@@ -1,0 +1,43 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+    <id>com.smallcloud.codify</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
+    <name>Codify</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor email="support@smallcloud.ai" url="https://www.smallcloud.ai">SmallCloud AI</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
+    <description><![CDATA[
+        <p>Codify from Small Magellanic Cloud is a coding assistant which uses the latest advances in Deep Learning and Large Language Models. It follows your instructions and provides suggestions on where exactly and how it proposes to change your code. For more key features, keep reading.</p>
+        <p>For more information, visit <a href="https://codify.smallcloud.ai">https://codify.smallcloud.ai</a></p>
+  ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <!-- Extension points defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <editorFactoryDocumentListener implementation="com.smallcloud.codify.Completion"/>
+<!--        <completion.contributor language="any" implementationClass="com.smallcloud.intellij.completions.CodifyCompletionContributor" order="first"/>-->
+<!--        <editorFactoryDocumentListener implementation="com.tabnine.inline.TabnineDocumentListener"/>-->
+    </extensions>
+    <actions>
+<!--        <action class="com.tabnine.inline.ShowNextTabnineInlineCompletionAction" id="ShowNextTabnineInlineCompletionAction" text="Show Next Inline Completion">-->
+<!--            <keyboard-shortcut first-keystroke="alt CLOSE_BRACKET" keymap="$default"/>-->
+<!--        </action>-->
+<!--        <action class="com.tabnine.inline.ShowPreviousTabnineInlineCompletionAction" id="ShowPreviousTabnineInlineCompletionAction" text="Show Previous Inline Completion">-->
+<!--            <keyboard-shortcut first-keystroke="alt OPEN_BRACKET" keymap="$default"/>-->
+<!--        </action>-->
+<!--        <action class="com.tabnine.inline.AcceptTabnineInlineCompletionAction" id="AcceptTabnineInlineCompletionAction" text="Accept Inline Completion">-->
+<!--            <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>-->
+<!--        </action>-->
+    </actions>
+</idea-plugin>

@@ -43,10 +43,10 @@ class CompletionPreview(val editor: Editor,
         val lines = inline.split("\n")
 
         try {
-            editor.getDocument().startGuardedBlockChecking();
+            editor.document.startGuardedBlockChecking();
             inlayer.render(lines, offset)
         } finally {
-            editor.getDocument().stopGuardedBlockChecking();
+            editor.document.stopGuardedBlockChecking();
         }
 
     }
@@ -58,7 +58,7 @@ class CompletionPreview(val editor: Editor,
         val project = editor.project ?: return
         val file: PsiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return
         try {
-            applyPreviewInternal(caret.getOffset(), project, file)
+            applyPreviewInternal(caret.offset, project, file)
         } catch (e: Throwable) {
             Logger.getInstance(javaClass).warn("Failed in the processes of accepting completion", e)
         } finally {

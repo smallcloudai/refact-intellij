@@ -25,9 +25,14 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <editorFactoryDocumentListener implementation="com.smallcloud.codify.Completion"/>
+        <editorFactoryDocumentListener implementation="com.smallcloud.codify.inline.SMCDocumentListener"/>
 <!--        <completion.contributor language="any" implementationClass="com.smallcloud.intellij.completions.CodifyCompletionContributor" order="first"/>-->
 <!--        <editorFactoryDocumentListener implementation="com.tabnine.inline.TabnineDocumentListener"/>-->
+<!--        <completion.contributor-->
+<!--                language="any"-->
+<!--                order="first"-->
+<!--                implementationClass="com.smallcloud.codify.inline.SMCDocumentListener"/>-->
+
     </extensions>
     <actions>
 <!--        <action class="com.tabnine.inline.ShowNextTabnineInlineCompletionAction" id="ShowNextTabnineInlineCompletionAction" text="Show Next Inline Completion">-->
@@ -39,5 +44,8 @@
 <!--        <action class="com.tabnine.inline.AcceptTabnineInlineCompletionAction" id="AcceptTabnineInlineCompletionAction" text="Accept Inline Completion">-->
 <!--            <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>-->
 <!--        </action>-->
+        <action class="com.smallcloud.codify.inline.AcceptSMCInlineCompletionAction" id="AcceptSMCInlineCompletionAction" text="Accept Inline Completion">
+            <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>
+        </action>
     </actions>
 </idea-plugin>

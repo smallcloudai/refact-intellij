@@ -41,6 +41,8 @@ class Inlayer(val editor: Editor) : Disposable {
         if (!first_l.isEmpty()) {
             render_line(first_l, offset)
         }
-        render_block(other_lines, offset)
+        if (other_lines.isNotEmpty()) {
+            render_block(other_lines, offset)
+        }
     }
 }

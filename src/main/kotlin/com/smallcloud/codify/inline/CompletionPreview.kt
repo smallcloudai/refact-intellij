@@ -25,7 +25,7 @@ class CompletionPreview(val editor: Editor,
                         val offset: Int) : Disposable {
     private val caretListener: CaretListener = CaretListener(this)
     private val focusListener: FocusListener = FocusListener(this)
-    private var inline: String = ""
+    private var inlineData: Pair<String, Int>? = null
     private var inlayer: Inlayer = Inlayer(editor)
     override fun dispose() {
         inlayer.dispose()
@@ -35,8 +35,10 @@ class CompletionPreview(val editor: Editor,
     fun render() {
         val currentText = editor.document.text
         val predictedText = prediction.choices[0].files[request_body.cursorFile]
-        inline = difference(currentText, predictedText, offset) ?: return
-        if (inline == "") return
+        inlineData = difference(currentText, predictedText, offset) ?: return
+        val inline = inlineData!!.first
+        if (inline.isEmpty()) return
+
 
         val lines = inline.split("\n")
 
@@ -71,7 +73,8 @@ class CompletionPreview(val editor: Editor,
 //        if (hadSuffix(completion)) {
 //            editor.document.deleteString(cursorOffset, cursorOffset + completion.oldSuffix.length())
 //        }
-        editor.document.insertString(cursorOffset, inline)
+        val (inline, textOffset) = inlineData ?: return
+        editor.document.replaceString(cursorOffset, cursorOffset + textOffset, inline)
         editor.caretModel.moveToOffset(cursorOffset + inline.length)
 //        AutoImporter.registerTabNineAutoImporter(editor, project, startOffset, endOffset)
 //        previewListener.executeSelection(

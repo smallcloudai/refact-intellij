@@ -3,7 +3,7 @@ package com.smallcloud.codify.utils
 import org.apache.commons.lang.StringUtils
 
 
-fun difference(currentText: String?, predictedText: String?, offset: Int): String? {
+fun difference(currentText: String?, predictedText: String?, offset: Int): Pair<String, Int>? {
     return if ((currentText == null) or (predictedText == null)) {
         null
     } else {
@@ -23,12 +23,13 @@ fun difference(currentText: String?, predictedText: String?, offset: Int): Strin
             return null
         }
 
-        var endDiffIdx = StringUtils.indexOfDifference(predictedTextTail.reversed(), currentTextTail.reversed())
-        endDiffIdx = maxOf(currentTextTail.length, predictedTextTail.length) - endDiffIdx
-        if (endDiffIdx > 0) {
-            predictedTextTail.substring(0, endDiffIdx)
+        val endDiffIdx = StringUtils.indexOfDifference(predictedTextTail.reversed(), currentTextTail.reversed())
+        val predictedEndDiffIdx = predictedTextTail.length - endDiffIdx
+        val currentEndDiffIdx = maxOf(currentTextTail.length - endDiffIdx, 0)
+        if (predictedEndDiffIdx > 0) {
+            Pair(predictedTextTail.substring(0, predictedEndDiffIdx), currentEndDiffIdx)
         } else {
-            predictedTextTail
+            null
         }
     }
 }

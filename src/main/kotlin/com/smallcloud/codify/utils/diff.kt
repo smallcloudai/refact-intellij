@@ -23,11 +23,10 @@ fun difference(currentText: String?, predictedText: String?, offset: Int): Strin
             return null
         }
 
-        val endDiffIdx = predictedTextTail.indexOf(currentTextTail)
+        var endDiffIdx = StringUtils.indexOfDifference(predictedTextTail.reversed(), currentTextTail.reversed())
+        endDiffIdx = maxOf(currentTextTail.length, predictedTextTail.length) - endDiffIdx
         if (endDiffIdx > 0) {
             predictedTextTail.substring(0, endDiffIdx)
-        } else if ((endDiffIdx == -1) && currentText.isNotEmpty()) {
-            null
         } else {
             predictedTextTail
         }

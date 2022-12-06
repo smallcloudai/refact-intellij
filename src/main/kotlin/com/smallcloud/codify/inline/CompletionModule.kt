@@ -13,13 +13,12 @@ import java.util.concurrent.Future
 class CompletionModule : Module() {
     private var lastRenderTask: Future<*>? = null
     private var lastFetchAndRenderTask: Future<*>? = null
-
-
     override fun process(request_data: SMCRequestBody, request: SMCRequest, editor: Editor) {
         ObjectUtils.doIfNotNull(lastFetchAndRenderTask) { task -> task.cancel(true) }
         ObjectUtils.doIfNotNull(lastRenderTask) { task -> task.cancel(true) }
 
         val modificationStamp = editor.document.modificationStamp
+        val offset = editor.caretModel.offset
 
         lastFetchAndRenderTask = worker_pool
                 .submit {
@@ -32,7 +31,10 @@ class CompletionModule : Module() {
                                         editor, request_data,
                                         prediction, request_data.cursor0)
                                 prev.render()
-                            }, { modificationStamp != editor.getDocument().getModificationStamp() })
+                            }, {
+                                modificationStamp != editor.getDocument().getModificationStamp() ||
+                                        offset != editor.caretModel.offset
+                            })
                 }
     }
 }

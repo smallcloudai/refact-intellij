@@ -32,7 +32,10 @@
 <!--                language="any"-->
 <!--                order="first"-->
 <!--                implementationClass="com.smallcloud.codify.inline.SMCDocumentListener"/>-->
-
+        <applicationConfigurable parentId="tools" instance="com.smallcloud.codify.settings.AppSettingsConfigurable"
+                                 id="com.smallcloud.codify.settings.AppSettingsConfigurable"
+                                 displayName="Codify"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
     </extensions>
     <actions>
 <!--        <action class="com.tabnine.inline.ShowNextTabnineInlineCompletionAction" id="ShowNextTabnineInlineCompletionAction" text="Show Next Inline Completion">-->

@@ -10,6 +10,7 @@ import com.intellij.util.ObjectUtils
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.inline.CompletionModule
 import com.smallcloud.codify.io.fetch
+import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.struct.ProcessType
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
@@ -54,10 +55,10 @@ class SMCPlugin {
 
 
     fun make_request(request_data: SMCRequestBody) : SMCRequest {
-        request_data.model = Settings.instance.model
+        request_data.model = AppSettingsState.instance.model
         request_data.client = "jetbrains-0.0.1"
-        request_data.temperature = Settings.instance.temperature
-        val req = SMCRequest(request_data, Settings.instance.api_key)
+        request_data.temperature = AppSettingsState.instance.temperature
+        val req = SMCRequest(request_data, AppSettingsState.instance.token)
         return req
     }
 

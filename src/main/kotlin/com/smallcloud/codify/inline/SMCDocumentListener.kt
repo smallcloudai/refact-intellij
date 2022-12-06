@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 
 
 class SMCDocumentListener : BulkAwareDocumentListener {
-    private val DELAY: Long = 500 // ms
+    private val DELAY: Long = 50 // ms
 
     private val scheduler = AppExecutorUtil.getAppScheduledExecutorService()
     private var last_task: Future<*>? = null

@@ -9,7 +9,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
-import com.jediterm.terminal.model.SelectionUtil
 import com.smallcloud.codify.inline.listeners.CaretListener
 import com.smallcloud.codify.inline.listeners.FocusListener
 import com.smallcloud.codify.inline.renderer.Inlayer
@@ -34,8 +33,9 @@ class CompletionPreview(val editor: Editor,
     }
 
     fun render() {
-        val new_text = prediction.choices[0].files[request_body.cursorFile]
-        inline = difference(request_body.sources[request_body.cursorFile], new_text) ?: return
+        val currentText = editor.document.text
+        val predictedText = prediction.choices[0].files[request_body.cursorFile]
+        inline = difference(currentText, predictedText, offset) ?: return
         if (inline == "") return
 
         val lines = inline.split("\n")

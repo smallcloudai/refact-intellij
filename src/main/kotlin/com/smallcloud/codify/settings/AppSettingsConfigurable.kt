@@ -5,7 +5,7 @@ import com.smallcloud.codify.Resources
 import org.jetbrains.annotations.Nls
 import javax.swing.JComponent
 
-
+//import com.intellij.collaboration.auth.ui.
 /**
  * Provides controller functionality for application settings.
  */
@@ -15,7 +15,7 @@ class AppSettingsConfigurable : Configurable {
     // A default constructor with no arguments is required because this implementation
     // is registered as an applicationConfigurable EP
     override fun getDisplayName(): @Nls(capitalization = Nls.Capitalization.Title) String? {
-        return "Codify"
+        return "Settings"
     }
 
     override fun getPreferredFocusedComponent(): JComponent? {
@@ -27,36 +27,48 @@ class AppSettingsConfigurable : Configurable {
         return mySettingsComponent!!.panel
     }
 
-    private fun contrastUrlChanged(settings: AppSettingsState): Boolean {
-        return (mySettingsComponent!!.contrastUrlText != "" && settings.contrast_url == Resources.default_contrast_url) ||
-                (mySettingsComponent!!.contrastUrlText == "" && settings.contrast_url != Resources.default_contrast_url)
-    }
-
     override fun isModified(): Boolean {
         val settings: AppSettingsState = AppSettingsState.instance
-        var modified = mySettingsComponent!!.tokenText != settings.token
+        var modified = (mySettingsComponent!!.tokenText.isNotEmpty()
+                && (settings.token == null || mySettingsComponent!!.tokenText != settings.token))
+        modified = modified or (mySettingsComponent!!.tokenText.isEmpty() && settings.token != null)
+
         modified = modified or (mySettingsComponent!!.modelText != settings.model)
-        modified = modified or (mySettingsComponent!!.temperatureValue != settings.temperature)
-        modified = modified or contrastUrlChanged(settings)
+
+        modified = modified or (mySettingsComponent!!.temperatureText.isNotEmpty() &&
+                (settings.temperature == null ||
+                        mySettingsComponent!!.temperatureText.toFloat() != settings.temperature))
+        modified = modified or (mySettingsComponent!!.temperatureText.isEmpty() && settings.temperature != null)
+
+        modified = modified or (mySettingsComponent!!.contrastUrlText.isNotEmpty() &&
+                (settings.contrast_url == null || mySettingsComponent!!.contrastUrlText != settings.contrast_url))
+        modified = modified or (mySettingsComponent!!.contrastUrlText.isEmpty() && settings.contrast_url != null)
         return modified
     }
 
     override fun apply() {
         val settings: AppSettingsState = AppSettingsState.instance
-        settings.token = mySettingsComponent!!.tokenText
+        settings.token = if (mySettingsComponent!!.tokenText.isEmpty()) null else mySettingsComponent!!.tokenText
         settings.model = mySettingsComponent!!.modelText
-        settings.temperature = mySettingsComponent!!.temperatureValue
-        settings.contrast_url = if (mySettingsComponent!!.contrastUrlText == "")
-            Resources.default_contrast_url else mySettingsComponent!!.contrastUrlText
+        if (mySettingsComponent!!.temperatureText.isEmpty()) {
+            settings.temperature = null
+        } else {
+            try {
+                settings.temperature = mySettingsComponent!!.temperatureText.toFloat()
+            } catch (e: Exception) {
+                settings.temperature
+            }
+        }
+        settings.contrast_url = if (mySettingsComponent!!.contrastUrlText.isEmpty())
+            null else mySettingsComponent!!.contrastUrlText
     }
 
     override fun reset() {
         val settings: AppSettingsState = AppSettingsState.instance
-        mySettingsComponent!!.tokenText = settings.token
+        mySettingsComponent!!.tokenText = settings.token ?: ""
         mySettingsComponent!!.modelText = settings.model
-        mySettingsComponent!!.temperatureValue = settings.temperature
-        mySettingsComponent!!.contrastUrlText = if (settings.contrast_url == Resources.default_contrast_url)
-            "" else settings.contrast_url
+        mySettingsComponent!!.temperatureText = if (settings.temperature != null) settings.temperature.toString() else ""
+        mySettingsComponent!!.contrastUrlText = settings.contrast_url ?: ""
     }
 
     override fun disposeUIResources() {

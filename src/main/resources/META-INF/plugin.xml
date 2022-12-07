@@ -25,6 +25,8 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
+        <preloadingActivity implementation="com.smallcloud.codify.Initializer"/>
+        <postStartupActivity implementation="com.smallcloud.codify.Initializer"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.codify.inline.SMCDocumentListener"/>
 <!--        <completion.contributor language="any" implementationClass="com.smallcloud.intellij.completions.CodifyCompletionContributor" order="first"/>-->
 <!--        <editorFactoryDocumentListener implementation="com.tabnine.inline.TabnineDocumentListener"/>-->
@@ -32,10 +34,14 @@
 <!--                language="any"-->
 <!--                order="first"-->
 <!--                implementationClass="com.smallcloud.codify.inline.SMCDocumentListener"/>-->
-        <applicationConfigurable parentId="tools" instance="com.smallcloud.codify.settings.AppSettingsConfigurable"
-                                 id="com.smallcloud.codify.settings.AppSettingsConfigurable"
+        <applicationConfigurable parentId="tools" instance="com.smallcloud.codify.settings.AppRootConfigurable"
+                                 id="codify_root"
                                  displayName="Codify"/>
+        <applicationConfigurable parentId="codify_root" instance="com.smallcloud.codify.settings.AppSettingsConfigurable"
+                                 id="codify_advanced_settings"
+                                 displayName="Settings"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
+        startupActivity
     </extensions>
     <actions>
         <action class="com.smallcloud.codify.inline.AcceptSMCInlineCompletionAction"

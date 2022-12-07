@@ -8,6 +8,7 @@ import com.smallcloud.codify.Resources.default_activate_api_url
 import com.smallcloud.codify.settings.AppSettingsState
 //import net.minidev.json.JSONObject
 import com.google.gson.JsonObject
+import com.intellij.openapi.diagnostic.Logger
 import java.lang.reflect.Type
 
 private fun generate_ticket(): String {
@@ -15,15 +16,23 @@ private fun generate_ticket(): String {
 }
 
 fun login() {
-    if (AppSettingsState.instance.token.isNotEmpty() && AppSettingsState.instance.userLogged.isNotEmpty()) {
+    val is_logined = AppSettingsState.instance.is_logined()
+    if (is_logined) {
         return
     }
     AppSettingsState.instance.ticket = generate_ticket()
     BrowserUtil.browse("https://codify.smallcloud.ai/authentication?token=${AppSettingsState.instance.ticket}")
 }
 
+fun logout() {
+    AppSettingsState.instance.token = null
+    AppSettingsState.instance.userLogged = null
+}
+
 fun check_login() {
-    if (AppSettingsState.instance.token.isNotEmpty() && AppSettingsState.instance.userLogged.isNotEmpty()) {
+    Logger.getInstance("check_login").warn("check_login")
+    val is_logined = AppSettingsState.instance.is_logined()
+    if (is_logined) {
         return
     }
 
@@ -35,10 +44,10 @@ fun check_login() {
         "Content-Type" to "application/json",
         "Authorization" to  ""
     )
-    if (token.isEmpty() || (ticket.isNotEmpty() && userLogged.isNotEmpty())) {
+    if (token.isNullOrEmpty() || (!ticket.isNullOrEmpty() && !userLogged.isNullOrEmpty())) {
         headers["Authorization"] = "codify-${ticket}"
     } else {
-        if (userLogged.isEmpty() && token.isNotEmpty()) {
+        if (is_logined) {
             headers["Authorization"] = "Bearer ${token}"
         } else {
             return
@@ -60,6 +69,6 @@ fun check_login() {
 
     if (retcode == "TICKET-SAVEKEY" || retcode == "OK") {
         AppSettingsState.instance.userLogged = body.get("account").asString
-        AppSettingsState.instance.ticket = ""
+        AppSettingsState.instance.ticket = null
     }
 }

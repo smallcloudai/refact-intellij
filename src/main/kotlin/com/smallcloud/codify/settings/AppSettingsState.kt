@@ -15,13 +15,17 @@ import com.smallcloud.codify.Resources
  */
 @State(name = "com.smallcloud.userSettings.AppSettingsState", storages = [Storage("CodifySettings.xml")])
 class AppSettingsState : PersistentStateComponent<AppSettingsState?> {
-    var token: String = ""
-    var temperature: Float = .2f
+    var token: String? = null
+    var temperature: Float? = null
     var model: String = "CONTRASTcode/3b/py"
-    var contrast_url: String = Resources.default_contrast_url
-    var userLogged: String = ""
-    var ticket: String = ""
+    var contrast_url: String? = null
+    var userLogged: String? = null
+    var ticket: String? = null
     var personalizeAndImprove: Boolean = false
+
+    fun is_logined(): Boolean {
+        return !token.isNullOrEmpty() && !userLogged.isNullOrEmpty()
+    }
 
     override fun getState(): AppSettingsState? {
         return this

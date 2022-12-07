@@ -1,12 +1,14 @@
 package com.smallcloud.codify.settings
 
+import com.intellij.openapi.application.invokeLater
 import com.intellij.ui.components.*
 import com.intellij.util.ui.FormBuilder
+import com.intellij.util.ui.UIUtil
 import com.smallcloud.codify.io.check_login
 import com.smallcloud.codify.io.login
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JPanel
+import java.awt.BorderLayout
+import java.awt.Component
+import javax.swing.*
 
 /**
  * Supports creating and managing a [JPanel] for the Settings Dialog.
@@ -17,19 +19,18 @@ class AppSettingsComponent {
     private val myModelText = JBTextField()
     private val myTemperatureText = JBTextField()
     private val myCotrastUrlText = JBTextField()
-    private val loginButton = JButton("Log In")
-
-    init {
-        loginButton.addActionListener { login() }
-    }
-
     init {
         panel = FormBuilder.createFormBuilder()
-                .addLabeledComponent(JBLabel("Enter your token: "), myTokenText, 1, false)
-                .addLabeledComponent(JBLabel("Enter model: "), myModelText, 1, false)
-                .addLabeledComponent(JBLabel("Enter temperature: "), myTemperatureText, 1, false)
-                .addLabeledComponent(JBLabel("Contrast url: "), myCotrastUrlText, 1, false)
-                .addComponent(loginButton)
+                .addLabeledComponent(JBLabel("Secret API Key: "), myTokenText, 1, false)
+                .addLabeledComponent(JBLabel("Model: "), myModelText, 1, false)
+                .addComponentToRightColumn(JBLabel("Leave empty if not sure", UIUtil.ComponentStyle.SMALL,
+                        UIUtil.FontColor.BRIGHTER), 0)
+                .addLabeledComponent(JBLabel("Temperature: "), myTemperatureText, 1, false)
+                .addComponentToRightColumn(JBLabel("Leave empty if not sure", UIUtil.ComponentStyle.SMALL,
+                        UIUtil.FontColor.BRIGHTER), 0)
+                .addLabeledComponent(JBLabel("Inference URL: "), myCotrastUrlText, 1, false)
+                .addComponentToRightColumn(JBLabel("Fill this if you are using your own inference server",
+                        UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER), 0)
                 .addComponentFillVertically(JPanel(), 0)
                 .panel
     }
@@ -51,12 +52,11 @@ class AppSettingsComponent {
         set(newText) {
             myCotrastUrlText.text = newText
         }
-    var temperatureValue: Float
+    var temperatureText: String
         get() {
-            if (myTemperatureText.text == "") return 0.0f
-            return myTemperatureText.text.toFloat()
+            return myTemperatureText.text
         }
-        set(newVal) {
-            myTemperatureText.text = newVal.toString()
+        set(newText) {
+            myTemperatureText.text = newText
         }
 }

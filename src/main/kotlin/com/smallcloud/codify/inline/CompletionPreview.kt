@@ -9,7 +9,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
-import com.jediterm.terminal.model.SelectionUtil
 import com.smallcloud.codify.inline.listeners.CaretListener
 import com.smallcloud.codify.inline.listeners.FocusListener
 import com.smallcloud.codify.inline.renderer.Inlayer
@@ -26,7 +25,7 @@ class CompletionPreview(val editor: Editor,
                         val offset: Int) : Disposable {
     private val caretListener: CaretListener = CaretListener(this)
     private val focusListener: FocusListener = FocusListener(this)
-    private var inline: String = ""
+    private var inlineData: Pair<String, Int>? = null
     private var inlayer: Inlayer = Inlayer(editor)
     override fun dispose() {
         inlayer.dispose()
@@ -34,17 +33,20 @@ class CompletionPreview(val editor: Editor,
     }
 
     fun render() {
-        val new_text = prediction.choices[0].files[request_body.cursorFile]
-        inline = difference(request_body.sources[request_body.cursorFile], new_text) ?: return
-        if (inline == "") return
+        val currentText = editor.document.text
+        val predictedText = prediction.choices[0].files[request_body.cursorFile]
+        inlineData = difference(currentText, predictedText, offset) ?: return
+        val inline = inlineData!!.first
+        if (inline.isEmpty()) return
+
 
         val lines = inline.split("\n")
 
         try {
-            editor.getDocument().startGuardedBlockChecking();
+            editor.document.startGuardedBlockChecking();
             inlayer.render(lines, offset)
         } finally {
-            editor.getDocument().stopGuardedBlockChecking();
+            editor.document.stopGuardedBlockChecking();
         }
 
     }
@@ -56,7 +58,7 @@ class CompletionPreview(val editor: Editor,
         val project = editor.project ?: return
         val file: PsiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return
         try {
-            applyPreviewInternal(caret.getOffset(), project, file)
+            applyPreviewInternal(caret.offset, project, file)
         } catch (e: Throwable) {
             Logger.getInstance(javaClass).warn("Failed in the processes of accepting completion", e)
         } finally {
@@ -71,7 +73,8 @@ class CompletionPreview(val editor: Editor,
 //        if (hadSuffix(completion)) {
 //            editor.document.deleteString(cursorOffset, cursorOffset + completion.oldSuffix.length())
 //        }
-        editor.document.insertString(cursorOffset, inline)
+        val (inline, textOffset) = inlineData ?: return
+        editor.document.replaceString(cursorOffset, cursorOffset + textOffset, inline)
         editor.caretModel.moveToOffset(cursorOffset + inline.length)
 //        AutoImporter.registerTabNineAutoImporter(editor, project, startOffset, endOffset)
 //        previewListener.executeSelection(

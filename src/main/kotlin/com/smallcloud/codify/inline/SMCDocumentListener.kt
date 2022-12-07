@@ -5,6 +5,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorKind
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.diagnostic.RuntimeExceptionWithAttachments
 import com.intellij.openapi.editor.EditorModificationUtil.checkModificationAllowed
 import com.intellij.openapi.editor.event.BulkAwareDocumentListener
 import com.intellij.openapi.editor.event.DocumentEvent
@@ -22,7 +23,7 @@ import java.util.concurrent.TimeUnit
 
 
 class SMCDocumentListener : BulkAwareDocumentListener {
-    private val DELAY: Long = 500 // ms
+    private val DELAY: Long = 50 // ms
 
     private val scheduler = AppExecutorUtil.getAppScheduledExecutorService()
     private var last_task: Future<*>? = null
@@ -30,7 +31,6 @@ class SMCDocumentListener : BulkAwareDocumentListener {
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent) {
         ObjectUtils.doIfNotNull(last_task) { task -> task.cancel(true) }
     }
-
 
     override fun documentChangedNonBulk(event: DocumentEvent) {
         val document = event.document
@@ -83,14 +83,22 @@ class SMCDocumentListener : BulkAwareDocumentListener {
     }
 
     private fun getActiveEditor(document: Document): Editor? {
+        if (!ApplicationManager.getApplication().isDispatchThread) {
+            return null;
+        }
+        
         val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return null
         return FileEditorManager.getInstance(project).selectedTextEditor
     }
 
     private fun getActiveFile(document: Document): String? {
+        if (!ApplicationManager.getApplication().isDispatchThread) {
+            return null;
+        }
+
         val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return null
         val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(document) ?: return null
-        val vFile = psiFile.getOriginalFile().getVirtualFile() ?: return null
+        val vFile = psiFile.originalFile.virtualFile ?: return null
         val path = vFile.presentableName
         return path
     }

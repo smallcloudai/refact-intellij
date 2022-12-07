@@ -2,20 +2,34 @@ package com.smallcloud.codify.utils
 
 import org.apache.commons.lang.StringUtils
 
-fun difference(str1: String?, str2: String?): String? {
-    return if (str1 == null) {
-        str2
-    } else if (str2 == null) {
-        str1
+
+fun difference(currentText: String?, predictedText: String?, offset: Int): Pair<String, Int>? {
+    return if ((currentText == null) or (predictedText == null)) {
+        null
     } else {
-        val at = StringUtils.indexOfDifference(str1, str2)
-        if (at == -1) return ""
-        val str1 = str1.substring(at)
-        val str2 = str2.substring(at)
-        val at2 = str2.indexOf(str1)
-        if (at2 > 0)
-            return str2.substring(0, at2)
-        else
-            return str2
+        val startDiffIdx = StringUtils.indexOfDifference(currentText!!.substring(0, offset), predictedText!!)
+        // User has made some changes before the request, drop the suggestion
+        if (offset != startDiffIdx) {
+            return null
+        }
+        // There are no differences between the response and request
+        if (startDiffIdx == -1) {
+            return null
+        }
+
+        val currentTextTail = currentText.substring(startDiffIdx)
+        val predictedTextTail = predictedText.substring(startDiffIdx)
+        if (currentTextTail == predictedTextTail) {
+            return null
+        }
+
+        val endDiffIdx = StringUtils.indexOfDifference(predictedTextTail.reversed(), currentTextTail.reversed())
+        val predictedEndDiffIdx = predictedTextTail.length - endDiffIdx
+        val currentEndDiffIdx = maxOf(currentTextTail.length - endDiffIdx, 0)
+        if (predictedEndDiffIdx > 0) {
+            Pair(predictedTextTail.substring(0, predictedEndDiffIdx), currentEndDiffIdx)
+        } else {
+            null
+        }
     }
 }

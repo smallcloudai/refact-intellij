@@ -47,8 +47,15 @@
 <!--        <action class="com.tabnine.inline.AcceptTabnineInlineCompletionAction" id="AcceptTabnineInlineCompletionAction" text="Accept Inline Completion">-->
 <!--            <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>-->
 <!--        </action>-->
-        <action class="com.smallcloud.codify.inline.AcceptSMCInlineCompletionAction" id="AcceptSMCInlineCompletionAction" text="Accept Inline Completion">
+        <action class="com.smallcloud.codify.inline.AcceptSMCInlineCompletionAction"
+                id="AcceptSMCInlineCompletionAction"
+                text="Accept Inline Completion">
             <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>
+        </action>
+        <action class="com.smallcloud.codify.inline.CancelSMCInlineCompletionAction"
+                id="CancelSMCInlineCompletionAction"
+                text="Cancel Inline Completion">
+            <keyboard-shortcut first-keystroke="ESCAPE" keymap="$default"/>
         </action>
     </actions>
 </idea-plugin>

@@ -25,7 +25,8 @@ class CompletionModule : Module() {
             .submit {
                 Logger.getInstance("CompletionModule")
                     .warn("fetch")
-                val prediction = fetch(request)
+                val prediction = fetch(request) ?: return@submit
+
                 ApplicationManager.getApplication()
                     .invokeLater {
                         val invalidStamp = modificationStamp != editor.document.modificationStamp

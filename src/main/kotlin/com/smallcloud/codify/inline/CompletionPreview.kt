@@ -65,6 +65,7 @@ class CompletionPreview(val editor: Editor,
             Disposer.dispose(this)
         }
     }
+
     private fun applyPreviewInternal(@NotNull cursorOffset: Int, project: Project, file: PsiFile) {
 //        val completion: TabNineCompletion = completions.get(currentIndex)
 //        val suffix: String = completion.getSuffix()
@@ -93,7 +94,7 @@ class CompletionPreview(val editor: Editor,
         fun instance(editor: Editor,
                      request_body: SMCRequestBody,
                      prediction: SMCPrediction,
-                     offset: Int) : CompletionPreview{
+                     offset: Int): CompletionPreview {
             clean_instance(editor)
             val preview = CompletionPreview(editor, request_body, prediction, offset)
             editor.putUserData(INLINE_COMPLETION_PREVIEW, preview)
@@ -107,7 +108,7 @@ class CompletionPreview(val editor: Editor,
             }
         }
 
-        fun getInstance(editor: Editor) : CompletionPreview? {
+        fun getInstance(editor: Editor): CompletionPreview? {
             return editor.getUserData(INLINE_COMPLETION_PREVIEW)
         }
     }

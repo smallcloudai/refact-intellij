@@ -1,51 +1,15 @@
 package com.smallcloud.codify
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.EditorCustomElementRenderer
-import com.intellij.openapi.editor.Inlay
-import com.intellij.openapi.editor.colors.EditorFontType
-import com.intellij.openapi.editor.markup.TextAttributes
-import com.intellij.util.ObjectUtils
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.inline.CompletionModule
-import com.smallcloud.codify.io.fetch
+import com.smallcloud.codify.io.check_login
+import com.smallcloud.codify.io.login
 import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.struct.ProcessType
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
-import org.jetbrains.annotations.TestOnly
-import java.awt.Color
-import java.awt.Font
-import java.awt.Graphics
-import java.awt.Rectangle
-import java.awt.font.TextAttribute
-import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
-
-
-
-fun getFont(editor: Editor, deprecated: Boolean): Font {
-    val font = editor.colorsScheme.getFont(EditorFontType.ITALIC)
-    if (!deprecated) {
-        return font
-    }
-    val attributes: MutableMap<TextAttribute, Any?> = HashMap(font.attributes)
-    attributes[TextAttribute.STRIKETHROUGH] = TextAttribute.STRIKETHROUGH_ON
-    return Font(attributes)
-}
-
-fun longest_string(array: List<String>) : String {
-    var index = 0
-    var elementLength: Int = array.get(0).length
-    for (i in 1 until array.size) {
-        if (array.get(i).length > elementLength) {
-            index = i
-            elementLength = array.get(i).length
-        }
-    }
-    return array.get(index)
-}
 
 
 class SMCPlugin {
@@ -53,12 +17,28 @@ class SMCPlugin {
             ProcessType.COMPLETION to CompletionModule()
     )
 
+    private val contrast_url: String
+        get() {
+            return AppSettingsState.instance.contrast_url
+        }
 
-    fun make_request(request_data: SMCRequestBody) : SMCRequest {
+    init {
+        AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(
+                {
+                    check_login()
+                },
+                0,
+                10000,
+                TimeUnit.MILLISECONDS
+        )
+    }
+
+
+    fun make_request(request_data: SMCRequestBody): SMCRequest {
         request_data.model = AppSettingsState.instance.model
-        request_data.client = "jetbrains-0.0.1"
+        request_data.client = "${Resources.client}-${Resources.version}"
         request_data.temperature = AppSettingsState.instance.temperature
-        val req = SMCRequest(request_data, AppSettingsState.instance.token)
+        val req = SMCRequest(contrast_url, request_data, AppSettingsState.instance.token)
         return req
     }
 

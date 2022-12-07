@@ -5,6 +5,7 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.XmlSerializerUtil
+import com.smallcloud.codify.Resources
 
 
 /**
@@ -17,6 +18,10 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState?> {
     var token: String = ""
     var temperature: Float = .2f
     var model: String = "CONTRASTcode/3b/py"
+    var contrast_url: String = Resources.default_contrast_url
+    var userLogged: String = ""
+    var ticket: String = ""
+    var personalizeAndImprove: Boolean = false
 
     override fun getState(): AppSettingsState? {
         return this

@@ -13,12 +13,8 @@ object CompletionUtils {
         if (newOffset < 0 || previousOffset > newOffset) return false
 
         val addedText = document.getText(TextRange(previousOffset, newOffset))
-        return (
-                isValidMidlinePosition(document, newOffset) &&
-                        isValidNonEmptyChange(addedText.length, addedText) &&
-                        isSingleCharNonWhitespaceChange(addedText) &&
-                        isNotIndentationChange(addedText, editor)
-                )
+        return isValidMidlinePosition(document, newOffset) &&
+               isValidNonEmptyChange(addedText.length, addedText)
     }
 
     @JvmStatic
@@ -33,15 +29,5 @@ object CompletionUtils {
     @JvmStatic
     fun isValidNonEmptyChange(replacedTextLength: Int, newText: String): Boolean {
         return replacedTextLength >= 0 && newText != ""
-    }
-
-    @JvmStatic
-    fun isSingleCharNonWhitespaceChange(newText: String): Boolean {
-        return newText.trim().length <= 1
-    }
-
-    @JvmStatic
-    fun isNotIndentationChange(newText: String, editor: Editor): Boolean {
-        return true
     }
 }

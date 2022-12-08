@@ -4,6 +4,10 @@ plugins {
   id("org.jetbrains.kotlin.jvm") version "1.7.22"
 }
 
+dependencies {
+  "implementation"("dev.gitlive:kotlin-diff-utils:4.1.4")
+}
+
 group = "com.smallcloud"
 version = "0.1.3"
 

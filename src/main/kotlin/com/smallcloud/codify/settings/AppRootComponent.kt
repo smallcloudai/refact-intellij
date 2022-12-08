@@ -3,15 +3,13 @@ package com.smallcloud.codify.settings
 import com.intellij.openapi.application.invokeLater
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
-import com.smallcloud.codify.io.login
-import com.smallcloud.codify.io.logout
+import com.smallcloud.codify.account.AccountManager.is_login
+import com.smallcloud.codify.account.AccountManager.logout
+import com.smallcloud.codify.account.login
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.Timer
-
-
-private val blah_blah_text = "SMC blah blah blah blah blah blah blah blah blah"
 
 
 class AppRootComponent {
@@ -41,22 +39,20 @@ class AppRootComponent {
     }
 
     private fun setup_properties() {
-        val is_logged = AppSettingsState.instance.is_logined()
         loggedLabel.text = "Logged as ${AppSettingsState.instance.userLogged}"
-        loggedLabel.isVisible = is_logged
-        logoutButton.isVisible = is_logged
-        bugReportButton.isVisible = is_logged
-        loginButton.isVisible = !is_logged
+        loggedLabel.isVisible = is_login
+        logoutButton.isVisible = is_login
+        bugReportButton.isVisible = is_login
+        loginButton.isVisible = !is_login
     }
 
     val preferredFocusedComponent: JComponent
-        get() = if (AppSettingsState.instance.is_logined()) bugReportButton else loginButton
+        get() = if (is_login) bugReportButton else loginButton
 
-    private fun recreate_panel() : JPanel {
+    private fun recreate_panel(): JPanel {
         var builder = FormBuilder.createFormBuilder()
-        val blah_area = JBLabel(blah_blah_text)
-        blah_area.text = blah_blah_text
-        builder.addComponent(blah_area)
+        val description = JBLabel("Codify: AI autocomplete, refactoring and advanced code generation")
+        builder.addComponent(description)
         builder.addComponent(loggedLabel)
         builder.addComponent(logoutButton)
         builder.addComponent(bugReportButton)
@@ -66,5 +62,7 @@ class AppRootComponent {
     }
 
     val panel: JPanel
-        get() {return myPanel}
+        get() {
+            return myPanel
+        }
 }

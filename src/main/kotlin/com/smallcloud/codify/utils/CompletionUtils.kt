@@ -3,7 +3,6 @@ package com.smallcloud.codify.utils
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.TextRange
-//import com.tabnine.inline.render.getTabSize
 import java.util.regex.Pattern
 
 object CompletionUtils {

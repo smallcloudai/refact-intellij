@@ -67,26 +67,9 @@ class CompletionPreview(val editor: Editor,
     }
 
     private fun applyPreviewInternal(@NotNull cursorOffset: Int, project: Project, file: PsiFile) {
-//        val completion: TabNineCompletion = completions.get(currentIndex)
-//        val suffix: String = completion.getSuffix()
-//        val startOffset: Int = cursorOffset - completion.oldPrefix.length()
-//        val endOffset = cursorOffset + suffix.length
-//        if (hadSuffix(completion)) {
-//            editor.document.deleteString(cursorOffset, cursorOffset + completion.oldSuffix.length())
-//        }
         val (inline, textOffset) = inlineData ?: return
         editor.document.replaceString(cursorOffset, cursorOffset + textOffset, inline)
         editor.caretModel.moveToOffset(cursorOffset + inline.length)
-//        AutoImporter.registerTabNineAutoImporter(editor, project, startOffset, endOffset)
-//        previewListener.executeSelection(
-//                editor,
-//                completion,
-//                file.name,
-//                RenderingMode.INLINE
-//        ) { selection ->
-//            selection.index = currentIndex
-//            SelectionUtil.addSuggestionsCount(selection, completions)
-//        }
     }
 
     companion object {

@@ -23,10 +23,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState?> {
     var ticket: String? = null
     var personalizeAndImprove: Boolean = false
 
-    fun is_logined(): Boolean {
-        return !token.isNullOrEmpty() && !userLogged.isNullOrEmpty()
-    }
-
     override fun getState(): AppSettingsState? {
         return this
     }

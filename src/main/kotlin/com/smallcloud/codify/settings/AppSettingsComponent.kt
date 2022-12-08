@@ -1,13 +1,8 @@
 package com.smallcloud.codify.settings
 
-import com.intellij.openapi.application.invokeLater
 import com.intellij.ui.components.*
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
-import com.smallcloud.codify.io.check_login
-import com.smallcloud.codify.io.login
-import java.awt.BorderLayout
-import java.awt.Component
 import javax.swing.*
 
 /**

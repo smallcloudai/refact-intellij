@@ -26,11 +26,10 @@
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
         <preloadingActivity implementation="com.smallcloud.codify.Initializer"/>
+        <postStartupActivity implementation="com.smallcloud.codify.Initializer"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.codify.inline.SMCDocumentListener"/>
         <statusBarWidgetFactory implementation="com.smallcloud.codify.status_bar.SMCStatusBarWidgetFactory"/>
-        <notificationGroup id="Codify Notification Group"
-                           displayType="BALLOON"
-                           key="notification.group.name"/>
+        <notificationGroup id="Codify Notification Group" displayType="BALLOON"/>
 
 
         <applicationConfigurable parentId="tools" instance="com.smallcloud.codify.settings.AppRootConfigurable"
@@ -40,7 +39,6 @@
                                  id="codify_advanced_settings"
                                  displayName="Settings"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
-        startupActivity
     </extensions>
     <actions>
         <action class="com.smallcloud.codify.inline.AcceptSMCInlineCompletionAction"

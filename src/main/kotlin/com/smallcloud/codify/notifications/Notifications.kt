@@ -21,5 +21,6 @@ fun emit_login(project: Project) {
         notification.expire()
     }).addAction(NotificationAction.createSimple("Settings") {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
+        notification.expire()
     }).notify(project);
 }

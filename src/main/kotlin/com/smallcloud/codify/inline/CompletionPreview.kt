@@ -16,7 +16,6 @@ import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequestBody
 import com.smallcloud.codify.utils.difference
 import org.jetbrains.annotations.NotNull
-import javax.annotation.Nullable
 
 
 class CompletionPreview(val editor: Editor,
@@ -51,7 +50,7 @@ class CompletionPreview(val editor: Editor,
 
     }
 
-    fun applyPreview(@Nullable caret: Caret?) {
+    fun applyPreview(caret: Caret?) {
         if (caret == null) {
             return
         }

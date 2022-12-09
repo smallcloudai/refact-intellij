@@ -11,11 +11,14 @@ import com.intellij.openapi.wm.impl.status.EditorBasedWidget
 import com.intellij.openapi.wm.impl.status.TextPanel.WithIconAndArrows
 import com.intellij.ui.ColorUtil
 import com.intellij.util.Consumer
+import com.smallcloud.codify.InferenceGlobalContext
 import com.smallcloud.codify.Resources.Icons.LOGO_DARK_12x12
 import com.smallcloud.codify.Resources.Icons.LOGO_LIGHT_12x12
 import com.smallcloud.codify.Resources.Icons.LOGO_RED_12x12
-import com.smallcloud.codify.account.AccountManager.is_login
-import com.smallcloud.codify.account.LoginStatusChangedNotifier
+import com.smallcloud.codify.Resources.default_contrast_url_suffix
+import com.smallcloud.codify.Resources.default_model
+import com.smallcloud.codify.account.AccountManager.is_logged_in
+import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.notifications.emit_login
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -30,9 +33,9 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         ApplicationManager.getApplication()
             .messageBus
             .connect(this)
-            .subscribe(LoginStatusChangedNotifier.LOGIN_STATUS_CHANGED_TOPIC, object : LoginStatusChangedNotifier {
-                override fun isLoginChanged(is_login: Boolean) {
-                    update(is_login)
+            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+                override fun isLoggedInChanged(is_logged: Boolean) {
+                    update(is_logged)
                 }
             })
     }
@@ -59,7 +62,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
 
     private fun getIcon(): Icon? {
         val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().getGlobalScheme().getDefaultBackground())
-        if (!is_login) {
+        if (!is_logged_in) {
             return LOGO_RED_12x12
         }
         return if (isDark) {
@@ -74,13 +77,18 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     override fun getTooltipText(): String? {
-        return "Codify"
+        if (!is_logged_in) {
+            return "Click to login"
+        }
+        val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else default_model
+        return "<html>⚡ ${InferenceGlobalContext.inferenceUrl}${default_contrast_url_suffix}<br>" +
+                "\uD83D\uDDD2 ${model}</html>"
     }
 
     override fun getClickConsumer(): Consumer<MouseEvent>? {
         return Consumer { e: MouseEvent ->
             if (!e.isPopupTrigger && MouseEvent.BUTTON1 == e.button) {
-                if (!is_login)
+                if (!is_logged_in)
                     emit_login(project)
             }
         }

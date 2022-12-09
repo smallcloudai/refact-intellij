@@ -13,9 +13,11 @@ private fun get_version(): String {
 }
 
 object Resources {
-    val default_contrast_url: String = "https://inference.smallcloud.ai/v1/contrast"
-    val default_activate_api_url: String = "https://www.smallcloud.ai/v1/api-activate"
+    val default_contrast_url_suffix = "v1/contrast"
+    val default_recall_url: String = "https://www.smallcloud.ai/v1/streamlined-login-recall-ticket"
+    val default_login_url: String = "https://www.smallcloud.ai/v1/login"
     val default_temperature: Float = 0.2f
+    val default_model: String = "CONTRASTcode/3b/py"
     val version: String = get_version()
     val client: String = "jetbrains"
 

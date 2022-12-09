@@ -7,13 +7,13 @@ import com.intellij.openapi.project.ProjectManagerListener
 import com.smallcloud.codify.SMCPlugin
 import com.smallcloud.codify.account.AccountManager
 
-fun startup() {
+fun notification_startup() {
     ApplicationManager.getApplication()
         .messageBus
         .connect(SMCPlugin.instant)
         .subscribe(ProjectManager.TOPIC, object : ProjectManagerListener {
             override fun projectOpened(project: Project) {
-                if (!AccountManager.is_login)
+                if (!AccountManager.is_logged_in)
                     emit_login(project)
             }
         })

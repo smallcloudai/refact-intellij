@@ -5,6 +5,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.util.ObjectUtils
 import com.smallcloud.codify.Module
+import com.smallcloud.codify.Resources.default_contrast_url_suffix
 import com.smallcloud.codify.io.fetch
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
@@ -20,6 +21,7 @@ class CompletionModule : Module() {
 
         val modificationStamp = editor.document.modificationStamp
         val offset = editor.caretModel.offset
+        request.url += default_contrast_url_suffix
 
         lastFetchAndRenderTask = worker_pool
             .submit {

@@ -4,10 +4,17 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.ProjectManager
+import com.smallcloud.codify.Connection
+import com.smallcloud.codify.ConnectionStatus
 import com.smallcloud.codify.InferenceGlobalContext
 import com.smallcloud.codify.Resources.default_login_url
 import com.smallcloud.codify.Resources.default_recall_url
+import com.smallcloud.codify.SMCPlugin
 import com.smallcloud.codify.io.sendRequest
+import com.smallcloud.codify.notifications.emit_error
+import com.smallcloud.codify.notifications.emit_info
 import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.struct.PlanType
 
@@ -24,17 +31,23 @@ fun login() {
     BrowserUtil.browse("https://codify.smallcloud.ai/authentication?token=${AccountManager.ticket}")
 }
 
-fun check_login() {
-    val settings = ApplicationManager.getApplication().getService(AppSettingsState::class.java)
+fun log_error(msg: String, need_change: Boolean = true) {
+    Logger.getInstance("check_login").warn(msg)
+    if (need_change) {
+        Connection.status = ConnectionStatus.ERROR
+        Connection.last_error_msg = msg
+    }
+}
+
+fun check_login(force: Boolean = false) {
     val acc = AccountManager
     val inf_c = InferenceGlobalContext
     val is_logined = acc.is_logged_in
-    if (is_logined) {
+    if (is_logined && !force) {
         return
     }
 
     val streamlined_login_ticket = acc.ticket
-    val user_logged_in = acc.user
     val token = acc.apiKey
     val headers = mutableMapOf(
             "Content-Type" to "application/json",
@@ -53,22 +66,27 @@ fun check_login() {
             val gson = Gson()
             val body = gson.fromJson(result.body, JsonObject::class.java)
             val retcode = body.get("retcode").asString
+            val human_readable_message = if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
             if (retcode == "OK") {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
+                Connection.status = ConnectionStatus.CONNECTED
+            } else if (retcode == "FAILED" && human_readable_message.contains("rate limit")) {
+                log_error("recall: $human_readable_message", false)
+//                log_error("login-fail: $human_readable_message")
+                return
             } else {
-//                TODO("this cathcer")
+                log_error("recall: ${result.body}")
                 return
             }
 
         } catch (e: Exception) {
-//            TODO("this cathcer")
+            log_error("recall: $e")
             return
         }
     }
 
     if (token.isNullOrEmpty()) {
-        // wait until user clicks the login button
         return;
     }
 
@@ -88,54 +106,45 @@ fun check_login() {
             acc.user = body.get("account").asString
             acc.ticket = null
             if (body.get("inference_url") != null) {
-                inf_c.inferenceUrl = body.get("inference_url").asString
+                if (body.get("inference_url").asString == "DISABLED") {
+                    inf_c.inferenceUrl = null
+                } else {
+                    inf_c.inferenceUrl = body.get("inference_url").asString
+                }
             }
-            if (body.get("codify_message") != null) {
-                val i = 0
-//                TODO("set codify_message")
-//                statusBar.set_website_message(json.codify_message);
+
+            if (body.has("codify_message") && body.get("codify_message").asString.isNotEmpty()) {
+                SMCPlugin.instant.website_message = body.get("codify_message").asString
             }
 
             acc.active_plan = PlanType.valueOf(body.get("inference").asString)
-//            if (global.side_panel) {
-//                global.side_panel.update_webview();
-//            }
-//
-//            if (body.get("inference_url").asString == "DISABLED") {
-//                TODO("set codify_message")
-//                fetchAPI.save_url_from_login("");
-//            }
-//            if (body.get("login_message") != null) {
-//                await usabilityHints.show_message_from_server("LoginServer", json.login_message);
-//            }
-//            usageStats.report_success_or_failure(true, "login", login_url, "", "");
-//            inference_login_force_retry();
-        } else if (retcode == "FAILED" && human_readable_message.contains("rate limit")) {
-//            usageStats.report_success_or_failure(false, "login-failed", login_url, json.human_readable_message, "");
+
+            if (body.has("login_message") && body.get("login_message").asString.isNotEmpty()) {
+                SMCPlugin.instant.login_message = body.get("login_message").asString
+            }
+            Connection.status = ConnectionStatus.CONNECTED
+            inference_login()
+        } else if (retcode == "FAILED" && human_readable_message.contains("rate limitrate limit")) {
+            log_error("login-fail: $human_readable_message", false)
+//            log_error("login-fail: $human_readable_message")
             return
         } else if (retcode == "FAILED") {
             // Login failed, but the request was a success.
 
             acc.user = null
-//            global.user_active_plan = "";
-//            if (global.side_panel) {
-//                global.side_panel.update_webview();
-//            }
-//            usageStats.report_success_or_failure(true, "login-failed", login_url, json.human_readable_message, "");
+            acc.active_plan = PlanType.UNKNOWN
+            log_error("login-fail: $human_readable_message")
             return
         } else {
             acc.user = null
-//            global.user_active_plan = "";
-//            if (global.side_panel) {
-//                global.side_panel.update_webview();
-//            }
-//            usageStats.report_success_or_failure(false, "login (2)", login_url, "unrecognized response", "");
+            acc.active_plan = PlanType.UNKNOWN
+            log_error("login-fail: unrecognized response")
             return
         }
 
 
     } catch (e: Exception) {
-        //            TODO("this cathcer")
+        log_error("login-fail: $e")
         return
     }
 

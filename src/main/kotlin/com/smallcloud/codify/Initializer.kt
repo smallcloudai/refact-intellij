@@ -17,8 +17,7 @@ class Initializer : PreloadingActivity(), StartupActivity {
         initialize()
     }
     private fun initialize() {
-        SMCPlugin.startup()
-        notification_startup()
         settings_startup()
+        notification_startup()
     }
 }

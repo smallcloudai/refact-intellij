@@ -17,7 +17,7 @@ object Resources {
     val default_recall_url: String = "https://www.smallcloud.ai/v1/streamlined-login-recall-ticket"
     val default_login_url: String = "https://www.smallcloud.ai/v1/login"
     val default_temperature: Float = 0.2f
-    val default_model: String = "CONTRASTcode/3b/py"
+    val default_model: String = "CONTRASTcode/3b/multi"
     val version: String = get_version()
     val client: String = "jetbrains"
 

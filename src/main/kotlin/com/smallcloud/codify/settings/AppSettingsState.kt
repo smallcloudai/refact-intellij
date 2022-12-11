@@ -6,6 +6,7 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.XmlSerializerUtil
+import com.smallcloud.codify.ExtraInfoChangedNotifier
 import com.smallcloud.codify.InferenceGlobalContextChangedNotifier
 import com.smallcloud.codify.SMCPlugin
 import com.smallcloud.codify.account.AccountManager
@@ -28,6 +29,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState?> {
     var streamlined_login_ticket: String? = null
     var inference_url: String? = null
     var active_plan: PlanType = PlanType.UNKNOWN
+    var login_message: String? = null
+    var plugin_is_enabled: Boolean = true
 
     init {
         ApplicationManager.getApplication()
@@ -53,6 +56,17 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState?> {
                         inference_url = newUrl
                     }
                 })
+        ApplicationManager.getApplication()
+                .messageBus
+                .connect(SMCPlugin.instant)
+                .subscribe(ExtraInfoChangedNotifier.TOPIC, object : ExtraInfoChangedNotifier {
+                    override fun loginMessageChanged(newMsg: String?) {
+                        login_message = newMsg
+                    }
+                    override fun pluginEnableChanged(newVal: Boolean) {
+                        plugin_is_enabled = newVal
+                    }
+                })
     }
 
 
@@ -67,6 +81,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState?> {
 
 fun settings_startup() {
     val settings = ApplicationManager.getApplication().getService(AppSettingsState::class.java)
-    AccountManager.startup(settings)
+    SMCPlugin.startup(settings)
     InferenceGlobalContext.startup(settings)
+    AccountManager.startup(settings)
 }

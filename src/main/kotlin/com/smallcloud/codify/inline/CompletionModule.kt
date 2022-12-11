@@ -4,9 +4,12 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.util.ObjectUtils
+import com.smallcloud.codify.Connection
+import com.smallcloud.codify.ConnectionStatus
 import com.smallcloud.codify.Module
 import com.smallcloud.codify.Resources.default_contrast_url_suffix
 import com.smallcloud.codify.io.fetch
+import com.smallcloud.codify.notifications.emit_error
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
 import java.util.concurrent.Future
@@ -25,24 +28,27 @@ class CompletionModule : Module() {
 
         lastFetchAndRenderTask = worker_pool
             .submit {
-                Logger.getInstance("CompletionModule")
-                    .warn("fetch")
-                val prediction = fetch(request) ?: return@submit
+                try {
+                    val prediction = fetch(request) ?: return@submit
+                    ApplicationManager.getApplication()
+                            .invokeLater {
+                                val invalidStamp = modificationStamp != editor.document.modificationStamp
+                                val invalidOffset = offset != editor.caretModel.offset
+                                if (invalidStamp || invalidOffset) {
+                                    return@invokeLater
+                                }
 
-                ApplicationManager.getApplication()
-                    .invokeLater {
-                        val invalidStamp = modificationStamp != editor.document.modificationStamp
-                        val invalidOffset = offset != editor.caretModel.offset
-                        if (invalidStamp || invalidOffset) {
-                            return@invokeLater
-                        }
+                                val prev = CompletionPreview.instance(
+                                        editor, request_data,
+                                        prediction, request_data.cursor0
+                                )
+                                prev.render()
+                            }
+                } catch (e: Exception) {
+                    Connection.status = ConnectionStatus.ERROR
+                    Connection.last_error_msg = e.toString()
+                }
 
-                        val prev = CompletionPreview.instance(
-                            editor, request_data,
-                            prediction, request_data.cursor0
-                        )
-                        prev.render()
-                    }
             }
     }
 }

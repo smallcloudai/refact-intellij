@@ -8,7 +8,7 @@
     <name>Codify</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="support@smallcloud.ai" url="https://www.smallcloud.ai">SmallCloud AI</vendor>
+    <vendor email="info@smallcloud.ai" url="https://codify.smallcloud.ai" >smallcloudai</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.

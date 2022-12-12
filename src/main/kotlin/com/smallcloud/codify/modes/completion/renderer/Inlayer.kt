@@ -1,4 +1,4 @@
-package com.smallcloud.codify.inline.renderer
+package com.smallcloud.codify.modes.completion.renderer
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
@@ -18,31 +18,34 @@ class Inlayer(val editor: Editor) : Disposable {
             blockInlay = null
         }
     }
-    private fun render_line(line: String, offset: Int) {
+
+    private fun renderLine(line: String, offset: Int) {
         val renderer = LineRenderer(editor, line, false)
         val element = editor
-                .inlayModel
-                .addInlineElement(offset, true, renderer)
+            .inlayModel
+            .addInlineElement(offset, true, renderer)
         element?.let { Disposer.register(this, it) }
         lineInlay = element
     }
-    private fun render_block(lines: List<String>, offset: Int) {
+
+    private fun renderBlock(lines: List<String>, offset: Int) {
         val renderer = BlockElementRenderer(editor, lines, false)
         val element = editor
-                .inlayModel
-                .addBlockElement(offset, false, false, 1, renderer)
+            .inlayModel
+            .addBlockElement(offset, false, false, 1, renderer)
         element?.let { Disposer.register(this, it) }
         blockInlay = element
     }
-    fun render(lines: List<String>, offset: Int) {
-        val first_l = lines.first()
-        val other_lines = lines.drop(1)
 
-        if (!first_l.isEmpty()) {
-            render_line(first_l, offset)
+    fun render(lines: List<String>, offset: Int) {
+        val firstL = lines.first()
+        val otherLines = lines.drop(1)
+
+        if (!firstL.isEmpty()) {
+            renderLine(firstL, offset)
         }
-        if (other_lines.isNotEmpty()) {
-            render_block(other_lines, offset)
+        if (otherLines.isNotEmpty()) {
+            renderBlock(otherLines, offset)
         }
     }
 }

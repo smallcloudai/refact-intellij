@@ -1,4 +1,4 @@
-package com.smallcloud.codify.utils
+package com.smallcloud.codify.modes.completion
 
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
@@ -11,6 +11,23 @@ object CompletionUtils {
     @JvmStatic
     fun isValidDocumentChange(editor: Editor, document: Document, newOffset: Int, previousOffset: Int): Boolean {
         if (newOffset < 0 || previousOffset > newOffset) return false
+
+        // Convert to kotlin
+//        let max_tokens = 50;
+//        let max_edits = 1;
+//        let sources: { [key: string]: string } = {};
+//        sources[file_name] = whole_doc;
+//        let stop_tokens: string[];
+//        if (multiline) {
+//            stop_tokens = ["\n\n"];
+//        } else {
+//            stop_tokens = ["\n", "\n\n"];
+//        }
+//        let fail = false;
+//        let stop_at = cursor;
+//        let modif_doc = whole_doc;
+
+
 
         val addedText = document.getText(TextRange(previousOffset, newOffset))
         return isValidMidlinePosition(document, newOffset) &&

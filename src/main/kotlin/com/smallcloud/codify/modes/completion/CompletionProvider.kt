@@ -1,29 +1,30 @@
-package com.smallcloud.codify.inline
+package com.smallcloud.codify.modes.completion
 
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.event.CaretEvent
+import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
-import com.smallcloud.codify.inline.listeners.CaretListener
-import com.smallcloud.codify.inline.listeners.FocusListener
-import com.smallcloud.codify.inline.renderer.Inlayer
+import com.smallcloud.codify.listeners.CaretListener
+import com.smallcloud.codify.listeners.FocusListener
+import com.smallcloud.codify.modes.Mode
+import com.smallcloud.codify.modes.completion.renderer.Inlayer
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequestBody
-import com.smallcloud.codify.utils.difference
 import org.jetbrains.annotations.NotNull
 
 
-class CompletionPreview(val editor: Editor,
-                        val request_body: SMCRequestBody,
-                        val prediction: SMCPrediction,
-                        val offset: Int) : Disposable {
-    private val caretListener: CaretListener = CaretListener(this)
-    private val focusListener: FocusListener = FocusListener(this)
+class CompletionProvider(val editor: Editor,
+                         val request_body: SMCRequestBody,
+                         val prediction: SMCPrediction,
+                         val offset: Int) : Disposable, Mode() {
     private var inlineData: Pair<String, Int>? = null
     private var inlayer: Inlayer = Inlayer(editor)
     override fun dispose() {
@@ -72,13 +73,13 @@ class CompletionPreview(val editor: Editor,
     }
 
     companion object {
-        private val INLINE_COMPLETION_PREVIEW: Key<CompletionPreview> = Key.create("SMC_INLINE_COMPLETION_PREVIEW")
+        private val INLINE_COMPLETION_PREVIEW: Key<CompletionProvider> = Key.create("SMC_INLINE_COMPLETION_PREVIEW")
         fun instance(editor: Editor,
                      request_body: SMCRequestBody,
                      prediction: SMCPrediction,
-                     offset: Int): CompletionPreview {
+                     offset: Int): CompletionProvider {
             clean_instance(editor)
-            val preview = CompletionPreview(editor, request_body, prediction, offset)
+            val preview = CompletionProvider(editor, request_body, prediction, offset)
             editor.putUserData(INLINE_COMPLETION_PREVIEW, preview)
             return preview
         }
@@ -90,9 +91,29 @@ class CompletionPreview(val editor: Editor,
             }
         }
 
-        fun getInstance(editor: Editor): CompletionPreview? {
+        fun getInstance(editor: Editor): CompletionProvider? {
             return editor.getUserData(INLINE_COMPLETION_PREVIEW)
         }
+    }
+
+    override fun focusGained() {
+        TODO("Not yet implemented")
+    }
+
+    override fun focusLost() {
+        TODO("Not yet implemented")
+    }
+
+    override fun onTextChange(event: DocumentEvent) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onCaretChange(event: CaretEvent) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onKeyPressedChange(dataContext: DataContext) {
+        TODO("Not yet implemented")
     }
 
 }

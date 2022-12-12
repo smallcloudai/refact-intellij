@@ -1,10 +1,10 @@
-package com.smallcloud.codify.inline
+package com.smallcloud.codify.modes.completion
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.util.ObjectUtils
-import com.smallcloud.codify.Connection
-import com.smallcloud.codify.ConnectionStatus
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Module
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
 import com.smallcloud.codify.io.fetch
@@ -13,6 +13,7 @@ import com.smallcloud.codify.struct.SMCRequestBody
 import java.util.concurrent.Future
 
 class CompletionModule : Module() {
+    private val workerPool = AppExecutorUtil.getAppExecutorService()
     private var lastRenderTask: Future<*>? = null
     private var lastFetchAndRenderTask: Future<*>? = null
 

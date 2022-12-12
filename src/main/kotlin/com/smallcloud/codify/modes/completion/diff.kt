@@ -1,4 +1,4 @@
-package com.smallcloud.codify.utils
+package com.smallcloud.codify.modes.completion
 
 import org.apache.commons.lang.StringUtils
 

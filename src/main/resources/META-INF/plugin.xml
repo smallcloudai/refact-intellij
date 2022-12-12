@@ -41,15 +41,20 @@
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
     </extensions>
     <actions>
-        <action class="com.smallcloud.codify.inline.AcceptSMCInlineCompletionAction"
+        <action class="com.smallcloud.codify.listeners.AcceptSMCInlineCompletionAction"
                 id="AcceptSMCInlineCompletionAction"
                 text="Accept Inline Completion">
             <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>
         </action>
-        <action class="com.smallcloud.codify.inline.CancelSMCInlineCompletionAction"
+        <action class="com.smallcloud.codify.listeners.CancelSMCInlineCompletionAction"
                 id="CancelSMCInlineCompletionAction"
                 text="Cancel Inline Completion">
             <keyboard-shortcut first-keystroke="ESCAPE" keymap="$default"/>
         </action>
     </actions>
+    <projectListeners>
+        <listener class="com.smallcloud.codify.listeners.CaretListener"
+                  topic="com.intellij.openapi.editor.event.CaretListener" />
+
+    </projectListeners>
 </idea-plugin>

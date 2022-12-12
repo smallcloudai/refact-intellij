@@ -1,4 +1,4 @@
-package com.smallcloud.codify.inline
+package com.smallcloud.codify.listeners
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
@@ -11,14 +11,13 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.ObjectUtils
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.SMCPlugin
-import com.smallcloud.codify.struct.ProcessType
 import com.smallcloud.codify.struct.SMCRequestBody
-import com.smallcloud.codify.utils.CompletionUtils
+import com.smallcloud.codify.modes.completion.CompletionUtils
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
 
-class SMCDocumentListener : BulkAwareDocumentListener {
+class DocumentListener : BulkAwareDocumentListener {
     private val DELAY: Long = 50 // ms
 
     private val scheduler = AppExecutorUtil.getAppScheduledExecutorService()

@@ -30,6 +30,11 @@ class CompletionModule : Module() {
             .submit {
                 try {
                     val prediction = fetch(request) ?: return@submit
+                    if (prediction.status == null) {
+                        Connection.status = ConnectionStatus.ERROR
+                        Connection.last_error_msg = "Parameters is not correct"
+                        return@submit
+                    }
                     ApplicationManager.getApplication()
                             .invokeLater {
                                 val invalidStamp = modificationStamp != editor.document.modificationStamp

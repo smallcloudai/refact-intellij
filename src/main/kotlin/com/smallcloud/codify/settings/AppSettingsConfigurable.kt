@@ -49,7 +49,7 @@ class AppSettingsConfigurable : Configurable {
 
     override fun apply() {
         AccountManager.apiKey = if (mySettingsComponent!!.tokenText.isEmpty()) null else mySettingsComponent!!.tokenText
-        InferenceGlobalContext.model = mySettingsComponent!!.modelText
+        InferenceGlobalContext.model = if (mySettingsComponent!!.modelText.isEmpty()) null else mySettingsComponent!!.modelText
         if (mySettingsComponent!!.temperatureText.isEmpty()) {
             InferenceGlobalContext.temperature = null
         } else {

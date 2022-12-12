@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.smallcloud"
-version = "0.0.42"
+version = "0.0.44"
 
 repositories {
   mavenCentral()

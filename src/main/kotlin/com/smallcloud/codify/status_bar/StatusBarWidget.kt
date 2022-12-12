@@ -3,6 +3,8 @@ package com.smallcloud.codify.status_bar
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.components.ComponentManager
+import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.CustomStatusBarWidget
@@ -18,10 +20,13 @@ import com.smallcloud.codify.Resources.Icons.LOGO_LIGHT_12x12
 import com.smallcloud.codify.Resources.Icons.LOGO_RED_12x12
 import com.smallcloud.codify.Resources.default_contrast_url_suffix
 import com.smallcloud.codify.Resources.default_model
+import com.smallcloud.codify.Resources.default_temperature
 import com.smallcloud.codify.account.AccountManager.is_logged_in
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
+import com.smallcloud.codify.account.LoginStateService
 import com.smallcloud.codify.notifications.emit_login
 import com.smallcloud.codify.notifications.emit_regular
+import com.smallcloud.codify.settings.AppSettingsState
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.util.*
@@ -37,6 +42,20 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             .connect(this)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun isLoggedInChanged(unused: Boolean) {
+                    update(null)
+                }
+            })
+        ApplicationManager.getApplication()
+            .messageBus
+            .connect(this)
+            .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
+                override fun inferenceUrlChanged(unused: String?) {
+                    update(null)
+                }
+                override fun modelChanged(unused: String?) {
+                    update(null)
+                }
+                override fun temperatureChanged(unused: Float?) {
                     update(null)
                 }
             })
@@ -87,7 +106,15 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         return component
     }
 
+    private fun getLastStatus(): String {
+        val website_stat = ApplicationManager.getApplication().getService(LoginStateService::class.java).getLastWebsiteLoginStatus()
+        val inf_stat = ApplicationManager.getApplication().getService(LoginStateService::class.java).getLastInferenceLoginStatus()
+        if (inf_stat == "OK" && website_stat == "OK") return "OK"
+        return ""
+    }
+
     private fun getIcon(): Icon? {
+        val is_ok_stat = getLastStatus()
         if (!SMCPlugin.instant.is_enable)
             return AllIcons.Diff.GutterCheckBoxIndeterminate
         if (!is_logged_in) {
@@ -97,12 +124,11 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             } else LOGO_DARK_12x12
         }
         val c_stat = Connection.status
-        if (c_stat == ConnectionStatus.DISCONNECTED)
+        if (c_stat == ConnectionStatus.DISCONNECTED && is_ok_stat.isEmpty())
             return AllIcons.Debugger.ThreadStates.Socket
         else if (c_stat == ConnectionStatus.ERROR)
             return AllIcons.Debugger.Db_exception_breakpoint
         else if (c_stat == ConnectionStatus.CONNECTED) {
-            val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().getGlobalScheme().getDefaultBackground())
             return LOGO_RED_12x12
         }
         return null
@@ -127,10 +153,12 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         } else if (c_stat == ConnectionStatus.CONNECTED) {
             var tooltip_str = "<html>"
             if (InferenceGlobalContext.inferenceUrl != null) {
-                tooltip_str += "⚡ ${InferenceGlobalContext.inferenceUrl}${default_contrast_url_suffix}<br>"
+                tooltip_str += "⚡ ${InferenceGlobalContext.inferenceUrl}${default_contrast_url_suffix}"
             }
             val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else default_model
-            tooltip_str += "\uD83D\uDDD2 ${model}"
+            val temp = if (InferenceGlobalContext.temperature != null) InferenceGlobalContext.temperature else default_temperature
+            tooltip_str += "<br>\uD83D\uDDD2 ${model}"
+            tooltip_str += "<br>\uD83C\uDF21️ ${temp}"
             tooltip_str += "</html>"
 
             return tooltip_str

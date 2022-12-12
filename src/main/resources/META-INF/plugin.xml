@@ -39,6 +39,7 @@
                                  id="codify_advanced_settings"
                                  displayName="Settings"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.codify.inline.AcceptSMCInlineCompletionAction"

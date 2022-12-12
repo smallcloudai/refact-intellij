@@ -39,12 +39,12 @@ fun log_error(msg: String, need_change: Boolean = true) {
     }
 }
 
-fun check_login(force: Boolean = false) {
+fun check_login(force: Boolean = false) : String {
     val acc = AccountManager
     val inf_c = InferenceGlobalContext
     val is_logined = acc.is_logged_in
     if (is_logined && !force) {
-        return
+        return ""
     }
 
     val streamlined_login_ticket = acc.ticket
@@ -71,23 +71,24 @@ fun check_login(force: Boolean = false) {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
                 Connection.status = ConnectionStatus.CONNECTED
+                return "OK"
             } else if (retcode == "FAILED" && human_readable_message.contains("rate limit")) {
                 log_error("recall: $human_readable_message", false)
 //                log_error("login-fail: $human_readable_message")
-                return
+                return "OK"
             } else {
                 log_error("recall: ${result.body}")
-                return
+                return ""
             }
 
         } catch (e: Exception) {
             log_error("recall: $e")
-            return
+            return ""
         }
     }
 
     if (token.isNullOrEmpty()) {
-        return;
+        return ""
     }
 
     val url = default_login_url
@@ -124,28 +125,29 @@ fun check_login(force: Boolean = false) {
             }
             Connection.status = ConnectionStatus.CONNECTED
             inference_login()
+            return inference_login()
         } else if (retcode == "FAILED" && human_readable_message.contains("rate limitrate limit")) {
             log_error("login-fail: $human_readable_message", false)
 //            log_error("login-fail: $human_readable_message")
-            return
+            return "OK"
         } else if (retcode == "FAILED") {
             // Login failed, but the request was a success.
 
             acc.user = null
             acc.active_plan = PlanType.UNKNOWN
             log_error("login-fail: $human_readable_message")
-            return
+            return ""
         } else {
             acc.user = null
             acc.active_plan = PlanType.UNKNOWN
             log_error("login-fail: unrecognized response")
-            return
+            return ""
         }
 
 
     } catch (e: Exception) {
         log_error("login-fail: $e")
-        return
+        return ""
     }
 
 }

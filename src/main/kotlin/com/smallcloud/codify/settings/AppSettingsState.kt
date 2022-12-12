@@ -45,6 +45,9 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     override fun apiKeyChanged(newApiKey: String?) {
                         instance.apiKey = newApiKey
                     }
+                    override fun planStatusChanged(newPlan: PlanType) {
+                        instance.activePlan = newPlan
+                    }
                 })
         ApplicationManager.getApplication()
                 .messageBus
@@ -53,6 +56,12 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                         object : InferenceGlobalContextChangedNotifier {
                     override fun inferenceUrlChanged(newUrl: String?) {
                         instance.inferenceUrl = newUrl
+                    }
+                    override fun modelChanged(newM: String?) {
+                        instance.model = newM
+                    }
+                    override fun temperatureChanged(newT: Float?) {
+                        instance.temperature = newT
                     }
                 })
         ApplicationManager.getApplication()

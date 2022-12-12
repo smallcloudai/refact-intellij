@@ -11,17 +11,7 @@ import com.smallcloud.codify.utils.dispatch
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
-private var _counter = 0
-private fun need_force() : Boolean{
-    val c = 15
-    val need = (_counter % c) == 0
-    _counter = (_counter + 1) % c
-    return need || Connection.status != ConnectionStatus.CONNECTED
-}
-
 object AccountManager {
-    private var _website_task: Future<*>? = null
-    private var _inference_task: Future<*>? = null
     private var _previous_logged_in_state: Boolean = false
 
     var ticket: String?
@@ -89,28 +79,7 @@ object AccountManager {
     }
 
     fun startup(settings: AppSettingsState) {
-        if (_website_task != null) return
-
         load_from_settings(settings)
-
-        _website_task = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(
-                {
-                    try {
-                        Logger.getInstance("check_login").warn("call")
-                        check_login(need_force())
-                    } catch (e: Exception) {
-                        log_error("check_login exception: $e")
-                    }
-                }, 0, 10000, TimeUnit.MILLISECONDS)
-        _inference_task = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(
-                {
-                    try {
-                        Logger.getInstance("inference_login").warn("call")
-                        inference_login()
-                    } catch (e: Exception) {
-                        log_error("inference_login exception: $e")
-                    }
-                }, 1, 1, TimeUnit.HOURS)
     }
 
     private fun check_logged_in_and_notify_if_need() {

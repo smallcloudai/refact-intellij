@@ -17,11 +17,11 @@ fun get_inference_url(): String? {
     return "$infer_url/v1/secret-key-activate"
 }
 
-fun inference_login() {
+fun inference_login() : String {
     val acc = AccountManager
     val token = acc.apiKey
 
-    val infer_url = get_inference_url() ?: return
+    val infer_url = get_inference_url() ?: return ""
     val headers = mutableMapOf(
             "Content-Type" to "application/json",
             "Authorization" to "Bearer ${token}"
@@ -40,16 +40,15 @@ fun inference_login() {
                 SMCPlugin.instant.inference_message = body.get("codify_message").asString
             }
             Connection.status = ConnectionStatus.CONNECTED
-            return
+            return "OK"
         } else if (body.has("detail")) {
             log_error("inference_login: ${body.get("detail").asString}")
         } else {
             log_error("inference_login: ${result.body}")
         }
+        return ""
     } catch (e: Exception) {
         log_error("inference_login: $e")
-        return
+        return ""
     }
-
-
 }

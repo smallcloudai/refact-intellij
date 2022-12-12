@@ -2,12 +2,10 @@ package com.smallcloud.codify.settings
 
 import com.intellij.openapi.options.Configurable
 import com.smallcloud.codify.InferenceGlobalContext
-import com.smallcloud.codify.Resources
 import com.smallcloud.codify.account.AccountManager
 import org.jetbrains.annotations.Nls
 import javax.swing.JComponent
 
-//import com.intellij.collaboration.auth.ui.
 /**
  * Provides controller functionality for application settings.
  */
@@ -16,15 +14,15 @@ class AppSettingsConfigurable : Configurable {
 
     // A default constructor with no arguments is required because this implementation
     // is registered as an applicationConfigurable EP
-    override fun getDisplayName(): @Nls(capitalization = Nls.Capitalization.Title) String? {
+    override fun getDisplayName(): @Nls(capitalization = Nls.Capitalization.Title) String {
         return "Settings"
     }
 
-    override fun getPreferredFocusedComponent(): JComponent? {
+    override fun getPreferredFocusedComponent(): JComponent {
         return mySettingsComponent!!.preferredFocusedComponent
     }
 
-    override fun createComponent(): JComponent? {
+    override fun createComponent(): JComponent {
         mySettingsComponent = AppSettingsComponent()
         return mySettingsComponent!!.panel
     }

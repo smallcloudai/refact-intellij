@@ -13,24 +13,23 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-
 class AppRootComponent {
     private val loginButton = JButton("Login / Register")
     private val logoutButton = JButton("Logout")
     private val bugReportButton = JButton("Bug Report...")
     private val loggedLabel = JBLabel("")
     private val activePlanLabel = JBLabel("")
-    private var myPanel: JPanel = recreate_panel()
+    private var myPanel: JPanel = recreatePanel()
 
     init {
         ApplicationManager.getApplication()
                 .messageBus
-                .connect(SMCPlugin.instant)
+                .connect(SMCPlugin.instance)
                 .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                    override fun isLoggedInChanged(unused: Boolean) {
+                    override fun isLoggedInChanged(limited: Boolean) {
                         revalidate()
                     }
-                    override fun planStatusChanged(unused: PlanType) {
+                    override fun planStatusChanged(newPlan: PlanType) {
                         revalidate()
                     }
                 })
@@ -44,15 +43,15 @@ class AppRootComponent {
     }
 
     private fun revalidate() {
-        setup_properties()
+        setupProperties()
         myPanel.revalidate()
     }
 
-    private fun setup_properties() {
-        val is_logged_in = AccountManager.is_logged_in
+    private fun setupProperties() {
+        val is_logged_in = AccountManager.isLoggedIn
         loggedLabel.text = "Logged as ${AccountManager.user}"
         loggedLabel.isVisible = is_logged_in
-        activePlanLabel.text = "Active plan: ${AccountManager.active_plan}"
+        activePlanLabel.text = "Active plan: ${AccountManager.activePlan}"
         activePlanLabel.isVisible = is_logged_in
         logoutButton.isVisible = is_logged_in
         bugReportButton.isVisible = is_logged_in
@@ -60,19 +59,20 @@ class AppRootComponent {
     }
 
     val preferredFocusedComponent: JComponent
-        get() = if (AccountManager.is_logged_in) bugReportButton else loginButton
+        get() = if (AccountManager.isLoggedIn) bugReportButton else loginButton
 
-    private fun recreate_panel(): JPanel {
-        var builder = FormBuilder.createFormBuilder()
+    private fun recreatePanel(): JPanel {
         val description = JBLabel("Codify: AI autocomplete, refactoring and advanced code generation")
-        builder.addComponent(description)
-        builder.addComponent(loggedLabel)
-        builder.addComponent(activePlanLabel)
-        builder.addComponent(logoutButton)
-        builder.addComponent(bugReportButton)
-        builder = builder.addComponent(loginButton)
-        setup_properties()
-        return builder.addComponentFillVertically(JPanel(), 0).panel
+        setupProperties()
+        return FormBuilder.createFormBuilder().run {
+            addComponent(description)
+            addComponent(loggedLabel)
+            addComponent(activePlanLabel)
+            addComponent(logoutButton)
+            addComponent(bugReportButton)
+            addComponent(loginButton)
+            addComponentFillVertically(JPanel(), 0).panel
+        }
     }
 
     val panel: JPanel

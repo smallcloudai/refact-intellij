@@ -2,12 +2,10 @@ package com.smallcloud.codify.settings
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
-import com.intellij.openapi.components.SettingsCategory
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.XmlSerializerUtil
 import com.smallcloud.codify.ExtraInfoChangedNotifier
-import com.smallcloud.codify.InferenceGlobalContext
 import com.smallcloud.codify.InferenceGlobalContextChangedNotifier
 import com.smallcloud.codify.SMCPlugin
 import com.smallcloud.codify.account.AccountManager
@@ -31,50 +29,57 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var activePlan: PlanType = PlanType.UNKNOWN
     var loginMessage: String? = null
     var pluginIsEnabled: Boolean = true
+
     init {
         ApplicationManager.getApplication()
-                .messageBus
-                .connect(SMCPlugin.instant)
-                .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                    override fun ticketChanged(newTicket: String?) {
-                        instance.streamlinedLoginTicket = newTicket
-                    }
-                    override fun userChanged(newUser: String?) {
-                        instance.userLoggedIn = newUser
-                    }
-                    override fun apiKeyChanged(newApiKey: String?) {
-                        instance.apiKey = newApiKey
-                    }
-                    override fun planStatusChanged(newPlan: PlanType) {
-                        instance.activePlan = newPlan
-                    }
-                })
+            .messageBus
+            .connect(SMCPlugin.instance)
+            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+                override fun ticketChanged(newTicket: String?) {
+                    instance.streamlinedLoginTicket = newTicket
+                }
+
+                override fun userChanged(newUser: String?) {
+                    instance.userLoggedIn = newUser
+                }
+
+                override fun apiKeyChanged(newApiKey: String?) {
+                    instance.apiKey = newApiKey
+                }
+
+                override fun planStatusChanged(newPlan: PlanType) {
+                    instance.activePlan = newPlan
+                }
+            })
         ApplicationManager.getApplication()
-                .messageBus
-                .connect(SMCPlugin.instant)
-                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC,
-                        object : InferenceGlobalContextChangedNotifier {
+            .messageBus
+            .connect(SMCPlugin.instance)
+            .subscribe(InferenceGlobalContextChangedNotifier.TOPIC,
+                object : InferenceGlobalContextChangedNotifier {
                     override fun inferenceUrlChanged(newUrl: String?) {
                         instance.inferenceUrl = newUrl
                     }
-                    override fun modelChanged(newM: String?) {
-                        instance.model = newM
+
+                    override fun modelChanged(newModel: String?) {
+                        instance.model = newModel
                     }
-                    override fun temperatureChanged(newT: Float?) {
-                        instance.temperature = newT
+
+                    override fun temperatureChanged(newTemp: Float?) {
+                        instance.temperature = newTemp
                     }
                 })
         ApplicationManager.getApplication()
-                .messageBus
-                .connect(SMCPlugin.instant)
-                .subscribe(ExtraInfoChangedNotifier.TOPIC, object : ExtraInfoChangedNotifier {
-                    override fun loginMessageChanged(newMsg: String?) {
-                        instance.loginMessage = newMsg
-                    }
-                    override fun pluginEnableChanged(newVal: Boolean) {
-                        instance.pluginIsEnabled = newVal
-                    }
-                })
+            .messageBus
+            .connect(SMCPlugin.instance)
+            .subscribe(ExtraInfoChangedNotifier.TOPIC, object : ExtraInfoChangedNotifier {
+                override fun loginMessageChanged(newMsg: String?) {
+                    instance.loginMessage = newMsg
+                }
+
+                override fun pluginEnableChanged(newVal: Boolean) {
+                    instance.pluginIsEnabled = newVal
+                }
+            })
     }
 
 
@@ -93,7 +98,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     }
 }
 
-fun settings_startup() {
+fun settingsStartup() {
     val settings = AppSettingsState.instance
     SMCPlugin.startup(settings)
     AccountManager.startup(settings)

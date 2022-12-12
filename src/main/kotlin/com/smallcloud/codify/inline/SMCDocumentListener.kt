@@ -4,8 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorKind
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.diagnostic.RuntimeExceptionWithAttachments
 import com.intellij.openapi.editor.EditorModificationUtil.checkModificationAllowed
 import com.intellij.openapi.editor.event.BulkAwareDocumentListener
 import com.intellij.openapi.editor.event.DocumentEvent
@@ -59,7 +57,7 @@ class SMCDocumentListener : BulkAwareDocumentListener {
                                         listOf("\n\n")
 
                                 )
-                                SMCPlugin.instant.process(ProcessType.COMPLETION, req_data, editor)
+                                SMCPlugin.instance.process(ProcessType.COMPLETION, req_data, editor)
                             }
                 },
                 DELAY, TimeUnit.MILLISECONDS
@@ -84,7 +82,7 @@ class SMCDocumentListener : BulkAwareDocumentListener {
 
     private fun getActiveEditor(document: Document): Editor? {
         if (!ApplicationManager.getApplication().isDispatchThread) {
-            return null;
+            return null
         }
         
         val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return null
@@ -93,7 +91,7 @@ class SMCDocumentListener : BulkAwareDocumentListener {
 
     private fun getActiveFile(document: Document): String? {
         if (!ApplicationManager.getApplication().isDispatchThread) {
-            return null;
+            return null
         }
 
         val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return null

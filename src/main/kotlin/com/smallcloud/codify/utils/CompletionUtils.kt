@@ -42,6 +42,6 @@ object CompletionUtils {
 
     @JvmStatic
     fun isNotIndentationChange(newText: String, editor: Editor): Boolean {
-        return true //newText != getTabSize(editor)?.let { " ".repeat(it) }
+        return true
     }
 }

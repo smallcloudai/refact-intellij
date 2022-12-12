@@ -3,8 +3,6 @@ package com.smallcloud.codify.status_bar
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.components.ComponentManager
-import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.CustomStatusBarWidget
@@ -18,15 +16,14 @@ import com.smallcloud.codify.*
 import com.smallcloud.codify.Resources.Icons.LOGO_DARK_12x12
 import com.smallcloud.codify.Resources.Icons.LOGO_LIGHT_12x12
 import com.smallcloud.codify.Resources.Icons.LOGO_RED_12x12
-import com.smallcloud.codify.Resources.default_contrast_url_suffix
-import com.smallcloud.codify.Resources.default_model
-import com.smallcloud.codify.Resources.default_temperature
-import com.smallcloud.codify.account.AccountManager.is_logged_in
+import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
+import com.smallcloud.codify.Resources.defaultModel
+import com.smallcloud.codify.Resources.defaultTemperature
+import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.account.LoginStateService
-import com.smallcloud.codify.notifications.emit_login
-import com.smallcloud.codify.notifications.emit_regular
-import com.smallcloud.codify.settings.AppSettingsState
+import com.smallcloud.codify.notifications.emitLogin
+import com.smallcloud.codify.notifications.emitRegular
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.util.*
@@ -41,7 +38,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             .messageBus
             .connect(this)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun isLoggedInChanged(unused: Boolean) {
+                override fun isLoggedInChanged(limited: Boolean) {
                     update(null)
                 }
             })
@@ -49,13 +46,15 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             .messageBus
             .connect(this)
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                override fun inferenceUrlChanged(unused: String?) {
+                override fun inferenceUrlChanged(newUrl: String?) {
                     update(null)
                 }
-                override fun modelChanged(unused: String?) {
+
+                override fun modelChanged(newModel: String?) {
                     update(null)
                 }
-                override fun temperatureChanged(unused: Float?) {
+
+                override fun temperatureChanged(newTemp: Float?) {
                     update(null)
                 }
             })
@@ -66,10 +65,12 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 override fun websiteMessageChanged(newMsg: String?) {
                     update(newMsg)
                 }
+
                 override fun inferenceMessageChanged(newMsg: String?) {
                     update(newMsg)
                 }
-                override fun pluginEnableChanged(unused: Boolean) {
+
+                override fun pluginEnableChanged(newVal: Boolean) {
                     update(null)
                 }
             })
@@ -77,9 +78,10 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             .messageBus
             .connect(this)
             .subscribe(ConnectionChangedNotifier.TOPIC, object : ConnectionChangedNotifier {
-                override fun statusChanged(unused: ConnectionStatus) {
+                override fun statusChanged(newStatus: ConnectionStatus) {
                     update(null)
                 }
+
                 override fun lastErrorMsgChanged(newMsg: String?) {
                     update(newMsg)
                 }
@@ -107,28 +109,30 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private fun getLastStatus(): String {
-        val website_stat = ApplicationManager.getApplication().getService(LoginStateService::class.java).getLastWebsiteLoginStatus()
-        val inf_stat = ApplicationManager.getApplication().getService(LoginStateService::class.java).getLastInferenceLoginStatus()
-        if (inf_stat == "OK" && website_stat == "OK") return "OK"
+        val websiteStat =
+            ApplicationManager.getApplication().getService(LoginStateService::class.java).getLastWebsiteLoginStatus()
+        val infStat =
+            ApplicationManager.getApplication().getService(LoginStateService::class.java).getLastInferenceLoginStatus()
+        if (infStat == "OK" && websiteStat == "OK") return "OK"
         return ""
     }
 
     private fun getIcon(): Icon? {
-        val is_ok_stat = getLastStatus()
-        if (!SMCPlugin.instant.is_enable)
+        val isOkStat = getLastStatus()
+        if (!SMCPlugin.instance.isEnable)
             return AllIcons.Diff.GutterCheckBoxIndeterminate
-        if (!is_logged_in) {
+        if (!isLoggedIn) {
             val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().getGlobalScheme().getDefaultBackground())
             return if (isDark) {
                 LOGO_LIGHT_12x12
             } else LOGO_DARK_12x12
         }
-        val c_stat = Connection.status
-        if (c_stat == ConnectionStatus.DISCONNECTED && is_ok_stat.isEmpty())
+        val cStat = Connection.status
+        if (cStat == ConnectionStatus.DISCONNECTED && isOkStat.isEmpty())
             return AllIcons.Debugger.ThreadStates.Socket
-        else if (c_stat == ConnectionStatus.ERROR)
+        else if (cStat == ConnectionStatus.ERROR)
             return AllIcons.Debugger.Db_exception_breakpoint
-        else if (c_stat == ConnectionStatus.CONNECTED) {
+        else if (cStat == ConnectionStatus.CONNECTED) {
             return LOGO_RED_12x12
         }
         return null
@@ -136,52 +140,57 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
 
 
     // Compatability implementation. DO NOT ADD @Override.
-    override fun getPresentation(): WidgetPresentation? {
+    override fun getPresentation(): WidgetPresentation {
         return this
     }
 
     override fun getTooltipText(): String? {
-        if (!is_logged_in) {
+        if (!isLoggedIn) {
             return "Click to login"
         }
 
         val c_stat = Connection.status
-        if (c_stat == ConnectionStatus.DISCONNECTED) {
-            return "Connection is lost"
-        } else if (c_stat == ConnectionStatus.ERROR) {
-            return Connection.last_error_msg
-        } else if (c_stat == ConnectionStatus.CONNECTED) {
-            var tooltip_str = "<html>"
-            if (InferenceGlobalContext.inferenceUrl != null) {
-                tooltip_str += "⚡ ${InferenceGlobalContext.inferenceUrl}${default_contrast_url_suffix}"
+        when (c_stat) {
+            ConnectionStatus.DISCONNECTED -> {
+                return "Connection is lost"
             }
-            val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else default_model
-            val temp = if (InferenceGlobalContext.temperature != null) InferenceGlobalContext.temperature else default_temperature
-            tooltip_str += "<br>\uD83D\uDDD2 ${model}"
-            tooltip_str += "<br>\uD83C\uDF21️ ${temp}"
-            tooltip_str += "</html>"
+            ConnectionStatus.ERROR -> {
+                return Connection.last_error_msg
+            }
+            ConnectionStatus.CONNECTED -> {
+                var tooltip_str = "<html>"
+                if (InferenceGlobalContext.inferenceUrl != null) {
+                    tooltip_str += "⚡ ${InferenceGlobalContext.inferenceUrl}${defaultContrastUrlSuffix}"
+                }
+                val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else defaultModel
+                val temp =
+                    if (InferenceGlobalContext.temperature != null) InferenceGlobalContext.temperature else defaultTemperature
+                tooltip_str += "<br>\uD83D\uDDD2 $model"
+                tooltip_str += "<br>\uD83C\uDF21️ $temp"
+                tooltip_str += "</html>"
 
-            return tooltip_str
+                return tooltip_str
+            }
+            else -> return "Codify"
         }
-        return "Codify"
     }
 
-    override fun getClickConsumer(): Consumer<MouseEvent>? {
+    override fun getClickConsumer(): Consumer<MouseEvent> {
         return Consumer { e: MouseEvent ->
             if (!e.isPopupTrigger && MouseEvent.BUTTON1 == e.button) {
-                if (!is_logged_in)
-                    emit_login(project)
+                if (!isLoggedIn)
+                    emitLogin(project)
                 else
-                    emit_regular(project)
+                    emitRegular(project)
             }
         }
     }
 
-    private fun update(newMsg: String? ) {
+    private fun update(newMsg: String?) {
         ApplicationManager.getApplication()
             .invokeLater(
                 {
-                    if (myProject == null || myProject.isDisposed || myStatusBar == null) {
+                    if (myProject.isDisposed || myStatusBar == null) {
                         return@invokeLater
                     }
                     component!!.icon = getIcon()
@@ -193,5 +202,4 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 ModalityState.any()
             )
     }
-
 }

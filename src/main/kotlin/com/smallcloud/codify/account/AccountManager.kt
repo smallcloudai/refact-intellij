@@ -1,18 +1,12 @@
 package com.smallcloud.codify.account
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.util.concurrency.AppExecutorUtil
-import com.smallcloud.codify.Connection
-import com.smallcloud.codify.ConnectionStatus
 import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.struct.PlanType
 import com.smallcloud.codify.utils.dispatch
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 
 object AccountManager {
-    private var _previous_logged_in_state: Boolean = false
+    private var previousLoggedInState: Boolean = false
 
     var ticket: String?
         get() = AppSettingsState.instance.streamlinedLoginTicket
@@ -54,10 +48,10 @@ object AccountManager {
                 check_logged_in_and_notify_if_need()
             }
         }
-    var active_plan: PlanType
+    var activePlan: PlanType
         get() = AppSettingsState.instance.activePlan
         set(newPlan) {
-            if (newPlan != active_plan) {
+            if (newPlan != activePlan) {
                 dispatch {
                     ApplicationManager.getApplication()
                             .messageBus
@@ -68,33 +62,33 @@ object AccountManager {
         }
 
 
-    val is_logged_in: Boolean
+    val isLoggedIn: Boolean
         get() {
             return !apiKey.isNullOrEmpty() and !user.isNullOrEmpty()
         }
 
 
-    private fun load_from_settings(settings: AppSettingsState) {
-        _previous_logged_in_state = is_logged_in
+    private fun loadFromSettings(settings: AppSettingsState) {
+        previousLoggedInState = isLoggedIn
     }
 
     fun startup(settings: AppSettingsState) {
-        load_from_settings(settings)
+        loadFromSettings(settings)
     }
 
     private fun check_logged_in_and_notify_if_need() {
-        if (_previous_logged_in_state != is_logged_in) {
-            _previous_logged_in_state = is_logged_in
-            login_changed_notify(is_logged_in)
+        if (previousLoggedInState != isLoggedIn) {
+            previousLoggedInState = isLoggedIn
+            loginChangedNotify(isLoggedIn)
         }
     }
 
-    private fun login_changed_notify(is_logged_in: Boolean) {
+    private fun loginChangedNotify(isLoggedIn: Boolean) {
         dispatch {
             ApplicationManager.getApplication()
                     .messageBus
                     .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                    .isLoggedInChanged(is_logged_in)
+                    .isLoggedInChanged(isLoggedIn)
         }
     }
 

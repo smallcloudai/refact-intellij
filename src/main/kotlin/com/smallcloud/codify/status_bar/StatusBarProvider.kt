@@ -1,14 +1,10 @@
 package com.smallcloud.codify.status_bar
 
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidgetFactory
-import com.intellij.openapi.wm.StatusBarWidgetProvider
-import org.jetbrains.annotations.NotNull
 import org.jetbrains.annotations.Nullable
-
 
 class SMCStatusBarWidgetFactory : StatusBarWidgetFactory {
     override fun getId(): String {

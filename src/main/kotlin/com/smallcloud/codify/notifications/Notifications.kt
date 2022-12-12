@@ -12,23 +12,24 @@ import com.smallcloud.codify.SMCPlugin
 import com.smallcloud.codify.account.login
 import com.smallcloud.codify.settings.AppRootConfigurable
 
-private fun add_disable_enable(project: Project, notification: Notification) {
-    if (SMCPlugin.instant.is_enable) {
+private fun addDisableEnable(project: Project, notification: Notification) {
+    if (SMCPlugin.instance.isEnable) {
         notification.addAction(NotificationAction.createSimple("Disable") {
-            SMCPlugin.instant.is_enable = false
+            SMCPlugin.instance.isEnable = false
             notification.expire()
         })
     } else {
         notification.addAction(NotificationAction.createSimple("Enable") {
-            SMCPlugin.instant.is_enable = true
+            SMCPlugin.instance.isEnable = true
             notification.expire()
         })
     }
 }
-fun emit_login(project: Project) {
+
+fun emitLogin(project: Project) {
     val notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup("Codify Notification Group")
-            .createNotification("Login to Codify", NotificationType.INFORMATION)
+        .getNotificationGroup("Codify Notification Group")
+        .createNotification("Login to Codify", NotificationType.INFORMATION)
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple("Login") {
@@ -37,48 +38,49 @@ fun emit_login(project: Project) {
     }).addAction(NotificationAction.createSimple("Settings") {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
         notification.expire()
-    }).notify(project);
+    }).notify(project)
 }
 
-fun emit_regular(project: Project) {
+fun emitRegular(project: Project) {
     val notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup("Codify Notification Group")
-            .createNotification("Codify", NotificationType.INFORMATION)
+        .getNotificationGroup("Codify Notification Group")
+        .createNotification("Codify", NotificationType.INFORMATION)
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple("Settings") {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
         notification.expire()
     })
-    add_disable_enable(project, notification)
-    notification.notify(project);
+    addDisableEnable(project, notification)
+    notification.notify(project)
 }
 
-fun emit_info(msg: String) {
+fun emitInfo(msg: String) {
     val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return
     val notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup("Codify Notification Group")
-            .createNotification("Codify", msg, NotificationType.INFORMATION)
+        .getNotificationGroup("Codify Notification Group")
+        .createNotification("Codify", msg, NotificationType.INFORMATION)
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple("Settings") {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
         notification.expire()
     })
-    add_disable_enable(project, notification)
-    notification.notify(project);
+    addDisableEnable(project, notification)
+    notification.notify(project)
 }
-fun emit_error(msg: String) {
+
+fun emitError(msg: String) {
     val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return
     val notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup("Codify Notification Group")
-            .createNotification("Codify", msg, NotificationType.ERROR)
+        .getNotificationGroup("Codify Notification Group")
+        .createNotification("Codify", msg, NotificationType.ERROR)
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple("Settings") {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
         notification.expire()
     })
-    add_disable_enable(project, notification)
-    notification.notify(project);
+    addDisableEnable(project, notification)
+    notification.notify(project)
 }

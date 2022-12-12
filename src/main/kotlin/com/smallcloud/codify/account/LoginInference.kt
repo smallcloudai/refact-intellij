@@ -8,47 +8,50 @@ import com.smallcloud.codify.InferenceGlobalContext
 import com.smallcloud.codify.SMCPlugin
 import com.smallcloud.codify.io.sendRequest
 
-fun get_inference_url(): String? {
-    var infer_url = InferenceGlobalContext.inferenceUrl ?: return null
+fun getInferenceUrl(): String? {
+    var inferUrl = InferenceGlobalContext.inferenceUrl ?: return null
 
-    if (infer_url.endsWith('/')) {
-        infer_url = infer_url.dropLast(1)
+    if (inferUrl.endsWith('/')) {
+        inferUrl = inferUrl.dropLast(1)
     }
-    return "$infer_url/v1/secret-key-activate"
+    return "$inferUrl/v1/secret-key-activate"
 }
 
-fun inference_login() : String {
+fun inferenceLogin(): String {
     val acc = AccountManager
     val token = acc.apiKey
 
-    val infer_url = get_inference_url() ?: return ""
+    val inferUrl = getInferenceUrl() ?: return ""
     val headers = mutableMapOf(
-            "Content-Type" to "application/json",
-            "Authorization" to "Bearer ${token}"
+        "Content-Type" to "application/json",
+        "Authorization" to "Bearer $token"
     )
     try {
-        val result = sendRequest(infer_url, "GET", headers, request_properties = mapOf(
+        val result = sendRequest(
+            inferUrl,
+            "GET", headers, requestProperties = mapOf(
                 "redirect" to "follow",
                 "cache" to "no-cache",
                 "referrer" to "no-referrer"
-        ))
+            )
+        )
         val gson = Gson()
         val body = gson.fromJson(result.body, JsonObject::class.java)
         val retcode = body.get("retcode").asString
         if (retcode == "OK") {
             if (body.has("inference_message") && body.get("inference_message").asString.isNotEmpty()) {
-                SMCPlugin.instant.inference_message = body.get("codify_message").asString
+                SMCPlugin.instance.inferenceMessage = body.get("codify_message").asString
             }
             Connection.status = ConnectionStatus.CONNECTED
             return "OK"
         } else if (body.has("detail")) {
-            log_error("inference_login: ${body.get("detail").asString}")
+            logError("inference_login: ${body.get("detail").asString}")
         } else {
-            log_error("inference_login: ${result.body}")
+            logError("inference_login: ${result.body}")
         }
         return ""
     } catch (e: Exception) {
-        log_error("inference_login: $e")
+        logError("inference_login: $e")
         return ""
     }
 }

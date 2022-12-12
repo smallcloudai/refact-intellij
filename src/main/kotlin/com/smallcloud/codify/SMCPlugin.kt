@@ -12,7 +12,6 @@ import com.smallcloud.codify.utils.dispatch
 
 
 interface ExtraInfoChangedNotifier {
-
     fun websiteMessageChanged(newMsg: String?) {}
     fun inferenceMessageChanged(newMsg: String?) {}
     fun loginMessageChanged(newMsg: String?) {}
@@ -23,64 +22,58 @@ interface ExtraInfoChangedNotifier {
     }
 }
 
-class SMCPlugin: Disposable {
+class SMCPlugin : Disposable {
     private var modules: Map<ProcessType, Module> = mapOf(
-            ProcessType.COMPLETION to CompletionModule()
+        ProcessType.COMPLETION to CompletionModule()
     )
-    private var websiteMessage: String? = null
-    private var inferenceMessage: String? = null
-//    private var loginMessage: String? = null
-    private var isEnable: Boolean = false
-    var is_enable: Boolean
-        get() = isEnable
+
+    var isEnable: Boolean = false
         set(value) {
-            if (value != isEnable) {
-                isEnable = value
+            if (value != field) {
+                field = value
                 if (value) enable() else disable()
                 dispatch {
                     ApplicationManager.getApplication()
-                            .messageBus
-                            .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
-                            .pluginEnableChanged(isEnable)
+                        .messageBus
+                        .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
+                        .pluginEnableChanged(field)
                 }
             }
         }
-    var website_message: String?
-        get() = websiteMessage
+    var websiteMessage: String? = null
         set(newMsg) {
-            if (websiteMessage != newMsg) {
-                websiteMessage = newMsg
+            if (field != newMsg) {
+                field = newMsg
                 dispatch {
                     ApplicationManager.getApplication()
-                            .messageBus
-                            .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
-                            .websiteMessageChanged(websiteMessage)
+                        .messageBus
+                        .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
+                        .websiteMessageChanged(websiteMessage)
                 }
             }
         }
-    var inference_message: String?
-        get() = inferenceMessage
+    var inferenceMessage: String? = null
         set(newMsg) {
-            if (inferenceMessage != newMsg) {
-                inferenceMessage = newMsg
+            if (field != newMsg) {
+                field = newMsg
                 dispatch {
                     ApplicationManager.getApplication()
-                            .messageBus
-                            .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
-                            .inferenceMessageChanged(inferenceMessage)
+                        .messageBus
+                        .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
+                        .inferenceMessageChanged(field)
                 }
             }
         }
 
-    var login_message: String?
+    var loginMessage: String?
         get() = AppSettingsState.instance.loginMessage
         set(newMsg) {
-            if (login_message != newMsg) {
+            if (loginMessage != newMsg) {
                 dispatch {
                     ApplicationManager.getApplication()
-                            .messageBus
-                            .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
-                            .loginMessageChanged(newMsg)
+                        .messageBus
+                        .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
+                        .loginMessageChanged(newMsg)
                 }
             }
         }
@@ -88,25 +81,26 @@ class SMCPlugin: Disposable {
     private fun disable() {
         modules = emptyMap()
     }
+
     private fun enable() {
         modules = mapOf(
-                ProcessType.COMPLETION to CompletionModule()
+            ProcessType.COMPLETION to CompletionModule()
         )
     }
 
-    fun process(process_type: ProcessType, request_body: SMCRequestBody, editor: Editor) {
-        val request = InferenceGlobalContext.make_request(request_body)
+    fun process(processType: ProcessType, requestBody: SMCRequestBody, editor: Editor) {
+        val request = InferenceGlobalContext.make_request(requestBody)
 
-        val module = modules[process_type]
+        val module = modules[processType]
         if (module != null && request != null) {
-            module.process(request_body, request, editor)
+            module.process(requestBody, request, editor)
         }
     }
 
     companion object {
-        var instant = SMCPlugin()
+        var instance = SMCPlugin()
         fun startup(settings: AppSettingsState) {
-            instant.is_enable = settings.pluginIsEnabled
+            instance.isEnable = settings.pluginIsEnabled
         }
     }
 

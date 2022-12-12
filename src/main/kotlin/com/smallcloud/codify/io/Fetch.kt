@@ -1,19 +1,24 @@
 package com.smallcloud.codify.io
 
-
 import java.net.HttpURLConnection
 import java.net.URL
 
-data class Response(val statusCode: Int, val headers: Map<String, List<String>>? = null, val body: String? = null)
+data class Response(
+    val statusCode: Int,
+    val headers: Map<String, List<String>>? = null,
+    val body: String? = null
+)
 
 
-fun sendRequest(url: String, method: String = "GET",
-                headers: Map<String, String>? = null,
-                body: String? = null,
-                request_properties: Map<String, String>? = null): Response {
+fun sendRequest(
+    url: String, method: String = "GET",
+    headers: Map<String, String>? = null,
+    body: String? = null,
+    requestProperties: Map<String, String>? = null
+): Response {
     val conn = URL(url).openConnection() as HttpURLConnection
 
-    request_properties?.forEach {
+    requestProperties?.forEach {
         conn.setRequestProperty(it.key, it.value)
     }
 

@@ -4,9 +4,8 @@ import com.intellij.openapi.application.PreloadingActivity
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
-import com.smallcloud.codify.notifications.notification_startup
-import com.smallcloud.codify.settings.settings_startup
-
+import com.smallcloud.codify.notifications.notificationStartup
+import com.smallcloud.codify.settings.settingsStartup
 
 class Initializer : PreloadingActivity(), StartupActivity {
     override fun preload(indicator: ProgressIndicator) {
@@ -16,8 +15,9 @@ class Initializer : PreloadingActivity(), StartupActivity {
     override fun runActivity(project: Project) {
         initialize()
     }
+
     private fun initialize() {
-        settings_startup()
-        notification_startup()
+        settingsStartup()
+        notificationStartup()
     }
 }

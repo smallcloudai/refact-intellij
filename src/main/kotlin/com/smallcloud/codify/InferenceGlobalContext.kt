@@ -8,7 +8,6 @@ import com.smallcloud.codify.struct.SMCRequestBody
 import com.smallcloud.codify.utils.dispatch
 
 object InferenceGlobalContext {
-
     var inferenceUrl: String?
         get() = AppSettingsState.instance.inferenceUrl
         set(newInferenceUrl) {
@@ -51,11 +50,10 @@ object InferenceGlobalContext {
         if (api_key.isNullOrEmpty()) return null
         if (inferenceUrl.isNullOrEmpty()) return null
 
-        request_data.model = if (model != null) model!! else Resources.default_model
-        request_data.temperature = if (temperature != null) temperature!! else Resources.default_temperature
+        request_data.model = if (model != null) model!! else Resources.defaultModel
+        request_data.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
         request_data.client = "${Resources.client}-${Resources.version}"
         val req = SMCRequest(inferenceUrl!!, request_data, api_key)
         return req
     }
-
 }

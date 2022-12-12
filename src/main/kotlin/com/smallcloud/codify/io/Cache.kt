@@ -3,49 +3,49 @@ package com.smallcloud.codify.io
 import com.smallcloud.codify.struct.SMCPrediction
 import com.google.common.collect.EvictingQueue
 import com.google.gson.Gson
-import com.smallcloud.codify.notifications.emit_error
+import com.smallcloud.codify.notifications.emitError
 import com.smallcloud.codify.struct.SMCRequest
 
 
 private object Cache {
-    private val buffer: EvictingQueue<Pair<Int, SMCPrediction>> = EvictingQueue.create(15)
+    private val buffer = EvictingQueue.create<Pair<Int, SMCPrediction>>(15)
 
-    fun get_from_cache(request: SMCRequest): SMCPrediction? {
+    fun getFromCache(request: SMCRequest): SMCPrediction? {
         val hash = request.hashCode()
         val elem = buffer.find { it -> it.first == hash }
         return elem?.second
     }
 
-    fun add_cache(request: SMCRequest, prediction: SMCPrediction) {
+    fun addCache(request: SMCRequest, prediction: SMCPrediction) {
         val hash = request.hashCode()
         buffer.add(Pair(hash, prediction))
     }
 
 }
 
-private fun _fetch(req: SMCRequest): SMCPrediction? {
+private fun fetchRequest(req: SMCRequest): SMCPrediction? {
     val gson = Gson()
     val headers = mapOf(
-            "Content-Type" to "application/json",
-            "Authorization" to "Bearer ${req.token}",
+        "Content-Type" to "application/json",
+        "Authorization" to "Bearer ${req.token}",
     )
     val json = gson.toJson(req.body)
-    try {
+    return try {
         val response = sendRequest(req.url, "POST", headers, json.toString())
         // TODO make normal statusCode
 //        if (response.statusCode != 200) return null
-        return gson.fromJson(response.body.toString(), SMCPrediction::class.java)
+        gson.fromJson(response.body.toString(), SMCPrediction::class.java)
     } catch (e: Exception) {
-        emit_error(e.toString())
-        return null
+        emitError(e.toString())
+        null
     }
 }
 
 fun fetch(request: SMCRequest): SMCPrediction? {
-    val cache = Cache.get_from_cache(request)
+    val cache = Cache.getFromCache(request)
     if (cache != null) return cache
-    val prediction = _fetch(request) ?: return null
+    val prediction = fetchRequest(request) ?: return null
 
-    Cache.add_cache(request, prediction)
+    Cache.addCache(request, prediction)
     return prediction
 }

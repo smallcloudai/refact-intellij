@@ -5,8 +5,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Connection
 import com.smallcloud.codify.ConnectionStatus
-import com.smallcloud.codify.SMCPlugin
-import com.smallcloud.codify.notifications.emit_error
 import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.struct.PlanType
 import com.smallcloud.codify.utils.dispatch
@@ -22,67 +20,59 @@ private fun need_force() : Boolean{
 }
 
 object AccountManager {
-    private var _active_plan: PlanType = PlanType.UNKNOWN
     private var _website_task: Future<*>? = null
     private var _inference_task: Future<*>? = null
-    private var _ticket: String? = null
-    private var _apiKey: String? = null
-    private var _user: String? = null
     private var _previous_logged_in_state: Boolean = false
 
     var ticket: String?
-        get() = _ticket
+        get() = AppSettingsState.instance.streamlinedLoginTicket
         set(newTicket) {
-            if (newTicket != _ticket) {
-                _ticket = newTicket
+            if (newTicket != ticket) {
                 dispatch {
                     ApplicationManager.getApplication()
                             .messageBus
                             .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                            .ticketChanged(_ticket)
+                            .ticketChanged(newTicket)
                 }
                 check_logged_in_and_notify_if_need()
             }
         }
 
     var user: String?
-        get() = _user
+        get() = AppSettingsState.instance.userLoggedIn
         set(newUser) {
-            if (newUser != _user) {
-                _user = newUser
+            if (newUser != user) {
                 dispatch {
                     ApplicationManager.getApplication()
                             .messageBus
                             .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                            .userChanged(_user)
+                            .userChanged(newUser)
                 }
                 check_logged_in_and_notify_if_need()
             }
         }
     var apiKey: String?
-        get() = _apiKey
+        get() = AppSettingsState.instance.apiKey
         set(newApiKey) {
-            if (newApiKey != _apiKey) {
-                _apiKey = newApiKey
+            if (newApiKey != apiKey) {
                 dispatch {
                     ApplicationManager.getApplication()
                             .messageBus
                             .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                            .apiKeyChanged(_apiKey)
+                            .apiKeyChanged(newApiKey)
                 }
                 check_logged_in_and_notify_if_need()
             }
         }
     var active_plan: PlanType
-        get() = _active_plan
+        get() = AppSettingsState.instance.activePlan
         set(newPlan) {
-            if (newPlan != _active_plan) {
-                _active_plan = newPlan
+            if (newPlan != active_plan) {
                 dispatch {
                     ApplicationManager.getApplication()
                             .messageBus
                             .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                            .planStatusChanged(_active_plan)
+                            .planStatusChanged(newPlan)
                 }
             }
         }
@@ -90,15 +80,11 @@ object AccountManager {
 
     val is_logged_in: Boolean
         get() {
-            return !_apiKey.isNullOrEmpty() and !_user.isNullOrEmpty()
+            return !apiKey.isNullOrEmpty() and !user.isNullOrEmpty()
         }
 
 
     private fun load_from_settings(settings: AppSettingsState) {
-        _ticket = settings.streamlined_login_ticket
-        _user = settings.user_logged_in
-        _apiKey = settings.apiKey
-        _active_plan = settings.active_plan
         _previous_logged_in_state = is_logged_in
     }
 

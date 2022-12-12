@@ -4,13 +4,9 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.util.messages.Topic
-import com.smallcloud.codify.account.AccountManager
-import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.inline.CompletionModule
 import com.smallcloud.codify.settings.AppSettingsState
-import com.smallcloud.codify.struct.PlanType
 import com.smallcloud.codify.struct.ProcessType
-import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
 import com.smallcloud.codify.utils.dispatch
 
@@ -33,7 +29,7 @@ class SMCPlugin: Disposable {
     )
     private var websiteMessage: String? = null
     private var inferenceMessage: String? = null
-    private var loginMessage: String? = null
+//    private var loginMessage: String? = null
     private var isEnable: Boolean = false
     var is_enable: Boolean
         get() = isEnable
@@ -77,15 +73,14 @@ class SMCPlugin: Disposable {
         }
 
     var login_message: String?
-        get() = loginMessage
+        get() = AppSettingsState.instance.loginMessage
         set(newMsg) {
-            if (loginMessage != newMsg) {
-                loginMessage = newMsg
+            if (login_message != newMsg) {
                 dispatch {
                     ApplicationManager.getApplication()
                             .messageBus
                             .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
-                            .loginMessageChanged(loginMessage)
+                            .loginMessageChanged(newMsg)
                 }
             }
         }
@@ -111,7 +106,7 @@ class SMCPlugin: Disposable {
     companion object {
         var instant = SMCPlugin()
         fun startup(settings: AppSettingsState) {
-            instant.is_enable = settings.plugin_is_enabled
+            instant.is_enable = settings.pluginIsEnabled
         }
     }
 

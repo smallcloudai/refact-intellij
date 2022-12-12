@@ -1,11 +1,11 @@
 plugins {
   id("java")
-  id("org.jetbrains.intellij") version "1.10.0"
+  id("org.jetbrains.intellij") version "1.10.1"
   id("org.jetbrains.kotlin.jvm") version "1.7.22"
 }
 
 group = "com.smallcloud"
-version = "0.0.33"
+version = "0.0.42"
 
 repositories {
   mavenCentral()

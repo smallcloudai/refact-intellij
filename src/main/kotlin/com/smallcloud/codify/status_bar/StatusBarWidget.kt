@@ -91,7 +91,10 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         if (!SMCPlugin.instant.is_enable)
             return AllIcons.Diff.GutterCheckBoxIndeterminate
         if (!is_logged_in) {
-            return LOGO_RED_12x12
+            val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().getGlobalScheme().getDefaultBackground())
+            return if (isDark) {
+                LOGO_LIGHT_12x12
+            } else LOGO_DARK_12x12
         }
         val c_stat = Connection.status
         if (c_stat == ConnectionStatus.DISCONNECTED)
@@ -100,9 +103,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return AllIcons.Debugger.Db_exception_breakpoint
         else if (c_stat == ConnectionStatus.CONNECTED) {
             val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().getGlobalScheme().getDefaultBackground())
-            return if (isDark) {
-                LOGO_LIGHT_12x12
-            } else LOGO_DARK_12x12
+            return LOGO_RED_12x12
         }
         return null
     }

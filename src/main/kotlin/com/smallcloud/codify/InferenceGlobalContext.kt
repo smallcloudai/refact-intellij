@@ -8,46 +8,40 @@ import com.smallcloud.codify.struct.SMCRequestBody
 import com.smallcloud.codify.utils.dispatch
 
 object InferenceGlobalContext {
-    private var _temperature: Float? = null
-    private var _inferenceUrl: String? = null
-    private var _model: String? = null
 
     var inferenceUrl: String?
-        get() = _inferenceUrl
+        get() = AppSettingsState.instance.inferenceUrl
         set(newInferenceUrl) {
-            if (newInferenceUrl != _inferenceUrl) {
-                _inferenceUrl = newInferenceUrl
+            if (newInferenceUrl != inferenceUrl) {
                 dispatch {
                     ApplicationManager.getApplication()
                             .messageBus
                             .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                            .inferenceUrlChanged(_inferenceUrl)
+                            .inferenceUrlChanged(newInferenceUrl)
                 }
             }
         }
     var temperature: Float?
-        get() = _temperature
+        get() = AppSettingsState.instance.temperature
         set(newTemp) {
-            if (newTemp != _temperature) {
-                _temperature = newTemp
+            if (newTemp != temperature) {
                 dispatch {
                     ApplicationManager.getApplication()
                             .messageBus
                             .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                            .temperatureChanged(_temperature)
+                            .temperatureChanged(newTemp)
                 }
             }
         }
     var model: String?
-        get() = _model
+        get() = AppSettingsState.instance.model
         set(newModel) {
-            if (newModel != _model) {
-                _model = newModel
+            if (newModel != model) {
                 dispatch {
                     ApplicationManager.getApplication()
                             .messageBus
                             .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                            .modelChanged(_model)
+                            .modelChanged(newModel)
                 }
             }
         }
@@ -64,9 +58,4 @@ object InferenceGlobalContext {
         return req
     }
 
-    fun startup(settings: AppSettingsState) {
-        _temperature = settings.temperature
-        _model = settings.model
-        _inferenceUrl = settings.inference_url
-    }
 }

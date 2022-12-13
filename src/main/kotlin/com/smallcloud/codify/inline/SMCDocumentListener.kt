@@ -1,15 +1,13 @@
 package com.smallcloud.codify.inline
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.EditorKind
 import com.intellij.openapi.editor.EditorModificationUtil.checkModificationAllowed
 import com.intellij.openapi.editor.event.BulkAwareDocumentListener
 import com.intellij.openapi.editor.event.DocumentEvent
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.project.ProjectManager
-import com.intellij.psi.PsiDocumentManager
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.ObjectUtils
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.SMCPlugin
@@ -32,35 +30,37 @@ class SMCDocumentListener : BulkAwareDocumentListener {
 
     override fun documentChangedNonBulk(event: DocumentEvent) {
         val document = event.document
-        val editor = getActiveEditor(document) ?: return
-        val text = editor.document.text
-        val file_name = getActiveFile(document) ?: return
+        val editor = EditorFactory.getInstance().getEditors(document).firstOrNull() ?: return
+
+        val file = FileDocumentManager.getInstance().getFile(document)
+        val text = document.text
+        val file_name = file?.presentableName ?: return
 
         ObjectUtils.doIfNotNull(last_task) { task -> task.cancel(true) }
 
         last_task = scheduler.schedule(
-                {
-                    ApplicationManager.getApplication()
-                            .invokeLater {
-                                val offset = editor.getCaretModel().getOffset()
+            {
+                ApplicationManager.getApplication()
+                    .invokeLater {
+                        val offset = editor.getCaretModel().getOffset()
 //                                if (shouldIgnoreChange(event, editor, offset)) {
 //                                    return@invokeLater
 //                                }
-                                val req_data = SMCRequestBody(
-                                        mapOf(file_name to text),
-                                        "Infill",
-                                        "infill",
-                                        file_name,
-                                        offset, offset,
-                                        50,
-                                        1,
-                                        listOf("\n\n")
+                        val req_data = SMCRequestBody(
+                            mapOf(file_name to text),
+                            "Infill",
+                            "infill",
+                            file_name,
+                            offset, offset,
+                            50,
+                            1,
+                            listOf("\n\n")
 
-                                )
-                                SMCPlugin.instance.process(ProcessType.COMPLETION, req_data, editor)
-                            }
-                },
-                DELAY, TimeUnit.MILLISECONDS
+                        )
+                        SMCPlugin.instance.process(ProcessType.COMPLETION, req_data, editor)
+                    }
+            },
+            DELAY, TimeUnit.MILLISECONDS
         )
     }
 
@@ -70,7 +70,8 @@ class SMCDocumentListener : BulkAwareDocumentListener {
 //            return true
 //        }
         if (editor.editorKind != EditorKind.MAIN_EDITOR
-                && !ApplicationManager.getApplication().isUnitTestMode) {
+            && !ApplicationManager.getApplication().isUnitTestMode
+        ) {
             return true
         }
         if (!checkModificationAllowed(editor) || document.getRangeGuard(offset, offset) != null) {
@@ -80,24 +81,4 @@ class SMCDocumentListener : BulkAwareDocumentListener {
         return !CompletionUtils.isValidDocumentChange(editor, document, offset, event.offset)
     }
 
-    private fun getActiveEditor(document: Document): Editor? {
-        if (!ApplicationManager.getApplication().isDispatchThread) {
-            return null
-        }
-        
-        val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return null
-        return FileEditorManager.getInstance(project).selectedTextEditor
-    }
-
-    private fun getActiveFile(document: Document): String? {
-        if (!ApplicationManager.getApplication().isDispatchThread) {
-            return null
-        }
-
-        val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return null
-        val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(document) ?: return null
-        val vFile = psiFile.originalFile.virtualFile ?: return null
-        val path = vFile.presentableName
-        return path
-    }
 }

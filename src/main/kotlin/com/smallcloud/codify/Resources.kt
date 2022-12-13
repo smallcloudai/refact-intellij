@@ -20,6 +20,8 @@ object Resources {
     const val defaultModel: String = "CONTRASTcode/3b/multi"
     val version: String = getVersion()
     const val client: String = "jetbrains"
+    const val loginCooldown: Int = 30
+    const val waitWebsiteLoginStr: String = "Waiting for website login..."
 
     object Icons {
         val LOGO_FULL_WHITE: Icon = IconLoader.getIcon("/icons/logo-full-white.svg", Resources::class.java)

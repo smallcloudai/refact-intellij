@@ -22,7 +22,8 @@ fun login() {
     if (isLogined) {
         return
     }
-    AccountManager.ticket = generateTicket()
+    if (AccountManager.ticket == null)
+        AccountManager.ticket = generateTicket()
     BrowserUtil.browse("https://codify.smallcloud.ai/authentication?token=${AccountManager.ticket}")
 }
 
@@ -34,16 +35,16 @@ fun logError(msg: String, need_change: Boolean = true) {
     }
 }
 
-fun checkLogin(force: Boolean = false): String {
+fun checkLogin(): String {
     val acc = AccountManager
     val infC = InferenceGlobalContext
     val isLoggedIn = acc.isLoggedIn
-    if (isLoggedIn && !force) {
+    if (isLoggedIn) {
         return ""
     }
 
     val streamlinedLoginTicket = acc.ticket
-    val token = acc.apiKey
+    var token = acc.apiKey
     val headers = mutableMapOf(
         "Content-Type" to "application/json",
         "Authorization" to ""
@@ -69,7 +70,6 @@ fun checkLogin(force: Boolean = false): String {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
                 Connection.status = ConnectionStatus.CONNECTED
-                return "OK"
             } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
                 logError("recall: $humanReadableMessage", false)
 //                log_error("login-fail: $human_readable_message")
@@ -85,6 +85,7 @@ fun checkLogin(force: Boolean = false): String {
         }
     }
 
+    token = acc.apiKey
     if (token.isNullOrEmpty()) {
         return ""
     }

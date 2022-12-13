@@ -1,45 +1,101 @@
 package com.smallcloud.codify.settings
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.FormBuilder
+import com.smallcloud.codify.Resources
+import com.smallcloud.codify.Resources.loginCooldown
 import com.smallcloud.codify.SMCPlugin
 import com.smallcloud.codify.account.AccountManager
+import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.account.AccountManager.logout
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
+import com.smallcloud.codify.account.LoginStateService
 import com.smallcloud.codify.account.login
 import com.smallcloud.codify.struct.PlanType
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 
+private enum class SettingsState {
+    SIGNED,
+    UNSIGNED,
+    WAITING
+}
+
 class AppRootComponent {
+    private var loginTask: Future<*>? = null
+    private var loginCounter: Int = loginCooldown
+    private var currentState: SettingsState = SettingsState.UNSIGNED
     private val loginButton = JButton("Login / Register")
     private val logoutButton = JButton("Logout")
+    private val forceLoginButton = JButton(AllIcons.Actions.Refresh)
     private val bugReportButton = JButton("Bug Report...")
-    private val loggedLabel = JBLabel("")
+    private val waitLoginLabel = JBLabel()
     private val activePlanLabel = JBLabel("")
-    private var myPanel: JPanel = recreatePanel()
 
     init {
+        if (AccountManager.isLoggedIn) {
+            currentState = SettingsState.SIGNED
+        } else if (AccountManager.ticket != null) {
+            currentState = SettingsState.WAITING
+        } else {
+            currentState = SettingsState.UNSIGNED
+        }
         ApplicationManager.getApplication()
-                .messageBus
-                .connect(SMCPlugin.instance)
-                .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                    override fun isLoggedInChanged(limited: Boolean) {
-                        revalidate()
-                    }
-                    override fun planStatusChanged(newPlan: PlanType) {
-                        revalidate()
-                    }
-                })
+            .messageBus
+            .connect(SMCPlugin.instance)
+            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+                override fun isLoggedInChanged(loggedIn: Boolean) {
+                    currentState = if (loggedIn) SettingsState.SIGNED else SettingsState.UNSIGNED
+                    revalidate()
+                }
+
+                override fun planStatusChanged(newPlan: PlanType) {
+                    revalidate()
+                }
+
+                override fun ticketChanged(newTicket: String?) {
+                    if (newTicket != null) currentState = SettingsState.WAITING
+                    revalidate()
+                }
+            })
 
         loginButton.addActionListener {
             login()
+
+            if (loginTask != null && (!loginTask!!.isDone || !loginTask!!.isCancelled))
+                return@addActionListener
+            runCounterTask()
         }
         logoutButton.addActionListener {
             logout()
         }
+        forceLoginButton.addActionListener {
+            ApplicationManager.getApplication().getService(LoginStateService::class.java).try_to_website_login()
+        }
+    }
+
+    private var myPanel: JPanel = recreatePanel()
+
+    private fun runCounterTask() {
+        var i = 1
+        loginTask = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay({
+            loginCounter = loginCooldown - (i % loginCooldown)
+            if (i % loginCooldown == 0) {
+                ApplicationManager.getApplication().getService(LoginStateService::class.java).try_to_website_login()
+            }
+
+            if (isLoggedIn || i == loginCooldown * 10) {
+                loginTask?.cancel(false)
+            }
+            revalidate()
+            i++
+        }, 0, 1, TimeUnit.SECONDS)
     }
 
     private fun revalidate() {
@@ -48,25 +104,26 @@ class AppRootComponent {
     }
 
     private fun setupProperties() {
-        val is_logged_in = AccountManager.isLoggedIn
-        loggedLabel.text = "Logged as ${AccountManager.user}"
-        loggedLabel.isVisible = is_logged_in
         activePlanLabel.text = "Active plan: ${AccountManager.activePlan}"
-        activePlanLabel.isVisible = is_logged_in
-        logoutButton.isVisible = is_logged_in
-        bugReportButton.isVisible = is_logged_in
-        loginButton.isVisible = !is_logged_in
+        activePlanLabel.isVisible = currentState == SettingsState.SIGNED
+        logoutButton.isVisible = currentState == SettingsState.SIGNED
+        bugReportButton.isVisible = currentState == SettingsState.SIGNED
+        loginButton.isVisible = currentState != SettingsState.SIGNED
+        forceLoginButton.isVisible = currentState != SettingsState.UNSIGNED
+        waitLoginLabel.text = if (currentState == SettingsState.WAITING)
+            "${Resources.waitWebsiteLoginStr} ${loginCounter}" else "Logged as ${AccountManager.user}"
+        waitLoginLabel.isVisible = currentState != SettingsState.UNSIGNED
     }
 
     val preferredFocusedComponent: JComponent
-        get() = if (AccountManager.isLoggedIn) bugReportButton else loginButton
+        get() = if (isLoggedIn) bugReportButton else loginButton
 
     private fun recreatePanel(): JPanel {
         val description = JBLabel("Codify: AI autocomplete, refactoring and advanced code generation")
         setupProperties()
         return FormBuilder.createFormBuilder().run {
             addComponent(description)
-            addComponent(loggedLabel)
+            addLabeledComponent(waitLoginLabel, forceLoginButton)
             addComponent(activePlanLabel)
             addComponent(logoutButton)
             addComponent(bugReportButton)

@@ -12,7 +12,7 @@ import com.smallcloud.codify.SMCPlugin
 import com.smallcloud.codify.account.login
 import com.smallcloud.codify.settings.AppRootConfigurable
 
-private fun addDisableEnable(project: Project, notification: Notification) {
+private fun addDisableEnable(notification: Notification) {
     if (SMCPlugin.instance.isEnable) {
         notification.addAction(NotificationAction.createSimple("Disable") {
             SMCPlugin.instance.isEnable = false
@@ -51,7 +51,7 @@ fun emitRegular(project: Project) {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
         notification.expire()
     })
-    addDisableEnable(project, notification)
+    addDisableEnable(notification)
     notification.notify(project)
 }
 
@@ -66,7 +66,7 @@ fun emitInfo(msg: String) {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
         notification.expire()
     })
-    addDisableEnable(project, notification)
+    addDisableEnable(notification)
     notification.notify(project)
 }
 
@@ -81,6 +81,6 @@ fun emitError(msg: String) {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
         notification.expire()
     })
-    addDisableEnable(project, notification)
+    addDisableEnable(notification)
     notification.notify(project)
 }

@@ -7,10 +7,7 @@ import com.intellij.openapi.startup.StartupActivity
 import com.smallcloud.codify.notifications.notificationStartup
 import com.smallcloud.codify.settings.settingsStartup
 
-class Initializer : PreloadingActivity(), StartupActivity {
-    override fun preload(indicator: ProgressIndicator) {
-        initialize()
-    }
+class Initializer : StartupActivity.Background {
 
     override fun runActivity(project: Project) {
         initialize()

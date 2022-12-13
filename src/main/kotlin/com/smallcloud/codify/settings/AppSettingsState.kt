@@ -101,5 +101,5 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
 fun settingsStartup() {
     val settings = AppSettingsState.instance
     SMCPlugin.startup(settings)
-    AccountManager.startup(settings)
+    AccountManager.startup()
 }

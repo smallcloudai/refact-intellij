@@ -22,12 +22,12 @@ object Resources {
     const val client: String = "jetbrains"
 
     object Icons {
-        val LOGO_FULL_WHITE: Icon? = IconLoader.findIcon("/icons/logo-full-white.svg")
-        val LOGO_RED_12x12: Icon? = IconLoader.findIcon("/icons/codify_red_12x12.svg")
-        val LOGO_LIGHT_12x12: Icon? = IconLoader.findIcon("/icons/codify_light_12x12.svg")
-        val LOGO_DARK_12x12: Icon? = IconLoader.findIcon("/icons/codify_dark_12x12.svg")
-        val LOGO_RED_16x16: Icon? = IconLoader.findIcon("/icons/codify_red_16x16.svg")
-        val LOGO_LIGHT_16x16: Icon? = IconLoader.findIcon("/icons/codify_light_16x16.svg")
-        val LOGO_DARK_16x16: Icon? = IconLoader.findIcon("/icons/codify_dark_16x16.svg")
+        val LOGO_FULL_WHITE: Icon = IconLoader.getIcon("/icons/logo-full-white.svg", Resources::class.java)
+        val LOGO_RED_12x12: Icon = IconLoader.getIcon("/icons/codify_red_12x12.svg", Resources::class.java)
+        val LOGO_LIGHT_12x12: Icon = IconLoader.getIcon("/icons/codify_light_12x12.svg", Resources::class.java)
+        val LOGO_DARK_12x12: Icon = IconLoader.getIcon("/icons/codify_dark_12x12.svg", Resources::class.java)
+        val LOGO_RED_16x16: Icon = IconLoader.getIcon("/icons/codify_red_16x16.svg", Resources::class.java)
+        val LOGO_LIGHT_16x16: Icon = IconLoader.getIcon("/icons/codify_light_16x16.svg", Resources::class.java)
+        val LOGO_DARK_16x16: Icon = IconLoader.getIcon("/icons/codify_dark_16x16.svg", Resources::class.java)
     }
 }

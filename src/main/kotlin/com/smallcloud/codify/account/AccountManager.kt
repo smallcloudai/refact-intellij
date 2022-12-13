@@ -68,12 +68,12 @@ object AccountManager {
         }
 
 
-    private fun loadFromSettings(settings: AppSettingsState) {
+    private fun loadFromSettings() {
         previousLoggedInState = isLoggedIn
     }
 
-    fun startup(settings: AppSettingsState) {
-        loadFromSettings(settings)
+    fun startup() {
+        loadFromSettings()
     }
 
     private fun check_logged_in_and_notify_if_need() {

@@ -17,4 +17,8 @@ data class SMCRequestBody(
     var model: String = ""
 )
 
-data class SMCRequest(var url: String, var body: SMCRequestBody, var token: String)
+data class SMCRequest(
+    var url: String,
+    var body: SMCRequestBody,
+    var token: String
+)

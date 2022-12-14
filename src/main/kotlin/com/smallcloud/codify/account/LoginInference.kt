@@ -2,10 +2,10 @@ package com.smallcloud.codify.account
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import com.smallcloud.codify.Connection
-import com.smallcloud.codify.ConnectionStatus
-import com.smallcloud.codify.InferenceGlobalContext
-import com.smallcloud.codify.SMCPlugin
+import com.smallcloud.codify.io.Connection
+import com.smallcloud.codify.io.ConnectionStatus
+import com.smallcloud.codify.io.InferenceGlobalContext
+import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.io.sendRequest
 
 fun getInferenceUrl(): String? {
@@ -40,7 +40,7 @@ fun inferenceLogin(): String {
         val retcode = body.get("retcode").asString
         if (retcode == "OK") {
             if (body.has("inference_message") && body.get("inference_message").asString.isNotEmpty()) {
-                SMCPlugin.instance.inferenceMessage = body.get("codify_message").asString
+                PluginState.instance.inferenceMessage = body.get("codify_message").asString
             }
             Connection.status = ConnectionStatus.CONNECTED
             return "OK"

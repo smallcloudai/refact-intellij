@@ -1,7 +1,7 @@
 package com.smallcloud.codify.settings
 
 import com.intellij.openapi.options.Configurable
-import com.smallcloud.codify.InferenceGlobalContext
+import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.account.AccountManager
 import org.jetbrains.annotations.Nls
 import javax.swing.JComponent

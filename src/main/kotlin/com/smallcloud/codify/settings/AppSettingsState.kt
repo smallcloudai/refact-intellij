@@ -4,10 +4,11 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.util.messages.MessageBus
 import com.intellij.util.xmlb.XmlSerializerUtil
 import com.smallcloud.codify.ExtraInfoChangedNotifier
-import com.smallcloud.codify.InferenceGlobalContextChangedNotifier
-import com.smallcloud.codify.SMCPlugin
+import com.smallcloud.codify.io.InferenceGlobalContextChangedNotifier
+import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.struct.PlanType
@@ -29,11 +30,11 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var activePlan: PlanType = PlanType.UNKNOWN
     var loginMessage: String? = null
     var pluginIsEnabled: Boolean = true
+    private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
 
     init {
-        ApplicationManager.getApplication()
-            .messageBus
-            .connect(SMCPlugin.instance)
+        messageBus
+            .connect(PluginState.instance)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun ticketChanged(newTicket: String?) {
                     instance.streamlinedLoginTicket = newTicket
@@ -51,10 +52,10 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     instance.activePlan = newPlan
                 }
             })
-        ApplicationManager.getApplication()
-            .messageBus
-            .connect(SMCPlugin.instance)
-            .subscribe(InferenceGlobalContextChangedNotifier.TOPIC,
+        messageBus
+            .connect(PluginState.instance)
+            .subscribe(
+                InferenceGlobalContextChangedNotifier.TOPIC,
                 object : InferenceGlobalContextChangedNotifier {
                     override fun inferenceUrlChanged(newUrl: String?) {
                         instance.inferenceUrl = newUrl
@@ -68,9 +69,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                         instance.temperature = newTemp
                     }
                 })
-        ApplicationManager.getApplication()
-            .messageBus
-            .connect(SMCPlugin.instance)
+        messageBus
+            .connect(PluginState.instance)
             .subscribe(ExtraInfoChangedNotifier.TOPIC, object : ExtraInfoChangedNotifier {
                 override fun loginMessageChanged(newMsg: String?) {
                     instance.loginMessage = newMsg
@@ -100,6 +100,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
 
 fun settingsStartup() {
     val settings = AppSettingsState.instance
-    SMCPlugin.startup(settings)
+    PluginState.startup(settings)
     AccountManager.startup()
 }

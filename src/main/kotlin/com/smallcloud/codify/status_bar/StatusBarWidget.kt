@@ -22,6 +22,7 @@ import com.smallcloud.codify.Resources.defaultTemperature
 import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.account.LoginStateService
+import com.smallcloud.codify.io.*
 import com.smallcloud.codify.notifications.emitLogin
 import com.smallcloud.codify.notifications.emitRegular
 import java.awt.event.MouseAdapter
@@ -119,7 +120,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
 
     private fun getIcon(): Icon? {
         val isOkStat = getLastStatus()
-        if (!SMCPlugin.instance.isEnable)
+        if (!PluginState.instance.isEnabled)
             return AllIcons.Diff.GutterCheckBoxIndeterminate
         if (!isLoggedIn) {
             val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().getGlobalScheme().getDefaultBackground())
@@ -155,7 +156,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 return "Connection is lost"
             }
             ConnectionStatus.ERROR -> {
-                return Connection.last_error_msg
+                return Connection.lastErrorMsg
             }
             ConnectionStatus.CONNECTED -> {
                 var tooltip_str = "<html>"

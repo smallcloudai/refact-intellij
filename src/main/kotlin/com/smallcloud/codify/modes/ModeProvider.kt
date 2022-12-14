@@ -2,62 +2,76 @@ package com.smallcloud.codify.modes
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.DocumentEvent
-import com.intellij.openapi.editor.ex.FocusChangeListener
+import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.util.ObjectUtils
 import com.jetbrains.rd.util.getOrCreate
+import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.listeners.CaretListener
 import com.smallcloud.codify.listeners.FocusListener
-import com.smallcloud.codify.modes.completion.CompletionProvider
+import com.smallcloud.codify.modes.completion.CompletionMode
 import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
 
 
 class ModeProvider(
-    private val editor: Editor,
-    private var modes: List<Mode> = listOf(CompletionMode()),
+    editor: Editor,
+    private val modes: List<Mode> = listOf(CompletionMode()),
     private var activeMode: Mode? = null,
+    private val pluginState: PluginState = PluginState.instance,
 ) : Disposable {
+    private val isEnabled: Boolean
+        get() = pluginState.isEnabled
+
     init {
-        modes = listOf()
-        activeMode = modes[0]
+        activeMode = modes.firstOrNull()
     }
 
     fun switchMode() {
+
     }
 
     fun focusGained() {
-
+        if (!isEnabled) return
+        activeMode?.focusGained()
     }
+
 
     fun focusLost() {
-
+        if (!isEnabled) return
+        activeMode?.focusLost()
     }
 
-    fun beforeDocumentChangeNonBulk(event: DocumentEvent) {
-
+    fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
+        if (!isEnabled) return
+        activeMode?.beforeDocumentChangeNonBulk(event, editor)
     }
 
 
-    fun onTextChange(event: DocumentEvent) {
-
+    fun onTextChange(event: DocumentEvent, editor: Editor) {
+        if (!isEnabled) return
+        activeMode?.onTextChange(event, editor)
     }
 
     fun onCaretChange(event: CaretEvent) {
-
+        if (!isEnabled) return
+        activeMode?.onCaretChange(event)
     }
 
-    fun onTabPressed(dataContext: DataContext) {
-
+    fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
+        if (!isEnabled) return
+        activeMode?.onTabPressed(editor, caret, dataContext)
     }
 
-    fun onEscPressed(dataContext: DataContext) {
-
+    fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
+        if (!isEnabled) return
+        activeMode?.onEscPressed(editor, caret, dataContext)
     }
 
     override fun dispose() {
-        TODO("Not yet implemented")
     }
 
     companion object {
@@ -72,10 +86,14 @@ class ModeProvider(
                 providersToTs.remove(toRemove)
                 modeProviders.remove(toRemove)
             }
-
             return modeProviders.getOrCreate(hashId) {
+                val modeProvider = ModeProvider(editor)
                 providersToTs[hashId] = currentTimeMillis()
-                ModeProvider(editor)
+                editor.caretModel.addCaretListener(CaretListener())
+                ObjectUtils.consumeIfCast(editor, EditorEx::class.java) {
+                    it.addFocusListener(FocusListener(), modeProvider)
+                }
+                modeProvider
             }
         }
     }

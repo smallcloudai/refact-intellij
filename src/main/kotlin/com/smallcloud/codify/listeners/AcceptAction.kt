@@ -8,17 +8,18 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.EditorAction
 import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
 import com.smallcloud.codify.modes.ModeProvider
+import com.intellij.openapi.diagnostic.Logger
 
-object AcceptSMCInlineCompletionAction :
+object TabPressedAction :
     EditorAction(AcceptInlineCompletionHandler()),
     ActionToIgnore {
-    const val ACTION_ID = "AcceptSMCInlineCompletionAction"
+    const val ACTION_ID = "TabPressedAction"
 
     class AcceptInlineCompletionHandler : EditorWriteActionHandler() {
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
+            Logger.getInstance("TabPressedAction").warn("executeWriteAction")
             val provider = ModeProvider.getOrCreateModeProvider(editor)
-            provider.onTabPressed(dataContext)
-//            CompletionProvider.getInstance(editor)?.applyPreview(caret ?: editor.caretModel.currentCaret)
+            provider.onTabPressed(editor, caret, dataContext)
         }
 
         override fun isEnabledForCaret(

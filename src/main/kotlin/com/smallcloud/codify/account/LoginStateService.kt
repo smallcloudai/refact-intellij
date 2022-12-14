@@ -2,6 +2,8 @@ package com.smallcloud.codify.account
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.smallcloud.codify.io.Connection
+import com.smallcloud.codify.io.ConnectionStatus
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
@@ -14,7 +16,7 @@ class LoginStateService {
 
     init {
         inferenceTask = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(
-            this::try_to_inference_login, 1, 1, TimeUnit.HOURS
+            this::tryToInferenceLogin, 1, 1, TimeUnit.HOURS
         )
     }
 
@@ -26,7 +28,7 @@ class LoginStateService {
         return lastInferenceLoginStatus
     }
 
-    fun try_to_website_login() {
+    private fun tryToWebsiteLogin() {
         AppExecutorUtil.getAppExecutorService().submit {
             try {
                 Logger.getInstance("check_login").warn("call")
@@ -37,7 +39,7 @@ class LoginStateService {
         }
     }
 
-    private fun try_to_inference_login() {
+    private fun tryToInferenceLogin() {
         try {
             Logger.getInstance("inference_login").warn("call")
             lastInferenceLoginStatus = inferenceLogin()

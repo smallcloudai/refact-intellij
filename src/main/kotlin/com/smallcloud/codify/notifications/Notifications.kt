@@ -8,19 +8,19 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.smallcloud.codify.Resources
-import com.smallcloud.codify.SMCPlugin
+import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.login
 import com.smallcloud.codify.settings.AppRootConfigurable
 
 private fun addDisableEnable(notification: Notification) {
-    if (SMCPlugin.instance.isEnable) {
+    if (PluginState.instance.isEnabled) {
         notification.addAction(NotificationAction.createSimple("Disable") {
-            SMCPlugin.instance.isEnable = false
+            PluginState.instance.isEnabled = false
             notification.expire()
         })
     } else {
         notification.addAction(NotificationAction.createSimple("Enable") {
-            SMCPlugin.instance.isEnable = true
+            PluginState.instance.isEnabled = true
             notification.expire()
         })
     }

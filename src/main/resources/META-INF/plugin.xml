@@ -8,7 +8,7 @@
     <name>Codify</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="info@smallcloud.ai" url="https://codify.smallcloud.ai" >smallcloudai</vendor>
+    <vendor email="info@smallcloud.ai" url="https://codify.smallcloud.ai">smallcloudai</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
@@ -26,7 +26,7 @@
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="com.smallcloud.codify.Initializer"/>
-        <editorFactoryDocumentListener implementation="com.smallcloud.codify.inline.SMCDocumentListener"/>
+        <editorFactoryDocumentListener implementation="com.smallcloud.codify.listeners.DocumentListener"/>
         <statusBarWidgetFactory implementation="com.smallcloud.codify.status_bar.SMCStatusBarWidgetFactory"/>
         <notificationGroup id="Codify Notification Group" displayType="BALLOON"/>
 
@@ -34,27 +34,23 @@
         <applicationConfigurable parentId="tools" instance="com.smallcloud.codify.settings.AppRootConfigurable"
                                  id="codify_root"
                                  displayName="Codify"/>
-        <applicationConfigurable parentId="codify_root" instance="com.smallcloud.codify.settings.AppSettingsConfigurable"
+        <applicationConfigurable parentId="codify_root"
+                                 instance="com.smallcloud.codify.settings.AppSettingsConfigurable"
                                  id="codify_advanced_settings"
                                  displayName="Settings"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
     </extensions>
     <actions>
-        <action class="com.smallcloud.codify.listeners.AcceptSMCInlineCompletionAction"
-                id="AcceptSMCInlineCompletionAction"
+        <action class="com.smallcloud.codify.listeners.TabPressedAction"
+                id="TabPressedAction"
                 text="Accept Inline Completion">
             <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>
         </action>
-        <action class="com.smallcloud.codify.listeners.CancelSMCInlineCompletionAction"
-                id="CancelSMCInlineCompletionAction"
+        <action class="com.smallcloud.codify.listeners.CancelPressedAction"
+                id="CancelPressedAction"
                 text="Cancel Inline Completion">
             <keyboard-shortcut first-keystroke="ESCAPE" keymap="$default"/>
         </action>
     </actions>
-    <projectListeners>
-        <listener class="com.smallcloud.codify.listeners.CaretListener"
-                  topic="com.intellij.openapi.editor.event.CaretListener" />
-
-    </projectListeners>
 </idea-plugin>

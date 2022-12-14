@@ -35,6 +35,5 @@ fun sendRequest(
     }
 
     val responseBody = conn.inputStream.use { it.readBytes() }.toString(Charsets.UTF_8)
-
     return Response(conn.responseCode, conn.headerFields, responseBody)
 }

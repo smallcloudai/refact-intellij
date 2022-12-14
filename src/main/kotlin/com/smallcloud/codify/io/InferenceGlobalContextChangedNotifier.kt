@@ -1,4 +1,4 @@
-package com.smallcloud.codify
+package com.smallcloud.codify.io
 
 import com.intellij.util.messages.Topic
 

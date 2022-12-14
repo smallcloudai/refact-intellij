@@ -4,12 +4,12 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.diagnostic.Logger
-import com.smallcloud.codify.Connection
-import com.smallcloud.codify.ConnectionStatus
-import com.smallcloud.codify.InferenceGlobalContext
+import com.smallcloud.codify.io.Connection
+import com.smallcloud.codify.io.ConnectionStatus
+import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.Resources.defaultLoginUrl
 import com.smallcloud.codify.Resources.defaultRecallUrl
-import com.smallcloud.codify.SMCPlugin
+import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.io.sendRequest
 import com.smallcloud.codify.struct.PlanType
 
@@ -31,7 +31,7 @@ fun logError(msg: String, need_change: Boolean = true) {
     Logger.getInstance("check_login").warn(msg)
     if (need_change) {
         Connection.status = ConnectionStatus.ERROR
-        Connection.last_error_msg = msg
+        Connection.lastErrorMsg = msg
     }
 }
 
@@ -103,7 +103,7 @@ fun checkLogin(): String {
         val gson = Gson()
         val body = gson.fromJson(result.body, JsonObject::class.java)
         val retcode = body.get("retcode").asString
-        val human_readable_message =
+        val humanReadableMessage =
             if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
         if (retcode == "OK") {
             acc.user = body.get("account").asString
@@ -117,19 +117,19 @@ fun checkLogin(): String {
             }
 
             if (body.has("codify_message") && body.get("codify_message").asString.isNotEmpty()) {
-                SMCPlugin.instance.websiteMessage = body.get("codify_message").asString
+                PluginState.instance.websiteMessage = body.get("codify_message").asString
             }
 
             acc.activePlan = PlanType.valueOf(body.get("inference").asString)
 
             if (body.has("login_message") && body.get("login_message").asString.isNotEmpty()) {
-                SMCPlugin.instance.loginMessage = body.get("login_message").asString
+                PluginState.instance.loginMessage = body.get("login_message").asString
             }
             Connection.status = ConnectionStatus.CONNECTED
             inferenceLogin()
             return inferenceLogin()
-        } else if (retcode == "FAILED" && human_readable_message.contains("rate limitrate limit")) {
-            logError("login-fail: $human_readable_message", false)
+        } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {
+            logError("login-fail: $humanReadableMessage", false)
 //            log_error("login-fail: $human_readable_message")
             return "OK"
         } else if (retcode == "FAILED") {
@@ -137,7 +137,7 @@ fun checkLogin(): String {
 
             acc.user = null
             acc.activePlan = PlanType.UNKNOWN
-            logError("login-fail: $human_readable_message")
+            logError("login-fail: $humanReadableMessage")
             return ""
         } else {
             acc.user = null

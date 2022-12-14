@@ -13,7 +13,7 @@ data class Choice(
 data class SMCPrediction(
     val id: String,
     @SerializedName("object") val obj: String,
-    val status: String,
+    val status: String?,
     val created: Float,
     val uploaded: Float,
     val generatedTokensN: Int,

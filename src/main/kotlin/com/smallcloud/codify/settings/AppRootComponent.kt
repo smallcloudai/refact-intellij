@@ -7,7 +7,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.FormBuilder
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.Resources.loginCooldown
-import com.smallcloud.codify.SMCPlugin
+import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.account.AccountManager.logout
@@ -48,7 +48,7 @@ class AppRootComponent {
         }
         ApplicationManager.getApplication()
             .messageBus
-            .connect(SMCPlugin.instance)
+            .connect(PluginState.instance)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun isLoggedInChanged(loggedIn: Boolean) {
                     currentState = if (loggedIn) SettingsState.SIGNED else SettingsState.UNSIGNED

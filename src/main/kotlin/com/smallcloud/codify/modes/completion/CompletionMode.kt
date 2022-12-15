@@ -5,6 +5,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.*
 import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
@@ -152,14 +153,10 @@ class CompletionMode : Mode() {
     }
 
     private fun getActiveFile(document: Document): String? {
-        if (!ApplicationManager.getApplication().isDispatchThread) {
-            return null
-        }
-
-        val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return null
-        val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(document) ?: return null
-        val vFile = psiFile.originalFile.virtualFile ?: return null
-        return vFile.presentableName
+        if (!ApplicationManager.getApplication().isDispatchThread) return null
+        
+        val file = FileDocumentManager.getInstance().getFile(document)
+        return file?.presentableName
     }
 
     private fun cancelOrClose() {

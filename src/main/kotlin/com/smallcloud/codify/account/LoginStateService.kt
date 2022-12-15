@@ -28,7 +28,7 @@ class LoginStateService {
         return lastInferenceLoginStatus
     }
 
-    private fun tryToWebsiteLogin() {
+    fun tryToWebsiteLogin() {
         AppExecutorUtil.getAppExecutorService().submit {
             try {
                 Logger.getInstance("check_login").warn("call")
@@ -39,7 +39,7 @@ class LoginStateService {
         }
     }
 
-    private fun tryToInferenceLogin() {
+    fun tryToInferenceLogin() {
         try {
             Logger.getInstance("inference_login").warn("call")
             lastInferenceLoginStatus = inferenceLogin()

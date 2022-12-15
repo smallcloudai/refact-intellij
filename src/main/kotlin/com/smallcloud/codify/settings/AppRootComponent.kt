@@ -76,7 +76,7 @@ class AppRootComponent {
             logout()
         }
         forceLoginButton.addActionListener {
-            ApplicationManager.getApplication().getService(LoginStateService::class.java).try_to_website_login()
+            ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin()
         }
     }
 
@@ -87,7 +87,7 @@ class AppRootComponent {
         loginTask = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay({
             loginCounter = loginCooldown - (i % loginCooldown)
             if (i % loginCooldown == 0) {
-                ApplicationManager.getApplication().getService(LoginStateService::class.java).try_to_website_login()
+                ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin()
             }
 
             if (isLoggedIn || i == loginCooldown * 10) {

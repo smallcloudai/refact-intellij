@@ -29,7 +29,7 @@ data class EditorState(
 
 class CompletionMode : Mode() {
     private val scheduler = AppExecutorUtil.getAppScheduledExecutorService()
-    private val taskDelayMs: Long = 50
+    private val taskDelayMs: Long = 250
     private var processTask: Future<*>? = null
     private var completionLayout: CompletionLayout? = null
 
@@ -80,6 +80,7 @@ class CompletionMode : Mode() {
             var completionData = CompletionCache.getCompletion(state.text)
             if (completionData == null) {
                 request.body.stopTokens = completionState.stopTokens
+
                 val prediction = fetch(request) ?: return
                 if (prediction.status == null) {
                     Connection.status = ConnectionStatus.ERROR
@@ -96,7 +97,9 @@ class CompletionMode : Mode() {
 
                 completionData = completionState.difference(predictedText) ?: return
                 if (!completionData.isMakeSense()) return
-                CompletionCache.addCompletion(completionData)
+                synchronized(this) {
+                    CompletionCache.addCompletion(completionData)
+                }
             }
 
             ApplicationManager.getApplication()
@@ -122,6 +125,7 @@ class CompletionMode : Mode() {
 
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
         completionLayout?.applyPreview(caret ?: editor.caretModel.currentCaret)
+        cancelOrClose()
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {

@@ -3,6 +3,7 @@ package com.smallcloud.codify.io
 import com.smallcloud.codify.struct.SMCPrediction
 import com.google.common.collect.EvictingQueue
 import com.google.gson.Gson
+import com.intellij.openapi.diagnostic.Logger
 import com.smallcloud.codify.notifications.emitError
 import com.smallcloud.codify.struct.SMCRequest
 
@@ -11,14 +12,18 @@ private object Cache {
     private val buffer = EvictingQueue.create<Pair<Int, SMCPrediction>>(15)
 
     fun getFromCache(request: SMCRequest): SMCPrediction? {
-        val hash = request.hashCode()
-        val elem = buffer.find { it -> it.first == hash }
-        return elem?.second
+        synchronized(this) {
+            val hash = request.hashCode()
+            val elem = buffer.find { it.first == hash }
+            return elem?.second
+        }
     }
 
     fun addCache(request: SMCRequest, prediction: SMCPrediction) {
-        val hash = request.hashCode()
-        buffer.add(Pair(hash, prediction))
+        synchronized(this) {
+            val hash = request.hashCode()
+            buffer.add(Pair(hash, prediction))
+        }
     }
 
 }
@@ -44,8 +49,8 @@ private fun fetchRequest(req: SMCRequest): SMCPrediction? {
 fun fetch(request: SMCRequest): SMCPrediction? {
     val cache = Cache.getFromCache(request)
     if (cache != null) return cache
+    Logger.getInstance("fetch").info("fetching the request")
     val prediction = fetchRequest(request) ?: return null
-
     Cache.addCache(request, prediction)
     return prediction
 }

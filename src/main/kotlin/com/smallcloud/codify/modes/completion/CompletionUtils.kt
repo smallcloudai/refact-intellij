@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 
 class CompletionState(
     private var textHelper: EditorTextHelper,
-    private val filterRightFromCursor: Boolean = true
+    private val filterRightFromCursor: Boolean = false
 ) {
     private val MAX_TEXT_SIZE: Long = 180 * 1024
     private val RIGHT_OF_CURSOR_SPECIAL_CHAR = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
@@ -68,7 +68,7 @@ class CompletionState(
             return null
         }
 
-        var startIndex = textHelper.offset
+        val startIndex = textHelper.offset
         var stopIndex = textHelper.offset
         var completion = ""
         if (!currentLinesAreEqual) {

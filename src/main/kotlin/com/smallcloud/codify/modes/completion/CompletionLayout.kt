@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull
 class CompletionLayout(
     private val editor: Editor,
     private val completionData: Completion
-) : CaretListener, Disposable {
+) : Disposable {
     private var inlayer: Inlayer = Inlayer(editor)
     var blockEvents: Boolean = false
 
@@ -29,7 +29,6 @@ class CompletionLayout(
             blockEvents = true
             editor.document.startGuardedBlockChecking()
             inlayer.render(completionData)
-            editor.caretModel.addCaretListener(this, this)
         } catch (ex: Exception) {
             Disposer.dispose(this)
             throw ex
@@ -55,7 +54,6 @@ class CompletionLayout(
     }
 
     private fun applyPreviewInternal(@NotNull cursorOffset: Int, project: Project, file: PsiFile) {
-        editor.caretModel.removeCaretListener(this)
         editor.document.replaceString(
             completionData.startIndex,
             completionData.endIndex,
@@ -64,9 +62,5 @@ class CompletionLayout(
         editor.caretModel.moveToOffset(
             completionData.startIndex + completionData.completion.length
         )
-    }
-
-    override fun caretPositionChanged(event: CaretEvent) {
-        Disposer.dispose(this)
     }
 }

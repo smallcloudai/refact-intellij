@@ -4,15 +4,17 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.*
+import com.intellij.openapi.editor.event.CaretEvent
+import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
 import com.smallcloud.codify.io.Connection
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
-import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
 import com.smallcloud.codify.io.fetch
 import com.smallcloud.codify.modes.EditorTextHelper
 import com.smallcloud.codify.modes.Mode
@@ -27,7 +29,7 @@ data class EditorState(
     val text: String
 )
 
-class CompletionMode : Mode() {
+class CompletionMode : Mode(), CaretListener {
     private val scheduler = AppExecutorUtil.getAppScheduledExecutorService()
     private val taskDelayMs: Long = 250
     private var processTask: Future<*>? = null
@@ -36,12 +38,13 @@ class CompletionMode : Mode() {
 
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
         if (completionLayout != null && completionLayout!!.blockEvents) return
-        cancelOrClose()
+        cancelOrClose(editor)
     }
 
     override fun onTextChange(event: DocumentEvent, editor: Editor) {
         if (completionLayout != null && completionLayout!!.blockEvents) return
         if (editor.caretModel.offset + event.newLength > editor.document.text.length) return
+        if (event.newLength + event.oldLength <= 0) return
 
         val hasManyChanges = event.newLength > 3 || event.oldLength > 3
         val state = EditorState(
@@ -87,15 +90,17 @@ class CompletionMode : Mode() {
         state: EditorState,
         completionData: Completion,
     ) {
-        completionLayout = CompletionLayout(editor, completionData)
         return ApplicationManager.getApplication()
             .invokeLater {
+                completionLayout = CompletionLayout(editor, completionData)
                 val invalidStamp = state.modificationStamp != editor.document.modificationStamp
                 val invalidOffset = state.offset != editor.caretModel.offset
                 if (invalidStamp || invalidOffset) {
+                    logger.info("Completion is droppped: invalidStamp || invalidOffset")
                     return@invokeLater
                 }
                 completionLayout!!.render()
+                editor.caretModel.addCaretListener(this)
             }
     }
 
@@ -138,11 +143,15 @@ class CompletionMode : Mode() {
 
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
         completionLayout?.applyPreview(caret ?: editor.caretModel.currentCaret)
-        cancelOrClose()
+        cancelOrClose(editor)
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
-        cancelOrClose()
+        cancelOrClose(editor)
+    }
+
+    override fun caretPositionChanged(event: CaretEvent) {
+        cancelOrClose(event.editor)
     }
 
     override fun isInActiveState(): Boolean = completionLayout != null
@@ -171,12 +180,13 @@ class CompletionMode : Mode() {
         return file?.presentableName
     }
 
-    private fun cancelOrClose() {
+    private fun cancelOrClose(editor: Editor) {
         ApplicationManager.getApplication()
         logger.info("cancelOrClose request")
         processTask?.cancel(true)
         processTask = null
         completionLayout?.let { Disposer.dispose(it) }
         completionLayout = null
+        editor.caretModel.removeCaretListener(this)
     }
 }

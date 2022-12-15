@@ -18,14 +18,15 @@ class Inlayer(val editor: Editor) : Disposable {
 
     override fun dispose() {
         lineInlay?.let {
-            Disposer.dispose(it)
+            it.dispose()
             lineInlay = null
         }
         blockInlay?.let {
-            Disposer.dispose(it)
+            it.dispose()
             blockInlay = null
         }
         rangeHighlighters.forEach { editor.markupModel.removeHighlighter(it) }
+        rangeHighlighters.clear()
     }
 
     private fun renderLine(line: String, offset: Int) {
@@ -46,7 +47,7 @@ class Inlayer(val editor: Editor) : Disposable {
         blockInlay = element
     }
 
-    fun render(completionData: Completion) {
+    fun render(completionData: Completion): Inlayer {
         if (!completionData.multiline) {
             renderLine(completionData.completion, completionData.startIndex)
             rangeHighlighters.add(
@@ -64,7 +65,7 @@ class Inlayer(val editor: Editor) : Disposable {
             val helper = EditorTextHelper(editor, completionData.startIndex)
             val afterCursor = completionData.originalText.substring(helper.offset, helper.currentLineEndOffset)
             val lines = completionData.completion.split('\n')
-            if (lines.isEmpty()) return
+            if (lines.isEmpty()) return this
             val firstLine = lines.first()
             val otherLines = lines.drop(1)
             if (firstLine.isNotEmpty()) {
@@ -74,5 +75,6 @@ class Inlayer(val editor: Editor) : Disposable {
                 renderBlock(otherLines, completionData.startIndex)
             }
         }
+        return this
     }
 }

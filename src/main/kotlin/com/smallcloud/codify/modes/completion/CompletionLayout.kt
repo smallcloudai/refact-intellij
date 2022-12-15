@@ -4,8 +4,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.event.CaretEvent
-import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiDocumentManager
@@ -17,18 +15,23 @@ class CompletionLayout(
     private val editor: Editor,
     private val completionData: Completion
 ) : Disposable {
-    private var inlayer: Inlayer = Inlayer(editor)
+    private var inlayer: Inlayer? = null
     var blockEvents: Boolean = false
+    var rendered: Boolean = false
 
     override fun dispose() {
-        inlayer.dispose()
+        rendered = false
+        blockEvents = false
+        inlayer?.dispose()
     }
 
-    fun render() {
+    fun render(): CompletionLayout {
+        assert(!rendered) { "Already rendered" }
         try {
             blockEvents = true
             editor.document.startGuardedBlockChecking()
-            inlayer.render(completionData)
+            inlayer = Inlayer(editor).render(completionData)
+            rendered = true
         } catch (ex: Exception) {
             Disposer.dispose(this)
             throw ex
@@ -36,6 +39,7 @@ class CompletionLayout(
             editor.document.stopGuardedBlockChecking()
             blockEvents = false
         }
+        return this
     }
 
     fun applyPreview(caret: Caret?) {

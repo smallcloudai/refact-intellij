@@ -9,7 +9,6 @@ import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProcessCanceledException
-import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
 import com.smallcloud.codify.io.Connection
@@ -46,7 +45,7 @@ class CompletionMode : Mode(), CaretListener {
         if (editor.caretModel.offset + event.newLength > editor.document.text.length) return
         if (event.newLength + event.oldLength <= 0) return
 
-        val hasManyChanges = event.newLength > 3 || event.oldLength > 3
+        val hasManyChanges = event.newLength > 5 || event.oldLength > 5
         val state = EditorState(
             editor.document.modificationStamp,
             editor.caretModel.offset + event.newLength,
@@ -92,14 +91,13 @@ class CompletionMode : Mode(), CaretListener {
     ) {
         return ApplicationManager.getApplication()
             .invokeLater {
-                completionLayout = CompletionLayout(editor, completionData)
                 val invalidStamp = state.modificationStamp != editor.document.modificationStamp
                 val invalidOffset = state.offset != editor.caretModel.offset
                 if (invalidStamp || invalidOffset) {
                     logger.info("Completion is droppped: invalidStamp || invalidOffset")
                     return@invokeLater
                 }
-                completionLayout!!.render()
+                completionLayout = CompletionLayout(editor, completionData).render()
                 editor.caretModel.addCaretListener(this)
             }
     }
@@ -154,7 +152,7 @@ class CompletionMode : Mode(), CaretListener {
         cancelOrClose(event.editor)
     }
 
-    override fun isInActiveState(): Boolean = completionLayout != null
+    override fun isInActiveState(): Boolean = completionLayout != null && completionLayout!!.rendered
 
     private fun shouldIgnoreChange(event: DocumentEvent, editor: Editor, offset: Int): Boolean {
         val document = event.document
@@ -185,7 +183,7 @@ class CompletionMode : Mode(), CaretListener {
         logger.info("cancelOrClose request")
         processTask?.cancel(true)
         processTask = null
-        completionLayout?.let { Disposer.dispose(it) }
+        completionLayout?.dispose()
         completionLayout = null
         editor.caretModel.removeCaretListener(this)
     }

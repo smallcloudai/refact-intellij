@@ -15,6 +15,7 @@ class CompletionState(
     private var requestedText: String = ""
     private val logger = Logger.getInstance("CompletionUtils")
 
+    @Suppress("RedundantSetter")
     var readyForCompletion: Boolean = false
         private set(value) {
             field = value
@@ -146,8 +147,8 @@ class CompletionState(
         }
 
         if (predictedLinesOffset == -1
-            && lines.subList(currentLineNum + 1, lines.size).filter { it.isNotEmpty() }.isEmpty()
-            && predictedLines.subList(currentLineNum + 1, predictedLines.size).filter { it.isNotEmpty() }.isNotEmpty()
+            && lines.subList(currentLineNum + 1, lines.size).none { it.isNotEmpty() }
+            && predictedLines.subList(currentLineNum + 1, predictedLines.size).any { it.isNotEmpty() }
         ) {
             linesOffset = lines.size - 1
             predictedLinesOffset = predictedLines.size - 1

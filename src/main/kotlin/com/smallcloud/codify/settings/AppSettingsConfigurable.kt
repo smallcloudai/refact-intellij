@@ -46,8 +46,8 @@ class AppSettingsConfigurable : Configurable {
     }
 
     override fun apply() {
-        AccountManager.apiKey = if (mySettingsComponent!!.tokenText.isEmpty()) null else mySettingsComponent!!.tokenText
-        InferenceGlobalContext.model = if (mySettingsComponent!!.modelText.isEmpty()) null else mySettingsComponent!!.modelText
+        AccountManager.apiKey = mySettingsComponent!!.tokenText.ifEmpty { null }
+        InferenceGlobalContext.model = mySettingsComponent!!.modelText.ifEmpty { null }
         if (mySettingsComponent!!.temperatureText.isEmpty()) {
             InferenceGlobalContext.temperature = null
         } else {
@@ -57,8 +57,7 @@ class AppSettingsConfigurable : Configurable {
                 InferenceGlobalContext.temperature
             }
         }
-        InferenceGlobalContext.inferenceUrl = if (mySettingsComponent!!.contrastUrlText.isEmpty())
-            null else mySettingsComponent!!.contrastUrlText
+        InferenceGlobalContext.inferenceUrl = mySettingsComponent!!.contrastUrlText.ifEmpty { null }
     }
 
     override fun reset() {

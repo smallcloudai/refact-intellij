@@ -7,9 +7,7 @@ import com.intellij.openapi.editor.*
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProcessCanceledException
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.psi.PsiDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.io.Connection
 import com.smallcloud.codify.io.ConnectionStatus
@@ -154,7 +152,7 @@ class CompletionMode : Mode() {
 
     private fun getActiveFile(document: Document): String? {
         if (!ApplicationManager.getApplication().isDispatchThread) return null
-        
+
         val file = FileDocumentManager.getInstance().getFile(document)
         return file?.presentableName
     }

@@ -39,19 +39,19 @@ class AppRootComponent {
     private val activePlanLabel = JBLabel("")
 
     init {
-        if (AccountManager.isLoggedIn) {
-            currentState = SettingsState.SIGNED
+        currentState = if (isLoggedIn) {
+            SettingsState.SIGNED
         } else if (AccountManager.ticket != null) {
-            currentState = SettingsState.WAITING
+            SettingsState.WAITING
         } else {
-            currentState = SettingsState.UNSIGNED
+            SettingsState.UNSIGNED
         }
         ApplicationManager.getApplication()
             .messageBus
             .connect(PluginState.instance)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun isLoggedInChanged(loggedIn: Boolean) {
-                    currentState = if (loggedIn) SettingsState.SIGNED else SettingsState.UNSIGNED
+                override fun isLoggedInChanged(limited: Boolean) {
+                    currentState = if (limited) SettingsState.SIGNED else SettingsState.UNSIGNED
                     revalidate()
                 }
 
@@ -111,7 +111,7 @@ class AppRootComponent {
         loginButton.isVisible = currentState != SettingsState.SIGNED
         forceLoginButton.isVisible = currentState != SettingsState.UNSIGNED
         waitLoginLabel.text = if (currentState == SettingsState.WAITING)
-            "${Resources.waitWebsiteLoginStr} ${loginCounter}" else "Logged as ${AccountManager.user}"
+            "${Resources.waitWebsiteLoginStr} $loginCounter" else "Logged as ${AccountManager.user}"
         waitLoginLabel.isVisible = currentState != SettingsState.UNSIGNED
     }
 

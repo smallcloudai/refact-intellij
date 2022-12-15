@@ -2,8 +2,6 @@ package com.smallcloud.codify.account
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.smallcloud.codify.io.Connection
-import com.smallcloud.codify.io.ConnectionStatus
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 

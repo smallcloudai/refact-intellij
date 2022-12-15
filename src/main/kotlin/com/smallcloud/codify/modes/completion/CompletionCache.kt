@@ -14,9 +14,9 @@ object CompletionCache : LinkedHashMap<String, Completion>() {
 
         for (i in 0 until completion.completion.length) {
             val newCompletion = completion.copy(
-                originalText = "${completion.originalText.substring(0, completion.startIndex)}" +
-                        "${completion.completion.substring(0, i)}" +
-                        "${completion.originalText.substring(completion.startIndex)}",
+                originalText = completion.originalText.substring(0, completion.startIndex) +
+                        completion.completion.substring(0, i) +
+                        completion.originalText.substring(completion.startIndex),
                 predictedText = null,
                 completion = completion.completion.substring(i),
                 startIndex = completion.startIndex + i,

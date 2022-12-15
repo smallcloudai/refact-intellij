@@ -13,7 +13,7 @@ class AppSettingsComponent {
     private val myTokenText = JBTextField()
     private val myModelText = JBTextField()
     private val myTemperatureText = JBTextField()
-    private val myCotrastUrlText = JBTextField()
+    private val myContrastUrlText = JBTextField()
 
     init {
         panel = FormBuilder.createFormBuilder().run {
@@ -32,7 +32,7 @@ class AppSettingsComponent {
                     UIUtil.FontColor.BRIGHTER
                 ), 0
             )
-            addLabeledComponent(JBLabel("Inference URL: "), myCotrastUrlText, 1, false)
+            addLabeledComponent(JBLabel("Inference URL: "), myContrastUrlText, 1, false)
             addComponentToRightColumn(
                 JBLabel(
                     "Fill this if you are using your own inference server",
@@ -59,9 +59,9 @@ class AppSettingsComponent {
         }
 
     var contrastUrlText: String
-        get() = myCotrastUrlText.text
+        get() = myContrastUrlText.text
         set(newText) {
-            myCotrastUrlText.text = newText
+            myContrastUrlText.text = newText
         }
 
     var temperatureText: String

@@ -18,8 +18,8 @@ private fun generateTicket(): String {
 }
 
 fun login() {
-    val isLogined = AccountManager.isLoggedIn
-    if (isLogined) {
+    val isLoggedIn = AccountManager.isLoggedIn
+    if (isLoggedIn) {
         return
     }
     if (AccountManager.ticket == null)
@@ -27,9 +27,9 @@ fun login() {
     BrowserUtil.browse("https://codify.smallcloud.ai/authentication?token=${AccountManager.ticket}")
 }
 
-fun logError(msg: String, need_change: Boolean = true) {
+fun logError(msg: String, needChange: Boolean = true) {
     Logger.getInstance("check_login").warn(msg)
-    if (need_change) {
+    if (needChange) {
         Connection.status = ConnectionStatus.ERROR
         Connection.lastErrorMsg = msg
     }
@@ -91,7 +91,7 @@ fun checkLogin(): String {
     }
 
     val url = defaultLoginUrl
-    headers["Authorization"] = "Bearer ${token}"
+    headers["Authorization"] = "Bearer $token"
     try {
         val result = sendRequest(
             url, "GET", headers, requestProperties = mapOf(

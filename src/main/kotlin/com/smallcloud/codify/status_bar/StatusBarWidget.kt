@@ -123,7 +123,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         if (!PluginState.instance.isEnabled)
             return AllIcons.Diff.GutterCheckBoxIndeterminate
         if (!isLoggedIn) {
-            val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().getGlobalScheme().getDefaultBackground())
+            val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().globalScheme.defaultBackground)
             return if (isDark) {
                 LOGO_LIGHT_12x12
             } else LOGO_DARK_12x12
@@ -150,8 +150,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return "Click to login"
         }
 
-        val c_stat = Connection.status
-        when (c_stat) {
+        when (Connection.status) {
             ConnectionStatus.DISCONNECTED -> {
                 return "Connection is lost"
             }
@@ -159,18 +158,18 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 return Connection.lastErrorMsg
             }
             ConnectionStatus.CONNECTED -> {
-                var tooltip_str = "<html>"
+                var tooltipStr = "<html>"
                 if (InferenceGlobalContext.inferenceUrl != null) {
-                    tooltip_str += "⚡ ${InferenceGlobalContext.inferenceUrl}${defaultContrastUrlSuffix}"
+                    tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUrl}${defaultContrastUrlSuffix}"
                 }
                 val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else defaultModel
                 val temp =
                     if (InferenceGlobalContext.temperature != null) InferenceGlobalContext.temperature else defaultTemperature
-                tooltip_str += "<br>\uD83D\uDDD2 $model"
-                tooltip_str += "<br>\uD83C\uDF21️ $temp"
-                tooltip_str += "</html>"
+                tooltipStr += "<br>\uD83D\uDDD2 $model"
+                tooltipStr += "<br>\uD83C\uDF21️ $temp"
+                tooltipStr += "</html>"
 
-                return tooltip_str
+                return tooltipStr
             }
             else -> return "Codify"
         }

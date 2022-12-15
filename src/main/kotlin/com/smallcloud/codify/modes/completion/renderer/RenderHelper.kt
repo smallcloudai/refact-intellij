@@ -2,6 +2,7 @@ package com.smallcloud.codify.modes.completion.renderer
 
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.EditorFontType
+import com.intellij.ui.JBColor
 import java.awt.Color
 import java.awt.Font
 import java.awt.font.TextAttribute
@@ -19,6 +20,6 @@ object RenderHelper {
 
     val color: Color
         get() {
-            return Color.gray
+            return JBColor.GRAY
         }
 }

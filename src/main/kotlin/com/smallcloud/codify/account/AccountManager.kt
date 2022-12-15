@@ -50,7 +50,7 @@ object AccountManager {
 
     val isLoggedIn: Boolean
         get() {
-            return !apiKey.isNullOrEmpty() and !user.isNullOrEmpty()
+            return !apiKey.isNullOrEmpty() && !user.isNullOrEmpty()
         }
 
     private fun loadFromSettings() {

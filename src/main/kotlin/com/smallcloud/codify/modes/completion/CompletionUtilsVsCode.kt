@@ -66,6 +66,7 @@ class CompletionStateVsCode(
     private var requestedText: String = ""
     private val logger = Logger.getInstance("CompletionUtils")
 
+    @Suppress("RedundantSetter")
     var readyForCompletion: Boolean = false
         private set(value) {
             field = value
@@ -88,7 +89,7 @@ class CompletionStateVsCode(
             if (requestedText.length > MAX_TEXT_SIZE) return@run
 
             if (requestedText.isNotEmpty() && requestedText.last() != '\n') {
-                requestedText += "\n";
+                requestedText += "\n"
             }
             readyForCompletion = true
         }
@@ -138,7 +139,7 @@ class CompletionStateVsCode(
             logger.info("RTRIM: \n$requestedText\n$completion")
             fail = completion.matches(Regex("/\\n/g"))
         } else if (!fail) {
-            completion = completion.replace(Regex("/[ \\t\\n]+\$/"), "");
+            completion = completion.replace(Regex("/[ \\t\\n]+\$/"), "")
             logger.info("MLINE RTRIM: \n$requestedText\n$completion")
         }
         if (!fail) {

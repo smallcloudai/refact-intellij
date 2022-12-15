@@ -6,12 +6,10 @@ import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
-import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
-import com.intellij.util.ObjectUtils
 import com.smallcloud.codify.modes.completion.renderer.Inlayer
 import org.jetbrains.annotations.NotNull
 
@@ -29,14 +27,14 @@ class CompletionLayout(
     fun render() {
         try {
             blockEvents = true
-            editor.document.startGuardedBlockChecking();
+            editor.document.startGuardedBlockChecking()
             inlayer.render(completionData)
             editor.caretModel.addCaretListener(this, this)
         } catch (ex: Exception) {
             Disposer.dispose(this)
             throw ex
         } finally {
-            editor.document.stopGuardedBlockChecking();
+            editor.document.stopGuardedBlockChecking()
             blockEvents = false
         }
     }

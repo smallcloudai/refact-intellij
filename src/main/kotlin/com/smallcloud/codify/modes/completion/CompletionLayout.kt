@@ -4,34 +4,40 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.event.CaretEvent
+import com.intellij.openapi.editor.event.CaretListener
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
+import com.intellij.util.ObjectUtils
 import com.smallcloud.codify.modes.completion.renderer.Inlayer
-import com.smallcloud.codify.struct.SMCPrediction
-import com.smallcloud.codify.struct.SMCRequestBody
 import org.jetbrains.annotations.NotNull
 
 class CompletionLayout(
     private val editor: Editor,
-    private val completionData: Pair<String, Int>,
-    private val offset: Int
-) : Disposable {
+    private val completionData: Completion
+) : CaretListener, Disposable {
     private var inlayer: Inlayer = Inlayer(editor)
+    var blockEvents: Boolean = false
 
     override fun dispose() {
         inlayer.dispose()
     }
 
     fun render() {
-        val inline = completionData.first
-        val lines = inline.split("\n")
         try {
+            blockEvents = true
             editor.document.startGuardedBlockChecking();
-            inlayer.render(lines, offset)
+            inlayer.render(completionData)
+            editor.caretModel.addCaretListener(this, this)
+        } catch (ex: Exception) {
+            Disposer.dispose(this)
+            throw ex
         } finally {
             editor.document.stopGuardedBlockChecking();
+            blockEvents = false
         }
     }
 
@@ -51,8 +57,18 @@ class CompletionLayout(
     }
 
     private fun applyPreviewInternal(@NotNull cursorOffset: Int, project: Project, file: PsiFile) {
-        val (inline, textOffset) = completionData
-        editor.document.replaceString(cursorOffset, cursorOffset + textOffset, inline)
-        editor.caretModel.moveToOffset(cursorOffset + inline.length)
+        editor.caretModel.removeCaretListener(this)
+        editor.document.replaceString(
+            completionData.startIndex,
+            completionData.endIndex,
+            completionData.completion
+        )
+        editor.caretModel.moveToOffset(
+            completionData.startIndex + completionData.completion.length
+        )
+    }
+
+    override fun caretPositionChanged(event: CaretEvent) {
+        Disposer.dispose(this)
     }
 }

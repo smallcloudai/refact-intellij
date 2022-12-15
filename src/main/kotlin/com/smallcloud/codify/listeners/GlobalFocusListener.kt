@@ -5,7 +5,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.FocusChangeListener
 import com.smallcloud.codify.modes.ModeProvider
 
-class FocusListener : FocusChangeListener {
+class GlobalFocusListener : FocusChangeListener {
     override fun focusGained(editor: Editor) {
         Logger.getInstance("FocusListener").warn("focusGained")
         val provider = ModeProvider.getOrCreateModeProvider(editor)

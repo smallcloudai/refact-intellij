@@ -4,6 +4,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.util.Disposer
+import com.smallcloud.codify.modes.completion.Completion
 
 class Inlayer(val editor: Editor) : Disposable {
     private var lineInlay: Inlay<*>? = null
@@ -37,15 +38,20 @@ class Inlayer(val editor: Editor) : Disposable {
         blockInlay = element
     }
 
-    fun render(lines: List<String>, offset: Int) {
-        val firstL = lines.first()
-        val otherLines = lines.drop(1)
-
-        if (!firstL.isEmpty()) {
-            renderLine(firstL, offset)
-        }
-        if (otherLines.isNotEmpty()) {
-            renderBlock(otherLines, offset)
+    fun render(completionData: Completion) {
+        if (!completionData.multiline) {
+            renderLine(completionData.completion, completionData.startIndex)
+        } else {
+            val lines = completionData.completion.split('\n')
+            if (lines.isEmpty()) return
+            val firstLine = lines.first()
+            val otherLines = lines.drop(1)
+            if (firstLine.isNotEmpty()) {
+                renderLine(firstLine, completionData.startIndex)
+            }
+            if (otherLines.isNotEmpty()) {
+                renderBlock(otherLines, completionData.startIndex)
+            }
         }
     }
 }

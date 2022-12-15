@@ -1,130 +1,170 @@
 package com.smallcloud.codify.modes.completion
 
-import com.intellij.openapi.editor.Document
-import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.diagnostic.Logger
 import java.util.regex.Pattern
 
-class EditorTextHelper(editor: Editor) {
-    val document: Document
-    val lines: List<String>
-    val offset: Int
-    val currentLineNumber: Int
-    val currentLine: String
-    val currentLineStartOffset: Int
-    val currentLineEndOffset: Int
-    val offsetByCurrentLine: Int
-
-    init {
-        document = editor.document
-        lines = document.text.split("\n")
-        assert(lines.size == document.lineCount)
-        offset = editor.caretModel.offset
-        currentLineNumber = document.getLineNumber(offset)
-        currentLine = lines[currentLineNumber]
-        currentLineStartOffset = document.getLineStartOffset(currentLineNumber)
-        currentLineEndOffset = document.getLineEndOffset(currentLineNumber)
-        offsetByCurrentLine = offset - currentLineStartOffset
-    }
-
-}
-
-fun String.getChar(index: Int): Char = if (index < 0) {
-    this[length + index]
-} else {
-    this[index]
-}
 
 class CompletionState(
-    private var textHelper: EditorTextHelper
+    private var textHelper: EditorTextHelper,
+    private val filterRightFromCursor: Boolean = true
 ) {
     private val MAX_TEXT_SIZE: Long = 180 * 1024
     private val RIGHT_OF_CURSOR_SPECIAL_CHAR = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
 
-    private var cursor: Int = textHelper.offset
-    private var multiline: Boolean = false
+    private var multiline: Boolean = true
     private var requestedText: String = ""
+    private val logger = Logger.getInstance("CompletionUtils")
+
     var readyForCompletion: Boolean = false
         private set(value) {
             field = value
         }
     val stopTokens: List<String>
         get() {
-            return if (multiline) listOf("\n") else listOf("\n", "\n\n")
+            return if (multiline) listOf("\n\n") else listOf("\n", "\n\n")
         }
 
     init {
         run {
-            val leftOfCursor = textHelper.currentLine.substring(0, textHelper.offsetByCurrentLine)
-            val rightOfCursor = textHelper.currentLine.substring(textHelper.offsetByCurrentLine)
-            val rightOfCursorHasOnlySpecialChars = RIGHT_OF_CURSOR_SPECIAL_CHAR.matcher(rightOfCursor).matches()
-            if (!rightOfCursorHasOnlySpecialChars) return@run
-
-            multiline = leftOfCursor.replace(Regex("/\\s/g"), "").isEmpty()
-
+            if (filterRightFromCursor) {
+                val rightOfCursor = textHelper.currentLine.substring(textHelper.offsetByCurrentLine)
+                val rightOfCursorHasOnlySpecialChars = RIGHT_OF_CURSOR_SPECIAL_CHAR.matcher(rightOfCursor).matches()
+                if (!rightOfCursorHasOnlySpecialChars) {
+                    logger.info("There are no special characters in the $rightOfCursor")
+                    return@run
+                }
+            }
             requestedText = textHelper.document.text
             if (requestedText.length > MAX_TEXT_SIZE) return@run
-
-            if (requestedText.isNotEmpty() && requestedText.last() != '\n') {
-                requestedText += "\n";
-            }
             readyForCompletion = true
-
-            var textLeft = requestedText.substring(0, cursor)
-            var deletedSpacesLeft = 0
-            while (
-                multiline && textLeft.isNotEmpty()
-                && (textLeft[textLeft.length - 1] == ' ' || textLeft[textLeft.length - 1] == '\t')
-            ) {
-                textLeft = textLeft.substring(0, textLeft.length - 1)
-                cursor -= 1
-                deletedSpacesLeft += 1
-            }
-            requestedText = textLeft + requestedText.substring(cursor)
         }
     }
 
-    fun difference(predictedText: String): Pair<String, Int>? {
+    fun difference(predictedText: String): Completion? {
         if (!readyForCompletion) {
             return null
         }
 
-        val requestedTextHead = requestedText.substring(0, cursor)
-        val predictedTextHead = predictedText.substring(0, cursor)
-        assert(requestedTextHead == predictedTextHead)
-
-        var stopAt = 0
-        var anyDifferent = false
-        for (i in -1 downTo -requestedText.length step 1) {
-            val reqCh = requestedText.getChar(i)
-            val predCh = predictedText.getChar(i)
-            if (reqCh == '\n') {
-                stopAt = i + 1
-            }
-            if (reqCh != predCh) {
-                anyDifferent = true
-                break
-            }
+        val currentLineNum = textHelper.currentLineNumber
+        val lines = textHelper.lines
+        val predictedLines = predictedText.split('\n')
+        val currentLine = textHelper.currentLine
+        val predictedCurrentLine = predictedLines[currentLineNum]
+        val currentLinesAreEqual = currentLine == predictedCurrentLine
+        val hasChangesBeforeCursor = (
+                requestedText.substring(0, textHelper.currentLineStartOffset) != predictedText.substring(
+                    0,
+                    textHelper.currentLineStartOffset
+                ))
+        val (linesOffset, predictedLinesOffset) = getMultilineOffsets(currentLineNum, lines, predictedLines)
+        val diffLikeCompletion = false  // predictedLinesOffset <= linesOffset
+        multiline = multiline && !diffLikeCompletion && (predictedLinesOffset - currentLineNum > 1)
+        if (hasChangesBeforeCursor) {
+            logger.info("No valid completion: hasChangesBeforeCursor")
+            return null
         }
-        stopAt += predictedText.length
+        if (currentLinesAreEqual && !multiline) {
+            logger.info("No completion: currentLinesAreEqual && !multiline")
+            return null
+        }
 
-        var fail = !anyDifferent
+        var startIndex = textHelper.offset
+        var stopIndex = textHelper.offset
         var completion = ""
-        if (!fail) {
-            fail = cursor >= stopAt
-        }
-        if (!fail) {
-            completion = predictedText.substring(cursor, stopAt)
-        }
-        if (!fail && !multiline) {
-            completion = completion.replace(Regex("/\\s+\$/"), "")
-            fail = completion.matches(Regex("/\\n/g"))
-        } else if (!fail) {
-            completion = completion.replace(Regex("/[ \\t\\n]+\$/"), "");
-        }
-        if (!fail) {
-            fail = completion.isEmpty()
+        if (!currentLinesAreEqual) {
+            stopIndex += requestedText.substring(
+                startIndex,
+                textHelper.currentLineStartOffset + currentLine.length
+            ).length
+            completion += predictedText.substring(
+                startIndex,
+                textHelper.currentLineStartOffset + predictedCurrentLine.length
+            )
         }
 
-        return completion to stopAt
+        if (!multiline) {
+            logger.info("Single line completion: $completion")
+            return Completion(
+                originalText = requestedText,
+                predictedText = predictedText,
+                completion = completion,
+                multiline = multiline,
+                startIndex = startIndex,
+                endIndex = stopIndex,
+                createdTs = System.currentTimeMillis()
+            )
+        } else {
+            stopIndex += lines.subList(
+                minOf(currentLineNum + 1, linesOffset),
+                linesOffset
+            ).joinToString("\n").length
+            completion += '\n'
+            completion += predictedLines.subList(
+                minOf(currentLineNum + 1, predictedLinesOffset),
+                predictedLinesOffset
+            ).joinToString("\n")
+            logger.info("Multi line completion: $completion")
+            return Completion(
+                originalText = requestedText,
+                predictedText = predictedText,
+                completion = completion,
+                multiline = multiline,
+                startIndex = startIndex,
+                endIndex = stopIndex,
+                createdTs = System.currentTimeMillis()
+            )
+        }
+    }
+
+    private fun getMultilineOffsets(
+        currentLineNum: Int,
+        lines: List<String>,
+        predictedLines: List<String>
+    ): Pair<Int, Int> {
+        val guesses: MutableList<Pair<Int, Int>> = mutableListOf()
+        for (i in currentLineNum + 1 until lines.size) {
+            if (lines[i].isEmpty()) {
+                continue
+            }
+            var predictedLinesOffset = -1
+            for (j in currentLineNum + 1 until predictedLines.size) {
+                if (lines[i] == predictedLines[j]) {
+                    predictedLinesOffset = j
+                    break
+                }
+            }
+            if (predictedLinesOffset != -1) {
+                guesses.add(i to predictedLinesOffset)
+            }
+        }
+
+        val minEl = guesses.minByOrNull { it.first + it.second }
+        var (linesOffset, predictedLinesOffset) = -1 to -1
+        if (minEl != null) {
+            linesOffset = minEl.first
+            predictedLinesOffset = minEl.second
+        }
+
+        if (predictedLinesOffset == -1
+            && lines.subList(currentLineNum + 1, lines.size).filter { it.isNotEmpty() }.isEmpty()
+            && predictedLines.subList(currentLineNum + 1, predictedLines.size).filter { it.isNotEmpty() }.isNotEmpty()
+        ) {
+            linesOffset = lines.size - 1
+            predictedLinesOffset = predictedLines.size - 1
+        }
+
+        if (linesOffset != -1 && predictedLinesOffset != -1) {
+            val predictedOffset = predictedLinesOffset - linesOffset
+            for (i in linesOffset - 1 downTo 0) {
+                if (lines[i] == predictedLines[i + predictedOffset] && lines[i].isEmpty()) {
+                    linesOffset -= 1
+                    predictedLinesOffset -= 1
+                } else {
+                    break
+                }
+            }
+        }
+
+        return linesOffset to predictedLinesOffset
     }
 }

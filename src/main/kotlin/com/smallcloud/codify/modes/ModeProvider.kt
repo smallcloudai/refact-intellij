@@ -1,5 +1,6 @@
 package com.smallcloud.codify.modes
 
+import com.intellij.codeInsight.completion.CompletionUtil.DUMMY_IDENTIFIER
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Caret
@@ -10,8 +11,8 @@ import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.util.ObjectUtils
 import com.jetbrains.rd.util.getOrCreate
 import com.smallcloud.codify.PluginState
-import com.smallcloud.codify.listeners.CaretListener
-import com.smallcloud.codify.listeners.FocusListener
+import com.smallcloud.codify.listeners.GlobalCaretListener
+import com.smallcloud.codify.listeners.GlobalFocusListener
 import com.smallcloud.codify.modes.completion.CompletionMode
 import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
@@ -30,35 +31,36 @@ class ModeProvider(
         activeMode = modes.firstOrNull()
     }
 
+    fun modeInActiveState(): Boolean = activeMode?.isInActiveState() == true
+
     fun switchMode() {
 
     }
 
-    fun focusGained() {
-        if (!isEnabled) return
-        activeMode?.focusGained()
-    }
-
-
-    fun focusLost() {
-        if (!isEnabled) return
-        activeMode?.focusLost()
-    }
-
     fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
         if (!isEnabled) return
+        if (event.newFragment.toString() == DUMMY_IDENTIFIER) return
         activeMode?.beforeDocumentChangeNonBulk(event, editor)
     }
 
 
     fun onTextChange(event: DocumentEvent, editor: Editor) {
         if (!isEnabled) return
+        if (event.newFragment.toString() == DUMMY_IDENTIFIER) return
         activeMode?.onTextChange(event, editor)
     }
 
     fun onCaretChange(event: CaretEvent) {
         if (!isEnabled) return
-        activeMode?.onCaretChange(event)
+    }
+
+    fun focusGained() {
+        if (!isEnabled) return
+    }
+
+
+    fun focusLost() {
+        if (!isEnabled) return
     }
 
     fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
@@ -89,9 +91,9 @@ class ModeProvider(
             return modeProviders.getOrCreate(hashId) {
                 val modeProvider = ModeProvider(editor)
                 providersToTs[hashId] = currentTimeMillis()
-                editor.caretModel.addCaretListener(CaretListener())
+                editor.caretModel.addCaretListener(GlobalCaretListener())
                 ObjectUtils.consumeIfCast(editor, EditorEx::class.java) {
-                    it.addFocusListener(FocusListener(), modeProvider)
+                    it.addFocusListener(GlobalFocusListener(), modeProvider)
                 }
                 modeProvider
             }

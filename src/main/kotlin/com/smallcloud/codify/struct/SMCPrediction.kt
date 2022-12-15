@@ -17,7 +17,7 @@ data class SMCPrediction(
     val created: Float,
     val uploaded: Float,
     val generatedTokensN: Int,
-    val choices: List<Choice>,
+    val choices: List<Choice>?,
     val highlightTokens: List<String>,
     val highlightLines: List<String>,
 )

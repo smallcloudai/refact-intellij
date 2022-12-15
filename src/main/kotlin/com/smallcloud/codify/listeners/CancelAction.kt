@@ -27,7 +27,7 @@ object CancelPressedAction :
             caret: Caret,
             dataContext: DataContext
         ): Boolean {
-            return caret.isValid  // it should work only for the main caret
+            return ModeProvider.getOrCreateModeProvider(editor).modeInActiveState()
         }
     }
 }

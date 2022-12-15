@@ -4,7 +4,6 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.*
-import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.ProjectManager
@@ -24,7 +23,8 @@ import java.util.concurrent.TimeUnit
 
 data class EditorState(
     val modificationStamp: Long,
-    val offset: Int
+    val offset: Int,
+    val text: String
 )
 
 class CompletionMode : Mode() {
@@ -34,20 +34,26 @@ class CompletionMode : Mode() {
     private var completionLayout: CompletionLayout? = null
 
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
+        if (completionLayout != null && completionLayout!!.blockEvents) return
         cancelOrClose()
     }
 
     override fun onTextChange(event: DocumentEvent, editor: Editor) {
-        val state = EditorState(editor.document.modificationStamp, editor.caretModel.offset)
+        if (completionLayout != null && completionLayout!!.blockEvents) return
+
+        val state = EditorState(
+            editor.document.modificationStamp,
+            editor.caretModel.offset + event.newLength,
+            editor.document.text
+        )
         val document = event.document
-        val text = editor.document.text
         val fileName = getActiveFile(document) ?: return
         if (shouldIgnoreChange(event, editor, state.offset)) {
             return
         }
-        val request = makeRequest(fileName, text, state.offset) ?: return
+        val request = makeRequest(fileName, state.text, state.offset) ?: return
         request.url += defaultContrastUrlSuffix
-        val editorHelper = EditorTextHelper(editor)
+        val editorHelper = EditorTextHelper(editor, state.offset)
         processTask = scheduler.schedule({
             process(request, editor, state, editorHelper)
         }, taskDelayMs, TimeUnit.MILLISECONDS)
@@ -71,23 +77,27 @@ class CompletionMode : Mode() {
         try {
             val completionState = CompletionState(editorHelper)
             if (!completionState.readyForCompletion) return
+            var completionData = CompletionCache.getCompletion(state.text)
+            if (completionData == null) {
+                request.body.stopTokens = completionState.stopTokens
+                val prediction = fetch(request) ?: return
+                if (prediction.status == null) {
+                    Connection.status = ConnectionStatus.ERROR
+                    Connection.lastErrorMsg = "Parameters are not correct"
+                    return
+                }
 
-            request.body.stopTokens = completionState.stopTokens
-            val prediction = fetch(request) ?: return
-            if (prediction.status == null) {
-                Connection.status = ConnectionStatus.ERROR
-                Connection.lastErrorMsg = "Parameters are not correct"
-                return
+                val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
+                if (predictedText == null) {
+                    Connection.status = ConnectionStatus.ERROR
+                    Connection.lastErrorMsg = "Request was succeeded but there is no predicted data"
+                    return
+                }
+
+                completionData = completionState.difference(predictedText) ?: return
+                if (!completionData.isMakeSense()) return
+                CompletionCache.addCompletion(completionData)
             }
-
-            val predictedText = prediction.choices.firstOrNull()?.files?.get(request.body.cursorFile)
-            if (predictedText == null) {
-                Connection.status = ConnectionStatus.ERROR
-                Connection.lastErrorMsg = "Request was succeeded but there is no predicted data"
-                return
-            }
-
-            val completionData = completionState.difference(predictedText) ?: return
 
             ApplicationManager.getApplication()
                 .invokeAndWait {
@@ -96,7 +106,7 @@ class CompletionMode : Mode() {
                     if (invalidStamp || invalidOffset) {
                         return@invokeAndWait
                     }
-                    completionLayout = CompletionLayout(editor, completionData, state.offset)
+                    completionLayout = CompletionLayout(editor, completionData)
                     completionLayout!!.render()
                 }
         } catch (_: ProcessCanceledException) {
@@ -112,26 +122,25 @@ class CompletionMode : Mode() {
 
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
         completionLayout?.applyPreview(caret ?: editor.caretModel.currentCaret)
-        cancelOrClose()
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
         cancelOrClose()
     }
 
-    override fun onCaretChange(event: CaretEvent) {
-//        cancelOrClose()
-    }
+    override fun isInActiveState(): Boolean = completionLayout != null
 
     private fun shouldIgnoreChange(event: DocumentEvent, editor: Editor, offset: Int): Boolean {
         val document = event.document
 
         if (editor.editorKind != EditorKind.MAIN_EDITOR
-            && !ApplicationManager.getApplication().isUnitTestMode) {
+            && !ApplicationManager.getApplication().isUnitTestMode
+        ) {
             return true
         }
         if (!EditorModificationUtil.checkModificationAllowed(editor)
-            || document.getRangeGuard(offset, offset) != null) {
+            || document.getRangeGuard(offset, offset) != null
+        ) {
             document.fireReadOnlyModificationAttempt()
             return true
         }
@@ -150,17 +159,11 @@ class CompletionMode : Mode() {
     }
 
     private fun cancelOrClose() {
+        ApplicationManager.getApplication()
+        Logger.getInstance("CompletionMode").info("cancelOrClose request")
         processTask?.cancel(true)
         processTask = null
-        completionLayout?.let {
-            Disposer.dispose(it)
-        }
+        completionLayout?.let { Disposer.dispose(it) }
         completionLayout = null
-    }
-
-    override fun focusGained() {
-    }
-
-    override fun focusLost() {
     }
 }

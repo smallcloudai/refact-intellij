@@ -43,11 +43,18 @@ class CompletionMode : Mode() {
         if (completionLayout != null && completionLayout!!.blockEvents) return
         if (editor.caretModel.offset + event.newLength > editor.document.text.length) return
 
+        val hasManyChanges = event.newLength > 3 || event.oldLength > 3
         val state = EditorState(
             editor.document.modificationStamp,
             editor.caretModel.offset + event.newLength,
             editor.document.text
         )
+        val completionData = CompletionCache.getCompletion(state.text)
+        if (completionData != null) {
+            renderCompletion(editor, state, completionData)
+            return
+        }
+
         val document = event.document
         val fileName = getActiveFile(document) ?: return
         if (shouldIgnoreChange(event, editor, state.offset)) {
@@ -58,7 +65,7 @@ class CompletionMode : Mode() {
         val editorHelper = EditorTextHelper(editor, state.offset)
         processTask = scheduler.schedule({
             process(request, editor, state, editorHelper)
-        }, taskDelayMs, TimeUnit.MILLISECONDS)
+        }, if (hasManyChanges) 0 else taskDelayMs, TimeUnit.MILLISECONDS)
     }
 
     private fun makeRequest(fileName: String, text: String, offset: Int): SMCRequest? {
@@ -75,45 +82,50 @@ class CompletionMode : Mode() {
         return InferenceGlobalContext.makeRequest(requestBody)
     }
 
+    private fun renderCompletion(
+        editor: Editor,
+        state: EditorState,
+        completionData: Completion,
+    ) {
+        completionLayout = CompletionLayout(editor, completionData)
+        return ApplicationManager.getApplication()
+            .invokeLater {
+                val invalidStamp = state.modificationStamp != editor.document.modificationStamp
+                val invalidOffset = state.offset != editor.caretModel.offset
+                if (invalidStamp || invalidOffset) {
+                    return@invokeLater
+                }
+                completionLayout!!.render()
+            }
+    }
+
     private fun process(request: SMCRequest, editor: Editor, state: EditorState, editorHelper: EditorTextHelper) {
         try {
             val completionState = CompletionState(editorHelper)
             if (!completionState.readyForCompletion) return
-            var completionData = CompletionCache.getCompletion(state.text)
-            if (completionData == null) {
-                request.body.stopTokens = completionState.stopTokens
+            request.body.stopTokens = completionState.stopTokens
 
-                val prediction = fetch(request) ?: return
-                if (prediction.status == null) {
-                    Connection.status = ConnectionStatus.ERROR
-                    Connection.lastErrorMsg = "Parameters are not correct"
-                    return
-                }
-
-                val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
-                if (predictedText == null) {
-                    Connection.status = ConnectionStatus.ERROR
-                    Connection.lastErrorMsg = "Request was succeeded but there is no predicted data"
-                    return
-                }
-
-                completionData = completionState.difference(predictedText) ?: return
-                if (!completionData.isMakeSense()) return
-                synchronized(this) {
-                    CompletionCache.addCompletion(completionData)
-                }
+            val prediction = fetch(request) ?: return
+            if (prediction.status == null) {
+                Connection.status = ConnectionStatus.ERROR
+                Connection.lastErrorMsg = "Parameters are not correct"
+                return
             }
 
-            ApplicationManager.getApplication()
-                .invokeAndWait {
-                    val invalidStamp = state.modificationStamp != editor.document.modificationStamp
-                    val invalidOffset = state.offset != editor.caretModel.offset
-                    if (invalidStamp || invalidOffset) {
-                        return@invokeAndWait
-                    }
-                    completionLayout = CompletionLayout(editor, completionData)
-                    completionLayout!!.render()
-                }
+            val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
+            if (predictedText == null) {
+                Connection.status = ConnectionStatus.ERROR
+                Connection.lastErrorMsg = "Request was succeeded but there is no predicted data"
+                return
+            }
+
+            val completionData = completionState.difference(predictedText) ?: return
+            if (!completionData.isMakeSense()) return
+            synchronized(this) {
+                CompletionCache.addCompletion(completionData)
+            }
+
+            renderCompletion(editor, state, completionData)
         } catch (_: ProcessCanceledException) {
             // do nothing now
             // send a cancel request later

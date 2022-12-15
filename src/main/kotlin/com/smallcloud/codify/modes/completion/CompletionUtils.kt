@@ -60,6 +60,7 @@ class CompletionState(
                 ))
         val (linesOffset, predictedLinesOffset) = getMultilineOffsets(currentLineNum, lines, predictedLines)
         val diffLikeCompletion = false  // predictedLinesOffset <= linesOffset
+        val deletionOnCurrentLine = textHelper.currentLineStartOffset + predictedCurrentLine.length < textHelper.offset
         multiline = multiline && !diffLikeCompletion && (predictedLinesOffset - currentLineNum > 1)
         if (hasChangesBeforeCursor) {
             logger.info("No valid completion: hasChangesBeforeCursor")
@@ -67,6 +68,10 @@ class CompletionState(
         }
         if (currentLinesAreEqual && !multiline) {
             logger.info("No completion: currentLinesAreEqual && !multiline")
+            return null
+        }
+        if (deletionOnCurrentLine) {
+            logger.info("No completion: deletionOnCurrentLine")
             return null
         }
 
@@ -78,6 +83,7 @@ class CompletionState(
                 startIndex,
                 textHelper.currentLineStartOffset + currentLine.length
             ).length
+
             completion += predictedText.substring(
                 startIndex,
                 textHelper.currentLineStartOffset + predictedCurrentLine.length

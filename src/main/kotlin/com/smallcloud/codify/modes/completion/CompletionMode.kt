@@ -32,6 +32,7 @@ class CompletionMode : Mode() {
     private val taskDelayMs: Long = 250
     private var processTask: Future<*>? = null
     private var completionLayout: CompletionLayout? = null
+    private val logger = Logger.getInstance("CompletionMode")
 
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
         if (completionLayout != null && completionLayout!!.blockEvents) return
@@ -40,6 +41,7 @@ class CompletionMode : Mode() {
 
     override fun onTextChange(event: DocumentEvent, editor: Editor) {
         if (completionLayout != null && completionLayout!!.blockEvents) return
+        if (editor.caretModel.offset + event.newLength > editor.document.text.length) return
 
         val state = EditorState(
             editor.document.modificationStamp,
@@ -118,8 +120,7 @@ class CompletionMode : Mode() {
         } catch (e: Exception) {
             Connection.status = ConnectionStatus.ERROR
             Connection.lastErrorMsg = e.toString()
-            Logger.getInstance("CompletionMode")
-                .warn("Exception while completion request processing", e)
+            logger.warn("Exception while completion request processing", e)
         }
     }
 
@@ -160,7 +161,7 @@ class CompletionMode : Mode() {
 
     private fun cancelOrClose() {
         ApplicationManager.getApplication()
-        Logger.getInstance("CompletionMode").info("cancelOrClose request")
+        logger.info("cancelOrClose request")
         processTask?.cancel(true)
         processTask = null
         completionLayout?.let { Disposer.dispose(it) }

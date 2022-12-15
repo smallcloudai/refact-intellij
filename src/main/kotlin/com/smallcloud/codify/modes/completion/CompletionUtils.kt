@@ -1,6 +1,7 @@
 package com.smallcloud.codify.modes.completion
 
 import com.intellij.openapi.diagnostic.Logger
+import com.smallcloud.codify.modes.EditorTextHelper
 import java.util.regex.Pattern
 
 

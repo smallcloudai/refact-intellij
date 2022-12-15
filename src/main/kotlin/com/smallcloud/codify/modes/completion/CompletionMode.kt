@@ -14,6 +14,7 @@ import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
 import com.smallcloud.codify.io.fetch
+import com.smallcloud.codify.modes.EditorTextHelper
 import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody

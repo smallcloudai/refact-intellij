@@ -3,12 +3,19 @@ package com.smallcloud.codify.modes.completion.renderer
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.Inlay
+import com.intellij.openapi.editor.markup.HighlighterTargetArea
+import com.intellij.openapi.editor.markup.RangeHighlighter
+import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.util.Disposer
+import com.smallcloud.codify.modes.EditorTextHelper
 import com.smallcloud.codify.modes.completion.Completion
+import java.awt.Color
 
 class Inlayer(val editor: Editor) : Disposable {
     private var lineInlay: Inlay<*>? = null
     private var blockInlay: Inlay<*>? = null
+    private var rangeHighlighters: MutableList<RangeHighlighter> = mutableListOf()
+
     override fun dispose() {
         lineInlay?.let {
             Disposer.dispose(it)
@@ -18,6 +25,7 @@ class Inlayer(val editor: Editor) : Disposable {
             Disposer.dispose(it)
             blockInlay = null
         }
+        rangeHighlighters.forEach { editor.markupModel.removeHighlighter(it) }
     }
 
     private fun renderLine(line: String, offset: Int) {
@@ -41,7 +49,20 @@ class Inlayer(val editor: Editor) : Disposable {
     fun render(completionData: Completion) {
         if (!completionData.multiline) {
             renderLine(completionData.completion, completionData.startIndex)
+            rangeHighlighters.add(
+                editor.markupModel.addRangeHighlighter(
+                    completionData.startIndex,
+                    completionData.endIndex,
+                    99999,
+                    TextAttributes().apply {
+                        backgroundColor = Color(200, 0, 0, 100)
+                    },
+                    HighlighterTargetArea.EXACT_RANGE
+                )
+            )
         } else {
+            val helper = EditorTextHelper(editor, completionData.startIndex)
+            val afterCursor = completionData.originalText.substring(helper.offset, helper.currentLineEndOffset)
             val lines = completionData.completion.split('\n')
             if (lines.isEmpty()) return
             val firstLine = lines.first()

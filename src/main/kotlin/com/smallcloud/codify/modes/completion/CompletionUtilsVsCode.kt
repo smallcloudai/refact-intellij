@@ -1,35 +1,8 @@
 package com.smallcloud.codify.modes.completion
 
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.editor.Document
-import com.intellij.openapi.editor.Editor
+import com.smallcloud.codify.modes.EditorTextHelper
 import java.util.regex.Pattern
-
-class EditorTextHelper(
-    editor: Editor,
-    customOffset: Int
-) {
-    val document: Document
-    val lines: List<String>
-    val offset: Int
-    val currentLineNumber: Int
-    val currentLine: String
-    val currentLineStartOffset: Int
-    val currentLineEndOffset: Int
-    val offsetByCurrentLine: Int
-
-    init {
-        document = editor.document
-        lines = document.text.split("\n")
-        assert(lines.size == document.lineCount)
-        offset = customOffset
-        currentLineNumber = document.getLineNumber(offset)
-        currentLine = lines[currentLineNumber]
-        currentLineStartOffset = document.getLineStartOffset(currentLineNumber)
-        currentLineEndOffset = document.getLineEndOffset(currentLineNumber)
-        offsetByCurrentLine = offset - currentLineStartOffset
-    }
-}
 
 
 data class Completion(

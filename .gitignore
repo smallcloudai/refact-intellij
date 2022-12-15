@@ -8,7 +8,9 @@ build/
 .idea/modules.xml
 .idea/jarRepositories.xml
 .idea/compiler.xml
+.idea/uiDesigner.xml
 .idea/libraries/
+.idea/inspectionProfiles/
 *.iws
 *.iml
 *.ipr

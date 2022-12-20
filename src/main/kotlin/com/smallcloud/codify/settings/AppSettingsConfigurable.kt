@@ -1,9 +1,10 @@
 package com.smallcloud.codify.settings
 
 import com.intellij.openapi.options.Configurable
-import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.account.AccountManager
+import com.smallcloud.codify.io.InferenceGlobalContext
 import org.jetbrains.annotations.Nls
+import java.net.URI
 import javax.swing.JComponent
 
 /**
@@ -37,11 +38,14 @@ class AppSettingsConfigurable : Configurable {
         modified = modified or (mySettingsComponent!!.temperatureText.isNotEmpty() &&
                 (InferenceGlobalContext.temperature == null ||
                         mySettingsComponent!!.temperatureText.toFloat() != InferenceGlobalContext.temperature))
-        modified = modified or (mySettingsComponent!!.temperatureText.isEmpty() && InferenceGlobalContext.temperature != null)
+        modified =
+            modified or (mySettingsComponent!!.temperatureText.isEmpty() && InferenceGlobalContext.temperature != null)
 
         modified = modified or (mySettingsComponent!!.contrastUrlText.isNotEmpty() &&
-                (InferenceGlobalContext.inferenceUrl == null || mySettingsComponent!!.contrastUrlText != InferenceGlobalContext.inferenceUrl))
-        modified = modified or (mySettingsComponent!!.contrastUrlText.isEmpty() && InferenceGlobalContext.inferenceUrl != null)
+                (InferenceGlobalContext.inferenceUri == null ||
+                        mySettingsComponent!!.contrastUrlText != InferenceGlobalContext.inferenceUri.toString()))
+        modified =
+            modified or (mySettingsComponent!!.contrastUrlText.isEmpty() && InferenceGlobalContext.inferenceUri != null)
         return modified
     }
 
@@ -57,7 +61,9 @@ class AppSettingsConfigurable : Configurable {
                 InferenceGlobalContext.temperature
             }
         }
-        InferenceGlobalContext.inferenceUrl = mySettingsComponent!!.contrastUrlText.ifEmpty { null }
+        InferenceGlobalContext.inferenceUri = if (mySettingsComponent!!.contrastUrlText.isEmpty())
+            null else URI(mySettingsComponent!!.contrastUrlText)
+
     }
 
     override fun reset() {
@@ -65,7 +71,8 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.modelText = InferenceGlobalContext.model ?: ""
         mySettingsComponent!!.temperatureText = if (InferenceGlobalContext.temperature == null) "" else
             InferenceGlobalContext.temperature.toString()
-        mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUrl ?: ""
+        mySettingsComponent!!.contrastUrlText = if (InferenceGlobalContext.inferenceUri == null)
+            "" else InferenceGlobalContext.inferenceUri.toString()
     }
 
     override fun disposeUIResources() {

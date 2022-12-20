@@ -1,9 +1,10 @@
 package com.smallcloud.codify.io
 
 import com.intellij.util.messages.Topic
+import java.net.URI
 
 interface InferenceGlobalContextChangedNotifier {
-    fun inferenceUrlChanged(newUrl: String?) {}
+    fun inferenceUriChanged(newUrl: URI?) {}
     fun temperatureChanged(newTemp: Float?) {}
     fun modelChanged(newModel: String?) {}
 

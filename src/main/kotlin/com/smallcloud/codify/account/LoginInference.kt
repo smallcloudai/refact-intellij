@@ -2,22 +2,20 @@ package com.smallcloud.codify.account
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import com.smallcloud.codify.io.Connection
+import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
-import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.io.sendRequest
+import java.net.URI
 
-fun getInferenceUrl(): String? {
-    var inferUrl = InferenceGlobalContext.inferenceUrl ?: return null
-
-    if (inferUrl.endsWith('/')) {
-        inferUrl = inferUrl.dropLast(1)
-    }
-    return "$inferUrl/v1/secret-key-activate"
+fun getInferenceUrl(): URI? {
+    val inferUrl = InferenceGlobalContext.inferenceUri ?: return null
+    return inferUrl.resolve("v1/secret-key-activate")
 }
 
 fun inferenceLogin(): String {
+    if (InferenceGlobalContext.connection == null) return ""
+
     val acc = AccountManager
     val token = acc.apiKey
 
@@ -42,7 +40,7 @@ fun inferenceLogin(): String {
             if (body.has("inference_message") && body.get("inference_message").asString.isNotEmpty()) {
                 PluginState.instance.inferenceMessage = body.get("codify_message").asString
             }
-            Connection.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.connection!!.status = ConnectionStatus.CONNECTED
             return "OK"
         } else if (body.has("detail")) {
             logError("inference_login: ${body.get("detail").asString}")

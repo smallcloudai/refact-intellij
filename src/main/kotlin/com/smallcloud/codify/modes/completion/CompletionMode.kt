@@ -8,15 +8,14 @@ import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
-import com.smallcloud.codify.io.Connection
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
-import com.smallcloud.codify.io.fetch
+import com.smallcloud.codify.io.inference_fetch
 import com.smallcloud.codify.modes.EditorTextHelper
 import com.smallcloud.codify.modes.Mode
+import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
 import java.util.concurrent.Future
@@ -63,8 +62,9 @@ class CompletionMode : Mode(), CaretListener {
             return
         }
         val request = makeRequest(fileName, state.text, state.offset) ?: return
-        request.url += defaultContrastUrlSuffix
+        request.uri = request.uri.resolve(defaultContrastUrlSuffix)
         val editorHelper = EditorTextHelper(editor, state.offset)
+
         processTask = scheduler.schedule({
             process(request, editor, state, editorHelper)
         }, if (hasManyChanges) 0 else taskDelayMs, TimeUnit.MILLISECONDS)
@@ -103,22 +103,27 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     private fun process(request: SMCRequest, editor: Editor, state: EditorState, editorHelper: EditorTextHelper) {
+        if (InferenceGlobalContext.connection == null) return
+        val lastReqJob = inference_fetch(request)
+
         try {
             val completionState = CompletionState(editorHelper)
             if (!completionState.readyForCompletion) return
             request.body.stopTokens = completionState.stopTokens
 
-            val prediction = fetch(request) ?: return
+            val prediction = lastReqJob?.future?.get() as SMCPrediction
+
             if (prediction.status == null) {
-                Connection.status = ConnectionStatus.ERROR
-                Connection.lastErrorMsg = "Parameters are not correct"
+                InferenceGlobalContext.connection!!.status = ConnectionStatus.ERROR
+                InferenceGlobalContext.connection!!.lastErrorMsg = "Parameters are not correct"
                 return
             }
 
             val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
             if (predictedText == null) {
-                Connection.status = ConnectionStatus.ERROR
-                Connection.lastErrorMsg = "Request was succeeded but there is no predicted data"
+                InferenceGlobalContext.connection!!.status = ConnectionStatus.ERROR
+                InferenceGlobalContext.connection!!.lastErrorMsg =
+                    "Request was succeeded but there is no predicted data"
                 return
             }
 
@@ -129,12 +134,13 @@ class CompletionMode : Mode(), CaretListener {
             }
 
             renderCompletion(editor, state, completionData)
-        } catch (_: ProcessCanceledException) {
-            // do nothing now
-            // send a cancel request later
+        } catch (_: InterruptedException) {
+            if (lastReqJob != null) {
+                lastReqJob.request?.abort()
+            }
         } catch (e: Exception) {
-            Connection.status = ConnectionStatus.ERROR
-            Connection.lastErrorMsg = e.toString()
+            InferenceGlobalContext.connection!!.status = ConnectionStatus.ERROR
+            InferenceGlobalContext.connection!!.lastErrorMsg = e.toString()
             logger.warn("Exception while completion request processing", e)
         }
     }

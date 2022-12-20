@@ -1,6 +1,7 @@
 package com.smallcloud.codify.io
 
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 
 data class Response(
@@ -11,12 +12,12 @@ data class Response(
 
 
 fun sendRequest(
-    url: String, method: String = "GET",
+    uri: URI, method: String = "GET",
     headers: Map<String, String>? = null,
     body: String? = null,
     requestProperties: Map<String, String>? = null
 ): Response {
-    val conn = URL(url).openConnection() as HttpURLConnection
+    val conn = uri.toURL().openConnection() as HttpURLConnection
 
     requestProperties?.forEach {
         conn.setRequestProperty(it.key, it.value)

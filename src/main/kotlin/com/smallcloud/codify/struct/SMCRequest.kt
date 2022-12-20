@@ -1,6 +1,7 @@
 package com.smallcloud.codify.struct
 
 import com.google.gson.annotations.SerializedName
+import java.net.URI
 
 data class SMCRequestBody(
     var sources: Map<String, String>,
@@ -18,7 +19,7 @@ data class SMCRequestBody(
 )
 
 data class SMCRequest(
-    var url: String,
+    var uri: URI,
     var body: SMCRequestBody,
     var token: String
 )

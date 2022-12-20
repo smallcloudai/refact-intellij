@@ -7,17 +7,23 @@ import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
+import java.net.URI
 
 object InferenceGlobalContext {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
+    var connection: Connection? = inferenceUri?.let { Connection(it) }
 
-    var inferenceUrl: String?
-        get() = AppSettingsState.instance.inferenceUrl
+    var inferenceUri: URI?
+        get() = AppSettingsState.instance.inferenceUri?.let { URI(it) }
         set(newInferenceUrl) {
-            if (newInferenceUrl == inferenceUrl) return
+            if (newInferenceUrl == inferenceUri) return
             messageBus
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .inferenceUrlChanged(newInferenceUrl)
+                .inferenceUriChanged(newInferenceUrl)
+            connection = if (newInferenceUrl != null)
+                Connection(newInferenceUrl)
+            else
+                null
         }
     var temperature: Float?
         get() = AppSettingsState.instance.temperature
@@ -39,11 +45,10 @@ object InferenceGlobalContext {
     fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
         val apiKey = AccountManager.apiKey
         if (apiKey.isNullOrEmpty()) return null
-        if (inferenceUrl.isNullOrEmpty()) return null
 
         requestData.model = if (model != null) model!! else Resources.defaultModel
         requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
         requestData.client = "${Resources.client}-${Resources.version}"
-        return SMCRequest(inferenceUrl!!, requestData, apiKey)
+        return inferenceUri?.let { SMCRequest(it, requestData, apiKey) }
     }
 }

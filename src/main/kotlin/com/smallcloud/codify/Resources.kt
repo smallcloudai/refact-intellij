@@ -2,6 +2,7 @@ package com.smallcloud.codify
 
 import com.intellij.ide.plugins.PluginManager
 import com.intellij.openapi.util.IconLoader
+import java.net.URI
 import javax.swing.Icon
 
 private fun getVersion(): String {
@@ -13,9 +14,9 @@ private fun getVersion(): String {
 }
 
 object Resources {
-    const val defaultContrastUrlSuffix = "v1/contrast"
-    const val defaultRecallUrl: String = "https://www.smallcloud.ai/v1/streamlined-login-recall-ticket"
-    const val defaultLoginUrl: String = "https://www.smallcloud.ai/v1/login"
+    val defaultContrastUrlSuffix = URI("v1/contrast")
+    val defaultRecallUrl: URI = URI("https://www.smallcloud.ai/v1/streamlined-login-recall-ticket")
+    val defaultLoginUrl: URI = URI("https://www.smallcloud.ai/v1/login")
     const val defaultTemperature: Float = 0.2f
     const val defaultModel: String = "CONTRASTcode/3b/multi"
     val version: String = getVersion()

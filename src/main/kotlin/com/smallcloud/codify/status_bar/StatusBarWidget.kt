@@ -27,6 +27,7 @@ import com.smallcloud.codify.notifications.emitLogin
 import com.smallcloud.codify.notifications.emitRegular
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.net.URI
 import java.util.*
 import javax.swing.Icon
 import javax.swing.JComponent
@@ -47,7 +48,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             .messageBus
             .connect(this)
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                override fun inferenceUrlChanged(newUrl: String?) {
+                override fun inferenceUriChanged(unused: URI?) {
                     update(null)
                 }
 
@@ -128,7 +129,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 LOGO_LIGHT_12x12
             } else LOGO_DARK_12x12
         }
-        val cStat = Connection.status
+        val cStat = InferenceGlobalContext.connection?.status
         if (cStat == ConnectionStatus.DISCONNECTED && isOkStat.isEmpty())
             return AllIcons.Debugger.ThreadStates.Socket
         else if (cStat == ConnectionStatus.ERROR)
@@ -150,17 +151,17 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return "Click to login"
         }
 
-        when (Connection.status) {
+        when (InferenceGlobalContext.connection?.status) {
             ConnectionStatus.DISCONNECTED -> {
                 return "Connection is lost"
             }
             ConnectionStatus.ERROR -> {
-                return Connection.lastErrorMsg
+                return InferenceGlobalContext.connection?.lastErrorMsg
             }
             ConnectionStatus.CONNECTED -> {
                 var tooltipStr = "<html>"
-                if (InferenceGlobalContext.inferenceUrl != null) {
-                    tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUrl}${defaultContrastUrlSuffix}"
+                if (InferenceGlobalContext.inferenceUri != null) {
+                    tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUri!!.resolve(defaultContrastUrlSuffix)}"
                 }
                 val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else defaultModel
                 val temp =

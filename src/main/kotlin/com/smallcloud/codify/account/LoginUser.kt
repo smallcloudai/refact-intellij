@@ -12,6 +12,7 @@ import com.smallcloud.codify.Resources.defaultRecallUrl
 import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.io.sendRequest
 import com.smallcloud.codify.struct.PlanType
+import java.net.URI
 
 private fun generateTicket(): String {
     return (Math.random() * 1e16).toLong().toString(36) + "-" + (Math.random() * 1e16).toLong().toString(36)
@@ -29,9 +30,9 @@ fun login() {
 
 fun logError(msg: String, needChange: Boolean = true) {
     Logger.getInstance("check_login").warn(msg)
-    if (needChange) {
-        Connection.status = ConnectionStatus.ERROR
-        Connection.lastErrorMsg = msg
+    if (needChange && InferenceGlobalContext.connection != null) {
+        InferenceGlobalContext.connection!!.status = ConnectionStatus.ERROR
+        InferenceGlobalContext.connection!!.lastErrorMsg = msg
     }
 }
 
@@ -69,7 +70,7 @@ fun checkLogin(): String {
             if (retcode == "OK") {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
-                Connection.status = ConnectionStatus.CONNECTED
+                InferenceGlobalContext.connection!!.status = ConnectionStatus.CONNECTED
             } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
                 logError("recall: $humanReadableMessage", false)
 //                log_error("login-fail: $human_readable_message")
@@ -109,10 +110,8 @@ fun checkLogin(): String {
             acc.user = body.get("account").asString
             acc.ticket = null
             if (body.get("inference_url") != null) {
-                if (body.get("inference_url").asString == "DISABLED") {
-                    infC.inferenceUrl = null
-                } else {
-                    infC.inferenceUrl = body.get("inference_url").asString
+                if (body.get("inference_url").asString != "DISABLED") {
+                    infC.inferenceUri = URI(body.get("inference_url").asString)
                 }
             }
 
@@ -125,7 +124,7 @@ fun checkLogin(): String {
             if (body.has("login_message") && body.get("login_message").asString.isNotEmpty()) {
                 PluginState.instance.loginMessage = body.get("login_message").asString
             }
-            Connection.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.connection!!.status = ConnectionStatus.CONNECTED
             inferenceLogin()
             return inferenceLogin()
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {

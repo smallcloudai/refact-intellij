@@ -12,6 +12,7 @@ import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.struct.PlanType
+import java.net.URI
 
 
 /**
@@ -26,7 +27,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var model: String? = null
     var userLoggedIn: String? = null
     var streamlinedLoginTicket: String? = null
-    var inferenceUrl: String? = null
+    var inferenceUri: String? = null
     var activePlan: PlanType = PlanType.UNKNOWN
     var loginMessage: String? = null
     var pluginIsEnabled: Boolean = true
@@ -57,8 +58,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
             .subscribe(
                 InferenceGlobalContextChangedNotifier.TOPIC,
                 object : InferenceGlobalContextChangedNotifier {
-                    override fun inferenceUrlChanged(newUrl: String?) {
-                        instance.inferenceUrl = newUrl
+                    override fun inferenceUriChanged(newUrl: URI?) {
+                        instance.inferenceUri = newUrl.toString()
                     }
 
                     override fun modelChanged(newModel: String?) {

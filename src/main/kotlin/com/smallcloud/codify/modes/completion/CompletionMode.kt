@@ -28,6 +28,7 @@ data class EditorState(
 )
 
 class CompletionMode : Mode(), CaretListener {
+    private val scope: String = "CompletionProvider"
     private val scheduler = AppExecutorUtil.getAppScheduledExecutorService()
     private val taskDelayMs: Long = 250
     private var processTask: Future<*>? = null
@@ -81,7 +82,11 @@ class CompletionMode : Mode(), CaretListener {
             1,
             listOf("\n\n")
         )
-        return InferenceGlobalContext.makeRequest(requestBody)
+        val req = InferenceGlobalContext.makeRequest(requestBody)
+        if (req != null) {
+            req.scope = scope
+        }
+        return req
     }
 
     private fun renderCompletion(
@@ -137,6 +142,7 @@ class CompletionMode : Mode(), CaretListener {
         } catch (_: InterruptedException) {
             if (lastReqJob != null) {
                 lastReqJob.request?.abort()
+                logger.info("lastReqJob abort")
             }
         } catch (e: Exception) {
             InferenceGlobalContext.connection!!.status = ConnectionStatus.ERROR

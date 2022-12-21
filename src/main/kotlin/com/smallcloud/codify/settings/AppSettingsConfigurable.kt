@@ -1,8 +1,12 @@
 package com.smallcloud.codify.settings
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
+import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.AccountManager
+import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.io.InferenceGlobalContext
+import com.smallcloud.codify.struct.PlanType
 import org.jetbrains.annotations.Nls
 import java.net.URI
 import javax.swing.JComponent
@@ -12,6 +16,18 @@ import javax.swing.JComponent
  */
 class AppSettingsConfigurable : Configurable {
     private var mySettingsComponent: AppSettingsComponent? = null
+
+    init {
+        ApplicationManager.getApplication()
+            .messageBus
+            .connect(PluginState.instance)
+            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+
+                override fun apiKeyChanged(newApiKey: String?) {
+                    reset()
+                }
+            })
+    }
 
     // A default constructor with no arguments is required because this implementation
     // is registered as an applicationConfigurable EP

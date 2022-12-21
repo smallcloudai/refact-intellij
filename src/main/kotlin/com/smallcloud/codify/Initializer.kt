@@ -14,5 +14,6 @@ class Initializer : StartupActivity.Background {
     private fun initialize() {
         settingsStartup()
         notificationStartup()
+        val unused = UsageStats.instance
     }
 }

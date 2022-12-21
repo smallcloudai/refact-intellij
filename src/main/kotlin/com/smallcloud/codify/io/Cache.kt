@@ -3,8 +3,10 @@ package com.smallcloud.codify.io
 import com.smallcloud.codify.struct.SMCPrediction
 import com.google.common.collect.EvictingQueue
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.rd.util.toPromise
+import com.smallcloud.codify.UsageStats
 import com.smallcloud.codify.notifications.emitError
 import com.smallcloud.codify.struct.SMCRequest
 import org.apache.http.HttpResponse
@@ -62,6 +64,24 @@ fun fetch(request: SMCRequest): SMCPrediction? {
     return prediction
 }
 
+private fun lookForCommonErrors(json: JsonObject, request: SMCRequest) : Boolean {
+    if (json.has("detail")) {
+        UsageStats.addStatistic(false, request.scope, request.uri.toString(), json.get("detail").asString)
+        return true
+    }
+    if (json.has("retcode") && json.get("retcode").asString != "OK") {
+        UsageStats.addStatistic(false, request.scope,
+            request.uri.toString(), json.get("human_readable_message").asString)
+        return true
+    }
+    if (json.has("error")) {
+        UsageStats.addStatistic(false, request.scope,
+            request.uri.toString(), json.get("error").asJsonObject.get("message").asString)
+        return true
+    }
+    return false
+}
+
 fun inference_fetch(request: SMCRequest): RequestJob? {
     val cache = Cache.getFromCache(request)
     if (cache != null)
@@ -74,12 +94,20 @@ fun inference_fetch(request: SMCRequest): RequestJob? {
     val headers = mapOf(
         "Content-Type" to "application/json",
         "Authorization" to "Bearer ${request.token}",
+        "redirect" to "follow",
+        "cache" to "no-cache",
+        "referrer" to "no-referrer"
     )
 
-    var job = InferenceGlobalContext.connection?.post(uri, body, headers)
+    val job = InferenceGlobalContext.connection?.post(uri, body, headers)
     if (job != null) {
         job.future = job.future.thenApplyAsync {
-            return@thenApplyAsync gson.fromJson((it as String), SMCPrediction::class.java)
+            if (lookForCommonErrors(gson.fromJson((it as String), JsonObject::class.java), request)) {
+                throw Exception()
+            }
+            val json = gson.fromJson((it as String), SMCPrediction::class.java)
+            UsageStats.addStatistic(true, request.scope, request.uri.toString(), "")
+            return@thenApplyAsync json
         }
     }
 

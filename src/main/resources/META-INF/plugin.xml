@@ -40,6 +40,7 @@
                                  displayName="Settings"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.UsageStats"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.codify.listeners.TabPressedAction"

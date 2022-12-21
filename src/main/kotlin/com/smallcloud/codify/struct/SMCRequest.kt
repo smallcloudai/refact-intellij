@@ -21,5 +21,6 @@ data class SMCRequestBody(
 data class SMCRequest(
     var uri: URI,
     var body: SMCRequestBody,
-    var token: String
+    var token: String,
+    var scope: String = ""
 )

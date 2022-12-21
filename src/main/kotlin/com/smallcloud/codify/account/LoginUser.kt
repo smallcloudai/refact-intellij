@@ -4,12 +4,12 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.diagnostic.Logger
-import com.smallcloud.codify.io.Connection
-import com.smallcloud.codify.io.ConnectionStatus
-import com.smallcloud.codify.io.InferenceGlobalContext
+import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.Resources.defaultLoginUrl
 import com.smallcloud.codify.Resources.defaultRecallUrl
-import com.smallcloud.codify.PluginState
+import com.smallcloud.codify.UsageStats.Companion.addStatistic
+import com.smallcloud.codify.io.ConnectionStatus
+import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.sendRequest
 import com.smallcloud.codify.struct.PlanType
 import java.net.URI
@@ -71,16 +71,19 @@ fun checkLogin(): String {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
                 InferenceGlobalContext.connection!!.status = ConnectionStatus.CONNECTED
+                addStatistic(true,  "recall", recallUrl.toString(), "")
             } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
                 logError("recall: $humanReadableMessage", false)
 //                log_error("login-fail: $human_readable_message")
                 return "OK"
             } else {
+                result.body?.let { addStatistic(false,  "recall (1)", recallUrl.toString(), it) }
                 logError("recall: ${result.body}")
                 return ""
             }
 
         } catch (e: Exception) {
+            addStatistic(false,  "recall (2)", recallUrl.toString(), e)
             logError("recall: $e")
             return ""
         }
@@ -125,30 +128,29 @@ fun checkLogin(): String {
                 PluginState.instance.loginMessage = body.get("login_message").asString
             }
             InferenceGlobalContext.connection!!.status = ConnectionStatus.CONNECTED
+            addStatistic(true,  "login", url.toString(), "")
             inferenceLogin()
             return inferenceLogin()
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {
-            logError("login-fail: $humanReadableMessage", false)
-//            log_error("login-fail: $human_readable_message")
+            logError("login-failed: $humanReadableMessage", false)
+            addStatistic(false,  "login-failed", url.toString(), humanReadableMessage)
             return "OK"
         } else if (retcode == "FAILED") {
-            // Login failed, but the request was a success.
-
             acc.user = null
             acc.activePlan = PlanType.UNKNOWN
-            logError("login-fail: $humanReadableMessage")
+            logError("login-failed: $humanReadableMessage")
+            addStatistic(false,  "login-failed", url.toString(), humanReadableMessage)
             return ""
         } else {
             acc.user = null
             acc.activePlan = PlanType.UNKNOWN
-            logError("login-fail: unrecognized response")
+            logError("login-failed: unrecognized response")
+            addStatistic(false,  "login (2)", url.toString(), "unrecognized response")
             return ""
         }
-
-
     } catch (e: Exception) {
         logError("login-fail: $e")
+        addStatistic(false,  "login (3)", url.toString(), e)
         return ""
     }
-
 }

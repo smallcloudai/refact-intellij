@@ -3,6 +3,7 @@ package com.smallcloud.codify.io
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.messages.Topic
+import com.smallcloud.codify.UsageStats.Companion.addStatistic
 import org.apache.http.HttpClientConnection
 import org.apache.http.HttpHost
 import org.apache.http.client.HttpClient
@@ -14,7 +15,9 @@ import org.apache.http.conn.routing.HttpRoute
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.BasicResponseHandler
 import org.apache.http.impl.client.HttpClients
-import org.apache.http.impl.conn.BasicHttpClientConnectionManager
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
+import org.apache.http.impl.execchain.RequestAbortedException
+import java.net.SocketException
 import java.net.URI
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
@@ -42,16 +45,23 @@ data class RequestJob(var future: CompletableFuture<*>, val request: HttpRequest
 class Connection(uri: URI) {
     private val route: HttpRoute = HttpRoute(HttpHost(uri.host))
     private var context: HttpClientContext = HttpClientContext.create()
-    private val connManager: BasicHttpClientConnectionManager = BasicHttpClientConnectionManager()
+    private val connManager: PoolingHttpClientConnectionManager = PoolingHttpClientConnectionManager()
     private val conn: HttpClientConnection = connManager.requestConnection(route, null).get(10, TimeUnit.SECONDS)
 
     init {
+        connManager.maxTotal = 5;
+        connManager.defaultMaxPerRoute = 4;
+//        connManager.validateAfterInactivity = 5_000
         connManager.connect(conn, route, 10000, context)
-        connManager.routeComplete(conn, route, context)
-        connManager.releaseConnection(conn, null, 1, TimeUnit.SECONDS);
+//        connManager.routeComplete(conn, route, context)
+        connManager.setMaxPerRoute(route, 5);
+//        connManager.releaseConnection(conn, null, 1, TimeUnit.SECONDS);
     }
 
-    private val client: HttpClient = HttpClients.custom().setConnectionManager(connManager).build()
+    private val client: HttpClient = HttpClients.custom()
+        .setConnectionManager(connManager)
+//        .setKeepAliveStrategy(DefaultConnectionKeepAliveStrategy.INSTANCE)
+        .build()
 
     fun get(
         uri: URI,
@@ -87,7 +97,20 @@ class Connection(uri: URI) {
         }
 
         val future = CompletableFuture.supplyAsync {
-            return@supplyAsync client.execute(req, BasicResponseHandler())
+            try {
+                return@supplyAsync client.execute(req, BasicResponseHandler())
+            } catch (e: SocketException) {
+                // request aborted, it's ok for small files
+                throw e
+            } catch (e: RequestAbortedException) {
+                // request aborted, it's ok
+                throw e
+            } catch (e: Exception) {
+                addStatistic(false, "h2stream (3)", req.uri.toString(), e.toString())
+                throw e
+            } finally {
+                req.releaseConnection()
+            }
         }
         return RequestJob(future, req)
     }

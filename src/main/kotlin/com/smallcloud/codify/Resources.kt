@@ -17,6 +17,7 @@ object Resources {
     val defaultContrastUrlSuffix = URI("v1/contrast")
     val defaultRecallUrl: URI = URI("https://www.smallcloud.ai/v1/streamlined-login-recall-ticket")
     val defaultLoginUrl: URI = URI("https://www.smallcloud.ai/v1/login")
+    val defaultReportUrl: URI = URI("https://www.smallcloud.ai/v1/usage-stats")
     const val defaultTemperature: Float = 0.2f
     const val defaultModel: String = "CONTRASTcode/3b/multi"
     val version: String = getVersion()

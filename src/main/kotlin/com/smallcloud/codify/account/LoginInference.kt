@@ -14,7 +14,7 @@ fun getInferenceUrl(): URI? {
 }
 
 fun inferenceLogin(): String {
-    if (InferenceGlobalContext.connection == null) return ""
+    val conn = InferenceGlobalContext.connection?: return ""
 
     val acc = AccountManager
     val token = acc.apiKey
@@ -40,7 +40,7 @@ fun inferenceLogin(): String {
             if (body.has("inference_message") && body.get("inference_message").asString.isNotEmpty()) {
                 PluginState.instance.inferenceMessage = body.get("codify_message").asString
             }
-            InferenceGlobalContext.connection!!.status = ConnectionStatus.CONNECTED
+            conn.status = ConnectionStatus.CONNECTED
             return "OK"
         } else if (body.has("detail")) {
             logError("inference_login: ${body.get("detail").asString}")

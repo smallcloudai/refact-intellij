@@ -30,15 +30,17 @@ fun login() {
 
 fun logError(msg: String, needChange: Boolean = true) {
     Logger.getInstance("check_login").warn(msg)
-    if (needChange && InferenceGlobalContext.connection != null) {
-        InferenceGlobalContext.connection!!.status = ConnectionStatus.ERROR
-        InferenceGlobalContext.connection!!.lastErrorMsg = msg
+    val conn = InferenceGlobalContext.connection?: return
+    if (needChange) {
+        conn.status = ConnectionStatus.ERROR
+        conn.lastErrorMsg = msg
     }
 }
 
 fun checkLogin(): String {
     val acc = AccountManager
     val infC = InferenceGlobalContext
+    val conn = InferenceGlobalContext.connection
     val isLoggedIn = acc.isLoggedIn
     if (isLoggedIn) {
         return ""
@@ -70,7 +72,9 @@ fun checkLogin(): String {
             if (retcode == "OK") {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
-                InferenceGlobalContext.connection!!.status = ConnectionStatus.CONNECTED
+                if (conn != null) {
+                    conn.status = ConnectionStatus.CONNECTED
+                }
                 addStatistic(true,  "recall", recallUrl.toString(), "")
             } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
                 logError("recall: $humanReadableMessage", false)
@@ -127,7 +131,9 @@ fun checkLogin(): String {
             if (body.has("login_message") && body.get("login_message").asString.isNotEmpty()) {
                 PluginState.instance.loginMessage = body.get("login_message").asString
             }
-            InferenceGlobalContext.connection!!.status = ConnectionStatus.CONNECTED
+            if (conn != null) {
+                conn.status = ConnectionStatus.CONNECTED
+            }
             addStatistic(true,  "login", url.toString(), "")
             inferenceLogin()
             return inferenceLogin()

@@ -108,7 +108,7 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     private fun process(request: SMCRequest, editor: Editor, state: EditorState, editorHelper: EditorTextHelper) {
-        if (InferenceGlobalContext.connection == null) return
+        val conn = InferenceGlobalContext.connection?: return
         val lastReqJob = inference_fetch(request)
 
         try {
@@ -119,16 +119,15 @@ class CompletionMode : Mode(), CaretListener {
             val prediction = lastReqJob?.future?.get() as SMCPrediction
 
             if (prediction.status == null) {
-                InferenceGlobalContext.connection!!.status = ConnectionStatus.ERROR
-                InferenceGlobalContext.connection!!.lastErrorMsg = "Parameters are not correct"
+                conn.status = ConnectionStatus.ERROR
+                conn.lastErrorMsg = "Parameters are not correct"
                 return
             }
 
             val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
             if (predictedText == null) {
-                InferenceGlobalContext.connection!!.status = ConnectionStatus.ERROR
-                InferenceGlobalContext.connection!!.lastErrorMsg =
-                    "Request was succeeded but there is no predicted data"
+                conn.status = ConnectionStatus.ERROR
+                conn.lastErrorMsg = "Request was succeeded but there is no predicted data"
                 return
             }
 
@@ -145,8 +144,8 @@ class CompletionMode : Mode(), CaretListener {
                 logger.info("lastReqJob abort")
             }
         } catch (e: Exception) {
-            InferenceGlobalContext.connection!!.status = ConnectionStatus.ERROR
-            InferenceGlobalContext.connection!!.lastErrorMsg = e.toString()
+            conn.status = ConnectionStatus.ERROR
+            conn.lastErrorMsg = e.toString()
             logger.warn("Exception while completion request processing", e)
         }
     }

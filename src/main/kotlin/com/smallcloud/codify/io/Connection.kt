@@ -115,7 +115,7 @@ class Connection(uri: URI) {
         return RequestJob(future, req)
     }
 
-    var status: ConnectionStatus = ConnectionStatus.CONNECTED
+    var status: ConnectionStatus = ConnectionStatus.DISCONNECTED
         set(newStatus) {
             if (field == newStatus) return
             field = newStatus

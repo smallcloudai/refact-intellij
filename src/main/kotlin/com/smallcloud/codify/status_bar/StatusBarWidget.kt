@@ -119,7 +119,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         return ""
     }
 
-    private fun getIcon(): Icon? {
+    private fun getIcon(): Icon {
         val isOkStat = getLastStatus()
         if (!PluginState.instance.isEnabled)
             return AllIcons.Diff.GutterCheckBoxIndeterminate
@@ -137,7 +137,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         else if (cStat == ConnectionStatus.CONNECTED) {
             return LOGO_RED_12x12
         }
-        return null
+        return LOGO_RED_12x12
     }
 
 

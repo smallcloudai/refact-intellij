@@ -5,6 +5,7 @@ import java.net.URI
 
 interface InferenceGlobalContextChangedNotifier {
     fun inferenceUriChanged(newUrl: URI?) {}
+    fun userInferenceUriChanged(newUrl: URI?) {}
     fun temperatureChanged(newTemp: Float?) {}
     fun modelChanged(newModel: String?) {}
 

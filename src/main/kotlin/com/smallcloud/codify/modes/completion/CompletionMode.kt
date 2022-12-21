@@ -129,6 +129,9 @@ class CompletionMode : Mode(), CaretListener {
                 conn.status = ConnectionStatus.ERROR
                 conn.lastErrorMsg = "Request was succeeded but there is no predicted data"
                 return
+            } else {
+                conn.status = ConnectionStatus.CONNECTED
+                conn.lastErrorMsg = null
             }
 
             val completionData = completionState.difference(predictedText) ?: return

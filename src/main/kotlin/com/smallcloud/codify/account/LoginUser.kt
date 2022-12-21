@@ -118,7 +118,7 @@ fun checkLogin(): String {
             acc.ticket = null
             if (body.get("inference_url") != null) {
                 if (body.get("inference_url").asString != "DISABLED") {
-                    infC.inferenceUri = URI(body.get("inference_url").asString)
+                    infC.serverInferenceUri = URI(body.get("inference_url").asString)
                 }
             }
 

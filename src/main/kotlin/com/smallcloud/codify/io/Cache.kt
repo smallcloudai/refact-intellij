@@ -105,7 +105,7 @@ fun inference_fetch(request: SMCRequest): RequestJob? {
             if (lookForCommonErrors(gson.fromJson((it as String), JsonObject::class.java), request)) {
                 throw Exception()
             }
-            val json = gson.fromJson((it as String), SMCPrediction::class.java)
+            val json = gson.fromJson(it, SMCPrediction::class.java)
             UsageStats.addStatistic(true, request.scope, request.uri.toString(), "")
             return@thenApplyAsync json
         }

@@ -14,17 +14,33 @@ object InferenceGlobalContext {
     var connection: Connection? = inferenceUri?.let { Connection(it) }
 
     var inferenceUri: URI?
-        get() = AppSettingsState.instance.inferenceUri?.let { URI(it) }
+        get() {
+            if (AppSettingsState.instance.userInferenceUri != null)
+                return AppSettingsState.instance.userInferenceUri?.let { URI(it) }
+            return AppSettingsState.instance.inferenceUri?.let { URI(it) }
+        }
         set(newInferenceUrl) {
             if (newInferenceUrl == inferenceUri) return
             messageBus
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .inferenceUriChanged(newInferenceUrl)
-            connection = if (newInferenceUrl != null)
-                Connection(newInferenceUrl)
-            else
-                null
+                .userInferenceUriChanged(newInferenceUrl)
+            connection = inferenceUri?.let { Connection(it) }
         }
+
+    // _inferenceUri is uri from SMC server; must be change only in login method
+    var serverInferenceUri: URI? = null
+        set(newInferenceUrl) {
+            if (newInferenceUrl == AppSettingsState.instance.inferenceUri?.let { URI(it) }) return
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .inferenceUriChanged(newInferenceUrl)
+            connection = inferenceUri?.let { Connection(it) }
+        }
+
+    fun hasUserInferenceUri(): Boolean {
+        return AppSettingsState.instance.userInferenceUri != null
+    }
+
     var temperature: Float?
         get() = AppSettingsState.instance.temperature
         set(newTemp) {
@@ -33,6 +49,7 @@ object InferenceGlobalContext {
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .temperatureChanged(newTemp)
         }
+
     var model: String?
         get() = AppSettingsState.instance.model
         set(newModel) {

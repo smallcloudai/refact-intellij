@@ -28,6 +28,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var userLoggedIn: String? = null
     var streamlinedLoginTicket: String? = null
     var inferenceUri: String? = null
+    var userInferenceUri: String? = null
     var activePlan: PlanType = PlanType.UNKNOWN
     var loginMessage: String? = null
     var pluginIsEnabled: Boolean = true
@@ -59,7 +60,12 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                 InferenceGlobalContextChangedNotifier.TOPIC,
                 object : InferenceGlobalContextChangedNotifier {
                     override fun inferenceUriChanged(newUrl: URI?) {
-                        instance.inferenceUri = newUrl.toString()
+                        instance.inferenceUri = newUrl?.toString()
+
+                    }
+
+                    override fun userInferenceUriChanged(newUrl: URI?) {
+                        instance.userInferenceUri = newUrl?.toString()
                     }
 
                     override fun modelChanged(newModel: String?) {

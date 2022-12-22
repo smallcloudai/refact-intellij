@@ -28,15 +28,15 @@ class UsageStats {
     fun addStatistic(
         positive: Boolean,
         scope: String,
-        related_url: String,
-        error_message: Any
+        relatedUrl: String,
+        errorMessage: Any
     ) {
-        val error_msg_string = if (error_message !is String) {
-            error_message.toString()
+        val errorMsgString = if (errorMessage !is String) {
+            errorMessage.toString()
         } else {
-            error_message
+            errorMessage
         }
-        val message = "${positive.compareTo(false)} $scope $related_url $error_msg_string"
+        val message = "${positive.compareTo(false)} $scope $relatedUrl $errorMsgString"
         synchronized(this) {
             if (messages.containsKey(message)) {
                 messages[message] = messages[message]!! + 1
@@ -48,7 +48,7 @@ class UsageStats {
 
     private fun report() {
         val acc = AccountManager
-        val token: String? = acc.apiKey ?: return
+        val token: String = acc.apiKey ?: return
 
         val headers = mutableMapOf(
             "Content-Type" to "application/json",

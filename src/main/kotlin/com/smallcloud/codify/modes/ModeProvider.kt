@@ -20,7 +20,7 @@ import java.lang.System.identityHashCode
 
 class ModeProvider(
     editor: Editor,
-    private val modes: List<Mode> = listOf(CompletionMode()),
+    modes: List<Mode> = listOf(CompletionMode()),
     private var activeMode: Mode? = null,
     private val pluginState: PluginState = PluginState.instance,
 ) : Disposable {

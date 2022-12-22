@@ -2,7 +2,6 @@ package com.smallcloud.codify.io
 
 import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URL
 
 data class Response(
     val statusCode: Int,

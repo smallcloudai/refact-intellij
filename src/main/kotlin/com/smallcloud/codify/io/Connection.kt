@@ -50,8 +50,8 @@ class Connection(uri: URI) {
     private val conn: HttpClientConnection = connManager.requestConnection(route, null).get(10, TimeUnit.SECONDS)
 
     init {
-        connManager.maxTotal = 5;
-        connManager.defaultMaxPerRoute = 4;
+        connManager.maxTotal = 5
+        connManager.defaultMaxPerRoute = 4
         connManager.validateAfterInactivity = 5_000
         connManager.connect(conn, route, 10000, context)
         connManager.setMaxPerRoute(route, 5)

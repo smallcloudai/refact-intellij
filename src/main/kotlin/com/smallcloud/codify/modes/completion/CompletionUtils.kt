@@ -36,6 +36,8 @@ class CompletionState(
                     return@run
                 }
             }
+            val leftOfCursor = textHelper.currentLine.substring(0, textHelper.offsetByCurrentLine)
+            multiline = leftOfCursor.replace(" ", "").replace("\t", "").isEmpty()
             requestedText = textHelper.document.text
             if (requestedText.length > MAX_TEXT_SIZE) return@run
             readyForCompletion = true
@@ -136,7 +138,7 @@ class CompletionState(
             }
             var predictedLinesOffset = -1
             for (j in currentLineNum + 1 until predictedLines.size) {
-                if (lines[i] == predictedLines[j]) {
+                if (lines[i] == predictedLines[j] || predictedLines[j].contains(lines[i])) {
                     predictedLinesOffset = j
                     break
                 }

@@ -146,10 +146,12 @@ class CompletionMode : Mode(), CaretListener {
                 lastReqJob.request?.abort()
                 logger.info("lastReqJob abort")
             }
+            cancelOrClose(editor)
         } catch (e: Exception) {
             conn.status = ConnectionStatus.ERROR
             conn.lastErrorMsg = e.toString()
             logger.warn("Exception while completion request processing", e)
+            cancelOrClose(editor)
         }
     }
 

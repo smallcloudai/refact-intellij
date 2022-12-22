@@ -5,17 +5,10 @@ import com.google.common.collect.EvictingQueue
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.rd.util.toPromise
 import com.smallcloud.codify.UsageStats
 import com.smallcloud.codify.notifications.emitError
 import com.smallcloud.codify.struct.SMCRequest
-import org.apache.http.HttpResponse
-import org.jetbrains.concurrency.Promise
-import org.jetbrains.concurrency.toActionCallback
 import java.util.concurrent.CompletableFuture
-
-import kotlinx.coroutines.*
-import java.util.concurrent.Future
 
 private object Cache {
     private val buffer = EvictingQueue.create<Pair<Int, SMCPrediction>>(15)
@@ -82,7 +75,7 @@ private fun lookForCommonErrors(json: JsonObject, request: SMCRequest) : Boolean
     return false
 }
 
-fun inference_fetch(request: SMCRequest): RequestJob? {
+fun inferenceFetch(request: SMCRequest): RequestJob? {
     val cache = Cache.getFromCache(request)
     if (cache != null)
         return RequestJob(CompletableFuture.supplyAsync{

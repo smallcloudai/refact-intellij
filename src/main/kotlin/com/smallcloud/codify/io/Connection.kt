@@ -14,6 +14,7 @@ import org.apache.http.client.protocol.HttpClientContext
 import org.apache.http.conn.routing.HttpRoute
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.BasicResponseHandler
+import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.impl.execchain.RequestAbortedException
@@ -51,16 +52,14 @@ class Connection(uri: URI) {
     init {
         connManager.maxTotal = 5;
         connManager.defaultMaxPerRoute = 4;
-//        connManager.validateAfterInactivity = 5_000
+        connManager.validateAfterInactivity = 5_000
         connManager.connect(conn, route, 10000, context)
-//        connManager.routeComplete(conn, route, context)
-        connManager.setMaxPerRoute(route, 5);
-//        connManager.releaseConnection(conn, null, 1, TimeUnit.SECONDS);
+        connManager.setMaxPerRoute(route, 5)
     }
 
     private val client: HttpClient = HttpClients.custom()
         .setConnectionManager(connManager)
-//        .setKeepAliveStrategy(DefaultConnectionKeepAliveStrategy.INSTANCE)
+        .setKeepAliveStrategy(DefaultConnectionKeepAliveStrategy.INSTANCE)
         .build()
 
     fun get(

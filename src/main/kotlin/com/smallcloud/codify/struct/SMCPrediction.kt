@@ -1,7 +1,6 @@
 package com.smallcloud.codify.struct
 
 import com.google.gson.annotations.SerializedName
-import org.jetbrains.concurrency.Promise
 
 data class Choice(
     val index: Int,

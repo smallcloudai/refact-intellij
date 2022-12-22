@@ -12,7 +12,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
-import com.smallcloud.codify.io.inference_fetch
+import com.smallcloud.codify.io.inferenceFetch
 import com.smallcloud.codify.modes.EditorTextHelper
 import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.struct.SMCPrediction
@@ -109,7 +109,7 @@ class CompletionMode : Mode(), CaretListener {
 
     private fun process(request: SMCRequest, editor: Editor, state: EditorState, editorHelper: EditorTextHelper) {
         val conn = InferenceGlobalContext.connection?: return
-        val lastReqJob = inference_fetch(request)
+        val lastReqJob = inferenceFetch(request)
 
         try {
             val completionState = CompletionState(editorHelper)

@@ -16,11 +16,17 @@ import com.smallcloud.codify.listeners.GlobalFocusListener
 import com.smallcloud.codify.modes.completion.CompletionMode
 import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
+import kotlin.reflect.typeOf
+
+
+enum class ModeType {
+    Completion,
+}
 
 
 class ModeProvider(
     editor: Editor,
-    modes: List<Mode> = listOf(CompletionMode()),
+    private var modes: Map<ModeType, Mode> = mapOf(ModeType.Completion to CompletionMode()),
     private var activeMode: Mode? = null,
     private val pluginState: PluginState = PluginState.instance,
 ) : Disposable {
@@ -28,10 +34,13 @@ class ModeProvider(
         get() = pluginState.isEnabled
 
     init {
-        activeMode = modes.firstOrNull()
+        activeMode = modes[ModeType.Completion]
     }
 
     fun modeInActiveState(): Boolean = activeMode?.isInActiveState() == true
+
+    fun isInCompletionMode(): Boolean = activeMode === modes[ModeType.Completion]
+    fun getCompletionMode(): Mode = modes[ModeType.Completion]!!
 
     fun switchMode() {
 

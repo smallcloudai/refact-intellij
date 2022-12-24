@@ -29,7 +29,9 @@
         <editorFactoryDocumentListener implementation="com.smallcloud.codify.listeners.DocumentListener"/>
         <statusBarWidgetFactory implementation="com.smallcloud.codify.status_bar.SMCStatusBarWidgetFactory"/>
         <notificationGroup id="Codify Notification Group" displayType="BALLOON"/>
-
+        <completion.contributor language="any"
+                                implementationClass="com.smallcloud.codify.modes.completion.PopupCompletionContributor"
+                                order="first"/>
 
         <applicationConfigurable parentId="tools" instance="com.smallcloud.codify.settings.AppRootConfigurable"
                                  id="codify_root"

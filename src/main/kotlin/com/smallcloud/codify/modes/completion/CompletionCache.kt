@@ -1,8 +1,14 @@
 package com.smallcloud.codify.modes.completion
 
 
-object CompletionCache : LinkedHashMap<String, Completion>() {
-    private fun cleanup(maxSize: Int = 160) {
+data class CompletionHash(
+    val text: String,
+    val offset: Int,
+)
+
+
+object CompletionCache : LinkedHashMap<CompletionHash, Completion>() {
+    private fun cleanup(maxSize: Int = 1600) {
         if (size < maxSize || size == 0) {
             return
         }
@@ -22,9 +28,9 @@ object CompletionCache : LinkedHashMap<String, Completion>() {
                 startIndex = completion.startIndex + i,
                 endIndex = completion.endIndex + i,
             )
-            this[newCompletion.originalText] = newCompletion
+            this[CompletionHash(newCompletion.originalText, newCompletion.startIndex)] = newCompletion
         }
     }
 
-    fun getCompletion(text: String): Completion? = getOrDefault(text, null)
+    fun getCompletion(text: String, offset: Int): Completion? = getOrDefault(CompletionHash(text, offset), null)
 }

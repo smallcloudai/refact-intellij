@@ -106,6 +106,7 @@ class CompletionState(
                 stopIndex -= offset
                 completion = completion.substring(0, completion.length - offset)
             }
+            stopIndex = maxOf(stopIndex, textHelper.offset)
         }
 
         if (!multiline) {
@@ -128,7 +129,6 @@ class CompletionState(
 //                minOf(currentLineNum + 1, linesOffset),
 //                linesOffset
 //            ).joinToString("\n").length
-            stopIndex = startIndex
             completion += '\n'
             completion += predictedLines.subList(
                 minOf(currentLineNum + 1, predictedLinesOffset),

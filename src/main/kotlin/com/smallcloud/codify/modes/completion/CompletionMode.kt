@@ -18,7 +18,6 @@ import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
-import com.smallcloud.codify.utils.CachedSchedule
 import java.util.concurrent.CancellationException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -129,8 +128,13 @@ class CompletionMode : Mode(), CaretListener {
                     " modificationStamp: ${state.modificationStamp}"
         )
         logger.info("Competion data: ${completionData.completion}")
-        completionLayout = CompletionLayout(editor, completionData).render()
-        editor.caretModel.addCaretListener(this)
+        try {
+            completionLayout = CompletionLayout(editor, completionData).render()
+            editor.caretModel.addCaretListener(this)
+        } catch (ex: Exception) {
+            logger.warn("Exception while rendering completion", ex)
+            cancelOrClose(editor)
+        }
     }
 
     fun hideCompletion() {

@@ -14,10 +14,8 @@ import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.listeners.GlobalCaretListener
 import com.smallcloud.codify.listeners.GlobalFocusListener
 import com.smallcloud.codify.modes.completion.CompletionMode
-import com.smallcloud.codify.utils.CachedSchedule
 import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
-import kotlin.reflect.typeOf
 
 
 enum class ModeType {
@@ -33,7 +31,6 @@ class ModeProvider(
 ) : Disposable {
     private val isEnabled: Boolean
         get() = pluginState.isEnabled
-    private val cachedScheduleonTextChange = CachedSchedule(msToWait = 20)
 
     init {
         activeMode = modes[ModeType.Completion]

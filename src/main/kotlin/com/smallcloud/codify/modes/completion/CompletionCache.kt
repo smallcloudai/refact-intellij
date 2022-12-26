@@ -15,7 +15,7 @@ object CompletionCache : LinkedHashMap<CompletionHash, Completion>() {
         remove(minByOrNull { it.value.createdTs }?.key)
     }
 
-    fun addCompletion(completion: Completion, maxSize: Int = 160) {
+    fun addCompletion(completion: Completion, maxSize: Int = 1600) {
         cleanup(maxSize)
 
         for (i in 0 until completion.completion.length) {
@@ -26,7 +26,23 @@ object CompletionCache : LinkedHashMap<CompletionHash, Completion>() {
                 predictedText = null,
                 completion = completion.completion.substring(i),
                 startIndex = completion.startIndex + i,
-                endIndex = completion.endIndex + i,
+                endIndex = completion.endIndex + i
+            )
+            this[CompletionHash(newCompletion.originalText, newCompletion.startIndex)] = newCompletion
+        }
+
+        val beforeLeft = completion.symbolsBeforeLeftCursorReversed()
+        for (i in beforeLeft.indices) {
+            if (beforeLeft[i] != ' ' && beforeLeft[i] != '\t') {
+                break
+            }
+            val newCompletion = completion.copy(
+                originalText = completion.originalText.substring(0, completion.startIndex - i) +
+                        completion.originalText.substring(completion.startIndex),
+                predictedText = null,
+                completion = beforeLeft.substring(0, i).reversed() + completion.completion,
+                startIndex = completion.startIndex - i,
+                endIndex = completion.endIndex - i
             )
             this[CompletionHash(newCompletion.originalText, newCompletion.startIndex)] = newCompletion
         }

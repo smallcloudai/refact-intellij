@@ -12,6 +12,12 @@ import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.login
 import com.smallcloud.codify.settings.AppRootConfigurable
 
+private var lastNotification: Notification? = null
+private fun removeLastNotification() {
+    lastNotification?.expire()
+    lastNotification?.hideBalloon()
+}
+
 private fun addDisableEnable(notification: Notification) {
     if (PluginState.instance.isEnabled) {
         notification.addAction(NotificationAction.createSimple("Disable") {
@@ -27,60 +33,64 @@ private fun addDisableEnable(notification: Notification) {
 }
 
 fun emitLogin(project: Project) {
-    val notification = NotificationGroupManager.getInstance()
+    removeLastNotification()
+    lastNotification = NotificationGroupManager.getInstance()
         .getNotificationGroup("Codify Notification Group")
         .createNotification("Login to Codify", NotificationType.INFORMATION)
-    notification.icon = Resources.Icons.LOGO_RED_16x16
+    lastNotification!!.icon = Resources.Icons.LOGO_RED_16x16
 
-    notification.addAction(NotificationAction.createSimple("Login") {
+    lastNotification!!.addAction(NotificationAction.createSimple("Login") {
         login()
-        notification.expire()
+        lastNotification!!.expire()
     }).addAction(NotificationAction.createSimple("Settings") {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
-        notification.expire()
+        lastNotification!!.expire()
     }).notify(project)
 }
 
 fun emitRegular(project: Project) {
-    val notification = NotificationGroupManager.getInstance()
+    removeLastNotification()
+    lastNotification = NotificationGroupManager.getInstance()
         .getNotificationGroup("Codify Notification Group")
         .createNotification("Codify", NotificationType.INFORMATION)
-    notification.icon = Resources.Icons.LOGO_RED_16x16
+    lastNotification!!.icon = Resources.Icons.LOGO_RED_16x16
 
-    notification.addAction(NotificationAction.createSimple("Settings") {
+    lastNotification!!.addAction(NotificationAction.createSimple("Settings") {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
-        notification.expire()
+        lastNotification!!.expire()
     })
-    addDisableEnable(notification)
-    notification.notify(project)
+    addDisableEnable(lastNotification!!)
+    lastNotification!!.notify(project)
 }
 
 fun emitInfo(msg: String) {
+    removeLastNotification()
     val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return
-    val notification = NotificationGroupManager.getInstance()
+    lastNotification = NotificationGroupManager.getInstance()
         .getNotificationGroup("Codify Notification Group")
         .createNotification("Codify", msg, NotificationType.INFORMATION)
-    notification.icon = Resources.Icons.LOGO_RED_16x16
+    lastNotification!!.icon = Resources.Icons.LOGO_RED_16x16
 
-    notification.addAction(NotificationAction.createSimple("Settings") {
+    lastNotification!!.addAction(NotificationAction.createSimple("Settings") {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
-        notification.expire()
+        lastNotification!!.expire()
     })
-    addDisableEnable(notification)
-    notification.notify(project)
+    addDisableEnable(lastNotification!!)
+    lastNotification!!.notify(project)
 }
 
 fun emitError(msg: String) {
+    removeLastNotification()
     val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return
-    val notification = NotificationGroupManager.getInstance()
+    lastNotification = NotificationGroupManager.getInstance()
         .getNotificationGroup("Codify Notification Group")
         .createNotification("Codify", msg, NotificationType.ERROR)
-    notification.icon = Resources.Icons.LOGO_RED_16x16
+    lastNotification!!.icon = Resources.Icons.LOGO_RED_16x16
 
-    notification.addAction(NotificationAction.createSimple("Settings") {
+    lastNotification!!.addAction(NotificationAction.createSimple("Settings") {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
-        notification.expire()
+        lastNotification!!.expire()
     })
-    addDisableEnable(notification)
-    notification.notify(project)
+    addDisableEnable(lastNotification!!)
+    lastNotification!!.notify(project)
 }

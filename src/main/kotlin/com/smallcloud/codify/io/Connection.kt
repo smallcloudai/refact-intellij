@@ -105,7 +105,7 @@ class Connection(uri: URI) {
                 // request aborted, it's ok
                 throw e
             } catch (e: Exception) {
-                addStatistic(false, "h2stream (3)", req.uri.toString(), e.toString())
+                addStatistic(false, "ApacheHttpClients", req.uri.toString(), e.toString())
                 throw e
             } finally {
                 req.releaseConnection()

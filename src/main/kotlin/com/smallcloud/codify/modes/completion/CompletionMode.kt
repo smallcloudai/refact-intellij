@@ -108,7 +108,7 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     private fun process(request: SMCRequest, editor: Editor, state: EditorState, editorHelper: EditorTextHelper) {
-        val conn = InferenceGlobalContext.connection?: return
+        val conn = InferenceGlobalContext.connection ?: return
         val lastReqJob = inferenceFetch(request)
 
         try {

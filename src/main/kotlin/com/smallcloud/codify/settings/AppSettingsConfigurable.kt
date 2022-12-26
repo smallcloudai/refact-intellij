@@ -19,7 +19,6 @@ class AppSettingsConfigurable : Configurable {
     init {
         ApplicationManager.getApplication().messageBus.connect(PluginState.instance)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-
                 override fun apiKeyChanged(newApiKey: String?) {
                     reset()
                 }
@@ -43,22 +42,36 @@ class AppSettingsConfigurable : Configurable {
 
     override fun isModified(): Boolean {
         var modified =
-            (mySettingsComponent!!.tokenText.isNotEmpty() && (AccountManager.apiKey == null || mySettingsComponent!!.tokenText != AccountManager.apiKey))
+            (mySettingsComponent!!.tokenText.isNotEmpty() && (AccountManager.apiKey == null ||
+                    mySettingsComponent!!.tokenText != AccountManager.apiKey))
         modified = modified or (mySettingsComponent!!.tokenText.isEmpty() && AccountManager.apiKey != null)
 
         modified = modified or (mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model != null)
         modified = modified or (!mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model == null)
 
         modified =
-            modified or (mySettingsComponent!!.temperatureText.isNotEmpty() && (InferenceGlobalContext.temperature == null || mySettingsComponent!!.temperatureText.toFloat() != InferenceGlobalContext.temperature))
+            modified or (mySettingsComponent!!.temperatureText.isNotEmpty() && (InferenceGlobalContext.temperature == null ||
+                    mySettingsComponent!!.temperatureText.toFloat() != InferenceGlobalContext.temperature))
         modified =
             modified or (mySettingsComponent!!.temperatureText.isEmpty() && InferenceGlobalContext.temperature != null)
 
         modified =
-            modified or (mySettingsComponent!!.contrastUrlText.isNotEmpty() && (!InferenceGlobalContext.hasUserInferenceUri() || mySettingsComponent!!.contrastUrlText != InferenceGlobalContext.inferenceUri.toString()))
+            modified or (mySettingsComponent!!.contrastUrlText.isNotEmpty() && (!InferenceGlobalContext.hasUserInferenceUri() ||
+                    makeUrlGreat(mySettingsComponent!!.contrastUrlText) != InferenceGlobalContext.inferenceUri))
         modified =
             modified or (mySettingsComponent!!.contrastUrlText.isEmpty() && InferenceGlobalContext.hasUserInferenceUri())
         return modified
+    }
+
+    private fun makeUrlGreat(uri: String): URI {
+        var newUri = uri
+        if(!uri.startsWith("http://") && !uri.startsWith("https://")) {
+            newUri = "https://" + newUri
+        }
+        if(!uri.endsWith("/")) {
+            newUri = newUri + "/"
+        }
+        return URI(newUri)
     }
 
     override fun apply() {
@@ -74,8 +87,8 @@ class AppSettingsConfigurable : Configurable {
             }
         }
         InferenceGlobalContext.inferenceUri =
-            if (mySettingsComponent!!.contrastUrlText.isEmpty()) null else URI(mySettingsComponent!!.contrastUrlText)
-
+            if (mySettingsComponent!!.contrastUrlText.isEmpty()) null else
+                makeUrlGreat(mySettingsComponent!!.contrastUrlText)
     }
 
     override fun reset() {

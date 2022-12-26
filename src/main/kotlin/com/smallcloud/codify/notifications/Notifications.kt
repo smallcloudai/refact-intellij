@@ -14,8 +14,10 @@ import com.smallcloud.codify.settings.AppRootConfigurable
 
 private var lastNotification: Notification? = null
 private fun removeLastNotification() {
-    lastNotification!!.expire()
-    lastNotification!!.hideBalloon()
+    lastNotification?.apply {
+        expire()
+        hideBalloon()
+    }
 }
 
 private fun addDisableEnable(notification: Notification) {

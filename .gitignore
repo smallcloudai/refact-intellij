@@ -9,6 +9,7 @@ build/
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/uiDesigner.xml
+.idea/misc.xml
 .idea/libraries/
 .idea/inspectionProfiles/
 *.iws

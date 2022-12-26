@@ -69,6 +69,7 @@ class CompletionLayout(
     }
 
     fun hide() {
+        if (!rendered) return
         dispose()
     }
 

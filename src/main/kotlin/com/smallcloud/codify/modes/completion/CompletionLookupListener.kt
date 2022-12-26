@@ -15,6 +15,7 @@ class CompletionLookupListener(editor: Editor): LookupListener {
     override fun lookupShown(event: LookupEvent) {
         logger.info("lookupShown")
         completionMode.hideCompletion()
+        completionMode.needToRender = false
     }
 
     override fun beforeItemSelected(event: LookupEvent): Boolean {
@@ -25,11 +26,13 @@ class CompletionLookupListener(editor: Editor): LookupListener {
     override fun itemSelected(event: LookupEvent) {
         logger.info("itemSelected")
         completionMode.cancelOrClose(event.lookup.editor)
+        completionMode.needToRender = true
     }
 
     override fun lookupCanceled(event: LookupEvent) {
-        completionMode.showCompletion()
         logger.info("lookupCanceled")
+        completionMode.showCompletion()
+        completionMode.needToRender = true
     }
 
     override fun currentItemChanged(event: LookupEvent) {
@@ -38,7 +41,6 @@ class CompletionLookupListener(editor: Editor): LookupListener {
 
     override fun uiRefreshed() {
         logger.info("uiRefreshed")
-        completionMode.hideCompletion()
     }
 
     override fun focusDegreeChanged() {

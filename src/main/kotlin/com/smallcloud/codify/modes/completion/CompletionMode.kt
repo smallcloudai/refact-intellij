@@ -29,10 +29,10 @@ data class EditorState(
 )
 
 class CompletionMode : Mode(), CaretListener {
+    var needToRender: Boolean = true
     private val scope: String = "CompletionProvider"
     private val app = ApplicationManager.getApplication()
-    private val scheduler = AppExecutorUtil.getAppScheduledExecutorService()
-    private val taskDelayMs: Long = 250
+    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CompletionScheduler", 1)
     private var processTask: Future<*>? = null
     private var completionLayout: CompletionLayout? = null
     private val logger = Logger.getInstance("CompletionMode")
@@ -131,7 +131,9 @@ class CompletionMode : Mode(), CaretListener {
         )
         logger.info("Completion data: ${completionData.completion}")
         try {
-            completionLayout = CompletionLayout(editor, completionData).render()
+            val completion = CompletionLayout(editor, completionData)
+            if (needToRender) completion.render()
+            completionLayout = completion
             editor.caretModel.addCaretListener(this)
         } catch (ex: Exception) {
             logger.warn("Exception while rendering completion", ex)
@@ -140,23 +142,27 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     fun hideCompletion() {
+        logger.info("hideCompletion")
+        if (!isInActiveState()) return
         scheduler.submit {
             try {
                 processTask?.get()
             } catch (_: CancellationException) {
             } finally {
-                app.invokeLater { completionLayout?.hide() }
+                app.invokeAndWait { completionLayout?.hide() }
             }
         }
     }
 
     fun showCompletion() {
+        logger.info("showCompletion")
+        if (isInActiveState()) return
         scheduler.submit {
             try {
                 processTask?.get()
             } catch (_: CancellationException) {
             } finally {
-                app.invokeLater { completionLayout?.show() }
+                app.invokeAndWait { completionLayout?.show() }
             }
         }
     }
@@ -215,8 +221,12 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
-        completionLayout?.applyPreview(caret ?: editor.caretModel.currentCaret)
-        cancelOrClose(editor)
+        completionLayout?.apply {
+            applyPreview(caret ?: editor.caretModel.currentCaret)
+            dispose()
+        }
+        completionLayout = null
+        editor.caretModel.removeCaretListener(this)
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
@@ -227,7 +237,7 @@ class CompletionMode : Mode(), CaretListener {
         cancelOrClose(event.editor)
     }
 
-    override fun isInActiveState(): Boolean = completionLayout != null && completionLayout!!.rendered
+    override fun isInActiveState(): Boolean = completionLayout != null && completionLayout!!.rendered && needToRender
 
     private fun shouldIgnoreChange(event: DocumentEvent, editor: Editor, offset: Int): Boolean {
         val document = event.document

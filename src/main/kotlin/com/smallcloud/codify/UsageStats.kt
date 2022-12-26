@@ -10,10 +10,17 @@ import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.io.sendRequest
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.codify.settings.AppSettingsState.Companion.instance as Settings
 
 
 class UsageStats {
-    private var messages: MutableMap<String, Int> = HashMap()
+    private var messages: MutableMap<String, Int>
+        set(newMap) {
+            Settings.usageStatsMessagesCache = newMap
+        }
+        get() {
+            return Settings.usageStatsMessagesCache
+        }
     private var task: Future<*>
 
     init {
@@ -91,7 +98,7 @@ class UsageStats {
         }
     }
 
-    private fun mergeMessages(newMessages:  MutableMap<String, Int>) {
+    private fun mergeMessages(newMessages: MutableMap<String, Int>) {
         synchronized(this) {
             messages = HashMap((messages.toList() + newMessages.toList())
                 .groupBy({ it.first }, { it.second })

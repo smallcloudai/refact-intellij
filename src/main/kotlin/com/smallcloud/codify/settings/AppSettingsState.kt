@@ -6,11 +6,12 @@ import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.messages.MessageBus
 import com.intellij.util.xmlb.XmlSerializerUtil
+import com.intellij.util.xmlb.annotations.Transient
 import com.smallcloud.codify.ExtraInfoChangedNotifier
-import com.smallcloud.codify.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
+import com.smallcloud.codify.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.codify.struct.PlanType
 import java.net.URI
 
@@ -32,6 +33,9 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var activePlan: PlanType = PlanType.UNKNOWN
     var loginMessage: String? = null
     var pluginIsEnabled: Boolean = true
+    var usageStatsMessagesCache: MutableMap<String, Int> = HashMap()
+
+    @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
 
     init {

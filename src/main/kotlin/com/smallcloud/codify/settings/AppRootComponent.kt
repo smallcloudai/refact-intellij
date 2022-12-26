@@ -30,7 +30,6 @@ class AppRootComponent {
     private val loginButton = JButton("Login / Register")
     private val logoutButton = JButton("Logout")
     private val forceLoginButton = JButton(AllIcons.Actions.Refresh)
-    private val bugReportButton = JButton("Bug Report...")
     private val waitLoginLabel = JBLabel()
     private val activePlanLabel = JBLabel("")
 
@@ -93,7 +92,6 @@ class AppRootComponent {
         activePlanLabel.text = "Active plan: ${AccountManager.activePlan}"
         activePlanLabel.isVisible = currentState == SettingsState.SIGNED
         logoutButton.isVisible = currentState == SettingsState.SIGNED
-        bugReportButton.isVisible = currentState == SettingsState.SIGNED
         loginButton.isVisible = currentState != SettingsState.SIGNED
         forceLoginButton.isVisible = currentState != SettingsState.UNSIGNED
         waitLoginLabel.text = if (currentState == SettingsState.WAITING)
@@ -102,7 +100,7 @@ class AppRootComponent {
     }
 
     val preferredFocusedComponent: JComponent
-        get() = if (isLoggedIn) bugReportButton else loginButton
+        get() = if (isLoggedIn) forceLoginButton else loginButton
 
     private fun recreatePanel(): JPanel {
         val description = JBLabel("Codify: AI autocomplete, refactoring and advanced code generation")
@@ -112,7 +110,6 @@ class AppRootComponent {
             addLabeledComponent(waitLoginLabel, forceLoginButton)
             addComponent(activePlanLabel)
             addComponent(logoutButton)
-            addComponent(bugReportButton)
             addComponent(loginButton)
             addComponentFillVertically(JPanel(), 0).panel
         }

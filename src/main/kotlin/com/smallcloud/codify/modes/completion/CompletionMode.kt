@@ -18,6 +18,7 @@ import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
+import java.util.concurrent.CancellationException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
@@ -29,6 +30,7 @@ data class EditorState(
 
 class CompletionMode : Mode(), CaretListener {
     private val scope: String = "CompletionProvider"
+    private val app = ApplicationManager.getApplication()
     private val scheduler = AppExecutorUtil.getAppScheduledExecutorService()
     private val taskDelayMs: Long = 250
     private var processTask: Future<*>? = null
@@ -36,24 +38,32 @@ class CompletionMode : Mode(), CaretListener {
     private val logger = Logger.getInstance("CompletionMode")
 
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
-        if (completionLayout != null && completionLayout!!.blockEvents) return
         cancelOrClose(editor)
     }
 
-    override fun onTextChange(event: DocumentEvent, editor: Editor) {
-        if (completionLayout != null && completionLayout!!.blockEvents) return
-        if (editor.caretModel.offset + event.newLength > editor.document.text.length) return
-        if (event.newLength + event.oldLength <= 0) return
+    private fun willHaveMoreEvents(event: DocumentEvent, editor: Editor): Boolean {
+        if (event.offset == 0 || event.offset >= editor.document.text.length) return false
+        val ch = editor.document.text[event.offset]
+        val beforeCh = editor.document.text[event.offset - 1]
+        if (beforeCh == ':' && ch == '\n') return true
+        return false
+    }
 
-        val hasManyChanges = event.newLength > 5 || event.oldLength > 5
+    override fun onTextChange(event: DocumentEvent, editor: Editor) {
+        if (event.offset + event.newLength > editor.document.text.length) return
+        if (event.newLength + event.oldLength <= 0) return
+        if (willHaveMoreEvents(event, editor)) return
+
         val state = EditorState(
             editor.document.modificationStamp,
-            editor.caretModel.offset + event.newLength,
+            event.offset + event.newLength,
             editor.document.text
         )
-        val completionData = CompletionCache.getCompletion(state.text)
+        val completionData = CompletionCache.getCompletion(state.text, state.offset)
         if (completionData != null) {
-            renderCompletion(editor, state, completionData)
+            processTask = scheduler.submit {
+                app.invokeLater { renderCompletion(editor, state, completionData) }
+            }
             return
         }
 
@@ -66,9 +76,12 @@ class CompletionMode : Mode(), CaretListener {
         request.uri = request.uri.resolve(defaultContrastUrlSuffix)
         val editorHelper = EditorTextHelper(editor, state.offset)
 
+        val debounceMs = CompletionTracker.calcDebounceTime(editor)
+        CompletionTracker.updateLastCompletionRequestTime(editor)
+        logger.info("Debounce time: $debounceMs")
         processTask = scheduler.schedule({
             process(request, editor, state, editorHelper)
-        }, if (hasManyChanges) 0 else taskDelayMs, TimeUnit.MILLISECONDS)
+        }, debounceMs, TimeUnit.MILLISECONDS)
     }
 
     private fun makeRequest(fileName: String, text: String, offset: Int): SMCRequest? {
@@ -94,20 +107,66 @@ class CompletionMode : Mode(), CaretListener {
         state: EditorState,
         completionData: Completion,
     ) {
-        return ApplicationManager.getApplication()
-            .invokeLater {
-                val invalidStamp = state.modificationStamp != editor.document.modificationStamp
-                val invalidOffset = state.offset != editor.caretModel.offset
-                if (invalidStamp || invalidOffset) {
-                    logger.info("Completion is droppped: invalidStamp || invalidOffset")
-                    return@invokeLater
-                }
-                completionLayout = CompletionLayout(editor, completionData).render()
-                editor.caretModel.addCaretListener(this)
-            }
+        val invalidStamp = state.modificationStamp != editor.document.modificationStamp
+        val invalidOffset = state.offset != editor.caretModel.offset
+        if (invalidStamp || invalidOffset) {
+            logger.info("Completion is droppped: invalidStamp || invalidOffset")
+            logger.info(
+                "state_offset: ${state.offset}," +
+                        " state_modificationStamp: ${state.modificationStamp}"
+            )
+            logger.info(
+                "editor_offset: ${editor.caretModel.offset}," +
+                        " editor_modificationStamp: ${editor.document.modificationStamp}"
+            )
+            return
+        }
+        if (processTask == null) {
+            logger.info("Completion is droppped: there is no active processTask is left")
+            return
+        }
+        logger.info(
+            "Completion rendering: offset: ${state.offset}," +
+                    " modificationStamp: ${state.modificationStamp}"
+        )
+        logger.info("Completion data: ${completionData.completion}")
+        try {
+            completionLayout = CompletionLayout(editor, completionData).render()
+            editor.caretModel.addCaretListener(this)
+        } catch (ex: Exception) {
+            logger.warn("Exception while rendering completion", ex)
+            cancelOrClose(editor)
+        }
     }
 
-    private fun process(request: SMCRequest, editor: Editor, state: EditorState, editorHelper: EditorTextHelper) {
+    fun hideCompletion() {
+        scheduler.submit {
+            try {
+                processTask?.get()
+            } catch (_: CancellationException) {
+            } finally {
+                app.invokeLater { completionLayout?.hide() }
+            }
+        }
+    }
+
+    fun showCompletion() {
+        scheduler.submit {
+            try {
+                processTask?.get()
+            } catch (_: CancellationException) {
+            } finally {
+                app.invokeLater { completionLayout?.show() }
+            }
+        }
+    }
+
+    private fun process(
+        request: SMCRequest,
+        editor: Editor,
+        state: EditorState,
+        editorHelper: EditorTextHelper
+    ) {
         val conn = InferenceGlobalContext.connection ?: return
         val lastReqJob = inferenceFetch(request)
 
@@ -116,6 +175,7 @@ class CompletionMode : Mode(), CaretListener {
             if (!completionState.readyForCompletion) return
             request.body.stopTokens = completionState.stopTokens
 
+            logger.info("Making a completion request")
             val prediction = lastReqJob?.future?.get() as SMCPrediction
 
             if (prediction.status == null) {
@@ -139,8 +199,9 @@ class CompletionMode : Mode(), CaretListener {
             synchronized(this) {
                 CompletionCache.addCompletion(completionData)
             }
-
-            renderCompletion(editor, state, completionData)
+            app.invokeAndWait {
+                renderCompletion(editor, state, completionData)
+            }
         } catch (_: InterruptedException) {
             if (lastReqJob != null) {
                 lastReqJob.request?.abort()
@@ -171,9 +232,7 @@ class CompletionMode : Mode(), CaretListener {
     private fun shouldIgnoreChange(event: DocumentEvent, editor: Editor, offset: Int): Boolean {
         val document = event.document
 
-        if (editor.editorKind != EditorKind.MAIN_EDITOR
-            && !ApplicationManager.getApplication().isUnitTestMode
-        ) {
+        if (editor.editorKind != EditorKind.MAIN_EDITOR && !app.isUnitTestMode) {
             return true
         }
         if (!EditorModificationUtil.checkModificationAllowed(editor)
@@ -186,19 +245,22 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     private fun getActiveFile(document: Document): String? {
-        if (!ApplicationManager.getApplication().isDispatchThread) return null
-
+        if (!app.isDispatchThread) return null
         val file = FileDocumentManager.getInstance().getFile(document)
         return file?.presentableName
     }
 
-    private fun cancelOrClose(editor: Editor) {
-        ApplicationManager.getApplication()
+    fun cancelOrClose(editor: Editor) {
         logger.info("cancelOrClose request")
-        processTask?.cancel(true)
-        processTask = null
-        completionLayout?.dispose()
-        completionLayout = null
-        editor.caretModel.removeCaretListener(this)
+        try {
+            processTask?.cancel(true)
+            processTask?.get()
+        } catch (_: CancellationException) {
+        } finally {
+            processTask = null
+            completionLayout?.dispose()
+            completionLayout = null
+            editor.caretModel.removeCaretListener(this)
+        }
     }
 }

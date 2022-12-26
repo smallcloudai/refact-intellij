@@ -7,7 +7,7 @@ import java.util.regex.Pattern
 
 class CompletionState(
     private var textHelper: EditorTextHelper,
-    private val filterRightFromCursor: Boolean = false
+    private val filterRightFromCursor: Boolean = true
 ) {
     private val MAX_TEXT_SIZE: Long = 180 * 1024
     private val RIGHT_OF_CURSOR_SPECIAL_CHAR = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
@@ -36,6 +36,8 @@ class CompletionState(
                     return@run
                 }
             }
+            val leftOfCursor = textHelper.currentLine.substring(0, textHelper.offsetByCurrentLine)
+            multiline = leftOfCursor.replace(" ", "").replace("\t", "").isEmpty()
             requestedText = textHelper.document.text
             if (requestedText.length > MAX_TEXT_SIZE) return@run
             readyForCompletion = true
@@ -88,6 +90,23 @@ class CompletionState(
                 startIndex,
                 textHelper.currentLineStartOffset + predictedCurrentLine.length
             )
+            if (!multiline) {
+                var offset = 0
+                for (i in -1 downTo  -completion.length) {
+                    if (currentLine.length <= -i) {
+                        break
+                    }
+                    val curCh = currentLine.getChar(i)
+                    val compCh = completion.getChar(i)
+                    if (curCh != compCh) {
+                        break
+                    }
+                    offset += 1
+                }
+                stopIndex -= offset
+                completion = completion.substring(0, completion.length - offset)
+            }
+            stopIndex = maxOf(stopIndex, textHelper.offset)
         }
 
         if (!multiline) {
@@ -102,10 +121,14 @@ class CompletionState(
                 createdTs = System.currentTimeMillis()
             )
         } else {
-            stopIndex += lines.subList(
-                minOf(currentLineNum + 1, linesOffset),
-                linesOffset
-            ).joinToString("\n").length
+//            This is the real index of the line where the completion stops with possible deletions.
+//            However, the deletion may occur during the sampling process when max_tokens is reached,
+//            so it's probably an unexpected result for a user
+//            We ignore the real value for now
+//            stopIndex += lines.subList(
+//                minOf(currentLineNum + 1, linesOffset),
+//                linesOffset
+//            ).joinToString("\n").length
             completion += '\n'
             completion += predictedLines.subList(
                 minOf(currentLineNum + 1, predictedLinesOffset),
@@ -136,7 +159,7 @@ class CompletionState(
             }
             var predictedLinesOffset = -1
             for (j in currentLineNum + 1 until predictedLines.size) {
-                if (lines[i] == predictedLines[j]) {
+                if (lines[i] == predictedLines[j] || predictedLines[j].contains(lines[i])) {
                     predictedLinesOffset = j
                     break
                 }

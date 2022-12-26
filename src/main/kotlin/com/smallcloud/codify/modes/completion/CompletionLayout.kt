@@ -67,4 +67,13 @@ class CompletionLayout(
             completionData.startIndex + completionData.completion.length
         )
     }
+
+    fun hide() {
+        dispose()
+    }
+
+    fun show() {
+        if (rendered) return
+        render()
+    }
 }

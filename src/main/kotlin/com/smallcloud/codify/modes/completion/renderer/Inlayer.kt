@@ -50,17 +50,19 @@ class Inlayer(val editor: Editor) : Disposable {
     fun render(completionData: Completion): Inlayer {
         if (!completionData.multiline) {
             renderLine(completionData.completion, completionData.startIndex)
-            rangeHighlighters.add(
-                editor.markupModel.addRangeHighlighter(
-                    completionData.startIndex,
-                    completionData.endIndex,
-                    99999,
-                    TextAttributes().apply {
-                        backgroundColor = Color(200, 0, 0, 100)
-                    },
-                    HighlighterTargetArea.EXACT_RANGE
+            if (completionData.endIndex > completionData.startIndex) {
+                rangeHighlighters.add(
+                    editor.markupModel.addRangeHighlighter(
+                        completionData.startIndex,
+                        completionData.endIndex,
+                        99999,
+                        TextAttributes().apply {
+                            backgroundColor = Color(200, 0, 0, 100)
+                        },
+                        HighlighterTargetArea.EXACT_RANGE
+                    )
                 )
-            )
+            }
         } else {
             val helper = EditorTextHelper(editor, completionData.startIndex)
             val afterCursor = completionData.originalText.substring(helper.offset, helper.currentLineEndOffset)

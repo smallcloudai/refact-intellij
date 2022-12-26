@@ -17,6 +17,15 @@ data class Completion(
     fun isMakeSense() : Boolean {
         return completion.isNotEmpty()
     }
+
+    fun symbolsBeforeLeftCursorReversed() : String {
+        val reversedText = originalText
+            .substring(0, startIndex)
+            .reversed()
+        val idx = reversedText.indexOfFirst { it == '\n' }
+        if (idx == -1) return ""
+        return reversedText.substring(0, idx)
+    }
 }
 
 fun String.getChar(index: Int): Char? {

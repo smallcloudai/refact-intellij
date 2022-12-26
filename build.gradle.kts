@@ -9,7 +9,7 @@ dependencies {
 }
 
 group = "com.smallcloud"
-version = "0.1.30"
+version = "0.1.29"
 
 repositories {
     mavenCentral()

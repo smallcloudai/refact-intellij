@@ -26,7 +26,6 @@ class CompletionLayout(
     }
 
     fun render(): CompletionLayout {
-        assert(!rendered) { "Already rendered" }
         try {
             blockEvents = true
             editor.document.startGuardedBlockChecking()
@@ -69,11 +68,14 @@ class CompletionLayout(
     }
 
     fun hide() {
-        dispose()
+        synchronized(this) {
+            dispose()
+        }
     }
 
     fun show() {
-        if (rendered) return
-        render()
+        synchronized(this) {
+            render()
+        }
     }
 }

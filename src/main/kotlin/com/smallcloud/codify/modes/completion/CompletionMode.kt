@@ -54,7 +54,6 @@ class CompletionMode : Mode(), CaretListener {
         if (event.newLength + event.oldLength <= 0) return
         if (willHaveMoreEvents(event, editor)) return
 
-        val hasManyChanges = event.newLength > 5 || event.oldLength > 5
         val state = EditorState(
             editor.document.modificationStamp,
             event.offset + event.newLength,
@@ -77,9 +76,12 @@ class CompletionMode : Mode(), CaretListener {
         request.uri = request.uri.resolve(defaultContrastUrlSuffix)
         val editorHelper = EditorTextHelper(editor, state.offset)
 
+        val debounceMs = CompletionTracker.calcDebounceTime(editor)
+        CompletionTracker.updateLastCompletionRequestTime(editor)
+        logger.info("Debounce time: $debounceMs")
         processTask = scheduler.schedule({
             process(request, editor, state, editorHelper)
-        }, if (hasManyChanges) 0 else taskDelayMs, TimeUnit.MILLISECONDS)
+        }, debounceMs, TimeUnit.MILLISECONDS)
     }
 
     private fun makeRequest(fileName: String, text: String, offset: Int): SMCRequest? {
@@ -127,7 +129,7 @@ class CompletionMode : Mode(), CaretListener {
             "Completion rendering: offset: ${state.offset}," +
                     " modificationStamp: ${state.modificationStamp}"
         )
-        logger.info("Competion data: ${completionData.completion}")
+        logger.info("Completion data: ${completionData.completion}")
         try {
             completionLayout = CompletionLayout(editor, completionData).render()
             editor.caretModel.addCaretListener(this)
@@ -173,6 +175,7 @@ class CompletionMode : Mode(), CaretListener {
             if (!completionState.readyForCompletion) return
             request.body.stopTokens = completionState.stopTokens
 
+            logger.info("Making a completion request")
             val prediction = lastReqJob?.future?.get() as SMCPrediction
 
             if (prediction.status == null) {

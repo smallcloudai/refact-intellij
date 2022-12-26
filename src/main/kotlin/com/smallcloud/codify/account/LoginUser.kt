@@ -26,6 +26,8 @@ fun login() {
     if (AccountManager.ticket == null)
         AccountManager.ticket = generateTicket()
     BrowserUtil.browse("https://codify.smallcloud.ai/authentication?token=${AccountManager.ticket}")
+
+    runCounterTask()
 }
 
 fun logError(msg: String, needChange: Boolean = true) {

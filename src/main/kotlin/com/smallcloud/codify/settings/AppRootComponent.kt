@@ -8,12 +8,9 @@ import com.intellij.util.ui.FormBuilder
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.Resources.loginCooldown
 import com.smallcloud.codify.PluginState
-import com.smallcloud.codify.account.AccountManager
+import com.smallcloud.codify.account.*
 import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.account.AccountManager.logout
-import com.smallcloud.codify.account.AccountManagerChangedNotifier
-import com.smallcloud.codify.account.LoginStateService
-import com.smallcloud.codify.account.login
 import com.smallcloud.codify.struct.PlanType
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -28,8 +25,7 @@ private enum class SettingsState {
 }
 
 class AppRootComponent {
-    private var loginTask: Future<*>? = null
-    private var loginCounter: Int = loginCooldown
+    private var loginCounter: Int
     private var currentState: SettingsState = SettingsState.UNSIGNED
     private val loginButton = JButton("Login / Register")
     private val logoutButton = JButton("Logout")
@@ -39,6 +35,7 @@ class AppRootComponent {
     private val activePlanLabel = JBLabel("")
 
     init {
+        loginCounter = loginCooldownCounter
         currentState = if (isLoggedIn) {
             SettingsState.SIGNED
         } else if (AccountManager.ticket != null) {
@@ -64,13 +61,18 @@ class AppRootComponent {
                     revalidate()
                 }
             })
+        ApplicationManager.getApplication()
+            .messageBus
+            .connect(PluginState.instance)
+            .subscribe(LoginCounterChangedNotifier.TOPIC, object : LoginCounterChangedNotifier {
+                override fun counterChanged(newValue: Int) {
+                    loginCounter = newValue
+                    revalidate()
+                }
+            })
 
         loginButton.addActionListener {
             login()
-
-            if (loginTask != null && (!loginTask!!.isDone || !loginTask!!.isCancelled))
-                return@addActionListener
-            runCounterTask()
         }
         logoutButton.addActionListener {
             logout()
@@ -81,22 +83,6 @@ class AppRootComponent {
     }
 
     private var myPanel: JPanel = recreatePanel()
-
-    private fun runCounterTask() {
-        var i = 1
-        loginTask = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay({
-            loginCounter = loginCooldown - (i % loginCooldown)
-            if (i % loginCooldown == 0) {
-                ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin()
-            }
-
-            if (isLoggedIn || i == loginCooldown * 10) {
-                loginTask?.cancel(false)
-            }
-            revalidate()
-            i++
-        }, 0, 1, TimeUnit.SECONDS)
-    }
 
     private fun revalidate() {
         setupProperties()

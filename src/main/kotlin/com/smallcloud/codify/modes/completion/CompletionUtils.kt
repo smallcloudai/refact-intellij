@@ -90,6 +90,22 @@ class CompletionState(
                 startIndex,
                 textHelper.currentLineStartOffset + predictedCurrentLine.length
             )
+            if (!multiline) {
+                var offset = 0
+                for (i in -1 downTo  -completion.length) {
+                    if (currentLine.length <= -i) {
+                        break
+                    }
+                    val curCh = currentLine.getChar(i)
+                    val compCh = completion.getChar(i)
+                    if (curCh != compCh) {
+                        break
+                    }
+                    offset += 1
+                }
+                stopIndex -= offset
+                completion = completion.substring(0, completion.length - offset)
+            }
         }
 
         if (!multiline) {

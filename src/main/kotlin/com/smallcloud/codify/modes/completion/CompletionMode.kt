@@ -18,6 +18,7 @@ import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
+import com.smallcloud.codify.utils.CachedSchedule
 import java.util.concurrent.CancellationException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -41,9 +42,19 @@ class CompletionMode : Mode(), CaretListener {
         cancelOrClose(editor)
     }
 
+    private fun isPreliminaryEvent(event: DocumentEvent, editor: Editor): Boolean {
+        val ch = editor.document.text[event.offset]
+        val beforeCh = editor.document.text[event.offset - 1]
+        val isBeforeEmpty: Boolean = beforeCh != '\n' && beforeCh != '\t' && beforeCh != ' '
+
+        if (isBeforeEmpty && ch == '\n') return true
+        return false
+    }
+
     override fun onTextChange(event: DocumentEvent, editor: Editor) {
         if (editor.caretModel.offset + event.newLength > editor.document.text.length) return
         if (event.newLength + event.oldLength <= 0) return
+        if (isPreliminaryEvent(event, editor)) return
 
         val hasManyChanges = event.newLength > 5 || event.oldLength > 5
         val state = EditorState(
@@ -100,6 +111,14 @@ class CompletionMode : Mode(), CaretListener {
         val invalidOffset = state.offset != editor.caretModel.offset
         if (invalidStamp || invalidOffset) {
             logger.info("Completion is droppped: invalidStamp || invalidOffset")
+            logger.info(
+                "state_offset: ${state.offset}," +
+                        " state_modificationStamp: ${state.modificationStamp}"
+            )
+            logger.info(
+                "editor_offset: ${editor.caretModel.offset}," +
+                        " editor_modificationStamp: ${editor.document.modificationStamp}"
+            )
             return
         }
         if (processTask == null) {
@@ -107,12 +126,8 @@ class CompletionMode : Mode(), CaretListener {
             return
         }
         logger.info(
-            "Completion rendering: state_offset: ${state.offset}," +
-                    " state_modificationStamp: ${state.modificationStamp}"
-        )
-        logger.info(
-            "Completion rendering: editor_offset: ${editor.caretModel.offset}," +
-                    " editor_modificationStamp: ${editor.document.modificationStamp}"
+            "Completion rendering: offset: ${state.offset}," +
+                    " modificationStamp: ${state.modificationStamp}"
         )
         logger.info("Competion data: ${completionData.completion}")
         completionLayout = CompletionLayout(editor, completionData).render()

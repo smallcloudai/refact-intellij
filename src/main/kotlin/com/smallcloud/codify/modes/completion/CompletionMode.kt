@@ -42,24 +42,23 @@ class CompletionMode : Mode(), CaretListener {
         cancelOrClose(editor)
     }
 
-    private fun isPreliminaryEvent(event: DocumentEvent, editor: Editor): Boolean {
+    private fun willHaveMoreEvents(event: DocumentEvent, editor: Editor): Boolean {
+        if (event.offset == 0 || event.offset >= editor.document.text.length) return false
         val ch = editor.document.text[event.offset]
         val beforeCh = editor.document.text[event.offset - 1]
-        val isBeforeEmpty: Boolean = beforeCh != '\n' && beforeCh != '\t' && beforeCh != ' '
-
-        if (isBeforeEmpty && ch == '\n') return true
+        if (beforeCh == ':' && ch == '\n') return true
         return false
     }
 
     override fun onTextChange(event: DocumentEvent, editor: Editor) {
-        if (editor.caretModel.offset + event.newLength > editor.document.text.length) return
+        if (event.offset + event.newLength > editor.document.text.length) return
         if (event.newLength + event.oldLength <= 0) return
-        if (isPreliminaryEvent(event, editor)) return
+        if (willHaveMoreEvents(event, editor)) return
 
         val hasManyChanges = event.newLength > 5 || event.oldLength > 5
         val state = EditorState(
             editor.document.modificationStamp,
-            editor.caretModel.offset + event.newLength,
+            event.offset + event.newLength,
             editor.document.text
         )
         val completionData = CompletionCache.getCompletion(state.text, state.offset)

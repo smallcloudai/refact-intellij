@@ -1,7 +1,9 @@
 package com.smallcloud.codify
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
+import com.smallcloud.codify.account.LoginStateService
 import com.smallcloud.codify.notifications.notificationStartup
 import com.smallcloud.codify.settings.settingsStartup
 
@@ -15,5 +17,6 @@ class Initializer : StartupActivity.Background {
         settingsStartup()
         notificationStartup()
         UsageStats.instance
+        ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
     }
 }

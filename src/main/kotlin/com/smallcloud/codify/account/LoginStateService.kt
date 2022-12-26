@@ -26,11 +26,11 @@ class LoginStateService {
         return lastInferenceLoginStatus
     }
 
-    fun tryToWebsiteLogin() {
+    fun tryToWebsiteLogin(force: Boolean = false) {
         AppExecutorUtil.getAppExecutorService().submit {
             try {
                 Logger.getInstance("check_login").warn("call")
-                lastWebsiteLoginStatus = checkLogin()
+                lastWebsiteLoginStatus = checkLogin(force)
             } catch (e: Exception) {
                 logError("check_login exception: $e")
             }

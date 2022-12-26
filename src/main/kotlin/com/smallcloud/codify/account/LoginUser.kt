@@ -39,12 +39,12 @@ fun logError(msg: String, needChange: Boolean = true) {
     }
 }
 
-fun checkLogin(): String {
+fun checkLogin(force: Boolean = false): String {
     val acc = AccountManager
     val infC = InferenceGlobalContext
     val conn = InferenceGlobalContext.connection
     val isLoggedIn = acc.isLoggedIn
-    if (isLoggedIn) {
+    if (isLoggedIn && !force) {
         return ""
     }
 

@@ -78,7 +78,7 @@ class AppRootComponent {
             logout()
         }
         forceLoginButton.addActionListener {
-            ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin()
+            ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
         }
     }
 

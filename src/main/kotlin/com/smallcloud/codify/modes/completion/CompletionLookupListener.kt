@@ -25,7 +25,6 @@ class CompletionLookupListener(editor: Editor): LookupListener {
 
     override fun itemSelected(event: LookupEvent) {
         logger.info("itemSelected")
-        completionMode.cancelOrClose(event.lookup.editor)
         completionMode.needToRender = true
     }
 

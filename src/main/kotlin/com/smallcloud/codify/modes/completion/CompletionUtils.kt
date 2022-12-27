@@ -12,7 +12,7 @@ class CompletionState(
     private val MAX_TEXT_SIZE: Long = 180 * 1024
     private val RIGHT_OF_CURSOR_SPECIAL_CHAR = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
 
-    private var multiline: Boolean = true
+    var multiline: Boolean = true
     private var requestedText: String = ""
     private val logger = Logger.getInstance("CompletionUtils")
 
@@ -56,9 +56,9 @@ class CompletionState(
         val predictedCurrentLine = predictedLines[currentLineNum]
         val currentLinesAreEqual = currentLine == predictedCurrentLine
         val hasChangesBeforeCursor = (
-                requestedText.substring(0, textHelper.currentLineStartOffset) != predictedText.substring(
+                requestedText.substring(0, textHelper.offset) != predictedText.substring(
                     0,
-                    textHelper.currentLineStartOffset
+                    textHelper.offset
                 ))
         val (linesOffset, predictedLinesOffset) = getMultilineOffsets(currentLineNum, lines, predictedLines)
         val diffLikeCompletion = false  // predictedLinesOffset <= linesOffset
@@ -90,7 +90,8 @@ class CompletionState(
                 startIndex,
                 textHelper.currentLineStartOffset + predictedCurrentLine.length
             )
-            if (!multiline) {
+            val cursorRightSide = textHelper.currentLine.substring(textHelper.offsetByCurrentLine)
+            if (!multiline && cursorRightSide.isNotEmpty()) {
                 var offset = 0
                 for (i in -1 downTo  -completion.length) {
                     if (currentLine.length <= -i) {

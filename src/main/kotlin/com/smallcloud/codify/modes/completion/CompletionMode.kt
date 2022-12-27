@@ -8,10 +8,12 @@ import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.refactoring.suggested.newRange
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
+import com.smallcloud.codify.io.RequestJob
 import com.smallcloud.codify.io.inferenceFetch
 import com.smallcloud.codify.modes.EditorTextHelper
 import com.smallcloud.codify.modes.Mode
@@ -37,8 +39,10 @@ class CompletionMode : Mode(), CaretListener {
     private var processTask: Future<*>? = null
     private var completionLayout: CompletionLayout? = null
     private val logger = Logger.getInstance("CompletionMode")
+    private var hasAutocompleteSymbolBefore: String = ""
 
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
+        logger.info("beforeDocumentChangeNonBulk cancelOrClose request")
         cancelOrClose(editor)
     }
 
@@ -50,14 +54,39 @@ class CompletionMode : Mode(), CaretListener {
         return false
     }
 
+    private fun autocompletedSymbolsInfo(event: DocumentEvent, editor: Editor): Pair<Boolean, Int> {
+        val startAutocompleteStrings = setOf("(", "\"", "{", "[", "'", "\"")
+        val endAutocompleteStrings = setOf(")", "\"", "\'", "}", "]", "'''", "\"\"\"")
+        val startToStopSymbols = mapOf(
+            "(" to setOf(")"), "{" to setOf("}"), "[" to setOf("]"),
+            "'" to setOf("'", "'''"), "\"" to setOf("\"", "\"\"\"")
+        )
+        val newStr = event.newFragment.toString()
+        if (startToStopSymbols[hasAutocompleteSymbolBefore]?.contains(newStr) == true && newStr in endAutocompleteStrings) {
+            logger.info("Fixing completion request for the autocomplete symbol: $newStr")
+            hasAutocompleteSymbolBefore = ""
+            return true to -1
+        }
+        if (newStr.isNotEmpty() && "${newStr.last()}" in startAutocompleteStrings) {
+            hasAutocompleteSymbolBefore = "${newStr.last()}"
+            logger.info("Skipped completion request: started autocomplete symbol: $hasAutocompleteSymbolBefore")
+            return false to 0
+        }
+
+        hasAutocompleteSymbolBefore = ""
+        return true to 0
+    }
+
     override fun onTextChange(event: DocumentEvent, editor: Editor) {
         if (event.offset + event.newLength > editor.document.text.length) return
         if (event.newLength + event.oldLength <= 0) return
         if (willHaveMoreEvents(event, editor)) return
+        val (valid, offset) = autocompletedSymbolsInfo(event, editor)
+        if (!valid) return
 
         val state = EditorState(
             editor.document.modificationStamp,
-            event.offset + event.newLength,
+            event.offset + event.newLength + offset,
             editor.document.text
         )
         val completionData = CompletionCache.getCompletion(state.text, state.offset)
@@ -138,6 +167,7 @@ class CompletionMode : Mode(), CaretListener {
             editor.caretModel.addCaretListener(this)
         } catch (ex: Exception) {
             logger.warn("Exception while rendering completion", ex)
+            logger.info("Exception while rendering completion cancelOrClose request")
             cancelOrClose(editor)
         }
     }
@@ -181,8 +211,11 @@ class CompletionMode : Mode(), CaretListener {
             if (!completionState.readyForCompletion) return
             request.body.stopTokens = completionState.stopTokens
 
-            logger.info("Making a completion request")
-            val prediction = lastReqJob?.future?.get() as SMCPrediction
+            maybeLastReqJob = inferenceFetch(request)
+            val lastReqJob = maybeLastReqJob ?: return
+
+            logger.info("Making a completion request: multiline=${completionState.multiline}")
+            val prediction = lastReqJob.future.get() as SMCPrediction
 
             if (prediction.status == null) {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR
@@ -209,8 +242,8 @@ class CompletionMode : Mode(), CaretListener {
                 renderCompletion(editor, state, completionData)
             }
         } catch (_: InterruptedException) {
-            if (lastReqJob != null) {
-                lastReqJob.request?.abort()
+            maybeLastReqJob?.let {
+                maybeLastReqJob.request?.abort()
                 logger.info("lastReqJob abort")
             }
         } catch (e: ExecutionException) {
@@ -238,10 +271,12 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
+        logger.info("onEscPressed cancelOrClose request")
         cancelOrClose(editor)
     }
 
     override fun caretPositionChanged(event: CaretEvent) {
+        logger.info("caretPositionChanged cancelOrClose request")
         cancelOrClose(event.editor)
     }
 
@@ -269,7 +304,6 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     fun cancelOrClose(editor: Editor) {
-        logger.info("cancelOrClose request")
         try {
             processTask?.cancel(true)
             processTask?.get()

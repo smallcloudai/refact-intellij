@@ -204,8 +204,7 @@ class CompletionMode : Mode(), CaretListener {
         state: EditorState,
         editorHelper: EditorTextHelper
     ) {
-        val lastReqJob = inferenceFetch(request)
-
+        var maybeLastReqJob: RequestJob? = null
         try {
             val completionState = CompletionState(editorHelper)
             if (!completionState.readyForCompletion) return

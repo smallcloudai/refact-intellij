@@ -39,7 +39,7 @@
         <applicationConfigurable parentId="codify_root"
                                  instance="com.smallcloud.codify.settings.AppSettingsConfigurable"
                                  id="codify_advanced_settings"
-                                 displayName="Settings"/>
+                                 displayName="Advanced"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.UsageStats"/>

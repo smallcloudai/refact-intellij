@@ -1,7 +1,9 @@
 package com.smallcloud.codify.io
 
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
+
 
 data class Response(
     val statusCode: Int,
@@ -33,7 +35,10 @@ fun sendRequest(
             it.write(body.toByteArray())
         }
     }
-
-    val responseBody = conn.inputStream.use { it.readBytes() }.toString(Charsets.UTF_8)
+    val responseBody = if (conn.responseCode in 100..399) {
+        conn.inputStream.use { it.readBytes() }.toString(Charsets.UTF_8)
+    } else {
+        conn.errorStream.use { it.readBytes() }.toString(Charsets.UTF_8)
+    }
     return Response(conn.responseCode, conn.headerFields, responseBody)
 }

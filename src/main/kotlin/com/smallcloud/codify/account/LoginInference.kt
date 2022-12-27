@@ -35,8 +35,7 @@ fun inferenceLogin(): String {
         )
         val gson = Gson()
         val body = gson.fromJson(result.body, JsonObject::class.java)
-        val retcode = body.get("retcode").asString
-        if (retcode == "OK") {
+        if (body.has("retcode") && body.get("retcode").asString == "OK") {
             if (body.has("inference_message") && body.get("inference_message").asString.isNotEmpty()) {
                 PluginState.instance.inferenceMessage = body.get("codify_message").asString
             }

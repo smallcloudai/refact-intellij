@@ -55,7 +55,7 @@ fun checkLogin(force: Boolean = false): String {
         "Authorization" to ""
     )
 
-    if (!streamlinedLoginTicket.isNullOrEmpty() && token.isNullOrEmpty()) {
+    if (!streamlinedLoginTicket.isNullOrEmpty() && (token.isNullOrEmpty() || force)) {
         val recallUrl = defaultRecallUrl
         headers["Authorization"] = "codify-${streamlinedLoginTicket}"
         try {

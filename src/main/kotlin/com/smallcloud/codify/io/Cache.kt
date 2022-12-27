@@ -57,22 +57,22 @@ fun fetch(request: SMCRequest): SMCPrediction? {
     return prediction
 }
 
-private fun lookForCommonErrors(json: JsonObject, request: SMCRequest) : Boolean {
+private fun lookForCommonErrors(json: JsonObject, request: SMCRequest) : String? {
     if (json.has("detail")) {
         UsageStats.addStatistic(false, request.scope, request.uri.toString(), json.get("detail").asString)
-        return true
+        return json.get("detail").asString
     }
     if (json.has("retcode") && json.get("retcode").asString != "OK") {
         UsageStats.addStatistic(false, request.scope,
             request.uri.toString(), json.get("human_readable_message").asString)
-        return true
+        return json.get("human_readable_message").asString
     }
     if (json.has("error")) {
         UsageStats.addStatistic(false, request.scope,
             request.uri.toString(), json.get("error").asJsonObject.get("message").asString)
-        return true
+        return json.get("error").asJsonObject.get("message").asString
     }
-    return false
+    return null
 }
 
 fun inferenceFetch(request: SMCRequest): RequestJob? {
@@ -95,8 +95,9 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
     val job = InferenceGlobalContext.connection?.post(uri, body, headers)
     if (job != null) {
         job.future = job.future.thenApplyAsync {
-            if (lookForCommonErrors(gson.fromJson((it as String), JsonObject::class.java), request)) {
-                throw Exception()
+            val errorMsg = lookForCommonErrors(gson.fromJson((it as String), JsonObject::class.java), request)
+            if (errorMsg != null) {
+                throw Exception(errorMsg)
             }
             val json = gson.fromJson(it, SMCPrediction::class.java)
             UsageStats.addStatistic(true, request.scope, request.uri.toString(), "")

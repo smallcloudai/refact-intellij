@@ -110,7 +110,7 @@ class GhostText(textfield: JTextField, ghostText: String) : FocusListener,
 
 class AppSettingsComponent {
     val panel: JPanel
-    private val myTokenText = JBTextField()
+    val myTokenText = JBTextField()
     private val myModelText = JBTextField()
     private val myTemperatureText = JBTextField()
     private val myGTemperatureText: GhostText

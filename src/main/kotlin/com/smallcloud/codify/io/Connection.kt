@@ -1,11 +1,15 @@
 package com.smallcloud.codify.io
 
 
+import com.google.gson.JsonObject
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.messages.Topic
+import com.smallcloud.codify.UsageStats
 import com.smallcloud.codify.UsageStats.Companion.addStatistic
+import com.smallcloud.codify.struct.SMCRequest
 import org.apache.http.HttpClientConnection
 import org.apache.http.HttpHost
+import org.apache.http.HttpResponse
 import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.methods.HttpPost
@@ -18,6 +22,7 @@ import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.impl.execchain.RequestAbortedException
+import org.apache.http.util.EntityUtils
 import java.net.SocketException
 import java.net.URI
 import java.util.concurrent.CompletableFuture
@@ -97,7 +102,10 @@ class Connection(uri: URI) {
 
         val future = CompletableFuture.supplyAsync {
             try {
-                return@supplyAsync client.execute(req, BasicResponseHandler())
+                val response: HttpResponse = client.execute(req)
+                val statusCode: Int = response.getStatusLine().getStatusCode()
+                val responseBody: String = EntityUtils.toString(response.getEntity())
+                return@supplyAsync responseBody
             } catch (e: SocketException) {
                 // request aborted, it's ok for small files
                 throw e

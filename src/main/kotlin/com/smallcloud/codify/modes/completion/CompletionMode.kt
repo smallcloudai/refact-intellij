@@ -19,6 +19,7 @@ import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
 import java.util.concurrent.CancellationException
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
@@ -213,9 +214,13 @@ class CompletionMode : Mode(), CaretListener {
                 lastReqJob.request?.abort()
                 logger.info("lastReqJob abort")
             }
+        } catch (e: ExecutionException) {
+            conn.status = ConnectionStatus.ERROR
+            conn.lastErrorMsg = e.cause?.message
+            logger.warn("Exception while completion request processing", e)
         } catch (e: Exception) {
             conn.status = ConnectionStatus.ERROR
-            conn.lastErrorMsg = e.toString()
+            conn.lastErrorMsg = e.message
             logger.warn("Exception while completion request processing", e)
         }
     }

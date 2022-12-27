@@ -20,7 +20,8 @@ class AppSettingsConfigurable : Configurable {
         ApplicationManager.getApplication().messageBus.connect(PluginState.instance)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun apiKeyChanged(newApiKey: String?) {
-                    reset()
+                    mySettingsComponent?.myTokenText?.let { it.text = newApiKey }
+                    mySettingsComponent?.panel?.revalidate()
                 }
             })
     }

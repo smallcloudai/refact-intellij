@@ -42,7 +42,6 @@ fun logError(scope: String, msg: String, needChange: Boolean = true) {
 fun checkLogin(force: Boolean = false): String {
     val acc = AccountManager
     val infC = InferenceGlobalContext
-    val conn = InferenceGlobalContext
     val isLoggedIn = acc.isLoggedIn
     if (isLoggedIn && !force) {
         return ""
@@ -74,7 +73,7 @@ fun checkLogin(force: Boolean = false): String {
             if (retcode == "OK") {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
-                conn.status = ConnectionStatus.CONNECTED
+                infC.status = ConnectionStatus.CONNECTED
                 addStatistic(true,  "recall", recallUrl.toString(), "")
             } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
                 logError("recall", humanReadableMessage, false)

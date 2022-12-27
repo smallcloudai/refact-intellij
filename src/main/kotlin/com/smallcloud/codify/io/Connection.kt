@@ -1,12 +1,8 @@
 package com.smallcloud.codify.io
 
 
-import com.google.gson.JsonObject
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.messages.Topic
-import com.smallcloud.codify.UsageStats
 import com.smallcloud.codify.UsageStats.Companion.addStatistic
-import com.smallcloud.codify.struct.SMCRequest
 import org.apache.http.HttpClientConnection
 import org.apache.http.HttpHost
 import org.apache.http.HttpResponse
@@ -17,7 +13,6 @@ import org.apache.http.client.methods.HttpRequestBase
 import org.apache.http.client.protocol.HttpClientContext
 import org.apache.http.conn.routing.HttpRoute
 import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.BasicResponseHandler
 import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
@@ -121,25 +116,6 @@ class Connection(uri: URI) {
         }
         return RequestJob(future, req)
     }
-
-    var status: ConnectionStatus = ConnectionStatus.DISCONNECTED
-        set(newStatus) {
-            if (field == newStatus) return
-            field = newStatus
-            ApplicationManager.getApplication()
-                .messageBus
-                .syncPublisher(ConnectionChangedNotifier.TOPIC)
-                .statusChanged(field)
-        }
-    var lastErrorMsg: String? = null
-        set(newMsg) {
-            if (field == newMsg) return
-            field = newMsg
-            ApplicationManager.getApplication()
-                .messageBus
-                .syncPublisher(ConnectionChangedNotifier.TOPIC)
-                .lastErrorMsgChanged(field)
-        }
 
     protected fun finalize() {
         conn.close()

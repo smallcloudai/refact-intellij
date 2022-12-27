@@ -30,9 +30,9 @@ fun login() {
     runCounterTask()
 }
 
-fun logError(msg: String, needChange: Boolean = true) {
-    Logger.getInstance("check_login").warn(msg)
-    val conn = InferenceGlobalContext.connection?: return
+fun logError(scope: String, msg: String, needChange: Boolean = true) {
+    Logger.getInstance("check_login").warn("$scope: $msg")
+    val conn = InferenceGlobalContext
     if (needChange) {
         conn.status = ConnectionStatus.ERROR
         conn.lastErrorMsg = msg
@@ -42,7 +42,7 @@ fun logError(msg: String, needChange: Boolean = true) {
 fun checkLogin(force: Boolean = false): String {
     val acc = AccountManager
     val infC = InferenceGlobalContext
-    val conn = InferenceGlobalContext.connection
+    val conn = InferenceGlobalContext
     val isLoggedIn = acc.isLoggedIn
     if (isLoggedIn && !force) {
         return ""
@@ -74,23 +74,22 @@ fun checkLogin(force: Boolean = false): String {
             if (retcode == "OK") {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
-                if (conn != null) {
-                    conn.status = ConnectionStatus.CONNECTED
-                }
+                conn.status = ConnectionStatus.CONNECTED
                 addStatistic(true,  "recall", recallUrl.toString(), "")
             } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
-                logError("recall: $humanReadableMessage", false)
-//                log_error("login-fail: $human_readable_message")
+                logError("recall", humanReadableMessage, false)
                 return "OK"
             } else {
-                result.body?.let { addStatistic(false,  "recall (1)", recallUrl.toString(), it) }
-                logError("recall: ${result.body}")
+                result.body?.let {
+                    addStatistic(false,  "recall (1)", recallUrl.toString(), it)
+                    logError("recall", it)
+                }
                 return ""
             }
 
         } catch (e: Exception) {
             addStatistic(false,  "recall (2)", recallUrl.toString(), e)
-            logError("recall: $e")
+            e.message?.let { logError("recall", it) }
             return ""
         }
     }
@@ -133,31 +132,27 @@ fun checkLogin(force: Boolean = false): String {
             if (body.has("login_message") && body.get("login_message").asString.isNotEmpty()) {
                 PluginState.instance.loginMessage = body.get("login_message").asString
             }
-            if (conn != null) {
-                conn.status = ConnectionStatus.CONNECTED
-            }
             addStatistic(true,  "login", url.toString(), "")
-            inferenceLogin()
             return inferenceLogin()
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {
-            logError("login-failed: $humanReadableMessage", false)
+            logError("login-failed", humanReadableMessage, false)
             addStatistic(false,  "login-failed", url.toString(), humanReadableMessage)
             return "OK"
         } else if (retcode == "FAILED") {
             acc.user = null
             acc.activePlan = PlanType.UNKNOWN
-            logError("login-failed: $humanReadableMessage")
+            logError("login-failed", humanReadableMessage)
             addStatistic(false,  "login-failed", url.toString(), humanReadableMessage)
             return ""
         } else {
             acc.user = null
             acc.activePlan = PlanType.UNKNOWN
-            logError("login-failed: unrecognized response")
+            logError("login-failed", "unrecognized response")
             addStatistic(false,  "login (2)", url.toString(), "unrecognized response")
             return ""
         }
     } catch (e: Exception) {
-        logError("login-fail: $e")
+        e.message?.let { logError("login-fail", it) }
         addStatistic(false,  "login (3)", url.toString(), e)
         return ""
     }

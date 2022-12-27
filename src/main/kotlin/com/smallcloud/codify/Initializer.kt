@@ -14,9 +14,9 @@ class Initializer : StartupActivity.Background {
     }
 
     private fun initialize() {
+        ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
         settingsStartup()
         notificationStartup()
         UsageStats.instance
-        ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
     }
 }

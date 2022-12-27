@@ -129,8 +129,8 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 LOGO_LIGHT_12x12
             } else LOGO_DARK_12x12
         }
-        val cStat = InferenceGlobalContext.connection?.status
-        if (cStat == ConnectionStatus.DISCONNECTED && isOkStat.isEmpty())
+        val cStat = InferenceGlobalContext.status
+        if (cStat == ConnectionStatus.DISCONNECTED)
             return AllIcons.Debugger.ThreadStates.Socket
         else if (cStat == ConnectionStatus.ERROR)
             return AllIcons.Debugger.Db_exception_breakpoint
@@ -151,12 +151,12 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return "Click to login"
         }
 
-        when (InferenceGlobalContext.connection?.status) {
+        when (InferenceGlobalContext.status) {
             ConnectionStatus.DISCONNECTED -> {
-                return "Connection is lost"
+                return InferenceGlobalContext.lastErrorMsg
             }
             ConnectionStatus.ERROR -> {
-                return InferenceGlobalContext.connection?.lastErrorMsg
+                return InferenceGlobalContext.lastErrorMsg
             }
             ConnectionStatus.CONNECTED -> {
                 var tooltipStr = "<html>"

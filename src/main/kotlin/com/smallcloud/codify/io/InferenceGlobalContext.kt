@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.messages.MessageBus
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.account.AccountManager
+import com.smallcloud.codify.account.inferenceLogin
 import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
@@ -11,7 +12,39 @@ import java.net.URI
 
 object InferenceGlobalContext {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
-    var connection: Connection? = inferenceUri?.let { Connection(it) }
+    var connection: Connection? = inferenceUri?.let { makeConnection(it) }
+
+    private fun makeConnection(uri: URI): Connection? {
+        try {
+            val conn = Connection(uri)
+            status = ConnectionStatus.CONNECTED
+            lastErrorMsg = null
+            return conn
+        } catch (e: Exception) {
+            status = ConnectionStatus.DISCONNECTED
+            lastErrorMsg = e.message
+            return null
+        }
+    }
+
+    var status: ConnectionStatus = ConnectionStatus.DISCONNECTED
+        set(newStatus) {
+            if (field == newStatus) return
+            field = newStatus
+            ApplicationManager.getApplication()
+                .messageBus
+                .syncPublisher(ConnectionChangedNotifier.TOPIC)
+                .statusChanged(field)
+        }
+    var lastErrorMsg: String? = null
+        set(newMsg) {
+            if (field == newMsg) return
+            field = newMsg
+            ApplicationManager.getApplication()
+                .messageBus
+                .syncPublisher(ConnectionChangedNotifier.TOPIC)
+                .lastErrorMsgChanged(field)
+        }
 
     var inferenceUri: URI?
         get() {
@@ -24,7 +57,8 @@ object InferenceGlobalContext {
             messageBus
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .userInferenceUriChanged(newInferenceUrl)
-            connection = inferenceUri?.let { Connection(it) }
+            connection = inferenceUri?.let { makeConnection(it) }
+            inferenceLogin()
         }
 
     // _inferenceUri is uri from SMC server; must be change only in login method

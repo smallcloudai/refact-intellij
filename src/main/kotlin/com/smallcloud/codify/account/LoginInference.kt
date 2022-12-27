@@ -14,7 +14,7 @@ fun getInferenceUrl(): URI? {
 }
 
 fun inferenceLogin(): String {
-    val conn = InferenceGlobalContext.connection?: return ""
+    val conn = InferenceGlobalContext.connection ?: return ""
 
     val acc = AccountManager
     val token = acc.apiKey
@@ -25,30 +25,29 @@ fun inferenceLogin(): String {
         "Authorization" to "Bearer $token"
     )
     try {
-        val result = sendRequest(
-            inferUrl,
-            "GET", headers, requestProperties = mapOf(
-                "redirect" to "follow",
-                "cache" to "no-cache",
-                "referrer" to "no-referrer"
-            )
-        )
+        val reqJob = conn.get(inferUrl, headers, requestProperties = mapOf(
+            "redirect" to "follow",
+            "cache" to "no-cache",
+            "referrer" to "no-referrer"
+        ))
+
+        val result = reqJob.future.get() as String
         val gson = Gson()
-        val body = gson.fromJson(result.body, JsonObject::class.java)
+        val body = gson.fromJson(result, JsonObject::class.java)
         if (body.has("retcode") && body.get("retcode").asString == "OK") {
             if (body.has("inference_message") && body.get("inference_message").asString.isNotEmpty()) {
                 PluginState.instance.inferenceMessage = body.get("codify_message").asString
             }
-            conn.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             return "OK"
         } else if (body.has("detail")) {
-            logError("inference_login: ${body.get("detail").asString}")
+            logError("inference_login", body.get("detail").asString)
         } else {
-            logError("inference_login: ${result.body}")
+            logError("inference_login", result)
         }
         return ""
     } catch (e: Exception) {
-        logError("inference_login: $e")
+        e.message?.let { logError("inference_login", it) }
         return ""
     }
 }

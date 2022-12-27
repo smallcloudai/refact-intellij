@@ -10,6 +10,7 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
+import com.smallcloud.codify.io.Connection
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.inferenceFetch
@@ -174,7 +175,8 @@ class CompletionMode : Mode(), CaretListener {
         state: EditorState,
         editorHelper: EditorTextHelper
     ) {
-        val conn = InferenceGlobalContext.connection ?: return
+        if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
+        val conn = InferenceGlobalContext
         val lastReqJob = inferenceFetch(request)
 
         try {
@@ -215,14 +217,18 @@ class CompletionMode : Mode(), CaretListener {
                 logger.info("lastReqJob abort")
             }
         } catch (e: ExecutionException) {
-            conn.status = ConnectionStatus.ERROR
-            conn.lastErrorMsg = e.cause?.message
-            logger.warn("Exception while completion request processing", e)
+            catchNetExceptions(e.cause)
         } catch (e: Exception) {
             conn.status = ConnectionStatus.ERROR
             conn.lastErrorMsg = e.message
             logger.warn("Exception while completion request processing", e)
         }
+    }
+
+    private fun catchNetExceptions(e: Throwable?) {
+        InferenceGlobalContext.status = ConnectionStatus.ERROR
+        InferenceGlobalContext.lastErrorMsg = e?.message
+        logger.warn("Exception while completion request processing", e)
     }
 
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {

@@ -32,7 +32,7 @@ class LoginStateService {
                 Logger.getInstance("check_login").warn("call")
                 lastWebsiteLoginStatus = checkLogin(force)
             } catch (e: Exception) {
-                logError("check_login exception: $e")
+                e.message?.let { logError("check_login exception", it) }
             }
         }
     }
@@ -42,7 +42,7 @@ class LoginStateService {
             Logger.getInstance("inference_login").warn("call")
             lastInferenceLoginStatus = inferenceLogin()
         } catch (e: Exception) {
-            logError("inference_login exception: $e")
+            e.message?.let { logError("inference_login exception", it) }
         }
     }
 }

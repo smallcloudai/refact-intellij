@@ -1,12 +1,13 @@
 package com.smallcloud.codify.io
 
-import com.smallcloud.codify.struct.SMCPrediction
 import com.google.common.collect.EvictingQueue
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.diagnostic.Logger
+import com.smallcloud.codify.Resources
 import com.smallcloud.codify.UsageStats
 import com.smallcloud.codify.notifications.emitError
+import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import java.util.concurrent.CompletableFuture
 
@@ -57,28 +58,33 @@ fun fetch(request: SMCRequest): SMCPrediction? {
     return prediction
 }
 
-private fun lookForCommonErrors(json: JsonObject, request: SMCRequest) : String? {
+private fun lookForCommonErrors(json: JsonObject, request: SMCRequest): String? {
     if (json.has("detail")) {
         UsageStats.addStatistic(false, request.scope, request.uri.toString(), json.get("detail").asString)
         return json.get("detail").asString
     }
     if (json.has("retcode") && json.get("retcode").asString != "OK") {
-        UsageStats.addStatistic(false, request.scope,
-            request.uri.toString(), json.get("human_readable_message").asString)
+        UsageStats.addStatistic(
+            false, request.scope,
+            request.uri.toString(), json.get("human_readable_message").asString
+        )
         return json.get("human_readable_message").asString
     }
     if (json.has("error")) {
-        UsageStats.addStatistic(false, request.scope,
-            request.uri.toString(), json.get("error").asJsonObject.get("message").asString)
+        UsageStats.addStatistic(
+            false, request.scope,
+            request.uri.toString(), json.get("error").asJsonObject.get("message").asString
+        )
         return json.get("error").asJsonObject.get("message").asString
     }
     return null
 }
 
-fun inferenceFetch(request: SMCRequest, needVerify: Boolean = false): RequestJob? {
+private var lastInferenceVerifyTs: Long = -1
+fun inferenceFetch(request: SMCRequest): RequestJob? {
     val cache = Cache.getFromCache(request)
     if (cache != null)
-        return RequestJob(CompletableFuture.supplyAsync{
+        return RequestJob(CompletableFuture.supplyAsync {
             return@supplyAsync cache
         }, null)
     val gson = Gson()
@@ -92,7 +98,12 @@ fun inferenceFetch(request: SMCRequest, needVerify: Boolean = false): RequestJob
         "referrer" to "no-referrer"
     )
 
-    val job = InferenceGlobalContext.connection?.post(uri, body, headers, needVerify=needVerify)
+    if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return null
+    val now = System.currentTimeMillis()
+    val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCooldown * 1000
+    if (needToVerify) lastInferenceVerifyTs = now
+
+    val job = InferenceGlobalContext.connection?.post(uri, body, headers, needVerify = needToVerify)
 
     if (job != null) {
         job.future = job.future.thenApplyAsync {

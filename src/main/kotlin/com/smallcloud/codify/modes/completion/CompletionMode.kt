@@ -10,7 +10,6 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
-import com.smallcloud.codify.Resources.inferenceLoginCooldown
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.inferenceFetch
@@ -38,7 +37,6 @@ class CompletionMode : Mode(), CaretListener {
     private var processTask: Future<*>? = null
     private var completionLayout: CompletionLayout? = null
     private val logger = Logger.getInstance("CompletionMode")
-    private var lastVerifyTs: Long = -1
 
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
         cancelOrClose(editor)
@@ -176,13 +174,7 @@ class CompletionMode : Mode(), CaretListener {
         state: EditorState,
         editorHelper: EditorTextHelper
     ) {
-        if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
-        val conn = InferenceGlobalContext
-
-        val now = System.currentTimeMillis()
-        val needToVerify = (now - lastVerifyTs) > inferenceLoginCooldown * 1000
-        if (needToVerify) lastVerifyTs = now
-        val lastReqJob = inferenceFetch(request, needToVerify)
+        val lastReqJob = inferenceFetch(request)
 
         try {
             val completionState = CompletionState(editorHelper)
@@ -193,19 +185,19 @@ class CompletionMode : Mode(), CaretListener {
             val prediction = lastReqJob?.future?.get() as SMCPrediction
 
             if (prediction.status == null) {
-                conn.status = ConnectionStatus.ERROR
-                conn.lastErrorMsg = "Parameters are not correct"
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                InferenceGlobalContext.lastErrorMsg = "Parameters are not correct"
                 return
             }
 
             val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
             if (predictedText == null) {
-                conn.status = ConnectionStatus.ERROR
-                conn.lastErrorMsg = "Request was succeeded but there is no predicted data"
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                InferenceGlobalContext.lastErrorMsg = "Request was succeeded but there is no predicted data"
                 return
             } else {
-                conn.status = ConnectionStatus.CONNECTED
-                conn.lastErrorMsg = null
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+                InferenceGlobalContext.lastErrorMsg = null
             }
 
             val completionData = completionState.difference(predictedText) ?: return
@@ -224,8 +216,8 @@ class CompletionMode : Mode(), CaretListener {
         } catch (e: ExecutionException) {
             catchNetExceptions(e.cause)
         } catch (e: Exception) {
-            conn.status = ConnectionStatus.ERROR
-            conn.lastErrorMsg = e.message
+            InferenceGlobalContext.status = ConnectionStatus.ERROR
+            InferenceGlobalContext.lastErrorMsg = e.message
             logger.warn("Exception while completion request processing", e)
         }
     }

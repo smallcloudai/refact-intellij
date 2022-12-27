@@ -8,6 +8,7 @@ import com.intellij.util.ui.FormBuilder
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.Resources.loginCooldown
 import com.smallcloud.codify.PluginState
+import com.smallcloud.codify.Resources.pluginDescriptionStr
 import com.smallcloud.codify.account.*
 import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.account.AccountManager.logout
@@ -103,7 +104,7 @@ class AppRootComponent {
         get() = if (isLoggedIn) forceLoginButton else loginButton
 
     private fun recreatePanel(): JPanel {
-        val description = JBLabel("Codify: AI autocomplete, refactoring and advanced code generation")
+        val description = JBLabel(pluginDescriptionStr)
         setupProperties()
         return FormBuilder.createFormBuilder().run {
             addComponent(description)

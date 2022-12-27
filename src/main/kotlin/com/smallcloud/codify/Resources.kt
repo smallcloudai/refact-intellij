@@ -24,6 +24,7 @@ object Resources {
     const val client: String = "jetbrains"
     const val loginCooldown: Int = 30
     const val waitWebsiteLoginStr: String = "Waiting for website login..."
+    const val pluginDescriptionStr: String = "Codify: AI autocomplete and refactoring"
 
     object Icons {
         val LOGO_FULL_WHITE: Icon = IconLoader.getIcon("/icons/logo-full-white.svg", Resources::class.java)

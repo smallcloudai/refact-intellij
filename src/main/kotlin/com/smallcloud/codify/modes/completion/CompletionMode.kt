@@ -10,7 +10,7 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
-import com.smallcloud.codify.io.Connection
+import com.smallcloud.codify.Resources.inferenceLoginCooldown
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.inferenceFetch
@@ -38,6 +38,7 @@ class CompletionMode : Mode(), CaretListener {
     private var processTask: Future<*>? = null
     private var completionLayout: CompletionLayout? = null
     private val logger = Logger.getInstance("CompletionMode")
+    private var lastVerifyTs: Long = -1
 
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
         cancelOrClose(editor)
@@ -177,7 +178,11 @@ class CompletionMode : Mode(), CaretListener {
     ) {
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         val conn = InferenceGlobalContext
-        val lastReqJob = inferenceFetch(request)
+
+        val now = System.currentTimeMillis()
+        val needToVerify = (now - lastVerifyTs) > inferenceLoginCooldown * 1000
+        if (needToVerify) lastVerifyTs = now
+        val lastReqJob = inferenceFetch(request, needToVerify)
 
         try {
             val completionState = CompletionState(editorHelper)

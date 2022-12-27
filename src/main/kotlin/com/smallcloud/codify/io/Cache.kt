@@ -75,7 +75,7 @@ private fun lookForCommonErrors(json: JsonObject, request: SMCRequest) : String?
     return null
 }
 
-fun inferenceFetch(request: SMCRequest): RequestJob? {
+fun inferenceFetch(request: SMCRequest, needVerify: Boolean = false): RequestJob? {
     val cache = Cache.getFromCache(request)
     if (cache != null)
         return RequestJob(CompletableFuture.supplyAsync{
@@ -92,7 +92,8 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
         "referrer" to "no-referrer"
     )
 
-    val job = InferenceGlobalContext.connection?.post(uri, body, headers)
+    val job = InferenceGlobalContext.connection?.post(uri, body, headers, needVerify=needVerify)
+
     if (job != null) {
         job.future = job.future.thenApplyAsync {
             val errorMsg = lookForCommonErrors(gson.fromJson((it as String), JsonObject::class.java), request)

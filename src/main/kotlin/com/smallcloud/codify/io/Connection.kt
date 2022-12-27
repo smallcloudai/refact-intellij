@@ -3,6 +3,7 @@ package com.smallcloud.codify.io
 
 import com.intellij.util.messages.Topic
 import com.smallcloud.codify.UsageStats.Companion.addStatistic
+import com.smallcloud.codify.account.inferenceLogin
 import org.apache.http.HttpClientConnection
 import org.apache.http.HttpHost
 import org.apache.http.HttpResponse
@@ -65,27 +66,30 @@ class Connection(uri: URI) {
     fun get(
         uri: URI,
         headers: Map<String, String>? = null,
-        requestProperties: Map<String, String>? = null
+        requestProperties: Map<String, String>? = null,
+        needVerify: Boolean = false
     ): RequestJob {
         val get = HttpGet(uri)
-        return send(get, headers, requestProperties)
+        return send(get, headers, requestProperties, needVerify=needVerify)
     }
 
     fun post(
         uri: URI,
         body: String? = null,
         headers: Map<String, String>? = null,
-        requestProperties: Map<String, String>? = null
+        requestProperties: Map<String, String>? = null,
+        needVerify: Boolean = false
     ): RequestJob {
         val post = HttpPost(uri)
         post.entity = StringEntity(body)
-        return send(post, headers, requestProperties)
+        return send(post, headers, requestProperties, needVerify=needVerify)
     }
 
     private fun send(
         req: HttpRequestBase,
         headers: Map<String, String>? = null,
-        requestProperties: Map<String, String>? = null
+        requestProperties: Map<String, String>? = null,
+        needVerify: Boolean = false
     ): RequestJob {
         headers?.forEach {
             req.addHeader(it.key, it.value)
@@ -96,11 +100,13 @@ class Connection(uri: URI) {
         }
 
         val future = CompletableFuture.supplyAsync {
+            if (needVerify) inferenceLogin()
+        }.thenApplyAsync {
             try {
                 val response: HttpResponse = client.execute(req)
                 val statusCode: Int = response.getStatusLine().getStatusCode()
                 val responseBody: String = EntityUtils.toString(response.getEntity())
-                return@supplyAsync responseBody
+                return@thenApplyAsync responseBody
             } catch (e: SocketException) {
                 // request aborted, it's ok for small files
                 throw e

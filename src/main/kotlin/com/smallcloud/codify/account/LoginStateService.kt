@@ -12,12 +12,6 @@ class LoginStateService {
     private var lastWebsiteLoginStatus: String = "OK"
     private var lastInferenceLoginStatus: String = "OK"
 
-    init {
-        inferenceTask = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(
-            this::tryToInferenceLogin, 1, 1, TimeUnit.HOURS
-        )
-    }
-
     fun getLastWebsiteLoginStatus(): String {
         return lastWebsiteLoginStatus
     }
@@ -34,15 +28,6 @@ class LoginStateService {
             } catch (e: Exception) {
                 e.message?.let { logError("check_login exception", it) }
             }
-        }
-    }
-
-    fun tryToInferenceLogin() {
-        try {
-            Logger.getInstance("inference_login").warn("call")
-            lastInferenceLoginStatus = inferenceLogin()
-        } catch (e: Exception) {
-            e.message?.let { logError("inference_login exception", it) }
         }
     }
 }

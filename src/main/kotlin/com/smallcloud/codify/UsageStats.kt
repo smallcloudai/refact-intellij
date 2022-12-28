@@ -38,9 +38,15 @@ class UsageStats {
         relatedUrl: String,
         errorMessage: Any
     ) {
+        var errorMessageStr = errorMessage.toString()
         val gson = Gson()
-        val errorMsgString = gson.toJson(errorMessage)
-        val message = "${positive.compareTo(false)} $scope $relatedUrl $errorMsgString"
+        if (errorMessageStr.length > 200) {
+            errorMessageStr = errorMessageStr.substring(0, 200) + "…"
+        }
+
+        val errorMessageJson = gson.toJson(errorMessageStr)
+        val scopeJson = gson.toJson(scope)
+        val message = "${positive.compareTo(false)} $scopeJson $relatedUrl $errorMessageJson"
         synchronized(this) {
             if (messages.containsKey(message)) {
                 messages[message] = messages[message]!! + 1

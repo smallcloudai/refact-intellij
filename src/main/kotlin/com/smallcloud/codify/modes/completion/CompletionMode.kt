@@ -32,7 +32,7 @@ data class EditorState(
 
 class CompletionMode : Mode(), CaretListener {
     var needToRender: Boolean = true
-    private val scope: String = "CompletionProvider"
+    private val scope: String = "completion"
     private val app = ApplicationManager.getApplication()
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CompletionScheduler", 1)
     private var processTask: Future<*>? = null

@@ -81,7 +81,6 @@ fun emitInfo(msg: String) {
     })
     addDisableEnable(notification)
     notification.notify(project)
-    lastNotification = notification
 }
 
 fun emitError(msg: String) {

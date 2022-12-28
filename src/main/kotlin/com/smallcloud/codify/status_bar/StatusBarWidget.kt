@@ -64,8 +64,8 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             .messageBus
             .connect(this)
             .subscribe(ExtraInfoChangedNotifier.TOPIC, object : ExtraInfoChangedNotifier {
-                override fun websiteMessageChanged(newMsg: String?) {
-                    update(newMsg)
+                override fun tooltipMessageChanged(newMsg: String?) {
+                    update(null)
                 }
 
                 override fun inferenceMessageChanged(newMsg: String?) {
@@ -168,6 +168,8 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     if (InferenceGlobalContext.temperature != null) InferenceGlobalContext.temperature else defaultTemperature
                 tooltipStr += "<br>\uD83D\uDDD2 $model"
                 tooltipStr += "<br>\uD83C\uDF21️ $temp"
+                if (PluginState.instance.tooltipMessage != null)
+                    tooltipStr += "<br>${PluginState.instance.tooltipMessage}"
                 tooltipStr += "</html>"
 
                 return tooltipStr

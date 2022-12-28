@@ -32,6 +32,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var userInferenceUri: String? = null
     var activePlan: PlanType = PlanType.UNKNOWN
     var loginMessage: String? = null
+    var tooltipMessage: String? = null
+    var inferenceMessage: String? = null
     var pluginIsEnabled: Boolean = true
     var usageStatsMessagesCache: MutableMap<String, Int> = HashMap()
 
@@ -85,6 +87,14 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
             .subscribe(ExtraInfoChangedNotifier.TOPIC, object : ExtraInfoChangedNotifier {
                 override fun loginMessageChanged(newMsg: String?) {
                     instance.loginMessage = newMsg
+                }
+
+                override fun tooltipMessageChanged(newMsg: String?) {
+                    instance.tooltipMessage = newMsg
+                }
+
+                override fun inferenceMessageChanged(newMsg: String?) {
+                    instance.inferenceMessage = newMsg
                 }
 
                 override fun pluginEnableChanged(newVal: Boolean) {

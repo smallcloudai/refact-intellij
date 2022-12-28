@@ -8,7 +8,7 @@ import com.smallcloud.codify.settings.AppSettingsState
 
 
 interface ExtraInfoChangedNotifier {
-    fun websiteMessageChanged(newMsg: String?) {}
+    fun tooltipMessageChanged(newMsg: String?) {}
     fun inferenceMessageChanged(newMsg: String?) {}
     fun loginMessageChanged(newMsg: String?) {}
     fun pluginEnableChanged(newVal: Boolean) {}
@@ -30,16 +30,18 @@ class PluginState : Disposable {
                 .pluginEnableChanged(field)
         }
 
-    var websiteMessage: String? = null
+    var tooltipMessage: String? = null
+        get() = AppSettingsState.instance.tooltipMessage
         set(newMsg) {
             if (field == newMsg) return
             field = newMsg
             messageBus
                 .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
-                .websiteMessageChanged(websiteMessage)
+                .tooltipMessageChanged(field)
         }
 
     var inferenceMessage: String? = null
+        get() = AppSettingsState.instance.inferenceMessage
         set(newMsg) {
             if (field != newMsg) {
                 field = newMsg

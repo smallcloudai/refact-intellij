@@ -122,15 +122,16 @@ fun checkLogin(force: Boolean = false): String {
                 }
             }
 
-            if (body.has("codify_message") && body.get("codify_message").asString.isNotEmpty()) {
-                PluginState.instance.websiteMessage = body.get("codify_message").asString
-            }
 
             acc.activePlan = PlanType.valueOf(body.get("inference").asString)
 
+            if (body.has("tooltip_message") && body.get("tooltip_message").asString.isNotEmpty()) {
+                PluginState.instance.tooltipMessage = body.get("tooltip_message").asString
+            }
             if (body.has("login_message") && body.get("login_message").asString.isNotEmpty()) {
                 PluginState.instance.loginMessage = body.get("login_message").asString
             }
+
             addStatistic(true,  "login", url.toString(), "")
             return inferenceLogin()
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {

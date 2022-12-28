@@ -8,7 +8,6 @@ import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.refactoring.suggested.newRange
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
 import com.smallcloud.codify.io.ConnectionStatus
@@ -39,7 +38,9 @@ class CompletionMode : Mode(), CaretListener {
     private var processTask: Future<*>? = null
     private var completionLayout: CompletionLayout? = null
     private val logger = Logger.getInstance("CompletionMode")
-    private var hasAutocompleteSymbolBefore: String = ""
+
+    private var autocompleteSymbolBefore: String = ""
+    private var hasOneLineCompletionBefore: Boolean = false
 
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
         logger.info("beforeDocumentChangeNonBulk cancelOrClose request")
@@ -62,18 +63,18 @@ class CompletionMode : Mode(), CaretListener {
             "'" to setOf("'", "'''"), "\"" to setOf("\"", "\"\"\"")
         )
         val newStr = event.newFragment.toString()
-        if (startToStopSymbols[hasAutocompleteSymbolBefore]?.contains(newStr) == true && newStr in endAutocompleteStrings) {
+        if (startToStopSymbols[autocompleteSymbolBefore]?.contains(newStr) == true && newStr in endAutocompleteStrings) {
             logger.info("Fixing completion request for the autocomplete symbol: $newStr")
-            hasAutocompleteSymbolBefore = ""
+            autocompleteSymbolBefore = ""
             return true to -1
         }
         if (newStr.isNotEmpty() && "${newStr.last()}" in startAutocompleteStrings) {
-            hasAutocompleteSymbolBefore = "${newStr.last()}"
-            logger.info("Skipped completion request: started autocomplete symbol: $hasAutocompleteSymbolBefore")
+            autocompleteSymbolBefore = "${newStr.last()}"
+            logger.info("Skipped completion request: started autocomplete symbol: $autocompleteSymbolBefore")
             return false to 0
         }
 
-        hasAutocompleteSymbolBefore = ""
+        autocompleteSymbolBefore = ""
         return true to 0
     }
 
@@ -208,6 +209,8 @@ class CompletionMode : Mode(), CaretListener {
         try {
             val completionState = CompletionState(editorHelper)
             if (!completionState.readyForCompletion) return
+            if (!completionState.multiline && hasOneLineCompletionBefore) return
+
             request.body.stopTokens = completionState.stopTokens
 
             maybeLastReqJob = inferenceFetch(request)
@@ -223,7 +226,8 @@ class CompletionMode : Mode(), CaretListener {
             }
 
             val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
-            if (predictedText == null) {
+            val finishReason = prediction.choices?.firstOrNull()?.finishReason
+            if (predictedText == null || finishReason == null) {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR
                 InferenceGlobalContext.lastErrorMsg = "Request was succeeded but there is no predicted data"
                 return
@@ -232,7 +236,7 @@ class CompletionMode : Mode(), CaretListener {
                 InferenceGlobalContext.lastErrorMsg = null
             }
 
-            val completionData = completionState.difference(predictedText) ?: return
+            val completionData = completionState.difference(predictedText, finishReason) ?: return
             if (!completionData.isMakeSense()) return
             synchronized(this) {
                 CompletionCache.addCompletion(completionData)
@@ -264,6 +268,7 @@ class CompletionMode : Mode(), CaretListener {
         completionLayout?.apply {
             applyPreview(caret ?: editor.caretModel.currentCaret)
             dispose()
+            hasOneLineCompletionBefore = completionData.isSingleLineComplete
         }
         completionLayout = null
         editor.caretModel.removeCaretListener(this)
@@ -311,6 +316,7 @@ class CompletionMode : Mode(), CaretListener {
             processTask = null
             completionLayout?.dispose()
             completionLayout = null
+            hasOneLineCompletionBefore = false
             editor.caretModel.removeCaretListener(this)
         }
     }

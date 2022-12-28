@@ -12,7 +12,8 @@ data class Completion(
     val multiline: Boolean,
     val startIndex: Int,
     val endIndex: Int,
-    val createdTs: Long
+    val createdTs: Long,
+    val isSingleLineComplete: Boolean
 ) {
     fun isMakeSense() : Boolean {
         return completion.isNotEmpty()
@@ -135,6 +136,7 @@ class CompletionStateVsCode(
             multiline = multiline,
             startIndex = cursor,
             endIndex = endIndex,
+            isSingleLineComplete = false,
             createdTs = System.currentTimeMillis()
         )
     }

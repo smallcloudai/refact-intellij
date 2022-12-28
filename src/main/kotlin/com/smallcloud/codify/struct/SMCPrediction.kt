@@ -7,7 +7,7 @@ data class Choice(
     val text: String,
     val files: Map<String, String>,
     val logprobs: Any,
-    val finishReason: String
+    @SerializedName("finish_reason") val finishReason: String
 )
 
 data class SMCPrediction(
@@ -16,8 +16,8 @@ data class SMCPrediction(
     val status: String?,
     val created: Float,
     val uploaded: Float,
-    val generatedTokensN: Int,
+    @SerializedName("generated_tokens_n") val generatedTokensN: Int,
     val choices: List<Choice>?,
-    val highlightTokens: List<String>,
-    val highlightLines: List<String>,
+    @SerializedName("highlight_tokens") val highlightTokens: List<String>,
+    @SerializedName("highlight_lines") val highlightLines: List<String>,
 )

@@ -44,7 +44,7 @@ class CompletionState(
         }
     }
 
-    fun difference(predictedText: String): Completion? {
+    fun difference(predictedText: String, finishReason: String): Completion? {
         if (!readyForCompletion) {
             return null
         }
@@ -80,6 +80,7 @@ class CompletionState(
         val startIndex = textHelper.offset
         var stopIndex = textHelper.offset
         var completion = ""
+        var singleLineComplete = false
         if (!currentLinesAreEqual) {
             stopIndex += requestedText.substring(
                 startIndex,
@@ -90,6 +91,7 @@ class CompletionState(
                 startIndex,
                 textHelper.currentLineStartOffset + predictedCurrentLine.length
             )
+            singleLineComplete = finishReason != "maxlen"
             val cursorRightSide = textHelper.currentLine.substring(textHelper.offsetByCurrentLine)
             if (!multiline && cursorRightSide.isNotEmpty()) {
                 var offset = 0
@@ -119,7 +121,8 @@ class CompletionState(
                 multiline = multiline,
                 startIndex = startIndex,
                 endIndex = stopIndex,
-                createdTs = System.currentTimeMillis()
+                createdTs = System.currentTimeMillis(),
+                isSingleLineComplete=singleLineComplete
             )
         } else {
 //            This is the real index of the line where the completion stops with possible deletions.
@@ -143,7 +146,8 @@ class CompletionState(
                 multiline = multiline,
                 startIndex = startIndex,
                 endIndex = stopIndex,
-                createdTs = System.currentTimeMillis()
+                createdTs = System.currentTimeMillis(),
+                isSingleLineComplete=false
             )
         }
     }

@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull
 
 class CompletionLayout(
     private val editor: Editor,
-    private val completionData: Completion
+    val completionData: Completion
 ) : Disposable {
     private var inlayer: Inlayer? = null
     var blockEvents: Boolean = false

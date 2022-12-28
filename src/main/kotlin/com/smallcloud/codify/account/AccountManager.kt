@@ -2,7 +2,6 @@ package com.smallcloud.codify.account
 
 import com.intellij.openapi.application.ApplicationManager
 import com.smallcloud.codify.settings.AppSettingsState
-import com.smallcloud.codify.struct.PlanType
 
 object AccountManager {
     private var previousLoggedInState: Boolean = false
@@ -38,7 +37,7 @@ object AccountManager {
                 .apiKeyChanged(newApiKey)
             checkLoggedInAndNotifyIfNeed()
         }
-    var activePlan: PlanType
+    var activePlan: String?
         get() = AppSettingsState.instance.activePlan
         set(newPlan) {
             if (newPlan == activePlan) return

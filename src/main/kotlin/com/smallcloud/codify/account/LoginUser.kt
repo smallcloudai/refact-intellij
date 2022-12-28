@@ -11,7 +11,6 @@ import com.smallcloud.codify.UsageStats.Companion.addStatistic
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.sendRequest
-import com.smallcloud.codify.struct.PlanType
 import java.net.URI
 
 private fun generateTicket(): String {
@@ -123,7 +122,7 @@ fun checkLogin(force: Boolean = false): String {
             }
 
 
-            acc.activePlan = PlanType.valueOf(body.get("inference").asString)
+            acc.activePlan = body.get("inference").asString
 
             if (body.has("tooltip_message") && body.get("tooltip_message").asString.isNotEmpty()) {
                 PluginState.instance.tooltipMessage = body.get("tooltip_message").asString
@@ -140,13 +139,13 @@ fun checkLogin(force: Boolean = false): String {
             return "OK"
         } else if (retcode == "FAILED") {
             acc.user = null
-            acc.activePlan = PlanType.UNKNOWN
+            acc.activePlan = null
             logError("login-failed", humanReadableMessage)
             addStatistic(false,  "login-failed", url.toString(), humanReadableMessage)
             return ""
         } else {
             acc.user = null
-            acc.activePlan = PlanType.UNKNOWN
+            acc.activePlan = null
             logError("login-failed", "unrecognized response")
             addStatistic(false,  "login (2)", url.toString(), "unrecognized response")
             return ""

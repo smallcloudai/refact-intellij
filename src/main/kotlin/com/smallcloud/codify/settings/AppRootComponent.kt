@@ -3,18 +3,13 @@ package com.smallcloud.codify.settings
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.components.JBLabel
-import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.FormBuilder
-import com.smallcloud.codify.Resources
-import com.smallcloud.codify.Resources.loginCooldown
 import com.smallcloud.codify.PluginState
+import com.smallcloud.codify.Resources
 import com.smallcloud.codify.Resources.pluginDescriptionStr
 import com.smallcloud.codify.account.*
 import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.account.AccountManager.logout
-import com.smallcloud.codify.struct.PlanType
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -52,7 +47,7 @@ class AppRootComponent {
                     revalidate()
                 }
 
-                override fun planStatusChanged(newPlan: PlanType) {
+                override fun planStatusChanged(newPlan: String?) {
                     revalidate()
                 }
 
@@ -91,7 +86,7 @@ class AppRootComponent {
 
     private fun setupProperties() {
         activePlanLabel.text = "Active plan: ${AccountManager.activePlan}"
-        activePlanLabel.isVisible = currentState == SettingsState.SIGNED
+        activePlanLabel.isVisible = currentState == SettingsState.SIGNED && AccountManager.activePlan != null
         logoutButton.isVisible = currentState == SettingsState.SIGNED
         loginButton.isVisible = currentState != SettingsState.SIGNED
         forceLoginButton.isVisible = currentState != SettingsState.UNSIGNED

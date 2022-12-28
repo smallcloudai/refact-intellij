@@ -47,8 +47,10 @@ class AppSettingsConfigurable : Configurable {
                     mySettingsComponent!!.tokenText != AccountManager.apiKey))
         modified = modified or (mySettingsComponent!!.tokenText.isEmpty() && AccountManager.apiKey != null)
 
+        modified = modified or (mySettingsComponent!!.modelText.isNotEmpty()
+                && (InferenceGlobalContext.model == null ||
+                InferenceGlobalContext.model != mySettingsComponent!!.modelText))
         modified = modified or (mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model != null)
-        modified = modified or (!mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model == null)
 
         modified =
             modified or (mySettingsComponent!!.temperatureText.isNotEmpty() && (InferenceGlobalContext.temperature == null ||

@@ -46,7 +46,7 @@ class UsageStats {
 
         val errorMessageJson = gson.toJson(errorMessageStr)
         val scopeJson = gson.toJson(scope)
-        val message = "${positive.compareTo(false)} $scopeJson $relatedUrl $errorMessageJson"
+        val message = "${positive.compareTo(false)}\t$scopeJson\t$relatedUrl\t$errorMessageJson"
         synchronized(this) {
             if (messages.containsKey(message)) {
                 messages[message] = messages[message]!! + 1

@@ -14,8 +14,40 @@
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-        <p>Codify from Small Magellanic Cloud is a coding assistant which uses the latest advances in Deep Learning and Large Language Models. It follows your instructions and provides suggestions on where exactly and how it proposes to change your code. For more key features, keep reading.</p>
-        <p>For more information, visit <a href="https://codify.smallcloud.ai">https://codify.smallcloud.ai</a></p>
+<h4 id="codify-features">Codify strives to be the only AI coding assistant you'll ever need!</h4>
+<ul>
+<li>Open source plugin.</li>
+<li>State of the art code generation models (see website for details).</li>
+<li>20+ programming languages.</li>
+<li>Cloud subscription and a free self-hosted version.</li>
+<li>Experimental features!</li>
+</ul>
+<br />
+<h4 id="open-source">Open Source</h4>
+<p>
+The plugin is open source: you can verify for yourself it cares about your data as advertised.
+</p>
+<br />
+<h4 id="open-source">Code Completion</h4>
+<p>
+As you type in code, this feature offers suggestions to increase your productivity. It can offer commonly used commands, functions, and variables.
+
+By looking up and down the cursor, it can make more informed suggestions based on surrounding code, natural language comments, and other contextual information.
+
+It also works fast!
+</p>
+<br />
+<h4 id="cloud-subscription">Cloud subscription</h4>
+<p>
+You can start with free trial, switch to a paid subscription later. Alternatively, you can run your own self-hosted version.
+</p>
+<br />
+<h4 id="experemental-features">Experimental features</h4>
+<p>
+Stay tuned for code refactoring and human-machine symbiosis! Check out preview videos on our website.
+</p>
+<br />
+<p>For more information, visit <a href="https://codify.smallcloud.ai">https://codify.smallcloud.ai</a></p>
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.

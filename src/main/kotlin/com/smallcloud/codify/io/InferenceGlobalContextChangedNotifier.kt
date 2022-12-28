@@ -8,6 +8,7 @@ interface InferenceGlobalContextChangedNotifier {
     fun userInferenceUriChanged(newUrl: URI?) {}
     fun temperatureChanged(newTemp: Float?) {}
     fun modelChanged(newModel: String?) {}
+    fun lastAutoModelChanged(newModel: String?) {}
 
     companion object {
         val TOPIC = Topic.create(

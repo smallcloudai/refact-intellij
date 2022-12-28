@@ -14,6 +14,7 @@ data class SMCPrediction(
     val id: String,
     @SerializedName("object") val obj: String,
     val status: String?,
+    val model: String?,
     val created: Float,
     val uploaded: Float,
     @SerializedName("generated_tokens_n") val generatedTokensN: Int,

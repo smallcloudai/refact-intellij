@@ -84,6 +84,15 @@ object InferenceGlobalContext {
                 .temperatureChanged(newTemp)
         }
 
+    var lastAutoModel: String? = null
+        set(newModel) {
+            if (newModel == field) return
+            field = newModel
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .lastAutoModelChanged(newModel)
+        }
+
     var model: String?
         get() = AppSettingsState.instance.model
         set(newModel) {

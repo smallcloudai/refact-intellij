@@ -56,6 +56,10 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     update(null)
                 }
 
+                override fun lastAutoModelChanged(newModel: String?) {
+                    update(null)
+                }
+
                 override fun temperatureChanged(newTemp: Float?) {
                     update(null)
                 }
@@ -163,10 +167,12 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 if (InferenceGlobalContext.inferenceUri != null) {
                     tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUri!!.resolve(defaultContrastUrlSuffix)}"
                 }
-                val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else defaultModel
+                val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else
+                    if (InferenceGlobalContext.lastAutoModel != null) InferenceGlobalContext.lastAutoModel else null
                 val temp =
                     if (InferenceGlobalContext.temperature != null) InferenceGlobalContext.temperature else defaultTemperature
-                tooltipStr += "<br>\uD83D\uDDD2 $model"
+                if (model != null)
+                    tooltipStr += "<br>\uD83D\uDDD2 $model"
                 tooltipStr += "<br>\uD83C\uDF21️ $temp"
                 if (PluginState.instance.tooltipMessage != null)
                     tooltipStr += "<br>${PluginState.instance.tooltipMessage}"

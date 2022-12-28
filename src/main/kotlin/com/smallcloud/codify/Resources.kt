@@ -19,7 +19,7 @@ object Resources {
     val defaultLoginUrl: URI = URI("https://www.smallcloud.ai/v1/login")
     val defaultReportUrl: URI = URI("https://www.smallcloud.ai/v1/usage-stats")
     const val defaultTemperature: Float = 0.2f
-    const val defaultModel: String = "CONTRASTcode/3b/multi"
+    const val defaultModel: String = "CONTRASTcode"
     val version: String = getVersion()
     const val client: String = "jetbrains"
     const val loginCooldown: Int = 30 // sec

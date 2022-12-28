@@ -112,6 +112,7 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
                 throw Exception(errorMsg)
             }
             val json = gson.fromJson(it, SMCPrediction::class.java)
+            InferenceGlobalContext.lastAutoModel = json.model
             UsageStats.addStatistic(true, request.scope, request.uri.toString(), "")
             return@thenApplyAsync json
         }

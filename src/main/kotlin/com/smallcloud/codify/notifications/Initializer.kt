@@ -12,16 +12,6 @@ fun notificationStartup() {
     ApplicationManager.getApplication()
         .messageBus
         .connect(PluginState.instance)
-        .subscribe(ProjectManager.TOPIC, object : ProjectManagerListener {
-            override fun projectOpened(project: Project) {
-                if (!AccountManager.isLoggedIn)
-                    emitLogin(project)
-            }
-        })
-
-    ApplicationManager.getApplication()
-        .messageBus
-        .connect(PluginState.instance)
         .subscribe(ExtraInfoChangedNotifier.TOPIC, object : ExtraInfoChangedNotifier {
             override fun loginMessageChanged(newMsg: String?) {
                 if (newMsg != null)

@@ -74,7 +74,7 @@ class UsageStats {
         if (lastMessages.isEmpty()) return
         var usage = ""
         lastMessages.forEach {
-            usage += "${it.key} ${it.value}\n"
+            usage += "${it.key}\t${it.value}\n"
         }
         val gson = Gson()
         val body = gson.toJson(

@@ -335,6 +335,9 @@ class CompletionMode : Mode(), CaretListener {
             processTask?.get()
         } catch (_: CancellationException) {
         } finally {
+            if (InferenceGlobalContext.status != ConnectionStatus.DISCONNECTED) {
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            }
             processTask = null
             completionLayout?.dispose()
             completionLayout = null

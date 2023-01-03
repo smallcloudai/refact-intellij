@@ -19,12 +19,15 @@ class EditorTextHelper(
     init {
         document = editor.document
         lines = document.text.split("\n")
-        assert(lines.size == document.lineCount)
         offset = customOffset
         currentLineNumber = document.getLineNumber(offset)
         currentLine = lines[currentLineNumber]
         currentLineStartOffset = document.getLineStartOffset(currentLineNumber)
         currentLineEndOffset = document.getLineEndOffset(currentLineNumber)
         offsetByCurrentLine = offset - currentLineStartOffset
+    }
+
+    fun isValid(): Boolean {
+        return lines.size == document.lineCount
     }
 }

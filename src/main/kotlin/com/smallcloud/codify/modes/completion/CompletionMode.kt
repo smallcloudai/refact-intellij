@@ -123,6 +123,7 @@ class CompletionMode : Mode(), CaretListener {
         val request = makeRequest(fileName, state.text, state.offset) ?: return
         request.uri = request.uri.resolve(defaultContrastUrlSuffix)
         val editorHelper = EditorTextHelper(editor, state.offset)
+        if (!editorHelper.isValid()) return
 
         processTask = scheduler.schedule({
             process(request, editor, state, editorHelper, force)

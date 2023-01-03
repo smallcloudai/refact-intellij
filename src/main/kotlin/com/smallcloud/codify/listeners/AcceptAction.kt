@@ -11,11 +11,11 @@ import com.smallcloud.codify.modes.ModeProvider
 import com.intellij.openapi.diagnostic.Logger
 
 object TabPressedAction :
-    EditorAction(AcceptInlineCompletionHandler()),
+    EditorAction(InlineCompletionHandler()),
     ActionToIgnore {
     const val ACTION_ID = "TabPressedAction"
 
-    class AcceptInlineCompletionHandler : EditorWriteActionHandler() {
+    class InlineCompletionHandler : EditorWriteActionHandler() {
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
             Logger.getInstance("TabPressedAction").warn("executeWriteAction")
             val provider = ModeProvider.getOrCreateModeProvider(editor)

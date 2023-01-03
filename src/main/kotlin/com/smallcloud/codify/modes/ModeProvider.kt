@@ -45,17 +45,17 @@ class ModeProvider(
 
     }
 
-    fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
+    fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {
         if (!isEnabled) return
-        if (event.newFragment.toString() == DUMMY_IDENTIFIER) return
+        if (event?.newFragment.toString() == DUMMY_IDENTIFIER) return
         activeMode?.beforeDocumentChangeNonBulk(event, editor)
     }
 
 
-    fun onTextChange(event: DocumentEvent, editor: Editor) {
+    fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean) {
         if (!isEnabled) return
-        if (event.newFragment.toString() == DUMMY_IDENTIFIER) return
-        activeMode?.onTextChange(event, editor)
+        if (event?.newFragment.toString() == DUMMY_IDENTIFIER) return
+        activeMode?.onTextChange(event, editor, force)
     }
 
     fun onCaretChange(event: CaretEvent) {

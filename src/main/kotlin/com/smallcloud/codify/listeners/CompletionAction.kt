@@ -9,17 +9,19 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.EditorAction
 import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
 import com.smallcloud.codify.modes.ModeProvider
+import com.smallcloud.codify.settings.AppSettingsState
 
-object CancelPressedAction :
+object CompletionAction :
     EditorAction(InlineCompletionHandler()),
     ActionToIgnore {
-    const val ACTION_ID = "CancelPressedAction"
+    const val ACTION_ID = "CompletionAction"
 
     class InlineCompletionHandler : EditorWriteActionHandler() {
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
-            Logger.getInstance("CancelPressedAction").warn("executeWriteAction")
+            Logger.getInstance("CompletionAction").warn("executeWriteAction")
             val provider = ModeProvider.getOrCreateModeProvider(editor)
-            provider.onEscPressed(editor, caret, dataContext)
+            provider.beforeDocumentChangeNonBulk(null, editor)
+            provider.onTextChange(null, editor, true)
         }
 
         override fun isEnabledForCaret(
@@ -27,7 +29,8 @@ object CancelPressedAction :
             caret: Caret,
             dataContext: DataContext
         ): Boolean {
-            return ModeProvider.getOrCreateModeProvider(editor).modeInActiveState()
+            val provider = ModeProvider.getOrCreateModeProvider(editor)
+            return AppSettingsState.instance.useForceCompletion && !provider.modeInActiveState()
         }
     }
 }

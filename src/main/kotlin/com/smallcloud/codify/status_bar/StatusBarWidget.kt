@@ -10,6 +10,7 @@ import com.intellij.openapi.wm.StatusBarWidget.WidgetPresentation
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.openapi.wm.impl.status.EditorBasedWidget
 import com.intellij.openapi.wm.impl.status.TextPanel.WithIconAndArrows
+import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.ColorUtil
 import com.intellij.util.Consumer
 import com.smallcloud.codify.*
@@ -138,9 +139,11 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return AllIcons.Debugger.ThreadStates.Socket
         else if (cStat == ConnectionStatus.ERROR)
             return AllIcons.Debugger.Db_exception_breakpoint
-        else if (cStat == ConnectionStatus.CONNECTED) {
+        else if (cStat == ConnectionStatus.CONNECTED)
             return LOGO_RED_12x12
-        }
+        else if (cStat == ConnectionStatus.PENDING)
+            return AnimatedIcon.Default()
+
         return LOGO_RED_12x12
     }
 

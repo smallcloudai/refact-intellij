@@ -115,6 +115,7 @@ class AppSettingsComponent {
     private val myTemperatureText = JBTextField()
     private val myGTemperatureText: GhostText
     private val myContrastUrlText = JBTextField()
+    private val myUseForceCompletionMode = JCheckBox()
 
     init {
         myGTemperatureText = GhostText(myTemperatureText, "asdasdasd")
@@ -138,6 +139,13 @@ class AppSettingsComponent {
             addComponentToRightColumn(
                 JBLabel(
                     "Fill this if you are using your own inference server",
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
+            addLabeledComponent(JBLabel("Use force completion mode: "), myUseForceCompletionMode, 1, false)
+            addComponentToRightColumn(
+                JBLabel(
+                    "In this mode use the `alt + /` combination to trigger the completion",
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
@@ -172,5 +180,13 @@ class AppSettingsComponent {
         }
         set(newText) {
             myTemperatureText.text = newText
+        }
+
+    var useForceCompletion: Boolean
+        get() {
+            return myUseForceCompletionMode.isSelected
+        }
+        set(value) {
+            myUseForceCompletionMode.isSelected = value
         }
 }

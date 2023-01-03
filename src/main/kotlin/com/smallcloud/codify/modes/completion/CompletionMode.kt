@@ -42,7 +42,7 @@ class CompletionMode : Mode(), CaretListener {
     private var autocompleteSymbolBefore: String = ""
     private var hasOneLineCompletionBefore: Boolean = false
 
-    override fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor) {
+    override fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {
         logger.info("beforeDocumentChangeNonBulk cancelOrClose request")
         cancelOrClose(editor)
     }
@@ -78,40 +78,54 @@ class CompletionMode : Mode(), CaretListener {
         return true to 0
     }
 
-    override fun onTextChange(event: DocumentEvent, editor: Editor) {
-        if (event.offset + event.newLength > editor.document.text.length) return
-        if (event.newLength + event.oldLength <= 0) return
-        if (willHaveMoreEvents(event, editor)) return
-        val (valid, offset) = autocompletedSymbolsInfo(event, editor)
-        if (!valid) return
-
-        val state = EditorState(
-            editor.document.modificationStamp,
-            event.offset + event.newLength + offset,
-            editor.document.text
-        )
-        val completionData = CompletionCache.getCompletion(state.text, state.offset)
-        if (completionData != null) {
-            processTask = scheduler.submit {
-                app.invokeLater { renderCompletion(editor, state, completionData) }
-            }
-            return
-        }
-
-        val document = event.document
+    override fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean) {
+        val document = editor.document
         val fileName = getActiveFile(document) ?: return
-        if (shouldIgnoreChange(event, editor, state.offset)) {
-            return
+        val state: EditorState
+        val debounceMs: Long
+        if (!force) {
+            if (event == null) return
+            if (event.offset + event.newLength > editor.document.text.length) return
+            if (event.newLength + event.oldLength <= 0) return
+            if (willHaveMoreEvents(event, editor)) return
+            val (valid, offset) = autocompletedSymbolsInfo(event, editor)
+            if (!valid) return
+            state = EditorState(
+                editor.document.modificationStamp,
+                event.offset + event.newLength + offset,
+                editor.document.text
+            )
+
+            val completionData = CompletionCache.getCompletion(state.text, state.offset)
+            if (completionData != null) {
+                processTask = scheduler.submit {
+                    app.invokeLater { renderCompletion(editor, state, completionData) }
+                }
+                return
+            }
+
+            if (shouldIgnoreChange(event, editor, state.offset)) {
+                return
+            }
+
+            debounceMs = CompletionTracker.calcDebounceTime(editor)
+            CompletionTracker.updateLastCompletionRequestTime(editor)
+            logger.info("Debounce time: $debounceMs")
+        } else {
+            state = EditorState(
+                editor.document.modificationStamp,
+                editor.caretModel.offset,
+                editor.document.text
+            )
+            debounceMs = 0
         }
+
         val request = makeRequest(fileName, state.text, state.offset) ?: return
         request.uri = request.uri.resolve(defaultContrastUrlSuffix)
         val editorHelper = EditorTextHelper(editor, state.offset)
 
-        val debounceMs = CompletionTracker.calcDebounceTime(editor)
-        CompletionTracker.updateLastCompletionRequestTime(editor)
-        logger.info("Debounce time: $debounceMs")
         processTask = scheduler.schedule({
-            process(request, editor, state, editorHelper)
+            process(request, editor, state, editorHelper, force)
         }, debounceMs, TimeUnit.MILLISECONDS)
     }
 
@@ -203,16 +217,23 @@ class CompletionMode : Mode(), CaretListener {
         request: SMCRequest,
         editor: Editor,
         state: EditorState,
-        editorHelper: EditorTextHelper
+        editorHelper: EditorTextHelper,
+        force: Boolean,
     ) {
         var maybeLastReqJob: RequestJob? = null
         try {
-            val completionState = CompletionState(editorHelper)
-            if (!completionState.readyForCompletion) return
-            if (!completionState.multiline && hasOneLineCompletionBefore) return
+            val completionState = CompletionState(editorHelper, force = force)
+            if (!force && !completionState.readyForCompletion) return
+            if (!force && !completionState.multiline && hasOneLineCompletionBefore) return
+            if (force) {
+                request.body.maxTokens = 512
+            }
 
             request.body.stopTokens = completionState.stopTokens
 
+            if (InferenceGlobalContext.status == ConnectionStatus.CONNECTED) {
+                InferenceGlobalContext.status = ConnectionStatus.PENDING
+            }
             maybeLastReqJob = inferenceFetch(request)
             val lastReqJob = maybeLastReqJob ?: return
 
@@ -228,7 +249,7 @@ class CompletionMode : Mode(), CaretListener {
             val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
             val finishReason = prediction.choices?.firstOrNull()?.finishReason
             if (predictedText == null || finishReason == null) {
-                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = "Request was succeeded but there is no predicted data"
                 return
             } else {
@@ -252,7 +273,7 @@ class CompletionMode : Mode(), CaretListener {
         } catch (e: ExecutionException) {
             catchNetExceptions(e.cause)
         } catch (e: Exception) {
-            InferenceGlobalContext.status = ConnectionStatus.ERROR
+            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             InferenceGlobalContext.lastErrorMsg = e.message
             logger.warn("Exception while completion request processing", e)
         }
@@ -286,7 +307,8 @@ class CompletionMode : Mode(), CaretListener {
 
     override fun isInActiveState(): Boolean = completionLayout != null && completionLayout!!.rendered && needToRender
 
-    private fun shouldIgnoreChange(event: DocumentEvent, editor: Editor, offset: Int): Boolean {
+    private fun shouldIgnoreChange(event: DocumentEvent?, editor: Editor, offset: Int): Boolean {
+        if (event == null) return false
         val document = event.document
 
         if (editor.editorKind != EditorKind.MAIN_EDITOR && !app.isUnitTestMode) {

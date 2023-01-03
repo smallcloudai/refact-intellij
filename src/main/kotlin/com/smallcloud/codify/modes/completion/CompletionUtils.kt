@@ -7,7 +7,8 @@ import java.util.regex.Pattern
 
 class CompletionState(
     private var textHelper: EditorTextHelper,
-    private val filterRightFromCursor: Boolean = true
+    private val filterRightFromCursor: Boolean = true,
+    private val force: Boolean = false
 ) {
     private val MAX_TEXT_SIZE: Long = 180 * 1024
     private val RIGHT_OF_CURSOR_SPECIAL_CHAR = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
@@ -28,7 +29,7 @@ class CompletionState(
 
     init {
         run {
-            if (filterRightFromCursor) {
+            if (!force && filterRightFromCursor) {
                 val rightOfCursor = textHelper.currentLine.substring(textHelper.offsetByCurrentLine)
                 val rightOfCursorHasOnlySpecialChars = RIGHT_OF_CURSOR_SPECIAL_CHAR.matcher(rightOfCursor).matches()
                 if (!rightOfCursorHasOnlySpecialChars) {
@@ -38,8 +39,9 @@ class CompletionState(
             }
             val leftOfCursor = textHelper.currentLine.substring(0, textHelper.offsetByCurrentLine)
             multiline = leftOfCursor.replace(" ", "").replace("\t", "").isEmpty()
+            multiline = multiline || force
             requestedText = textHelper.document.text
-            if (requestedText.length > MAX_TEXT_SIZE) return@run
+            if (!force && requestedText.length > MAX_TEXT_SIZE) return@run
             readyForCompletion = true
         }
     }

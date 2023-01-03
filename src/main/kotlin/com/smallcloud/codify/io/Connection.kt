@@ -38,6 +38,7 @@ interface ConnectionChangedNotifier {
 
 enum class ConnectionStatus {
     CONNECTED,
+    PENDING,
     DISCONNECTED,
     ERROR
 }

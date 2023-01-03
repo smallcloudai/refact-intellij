@@ -7,8 +7,8 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.DocumentEvent
 
 abstract class Mode {
-    abstract fun beforeDocumentChangeNonBulk(event: DocumentEvent, editor: Editor)
-    abstract fun onTextChange(event: DocumentEvent, editor: Editor)
+    abstract fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor)
+    abstract fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean)
     abstract fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext)
     abstract fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext)
     abstract fun isInActiveState(): Boolean

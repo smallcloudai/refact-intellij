@@ -63,6 +63,9 @@ class AppSettingsConfigurable : Configurable {
                     makeUrlGreat(mySettingsComponent!!.contrastUrlText) != InferenceGlobalContext.inferenceUri))
         modified =
             modified or (mySettingsComponent!!.contrastUrlText.isEmpty() && InferenceGlobalContext.hasUserInferenceUri())
+
+        modified = modified || mySettingsComponent!!.useForceCompletion != AppSettingsState.instance.useForceCompletion
+
         return modified
     }
 
@@ -92,6 +95,7 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.inferenceUri =
             if (mySettingsComponent!!.contrastUrlText.isEmpty()) null else
                 makeUrlGreat(mySettingsComponent!!.contrastUrlText)
+        AppSettingsState.instance.useForceCompletion = mySettingsComponent!!.useForceCompletion
     }
 
     override fun reset() {
@@ -101,6 +105,7 @@ class AppSettingsConfigurable : Configurable {
             if (InferenceGlobalContext.temperature == null) "" else InferenceGlobalContext.temperature.toString()
         mySettingsComponent!!.contrastUrlText =
             if (InferenceGlobalContext.hasUserInferenceUri()) InferenceGlobalContext.inferenceUri.toString() else ""
+        mySettingsComponent!!.useForceCompletion = AppSettingsState.instance.useForceCompletion
     }
 
     override fun disposeUIResources() {

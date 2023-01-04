@@ -70,7 +70,7 @@ class Inlayer(val editor: Editor) : Disposable {
             if (lines.isEmpty()) return this
             val firstLine = lines.first()
             val otherLines = lines.drop(1)
-            if (firstLine.isNotEmpty()) {
+            if (firstLine.isNotEmpty() && !completionData.currentLinesAreEqual) {
                 renderLine(firstLine, completionData.startIndex)
             }
             if (otherLines.isNotEmpty()) {

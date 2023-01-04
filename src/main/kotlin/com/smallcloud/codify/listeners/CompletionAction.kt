@@ -29,8 +29,7 @@ object CompletionAction :
             caret: Caret,
             dataContext: DataContext
         ): Boolean {
-            val provider = ModeProvider.getOrCreateModeProvider(editor)
-            return AppSettingsState.instance.useForceCompletion && !provider.modeInActiveState()
+            return AppSettingsState.instance.useForceCompletion
         }
     }
 }

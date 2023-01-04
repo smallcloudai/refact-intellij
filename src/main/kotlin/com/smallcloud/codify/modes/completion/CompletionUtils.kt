@@ -112,6 +112,15 @@ class CompletionState(
                 completion = completion.substring(0, completion.length - offset)
             }
             stopIndex = maxOf(stopIndex, textHelper.offset)
+        } else {
+            stopIndex += requestedText.substring(
+                startIndex,
+                textHelper.currentLineStartOffset + currentLine.length
+            ).length
+            completion += predictedText.substring(
+                startIndex,
+                textHelper.currentLineStartOffset + predictedCurrentLine.length
+            )
         }
 
         if (!multiline) {
@@ -120,6 +129,7 @@ class CompletionState(
                 originalText = requestedText,
                 predictedText = predictedText,
                 completion = completion,
+                currentLinesAreEqual = currentLinesAreEqual,
                 multiline = multiline,
                 startIndex = startIndex,
                 endIndex = stopIndex,
@@ -145,6 +155,7 @@ class CompletionState(
                 originalText = requestedText,
                 predictedText = predictedText,
                 completion = completion,
+                currentLinesAreEqual = currentLinesAreEqual,
                 multiline = multiline,
                 startIndex = startIndex,
                 endIndex = stopIndex,
@@ -159,28 +170,33 @@ class CompletionState(
         lines: List<String>,
         predictedLines: List<String>
     ): Pair<Int, Int> {
-        val guesses: MutableList<Pair<Int, Int>> = mutableListOf()
+        val predictedSize = predictedLines.size
+        var minGuess: Pair<Int, Int> = predictedSize to predictedSize
         for (i in currentLineNum + 1 until lines.size) {
             if (lines[i].isEmpty()) {
                 continue
             }
             var predictedLinesOffset = -1
             for (j in currentLineNum + 1 until predictedLines.size) {
+                if (minGuess.first + minGuess.second <= i + predictedLinesOffset) {
+                    break
+                }
                 if (lines[i] == predictedLines[j] || predictedLines[j].contains(lines[i])) {
                     predictedLinesOffset = j
                     break
                 }
             }
             if (predictedLinesOffset != -1) {
-                guesses.add(i to predictedLinesOffset)
+                if (minGuess.first + minGuess.second > i + predictedLinesOffset) {
+                    minGuess = i to predictedLinesOffset
+                }
             }
         }
 
-        val minEl = guesses.minByOrNull { it.first + it.second }
         var (linesOffset, predictedLinesOffset) = -1 to -1
-        if (minEl != null) {
-            linesOffset = minEl.first
-            predictedLinesOffset = minEl.second
+        if (minGuess.first != predictedSize && minGuess.second != predictedSize) {
+            linesOffset = minGuess.first
+            predictedLinesOffset = minGuess.second
         }
 
         if (predictedLinesOffset == -1

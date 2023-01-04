@@ -181,7 +181,7 @@ class CompletionState(
                 if (minGuess.first + minGuess.second <= i + predictedLinesOffset) {
                     break
                 }
-                if (lines[i] == predictedLines[j] || predictedLines[j].contains(lines[i])) {
+                if (lines[i] == predictedLines[j]) {
                     predictedLinesOffset = j
                     break
                 }

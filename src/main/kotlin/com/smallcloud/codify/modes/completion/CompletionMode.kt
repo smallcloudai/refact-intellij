@@ -79,8 +79,7 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     override fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean) {
-        val document = editor.document
-        val fileName = getActiveFile(document) ?: return
+        val fileName = getActiveFile(editor.document) ?: return
         val state: EditorState
         val debounceMs: Long
         if (!force) {
@@ -98,6 +97,7 @@ class CompletionMode : Mode(), CaretListener {
 
             val completionData = CompletionCache.getCompletion(state.text, state.offset)
             if (completionData != null) {
+                hasOneLineCompletionBefore = completionData.isSingleLineComplete
                 processTask = scheduler.submit {
                     app.invokeLater { renderCompletion(editor, state, completionData) }
                 }
@@ -330,7 +330,7 @@ class CompletionMode : Mode(), CaretListener {
         return file?.presentableName
     }
 
-    fun cancelOrClose(editor: Editor) {
+    private fun cancelOrClose(editor: Editor) {
         try {
             processTask?.cancel(true)
             processTask?.get()
@@ -340,9 +340,9 @@ class CompletionMode : Mode(), CaretListener {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             }
             processTask = null
+            hasOneLineCompletionBefore = completionLayout?.completionData?.isFromCache ?: false
             completionLayout?.dispose()
             completionLayout = null
-            hasOneLineCompletionBefore = false
             editor.caretModel.removeCaretListener(this)
         }
     }

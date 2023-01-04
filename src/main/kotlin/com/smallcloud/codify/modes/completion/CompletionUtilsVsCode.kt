@@ -7,14 +7,15 @@ import java.util.regex.Pattern
 
 data class Completion(
     val originalText: String,
-    val predictedText: String?,
+    val predictedText: String,
     val completion: String,
     val currentLinesAreEqual: Boolean,
     val multiline: Boolean,
     val startIndex: Int,
     val endIndex: Int,
     val createdTs: Long,
-    val isSingleLineComplete: Boolean
+    val isSingleLineComplete: Boolean,
+    val isFromCache: Boolean = false
 ) {
     fun isMakeSense() : Boolean {
         return completion.isNotEmpty()

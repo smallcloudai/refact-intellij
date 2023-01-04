@@ -75,7 +75,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     }
 
                     override fun modelChanged(newModel: String?) {
-                        instance.model = newModel
+                        instance.model = newModel?.trim()
                     }
 
                     override fun temperatureChanged(newTemp: Float?) {

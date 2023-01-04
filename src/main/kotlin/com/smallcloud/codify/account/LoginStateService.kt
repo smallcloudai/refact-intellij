@@ -4,7 +4,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.notifications.emitLogin
-import java.util.concurrent.Future
 
 
 class LoginStateService {
@@ -25,16 +24,20 @@ class LoginStateService {
             try {
                 Logger.getInstance("check_login").warn("call")
                 lastWebsiteLoginStatus = checkLogin(force)
-                if (!popupLoginMessageOnce && lastWebsiteLoginStatus.isEmpty()) {
-                    val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return@submit
-                    emitLogin(project)
-                }
+                emitLoginIfNeeded()
             } catch (e: Exception) {
                 e.message?.let { logError("check_login exception", it) }
-            }
-            finally {
+                emitLoginIfNeeded()
+            } finally {
                 popupLoginMessageOnce = true
             }
+        }
+    }
+
+    private fun emitLoginIfNeeded() {
+        if (!popupLoginMessageOnce && lastWebsiteLoginStatus.isEmpty()) {
+            val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return
+            emitLogin(project)
         }
     }
 }

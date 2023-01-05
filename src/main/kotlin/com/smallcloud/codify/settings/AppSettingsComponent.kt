@@ -62,7 +62,7 @@ class GhostText(textfield: JTextField, ghostText: String) : FocusListener,
     }
 
     private fun updateState() {
-        isEmpty = textfield.text.length == 0
+        isEmpty = textfield.text.isEmpty()
         foregroundColor = textfield.foreground
     }
 
@@ -113,13 +113,11 @@ class AppSettingsComponent {
     val myTokenText = JBTextField()
     private val myModelText = JBTextField()
     private val myTemperatureText = JBTextField()
-    private val myGTemperatureText: GhostText
     private val myContrastUrlText = JBTextField()
     private val myUseForceCompletionMode = JCheckBox()
     private val myUseMultipleFilesCompletion = JCheckBox()
 
     init {
-        myGTemperatureText = GhostText(myTemperatureText, "asdasdasd")
         panel = FormBuilder.createFormBuilder().run {
             addLabeledComponent(JBLabel("Secret API Key: "), myTokenText, 1, false)
             addLabeledComponent(JBLabel("Model: "), myModelText, 1, false)

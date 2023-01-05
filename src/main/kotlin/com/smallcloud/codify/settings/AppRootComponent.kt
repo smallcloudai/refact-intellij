@@ -30,7 +30,7 @@ class AppRootComponent {
     private val activePlanLabel = JBLabel("")
 
     init {
-        loginCounter = loginCooldownCounter
+        loginCounter = loginCoolDownCounter
         currentState = if (isLoggedIn) {
             SettingsState.SIGNED
         } else if (AccountManager.ticket != null) {

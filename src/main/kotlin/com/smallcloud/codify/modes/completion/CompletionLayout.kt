@@ -16,7 +16,7 @@ class CompletionLayout(
     val completionData: Completion
 ) : Disposable {
     private var inlayer: Inlayer? = null
-    var blockEvents: Boolean = false
+    private var blockEvents: Boolean = false
     var rendered: Boolean = false
 
     override fun dispose() {

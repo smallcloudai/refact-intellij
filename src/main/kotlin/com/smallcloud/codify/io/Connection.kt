@@ -1,6 +1,7 @@
 package com.smallcloud.codify.io
 
 
+import com.intellij.openapi.Disposable
 import com.intellij.util.messages.Topic
 import com.smallcloud.codify.UsageStats.Companion.addStatistic
 import com.smallcloud.codify.account.inferenceLogin
@@ -45,7 +46,7 @@ enum class ConnectionStatus {
 
 data class RequestJob(var future: CompletableFuture<*>, val request: HttpRequestBase?)
 
-class Connection(uri: URI) {
+class Connection(uri: URI): Disposable {
     private val route: HttpRoute = HttpRoute(HttpHost(uri.host))
     private var context: HttpClientContext = HttpClientContext.create()
     private val connManager: PoolingHttpClientConnectionManager = PoolingHttpClientConnectionManager()
@@ -105,8 +106,8 @@ class Connection(uri: URI) {
         }.thenApplyAsync {
             try {
                 val response: HttpResponse = client.execute(req)
-                val statusCode: Int = response.getStatusLine().getStatusCode()
-                val responseBody: String = EntityUtils.toString(response.getEntity())
+                val statusCode: Int = response.statusLine.statusCode
+                val responseBody: String = EntityUtils.toString(response.entity)
                 return@thenApplyAsync responseBody
             } catch (e: SocketException) {
                 // request aborted, it's ok for small files
@@ -124,7 +125,7 @@ class Connection(uri: URI) {
         return RequestJob(future, req)
     }
 
-    protected fun finalize() {
+    override fun dispose() {
         conn.close()
     }
 }

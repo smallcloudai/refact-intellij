@@ -73,10 +73,10 @@ class AppSettingsConfigurable : Configurable {
     private fun makeUrlGreat(uri: String): URI {
         var newUri = uri
         if(!uri.startsWith("http://") && !uri.startsWith("https://")) {
-            newUri = "https://" + newUri
+            newUri = "https://$newUri"
         }
         if(!uri.endsWith("/")) {
-            newUri = newUri + "/"
+            newUri = "$newUri/"
         }
         return URI(newUri)
     }

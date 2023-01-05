@@ -43,8 +43,8 @@ fun String.getChar(index: Int): Char? {
 class CompletionStateVsCode(
     private var textHelper: EditorTextHelper
 ) {
-    private val MAX_TEXT_SIZE: Long = 180 * 1024
-    private val RIGHT_OF_CURSOR_SPECIAL_CHAR = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
+    private val maxTextSize: Long = 180 * 1024
+    private val rightOfCursorSpecialChar = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
 
     private var cursor: Int = textHelper.offset
     private var multiline: Boolean = false
@@ -52,7 +52,7 @@ class CompletionStateVsCode(
     private val logger = Logger.getInstance("CompletionUtils")
 
     @Suppress("RedundantSetter")
-    var readyForCompletion: Boolean = false
+    private var readyForCompletion: Boolean = false
         private set(value) {
             field = value
         }
@@ -65,13 +65,13 @@ class CompletionStateVsCode(
         run {
             val leftOfCursor = textHelper.currentLine.substring(0, textHelper.offsetByCurrentLine)
             val rightOfCursor = textHelper.currentLine.substring(textHelper.offsetByCurrentLine)
-            val rightOfCursorHasOnlySpecialChars = RIGHT_OF_CURSOR_SPECIAL_CHAR.matcher(rightOfCursor).matches()
+            val rightOfCursorHasOnlySpecialChars = rightOfCursorSpecialChar.matcher(rightOfCursor).matches()
             if (!rightOfCursorHasOnlySpecialChars) return@run
 
             multiline = leftOfCursor.replace(" ", "").replace("\t", "").isEmpty()
 
             requestedText = textHelper.document.text
-            if (requestedText.length > MAX_TEXT_SIZE) return@run
+            if (requestedText.length > maxTextSize) return@run
 
             if (requestedText.isNotEmpty() && requestedText.last() != '\n') {
                 requestedText += "\n"

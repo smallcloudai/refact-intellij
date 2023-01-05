@@ -18,7 +18,6 @@ import com.smallcloud.codify.Resources.Icons.LOGO_DARK_12x12
 import com.smallcloud.codify.Resources.Icons.LOGO_LIGHT_12x12
 import com.smallcloud.codify.Resources.Icons.LOGO_RED_12x12
 import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
-import com.smallcloud.codify.Resources.defaultModel
 import com.smallcloud.codify.Resources.defaultTemperature
 import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
@@ -134,19 +133,13 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 LOGO_LIGHT_12x12
             } else LOGO_DARK_12x12
         }
-        val cStat = InferenceGlobalContext.status
-        if (cStat == ConnectionStatus.DISCONNECTED)
-            return AllIcons.Debugger.ThreadStates.Socket
-        else if (cStat == ConnectionStatus.ERROR)
-            return AllIcons.Debugger.Db_exception_breakpoint
-        else if (cStat == ConnectionStatus.CONNECTED)
-            return LOGO_RED_12x12
-        else if (cStat == ConnectionStatus.PENDING)
-            return AnimatedIcon.Default()
-
-        return LOGO_RED_12x12
+        return when (InferenceGlobalContext.status) {
+            ConnectionStatus.DISCONNECTED -> AllIcons.Debugger.ThreadStates.Socket
+            ConnectionStatus.ERROR -> AllIcons.Debugger.Db_exception_breakpoint
+            ConnectionStatus.CONNECTED -> LOGO_RED_12x12
+            ConnectionStatus.PENDING -> AnimatedIcon.Default()
+        }
     }
-
 
     // Compatability implementation. DO NOT ADD @Override.
     override fun getPresentation(): WidgetPresentation {

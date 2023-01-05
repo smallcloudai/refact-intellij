@@ -100,7 +100,7 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
 
     if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return null
     val now = System.currentTimeMillis()
-    val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCooldown * 1000
+    val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCoolDown * 1000
     if (needToVerify) lastInferenceVerifyTs = now
 
     val job = InferenceGlobalContext.connection?.post(uri, body, headers, needVerify = needToVerify)

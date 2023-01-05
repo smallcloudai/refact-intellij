@@ -10,8 +10,8 @@ class CompletionState(
     private val filterRightFromCursor: Boolean = true,
     private val force: Boolean = false
 ) {
-    private val MAX_TEXT_SIZE: Long = 180 * 1024
-    private val RIGHT_OF_CURSOR_SPECIAL_CHAR = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
+    private val maxTextSize: Long = 180 * 1024
+    private val rightOfCursorSpecialChar = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
 
     var multiline: Boolean = true
     private var requestedText: String = ""
@@ -31,7 +31,7 @@ class CompletionState(
         run {
             if (!force && filterRightFromCursor) {
                 val rightOfCursor = textHelper.currentLine.substring(textHelper.offsetByCurrentLine)
-                val rightOfCursorHasOnlySpecialChars = RIGHT_OF_CURSOR_SPECIAL_CHAR.matcher(rightOfCursor).matches()
+                val rightOfCursorHasOnlySpecialChars = rightOfCursorSpecialChar.matcher(rightOfCursor).matches()
                 if (!rightOfCursorHasOnlySpecialChars) {
                     logger.info("There are no special characters in the $rightOfCursor")
                     return@run
@@ -41,7 +41,7 @@ class CompletionState(
             multiline = leftOfCursor.replace(" ", "").replace("\t", "").isEmpty()
             multiline = multiline || force
             requestedText = textHelper.document.text
-            if (!force && requestedText.length > MAX_TEXT_SIZE) return@run
+            if (!force && requestedText.length > maxTextSize) return@run
             readyForCompletion = true
         }
     }

@@ -19,22 +19,22 @@ interface LoginCounterChangedNotifier {
 }
 
 private var loginTask: Future<*>? = null
-var loginCooldownCounter: Int = 0
+var loginCoolDownCounter: Int = 0
 
 fun runCounterTask() {
     if (loginTask != null && (!loginTask!!.isDone || !loginTask!!.isCancelled)) return
 
     var i = 1
     loginTask = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay({
-        loginCooldownCounter = Resources.loginCooldown - (i % Resources.loginCooldown)
+        loginCoolDownCounter = Resources.loginCoolDown - (i % Resources.loginCoolDown)
         ApplicationManager.getApplication().messageBus.syncPublisher(LoginCounterChangedNotifier.TOPIC)
-            .counterChanged(loginCooldownCounter)
+            .counterChanged(loginCoolDownCounter)
 
-        if (i % Resources.loginCooldown == 0) {
+        if (i % Resources.loginCoolDown == 0) {
             ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin()
         }
 
-        if (AccountManager.isLoggedIn || i == Resources.loginCooldown * 10) {
+        if (AccountManager.isLoggedIn || i == Resources.loginCoolDown * 10) {
             loginTask?.cancel(false)
         }
         i++

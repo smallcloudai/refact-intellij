@@ -15,15 +15,15 @@ object InferenceGlobalContext {
     var connection: Connection? = inferenceUri?.let { makeConnection(it) }
 
     private fun makeConnection(uri: URI): Connection? {
-        try {
+        return try {
             val conn = Connection(uri)
             status = ConnectionStatus.CONNECTED
             lastErrorMsg = null
-            return conn
+            conn
         } catch (e: Exception) {
             status = ConnectionStatus.DISCONNECTED
             lastErrorMsg = e.message
-            return null
+            null
         }
     }
 

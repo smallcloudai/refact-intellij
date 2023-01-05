@@ -156,7 +156,7 @@ class CompletionMode : Mode(), CaretListener {
         val invalidStamp = state.modificationStamp != editor.document.modificationStamp
         val invalidOffset = state.offset != editor.caretModel.offset
         if (invalidStamp || invalidOffset) {
-            logger.info("Completion is droppped: invalidStamp || invalidOffset")
+            logger.info("Completion is dropped: invalidStamp || invalidOffset")
             logger.info(
                 "state_offset: ${state.offset}," +
                         " state_modificationStamp: ${state.modificationStamp}"
@@ -168,7 +168,7 @@ class CompletionMode : Mode(), CaretListener {
             return
         }
         if (processTask == null) {
-            logger.info("Completion is droppped: there is no active processTask is left")
+            logger.info("Completion is dropped: there is no active processTask is left")
             return
         }
         logger.info(

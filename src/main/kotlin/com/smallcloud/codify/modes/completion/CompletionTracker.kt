@@ -5,7 +5,7 @@ import com.intellij.openapi.util.Key
 
 object CompletionTracker {
     private val LAST_COMPLETION_REQUEST_TIME = Key.create<Long>("LAST_COMPLETION_REQUEST_TIME")
-    private val DEBOUNCE_INTERVAL_MS = 500
+    private const val DEBOUNCE_INTERVAL_MS = 500
 
     fun calcDebounceTime(editor: Editor): Long {
         val lastCompletionTimestamp = LAST_COMPLETION_REQUEST_TIME[editor]

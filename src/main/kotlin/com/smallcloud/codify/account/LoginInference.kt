@@ -5,7 +5,6 @@ import com.google.gson.JsonObject
 import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
-import com.smallcloud.codify.io.sendRequest
 import java.net.URI
 
 fun getInferenceUrl(): URI? {

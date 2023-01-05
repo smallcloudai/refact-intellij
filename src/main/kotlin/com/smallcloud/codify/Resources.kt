@@ -22,8 +22,8 @@ object Resources {
     const val defaultModel: String = "CONTRASTcode"
     val version: String = getVersion()
     const val client: String = "jetbrains"
-    const val loginCooldown: Int = 30 // sec
-    const val inferenceLoginCooldown: Int = 300 // sec
+    const val loginCoolDown: Int = 30 // sec
+    const val inferenceLoginCoolDown: Int = 300 // sec
     const val waitWebsiteLoginStr: String = "Waiting for website login..."
     const val pluginDescriptionStr: String = "Codify: AI autocomplete and refactoring"
 

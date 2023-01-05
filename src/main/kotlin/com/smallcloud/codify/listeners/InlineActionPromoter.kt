@@ -8,6 +8,6 @@ import com.smallcloud.codify.settings.AppSettingsState
 class InlineActionsPromoter : ActionPromoter {
     override fun promote(actions: MutableList<out AnAction>, context: DataContext): MutableList<AnAction> {
         if (!AppSettingsState.instance.useForceCompletion) return actions.toMutableList()
-        return actions.filterIsInstance<CompletionAction>().toMutableList()
+        return actions.filterIsInstance<ForceCompletionAction>().toMutableList()
     }
 }

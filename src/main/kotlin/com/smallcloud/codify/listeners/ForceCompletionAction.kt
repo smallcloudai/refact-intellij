@@ -11,14 +11,14 @@ import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
 import com.smallcloud.codify.modes.ModeProvider
 import com.smallcloud.codify.settings.AppSettingsState
 
-object CompletionAction :
+object ForceCompletionAction :
     EditorAction(InlineCompletionHandler()),
     ActionToIgnore {
-    const val ACTION_ID = "CompletionAction"
+    const val ACTION_ID = "ForceCompletionAction"
 
     class InlineCompletionHandler : EditorWriteActionHandler() {
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
-            Logger.getInstance("CompletionAction").warn("executeWriteAction")
+            Logger.getInstance("ForceCompletionAction").warn("executeWriteAction")
             val provider = ModeProvider.getOrCreateModeProvider(editor)
             provider.beforeDocumentChangeNonBulk(null, editor)
             provider.onTextChange(null, editor, true)

@@ -89,9 +89,9 @@ Stay tuned for code refactoring and human-machine symbiosis! Check out preview v
                 text="Cancel Inline Completion">
             <keyboard-shortcut first-keystroke="ESCAPE" keymap="$default"/>
         </action>
-        <action class="com.smallcloud.codify.listeners.CompletionAction"
-                id="CompletionAction"
-                text="Make A Completion">
+        <action class="com.smallcloud.codify.listeners.ForceCompletionAction"
+                id="ForceCompletionAction"
+                text="Make A Force Completion">
             <keyboard-shortcut first-keystroke="alt SLASH" keymap="$default"/>
         </action>
     </actions>

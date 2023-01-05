@@ -9,16 +9,18 @@ import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.smallcloud.codify.Resources.defaultContrastUrlSuffix
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.RequestJob
 import com.smallcloud.codify.io.inferenceFetch
 import com.smallcloud.codify.modes.EditorTextHelper
 import com.smallcloud.codify.modes.Mode
+import com.smallcloud.codify.modes.completion.prompt.FilesCollector
+import com.smallcloud.codify.modes.completion.prompt.PromptCooker
+import com.smallcloud.codify.modes.completion.prompt.PromptInfo
+import com.smallcloud.codify.modes.completion.prompt.RequestCreator
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
-import com.smallcloud.codify.struct.SMCRequestBody
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
@@ -120,32 +122,27 @@ class CompletionMode : Mode(), CaretListener {
             debounceMs = 0
         }
 
-        val request = makeRequest(fileName, state.text, state.offset) ?: return
-        request.uri = request.uri.resolve(defaultContrastUrlSuffix)
         val editorHelper = EditorTextHelper(editor, state.offset)
         if (!editorHelper.isValid()) return
+
+        var promptInfo: List<PromptInfo> = listOf()
+        editor.project?.let {
+            promptInfo = PromptCooker.cook(
+                editorHelper,
+                FileDocumentManager.getInstance().getFile(editor.document)?.extension,
+                FilesCollector.getInstance(it).collect(),
+                mostImportantFilesMaxCount = if (force) 25 else 10,
+                lessImportantFilesMaxCount = if (force) 10 else 5,
+                maxFileSize = if (force) 2_000_000 else 200_000
+            )
+        }
+        val request = RequestCreator.create(
+            fileName, state.text, state.offset, scope, promptInfo
+        ) ?: return
 
         processTask = scheduler.schedule({
             process(request, editor, state, editorHelper, force)
         }, debounceMs, TimeUnit.MILLISECONDS)
-    }
-
-    private fun makeRequest(fileName: String, text: String, offset: Int): SMCRequest? {
-        val requestBody = SMCRequestBody(
-            mapOf(fileName to text),
-            "Infill",
-            "infill",
-            fileName,
-            offset, offset,
-            50,
-            1,
-            listOf("\n\n")
-        )
-        val req = InferenceGlobalContext.makeRequest(requestBody)
-        if (req != null) {
-            req.scope = scope
-        }
-        return req
     }
 
     private fun renderCompletion(

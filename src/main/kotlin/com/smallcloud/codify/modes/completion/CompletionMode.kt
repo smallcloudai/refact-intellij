@@ -19,6 +19,7 @@ import com.smallcloud.codify.modes.completion.prompt.FilesCollector
 import com.smallcloud.codify.modes.completion.prompt.PromptCooker
 import com.smallcloud.codify.modes.completion.prompt.PromptInfo
 import com.smallcloud.codify.modes.completion.prompt.RequestCreator
+import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import java.util.concurrent.CancellationException
@@ -126,15 +127,17 @@ class CompletionMode : Mode(), CaretListener {
         if (!editorHelper.isValid()) return
 
         var promptInfo: List<PromptInfo> = listOf()
-        editor.project?.let {
-            promptInfo = PromptCooker.cook(
-                editorHelper,
-                FileDocumentManager.getInstance().getFile(editor.document)?.extension,
-                FilesCollector.getInstance(it).collect(),
-                mostImportantFilesMaxCount = if (force) 25 else 10,
-                lessImportantFilesMaxCount = if (force) 10 else 5,
-                maxFileSize = if (force) 2_000_000 else 200_000
-            )
+        if (AppSettingsState.instance.useMultipleFilesCompletion) {
+            editor.project?.let {
+                promptInfo = PromptCooker.cook(
+                    editorHelper,
+                    FileDocumentManager.getInstance().getFile(editor.document)?.extension,
+                    FilesCollector.getInstance(it).collect(),
+                    mostImportantFilesMaxCount = if (force) 25 else 10,
+                    lessImportantFilesMaxCount = if (force) 10 else 5,
+                    maxFileSize = if (force) 2_000_000 else 200_000
+                )
+            }
         }
         val request = RequestCreator.create(
             fileName, state.text, state.offset, scope, promptInfo

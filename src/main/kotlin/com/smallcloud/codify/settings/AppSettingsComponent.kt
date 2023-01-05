@@ -116,6 +116,7 @@ class AppSettingsComponent {
     private val myGTemperatureText: GhostText
     private val myContrastUrlText = JBTextField()
     private val myUseForceCompletionMode = JCheckBox()
+    private val myUseMultipleFilesCompletion = JCheckBox()
 
     init {
         myGTemperatureText = GhostText(myTemperatureText, "asdasdasd")
@@ -146,6 +147,13 @@ class AppSettingsComponent {
             addComponentToRightColumn(
                 JBLabel(
                     "In this mode use the `alt + /` combination to trigger the completion",
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
+            addLabeledComponent(JBLabel("Use multiple files completion mode: "), myUseMultipleFilesCompletion, 1, false)
+            addComponentToRightColumn(
+                JBLabel(
+                    "In this mode plugin uses multiple files in its context",
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
@@ -188,5 +196,13 @@ class AppSettingsComponent {
         }
         set(value) {
             myUseForceCompletionMode.isSelected = value
+        }
+
+    var useMultipleFilesCompletion: Boolean
+        get() {
+            return myUseMultipleFilesCompletion.isSelected
+        }
+        set(value) {
+            myUseMultipleFilesCompletion.isSelected = value
         }
 }

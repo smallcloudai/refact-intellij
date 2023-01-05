@@ -36,6 +36,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var pluginIsEnabled: Boolean = true
     var usageStatsMessagesCache: MutableMap<String, Int> = HashMap()
     var useForceCompletion: Boolean = false
+    var useMultipleFilesCompletion: Boolean = false
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus

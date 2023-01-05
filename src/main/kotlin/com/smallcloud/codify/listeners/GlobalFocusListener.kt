@@ -7,13 +7,13 @@ import com.smallcloud.codify.modes.ModeProvider
 
 class GlobalFocusListener : FocusChangeListener {
     override fun focusGained(editor: Editor) {
-        Logger.getInstance("FocusListener").warn("focusGained")
+        Logger.getInstance("FocusListener").debug("focusGained")
         val provider = ModeProvider.getOrCreateModeProvider(editor)
         provider.focusGained()
     }
 
     override fun focusLost(editor: Editor) {
-        Logger.getInstance("FocusListener").warn("focusLost")
+        Logger.getInstance("FocusListener").debug("focusLost")
         val provider = ModeProvider.getOrCreateModeProvider(editor)
         provider.focusLost()
     }

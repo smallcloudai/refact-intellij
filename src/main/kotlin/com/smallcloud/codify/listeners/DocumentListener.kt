@@ -13,14 +13,14 @@ import com.smallcloud.codify.settings.AppSettingsState
 
 class DocumentListener : BulkAwareDocumentListener {
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent) {
-        Logger.getInstance("DocumentListener").warn("beforeDocumentChangeNonBulk")
+        Logger.getInstance("DocumentListener").debug("beforeDocumentChangeNonBulk")
         val editor = getActiveEditor(event.document) ?: return
         val provider = ModeProvider.getOrCreateModeProvider(editor)
         provider.beforeDocumentChangeNonBulk(event, editor)
     }
 
     override fun documentChangedNonBulk(event: DocumentEvent) {
-        Logger.getInstance("DocumentListener").warn("documentChangedNonBulk")
+        Logger.getInstance("DocumentListener").debug("documentChangedNonBulk")
         if (AppSettingsState.instance.useForceCompletion) return
         val editor = getActiveEditor(event.document) ?: return
         val provider = ModeProvider.getOrCreateModeProvider(editor)

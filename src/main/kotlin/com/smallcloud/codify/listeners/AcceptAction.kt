@@ -17,7 +17,7 @@ object TabPressedAction :
 
     class InlineCompletionHandler : EditorWriteActionHandler() {
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
-            Logger.getInstance("TabPressedAction").warn("executeWriteAction")
+            Logger.getInstance("TabPressedAction").debug("executeWriteAction")
             val provider = ModeProvider.getOrCreateModeProvider(editor)
             provider.onTabPressed(editor, caret, dataContext)
         }

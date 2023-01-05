@@ -17,7 +17,7 @@ object CancelPressedAction :
 
     class InlineCompletionHandler : EditorWriteActionHandler() {
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
-            Logger.getInstance("CancelPressedAction").warn("executeWriteAction")
+            Logger.getInstance("CancelPressedAction").debug("executeWriteAction")
             val provider = ModeProvider.getOrCreateModeProvider(editor)
             provider.onEscPressed(editor, caret, dataContext)
         }

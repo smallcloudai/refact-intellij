@@ -113,7 +113,7 @@ class CompletionMode : Mode(), CaretListener {
 
             debounceMs = CompletionTracker.calcDebounceTime(editor)
             CompletionTracker.updateLastCompletionRequestTime(editor)
-            logger.info("Debounce time: $debounceMs")
+            logger.debug("Debounce time: $debounceMs")
         } else {
             state = EditorState(
                 editor.document.modificationStamp,
@@ -183,13 +183,13 @@ class CompletionMode : Mode(), CaretListener {
             editor.caretModel.addCaretListener(this)
         } catch (ex: Exception) {
             logger.warn("Exception while rendering completion", ex)
-            logger.info("Exception while rendering completion cancelOrClose request")
+            logger.debug("Exception while rendering completion cancelOrClose request")
             cancelOrClose(editor)
         }
     }
 
     fun hideCompletion() {
-        logger.info("hideCompletion")
+        logger.debug("hideCompletion")
         if (!isInActiveState()) return
         scheduler.submit {
             try {
@@ -202,7 +202,7 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     fun showCompletion() {
-        logger.info("showCompletion")
+        logger.debug("showCompletion")
         if (isInActiveState()) return
         scheduler.submit {
             try {
@@ -269,7 +269,7 @@ class CompletionMode : Mode(), CaretListener {
         } catch (_: InterruptedException) {
             maybeLastReqJob?.let {
                 maybeLastReqJob.request?.abort()
-                logger.info("lastReqJob abort")
+                logger.debug("lastReqJob abort")
             }
         } catch (e: ExecutionException) {
             catchNetExceptions(e.cause)
@@ -297,12 +297,12 @@ class CompletionMode : Mode(), CaretListener {
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
-        logger.info("onEscPressed cancelOrClose request")
+        logger.debug("onEscPressed cancelOrClose request")
         cancelOrClose(editor)
     }
 
     override fun caretPositionChanged(event: CaretEvent) {
-        logger.info("caretPositionChanged cancelOrClose request")
+        logger.debug("caretPositionChanged cancelOrClose request")
         cancelOrClose(event.editor)
     }
 

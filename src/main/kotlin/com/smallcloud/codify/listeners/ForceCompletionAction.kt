@@ -18,7 +18,7 @@ object ForceCompletionAction :
 
     class InlineCompletionHandler : EditorWriteActionHandler() {
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
-            Logger.getInstance("ForceCompletionAction").warn("executeWriteAction")
+            Logger.getInstance("ForceCompletionAction").debug("executeWriteAction")
             val provider = ModeProvider.getOrCreateModeProvider(editor)
             provider.beforeDocumentChangeNonBulk(null, editor)
             provider.onTextChange(null, editor, true)

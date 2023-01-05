@@ -7,7 +7,7 @@ import com.smallcloud.codify.modes.ModeProvider
 
 class GlobalCaretListener : CaretListener {
     override fun caretPositionChanged(event: CaretEvent) {
-        Logger.getInstance("CaretListener").warn("caretPositionChanged")
+        Logger.getInstance("CaretListener").debug("caretPositionChanged")
         val provider = ModeProvider.getOrCreateModeProvider(event.editor)
         provider.onCaretChange(event)
     }

@@ -24,7 +24,7 @@ fun login() {
     }
     if (AccountManager.ticket == null)
         AccountManager.ticket = generateTicket()
-    BrowserUtil.browse("https://codify.smallcloud.ai/authentication?token=${AccountManager.ticket}")
+    BrowserUtil.browse("https://codify.smallcloud.ai/authentication?token=${AccountManager.ticket}&utm_source=plugin&utm_medium=jetbrains&utm_campaign=login")
 
     runCounterTask()
 }

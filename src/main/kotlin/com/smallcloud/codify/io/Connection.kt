@@ -47,7 +47,7 @@ enum class ConnectionStatus {
 data class RequestJob(var future: CompletableFuture<*>, val request: HttpRequestBase?)
 
 class Connection(uri: URI): Disposable {
-    private val route: HttpRoute = HttpRoute(HttpHost(uri.host))
+    private val route: HttpRoute = HttpRoute(HttpHost(uri.host, uri.port))
     private var context: HttpClientContext = HttpClientContext.create()
     private val connManager: PoolingHttpClientConnectionManager = PoolingHttpClientConnectionManager()
     private val conn: HttpClientConnection = connManager.requestConnection(route, null).get(10, TimeUnit.SECONDS)

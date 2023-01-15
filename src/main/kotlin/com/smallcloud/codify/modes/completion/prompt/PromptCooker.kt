@@ -6,10 +6,18 @@ import info.debatty.java.stringsimilarity.Jaccard
 
 data class PromptInfo(
     val fileName: String,
+    val textLines: List<String>,
     val prompt: String,
     val distance: Double,
-    val fileInfo: FileInformationEntry
-)
+    val fileInfo: FileInformationEntry,
+) {
+    val text = textLines.joinToString("\n")
+    fun cursors(): Pair<Int, Int> {
+        val start = text.indexOf(prompt)
+        val end = start + prompt.length
+        return start to end
+    }
+}
 
 object PromptCooker {
     private const val windowSize: Int = 60
@@ -64,7 +72,13 @@ object PromptCooker {
                         it.joinToString("\n")
                     }
                     .map {
-                        PromptInfo(info.file.path, it, simAlg.distance(it, currentText), info)
+                        PromptInfo(
+                            fileName = info.projectRelativeFilePath,
+                            textLines = lines,
+                            prompt = it,
+                            distance = simAlg.distance(it, currentText),
+                            fileInfo = info
+                        )
                     }
                     .minByOrNull { it.distance }
             }

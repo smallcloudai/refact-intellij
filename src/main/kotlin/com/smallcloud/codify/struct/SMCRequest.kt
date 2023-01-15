@@ -3,6 +3,13 @@ package com.smallcloud.codify.struct
 import com.google.gson.annotations.SerializedName
 import java.net.URI
 
+data class POI(
+    val filename: String,
+    val cursor0: Int,
+    val cursor1: Int,
+    val priority: Double,
+)
+
 data class SMCRequestBody(
     var sources: Map<String, String>,
     var intent: String,
@@ -16,6 +23,7 @@ data class SMCRequestBody(
     var temperature: Float = 0.8f,
     var client: String = "",
     var model: String = "",
+    var poi: List<POI>,
     var stream: Boolean = false
 )
 

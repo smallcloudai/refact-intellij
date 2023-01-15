@@ -7,17 +7,23 @@ import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.fileEditor.impl.text.PsiAwareTextEditorImpl
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.ProjectScope
 import com.intellij.util.ObjectUtils
+import java.nio.file.Path
+import kotlin.io.path.relativeTo
+import kotlin.io.path.Path as makePath
 
 data class FileInformationEntry(
     val file: VirtualFile,
     var lastEditorShown: Long,
-    private val fileEditorManager: FileEditorManager
+    val projectRelativeFilePath: String,
+    private val fileEditorManager: FileEditorManager,
 ) {
     val lastUpdatedTs: Long
         get() = file.timeStamp
@@ -31,6 +37,10 @@ class FilesCollector(
 ) : FileEditorManagerListener {
     private val fileEditorManager: FileEditorManager = FileEditorManager.getInstance(project)
     private var filesInformation: LinkedHashSet<FileInformationEntry> = linkedSetOf()
+    private val projectPaths: List<Path> = ModuleRootManager.getInstance(
+        ModuleManager.getInstance(project).modules[0]).sourceRoots.map {
+            makePath(it.path)
+    }
 
     init {
         FilenameIndex.getAllFilenames(project)
@@ -42,19 +52,24 @@ class FilesCollector(
                     }
             }
             .forEach {
-                makeEntry(it)
+                makeEntry(it, projectPaths)
             }
 
         project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, this)
     }
 
-    private fun makeEntry(file: VirtualFile) {
+    private fun makeEntry(file: VirtualFile, projectPaths: List<Path>) {
         val maybeInfo = filesInformation.find { info -> file == info.file }
         if (maybeInfo != null) {
             return
         }
 
-        val entry = FileInformationEntry(file, 0, fileEditorManager)
+        val filePath = makePath(file.path)
+        val relativeFilePath = projectPaths
+            .map {filePath.relativeTo(it).toString() }
+            .minBy { it.length }
+
+        val entry = FileInformationEntry(file, 0, relativeFilePath, fileEditorManager)
         filesInformation.add(entry)
         entry.getEditor()?.let { editor ->
             if (entry.isOpened()) {
@@ -70,12 +85,11 @@ class FilesCollector(
                     }
                 )
             }
-
         }
     }
 
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
-        makeEntry(file)
+        makeEntry(file, projectPaths)
     }
 
     fun collect(): List<FileInformationEntry> {

@@ -69,10 +69,11 @@ class Connection(uri: URI): Disposable {
         uri: URI,
         headers: Map<String, String>? = null,
         requestProperties: Map<String, String>? = null,
-        needVerify: Boolean = false
+        needVerify: Boolean = false,
+        scope: String = ""
     ): RequestJob {
         val get = HttpGet(uri)
-        return send(get, headers, requestProperties, needVerify=needVerify)
+        return send(get, headers, requestProperties, needVerify=needVerify, scope=scope)
     }
 
     fun post(
@@ -80,18 +81,20 @@ class Connection(uri: URI): Disposable {
         body: String? = null,
         headers: Map<String, String>? = null,
         requestProperties: Map<String, String>? = null,
-        needVerify: Boolean = false
+        needVerify: Boolean = false,
+        scope: String = ""
     ): RequestJob {
         val post = HttpPost(uri)
         post.entity = StringEntity(body)
-        return send(post, headers, requestProperties, needVerify=needVerify)
+        return send(post, headers, requestProperties, needVerify=needVerify, scope=scope)
     }
 
     private fun send(
         req: HttpRequestBase,
         headers: Map<String, String>? = null,
         requestProperties: Map<String, String>? = null,
-        needVerify: Boolean = false
+        needVerify: Boolean = false,
+        scope: String = ""
     ): RequestJob {
         headers?.forEach {
             req.addHeader(it.key, it.value)
@@ -116,7 +119,7 @@ class Connection(uri: URI): Disposable {
                 // request aborted, it's ok
                 throw e
             } catch (e: Exception) {
-                addStatistic(false, "ApacheHttpClients", req.uri.toString(), e.toString())
+                addStatistic(false, scope, req.uri.toString(), e.toString())
                 throw e
             } finally {
                 req.releaseConnection()

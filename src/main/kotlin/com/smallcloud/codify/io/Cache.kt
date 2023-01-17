@@ -103,7 +103,8 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
     val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCoolDown * 1000
     if (needToVerify) lastInferenceVerifyTs = now
 
-    val job = InferenceGlobalContext.connection?.post(uri, body, headers, needVerify = needToVerify)
+    val job = InferenceGlobalContext.connection?.post(uri, body, headers,
+        needVerify = needToVerify, scope=request.scope)
 
     if (job != null) {
         job.future = job.future.thenApplyAsync {

@@ -18,7 +18,7 @@ import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.modes.ModeProvider
 import com.smallcloud.codify.modes.ModeType
 import com.smallcloud.codify.modes.completion.prompt.RequestCreator
-import com.smallcloud.codify.modes.diff.DiffIntendProvider
+import com.smallcloud.codify.modes.diff.DiffIntentProvider
 import com.smallcloud.codify.modes.diff.dialog.DiffDialog
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
@@ -79,20 +79,20 @@ class HighlightMode : Mode {
 
     override fun onCaretChange(event: CaretEvent) {
         val offsets = event.caret?.let { layout?.getHighlightsOffsets(it.offset) }
-        val intend = DiffIntendProvider.instance.lastHistoryIntend()
-        if (offsets != null && intend != null) {
+        val intent = DiffIntentProvider.instance.lastHistoryIntent()
+        if (offsets != null && intent != null) {
             cleanup()
             ModeProvider.getOrCreateModeProvider(event.editor)
                 .getDiffMode().actionPerformed(
                     event.editor, HighlightContext(
-                        intend, offsets[0], offsets[1]
+                        intent, offsets[0], offsets[1]
                     )
                 )
         }
 
     }
 
-    fun isInRenderState() : Boolean {
+    fun isInRenderState(): Boolean {
         return (layout != null && !layout!!.rendered) ||
                 (renderTask != null && !renderTask!!.isDone && !renderTask!!.isCancelled) || isProgress()
     }
@@ -111,14 +111,14 @@ class HighlightMode : Mode {
     fun actionPerformed(editor: Editor, fromDiff: Boolean = false) {
         if (layout != null) return
 
-        val intend: String
-        if (fromDiff && DiffIntendProvider.instance.lastHistoryIntend() != null) {
-            intend = DiffIntendProvider.instance.lastHistoryIntend()!!
+        val intent: String
+        if (fromDiff && DiffIntentProvider.instance.lastHistoryIntent() != null) {
+            intent = DiffIntentProvider.instance.lastHistoryIntent()!!
         } else {
             val dialog = DiffDialog(editor.project, true)
             if (!dialog.showAndGet()) return
-            intend = dialog.messageText
-            DiffIntendProvider.instance.pushFrontHistoryIntend(intend)
+            intent = dialog.messageText
+            DiffIntentProvider.instance.pushFrontHistoryIntent(intent)
         }
 
         val fileName = getActiveFile(editor.document) ?: return
@@ -127,7 +127,7 @@ class HighlightMode : Mode {
         val request = RequestCreator.create(
             fileName, editor.document.text,
             startSelectionOffset, endSelectionOffset,
-            scope, intend, "highlight", listOf()
+            scope, intent, "highlight", listOf()
         ) ?: return
         ModeProvider.getOrCreateModeProvider(editor).switchMode(ModeType.Highlight)
 

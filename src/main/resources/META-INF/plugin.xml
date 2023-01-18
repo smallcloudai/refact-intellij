@@ -79,7 +79,7 @@ Stay tuned for code refactoring and human-machine symbiosis! Check out preview v
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.UsageStats"/>
-        <applicationService serviceImplementation="com.smallcloud.codify.modes.diff.DiffIntendProvider"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.modes.diff.DiffIntentProvider"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.codify.listeners.TabPressedAction"

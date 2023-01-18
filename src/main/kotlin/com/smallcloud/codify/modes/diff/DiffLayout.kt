@@ -2,11 +2,8 @@ package com.smallcloud.codify.modes.diff
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.Disposer
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiFile
 import com.smallcloud.codify.modes.diff.renderer.Inlayer
 import com.smallcloud.codify.struct.SMCRequest
 import dev.gitlive.difflib.patch.DeltaType
@@ -27,7 +24,7 @@ class DiffLayout(
         inlayer?.dispose()
     }
 
-    private fun getOffsetFromStringNumber(stringNumber: Int, column: Int = 0) : Int {
+    private fun getOffsetFromStringNumber(stringNumber: Int, column: Int = 0): Int {
         return getOffsetFromStringNumber(editor, stringNumber, column)
     }
 
@@ -68,19 +65,30 @@ class DiffLayout(
             if (det.target.lines == null) continue
             when (det.type) {
                 DeltaType.INSERT -> {
-                    document.insertString(getOffsetFromStringNumber(det.source.position),
-                        det.target.lines!!.joinToString("\n", postfix="\n"))
+                    document.insertString(
+                        getOffsetFromStringNumber(det.source.position),
+                        det.target.lines!!.joinToString("\n", postfix = "\n")
+                    )
                 }
+
                 DeltaType.CHANGE -> {
-                    document.deleteString(getOffsetFromStringNumber(det.source.position),
-                        getOffsetFromStringNumber(det.source.position + det.source.size()))
-                    document.insertString(getOffsetFromStringNumber(det.source.position),
-                        det.target.lines!!.joinToString("\n", postfix="\n"))
+                    document.deleteString(
+                        getOffsetFromStringNumber(det.source.position),
+                        getOffsetFromStringNumber(det.source.position + det.source.size())
+                    )
+                    document.insertString(
+                        getOffsetFromStringNumber(det.source.position),
+                        det.target.lines!!.joinToString("\n", postfix = "\n")
+                    )
                 }
+
                 DeltaType.DELETE -> {
-                    document.deleteString(getOffsetFromStringNumber(det.source.position),
-                        getOffsetFromStringNumber(det.source.position + det.source.size()))
+                    document.deleteString(
+                        getOffsetFromStringNumber(det.source.position),
+                        getOffsetFromStringNumber(det.source.position + det.source.size())
+                    )
                 }
+
                 else -> {}
             }
         }

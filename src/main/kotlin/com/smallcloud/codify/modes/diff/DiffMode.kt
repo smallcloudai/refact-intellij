@@ -10,7 +10,6 @@ import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.ui.Messages
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
@@ -41,7 +40,7 @@ class DiffMode : Mode {
     private var needRainbowAnimation: Boolean = false
     private var lastFromHL: Boolean = false
 
-    private fun isProgress() : Boolean {
+    private fun isProgress(): Boolean {
         return needRainbowAnimation
     }
 
@@ -91,7 +90,7 @@ class DiffMode : Mode {
 
     override fun onCaretChange(event: CaretEvent) {}
 
-    fun isInRenderState() : Boolean {
+    fun isInRenderState(): Boolean {
         return (diffLayout != null && !diffLayout!!.rendered) ||
                 (renderTask != null && !renderTask!!.isDone && !renderTask!!.isCancelled) || isProgress()
     }
@@ -115,15 +114,15 @@ class DiffMode : Mode {
         val finishPosition: LogicalPosition
         val request: SMCRequest
         if (diffLayout == null || highlightContext != null) {
-            var intend = ""
+            val intent: String
             if (highlightContext == null) {
                 val dialog = DiffDialog(editor.project)
                 if (!dialog.showAndGet()) return
-                intend = dialog.messageText
-                DiffIntendProvider.instance.pushFrontHistoryIntend(intend)
+                intent = dialog.messageText
+                DiffIntentProvider.instance.pushFrontHistoryIntent(intent)
                 lastFromHL = false
             } else {
-                intend = highlightContext.intend
+                intent = highlightContext.intent
                 startSelectionOffset = highlightContext.startOffset
                 endSelectionOffset = highlightContext.endOffset
                 lastFromHL = true
@@ -132,7 +131,7 @@ class DiffMode : Mode {
             request = RequestCreator.create(
                 fileName, editor.document.text,
                 startSelectionOffset, endSelectionOffset,
-                scope, intend,
+                scope, intent,
                 if (highlightContext == null) "diff-selection" else "diff-atcursor",
                 listOf()
             ) ?: return
@@ -150,9 +149,11 @@ class DiffMode : Mode {
 
         needRainbowAnimation = true
         renderTask = scheduler.submit {
-            waitingDiff(editor,
+            waitingDiff(
+                editor,
                 startPosition, finishPosition,
-                this::isProgress)
+                this::isProgress
+            )
         }
         processTask = scheduler.submit {
             process(request, editor)
@@ -198,7 +199,7 @@ class DiffMode : Mode {
             }
 
             val patch = request.body.sources[request.body.cursorFile]?.let {
-                prediction.choices?.get(0)?.files?.get(request.body.cursorFile)?.let { it1 ->
+                prediction.choices[0].files[request.body.cursorFile]?.let { it1 ->
                     DiffUtils.diff(
                         it.split('\n'),
                         it1.split('\n'),

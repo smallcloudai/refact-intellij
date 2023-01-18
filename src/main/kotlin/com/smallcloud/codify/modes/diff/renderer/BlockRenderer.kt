@@ -45,18 +45,23 @@ open class BlockElementRenderer(
 
         val smallPatchesG = g.create()
         smallPatchesG.color = veryColor
-        smallPatches.withIndex().forEach{ (i, patch) ->
+        smallPatches.withIndex().forEach { (i, patch) ->
             val currentLine = blockText[i]
             patch.getDeltas().forEach {
-                val startBound = g.font.getStringBounds(currentLine.substring(0, it.target.position),
-                    metric.fontRenderContext)
-                val endBound = g.font.getStringBounds(currentLine.substring(0, it.target.position + it.target.size()),
-                    metric.fontRenderContext)
+                val startBound = g.font.getStringBounds(
+                    currentLine.substring(0, it.target.position),
+                    metric.fontRenderContext
+                )
+                val endBound = g.font.getStringBounds(
+                    currentLine.substring(0, it.target.position + it.target.size()),
+                    metric.fontRenderContext
+                )
                 smallPatchesG.fillRect(
                     targetRegion.x + startBound.width.toInt(),
                     targetRegion.y + i * editor.lineHeight,
                     (endBound.width - startBound.width).toInt(),
-                    editor.lineHeight)
+                    editor.lineHeight
+                )
             }
         }
         blockText.withIndex().forEach { (i, line) ->
@@ -79,7 +84,7 @@ class InsertBlockElementRenderer(
 class DeleteBlockElementRenderer(
     private val editor: Editor,
     private val blockText: List<String>,
-    private val smallPatches:List<Patch<Char>>,
+    private val smallPatches: List<Patch<Char>>,
     private val deprecated: Boolean
 ) : BlockElementRenderer(redColor, veryRedColor, editor, blockText, smallPatches, deprecated)
 

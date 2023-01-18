@@ -8,18 +8,18 @@ import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.ui.JBColor
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
-import dev.gitlive.difflib.patch.Patch
 import java.awt.Color
 
-class HighlightLayout(private val editor: Editor,
-                      val request: SMCRequest,
-                      val prediction: SMCPrediction,
-    ) : Disposable {
+class HighlightLayout(
+    private val editor: Editor,
+    val request: SMCRequest,
+    val prediction: SMCPrediction,
+) : Disposable {
     var rendered: Boolean = false
     private var rangeTokensHighlighters: MutableList<RangeHighlighter> = mutableListOf()
     private var rangeLinesHighlighters: MutableList<RangeHighlighter> = mutableListOf()
 
-    fun isEmpty() : Boolean {
+    fun isEmpty(): Boolean {
         return rangeTokensHighlighters.isEmpty() && rangeLinesHighlighters.isEmpty()
     }
 
@@ -30,9 +30,9 @@ class HighlightLayout(private val editor: Editor,
         rangeLinesHighlighters.clear()
     }
 
-    fun getHighlightsOffsets(caretOffset: Int) : List<Int>? {
+    fun getHighlightsOffsets(caretOffset: Int): List<Int>? {
         for (rangeHighlight in rangeLinesHighlighters) {
-            if (rangeHighlight.startOffset <= caretOffset && caretOffset <= rangeHighlight.endOffset ) {
+            if (rangeHighlight.startOffset <= caretOffset && caretOffset <= rangeHighlight.endOffset) {
                 return listOf(rangeHighlight.startOffset, rangeHighlight.endOffset)
             }
         }
@@ -44,7 +44,7 @@ class HighlightLayout(private val editor: Editor,
         clean()
     }
 
-    private fun needToSkipToken(startOffset: Int, endOffset: Int) : Boolean {
+    private fun needToSkipToken(startOffset: Int, endOffset: Int): Boolean {
         val choice = prediction.choices?.first()
         val text = choice?.files?.get(request.body.cursorFile)
         if (text != null) {
@@ -53,7 +53,7 @@ class HighlightLayout(private val editor: Editor,
         return true
     }
 
-    fun render() : HighlightLayout {
+    fun render(): HighlightLayout {
         rendered = false
 
         for (highlightTokens in prediction.highlightTokens) {

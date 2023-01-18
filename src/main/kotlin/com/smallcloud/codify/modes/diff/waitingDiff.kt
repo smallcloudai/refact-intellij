@@ -6,10 +6,7 @@ import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.editor.markup.TextAttributes
-import com.intellij.util.concurrency.AppExecutorUtil
 import java.awt.Color
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.sin

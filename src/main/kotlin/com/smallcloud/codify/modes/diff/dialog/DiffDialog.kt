@@ -8,7 +8,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
-import com.smallcloud.codify.modes.diff.DiffIntendProvider
+import com.smallcloud.codify.modes.diff.DiffIntentProvider
 import java.awt.event.KeyEvent
 import java.awt.event.KeyListener
 import java.awt.event.MouseEvent
@@ -29,37 +29,37 @@ class DiffDialog(project: Project?, fromHL: Boolean = false) : DialogWrapper(pro
     private val historyList: JBList<String>
     private val historyScrollPane: JBScrollPane
     private var _messageText: String? = null
-    private var intends: List<String>
+    private var intents: List<String>
     private lateinit var panel: JPanel
-    private var previousIntend: String? = null
+    private var previousIntent: String? = null
 
     init {
         title = "Codify"
         descriptionLabel.text = if (fromHL) descriptionHLStr else descriptionDiffStr
 
-        val defaultIntends = DiffIntendProvider.instance.defaultIntends
-        var historyIntends = DiffIntendProvider.instance.historyIntends
-        intends = defaultIntends
-        if (historyIntends.isNotEmpty()) {
-            intends = emptyList()
-            historyIntends = historyIntends.filter { !it.isEmpty() }
+        val defaultIntents = DiffIntentProvider.instance.defaultIntents
+        var historyIntents = DiffIntentProvider.instance.historyIntents
+        intents = defaultIntents
+        if (historyIntents.isNotEmpty()) {
+            intents = emptyList()
+            historyIntents = historyIntents.filter { !it.isEmpty() }
 
             var i = 0
-            while (i < historyIntends.size) {
-                if (historyIntends[i] !in intends) {
-                    intends = intends + listOf(historyIntends[i])
+            while (i < historyIntents.size) {
+                if (historyIntents[i] !in intents) {
+                    intents = intents + listOf(historyIntents[i])
                 }
                 i++
             }
 
-            defaultIntends.forEach {
-                if (it !in intends) {
-                    intends = intends + listOf(it)
+            defaultIntents.forEach {
+                if (it !in intents) {
+                    intents = intents + listOf(it)
                 }
             }
         }
         msgTextField = JBTextField()
-        historyList = JBList<String>(intends)
+        historyList = JBList<String>(intents)
         historyList.selectionMode = ListSelectionModel.SINGLE_SELECTION
         historyList.border = JBUI.Borders.empty()
         historyList.visibleRowCount = 8
@@ -102,7 +102,7 @@ class DiffDialog(project: Project?, fromHL: Boolean = false) : DialogWrapper(pro
                     if (e.keyCode == KeyEvent.VK_UP && historyList.selectedIndex == 0) {
                         msgTextField.requestFocus()
                         historyList.clearSelection()
-                        msgTextField.text = previousIntend
+                        msgTextField.text = previousIntent
                     }
                 }
             }
@@ -120,7 +120,7 @@ class DiffDialog(project: Project?, fromHL: Boolean = false) : DialogWrapper(pro
                         _messageText = msgTextField.text
                         doOKAction()
                     } else if (e.keyCode == KeyEvent.VK_DOWN) {
-                        previousIntend = msgTextField.text
+                        previousIntent = msgTextField.text
                         historyList.requestFocus()
                         historyList.selectedIndex = 0
                     }
@@ -132,7 +132,7 @@ class DiffDialog(project: Project?, fromHL: Boolean = false) : DialogWrapper(pro
         init()
     }
 
-    override fun getPreferredFocusedComponent(): JComponent? {
+    override fun getPreferredFocusedComponent(): JComponent {
         return msgTextField
     }
 

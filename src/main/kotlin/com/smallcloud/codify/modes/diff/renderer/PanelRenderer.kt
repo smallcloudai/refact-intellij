@@ -63,8 +63,7 @@ class PanelRenderer(
             if (idx == insideIdx) {
                 UIUtil.setCursor(editor.contentComponent, Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
                 styles[idx] = Style.Underlined
-            }
-            else styles[idx] = Style.Normal
+            } else styles[idx] = Style.Normal
         }
         inlayVisitor?.update()
     }

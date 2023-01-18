@@ -54,7 +54,7 @@ class Inlayer(val editor: Editor) : Disposable {
         }
     }
 
-    private fun findAlignment(str: String) : String {
+    private fun findAlignment(str: String): String {
         val splited = str.split(Regex("\\s+"))
         if (splited.size < 2 || splited[0] != "") return ""
         return str.substring(0, str.findTextRange(splited[1])!!.startOffset)
@@ -63,9 +63,16 @@ class Inlayer(val editor: Editor) : Disposable {
     private fun renderPanel(msg: String, offset: Int) {
         val finalOffset = minOf(editor.selectionModel.selectionStart, offset)
         val logicalPosition = editor.offsetToLogicalPosition(finalOffset)
-        val alignment = findAlignment(editor.document.getText(TextRange(editor.document.getLineStartOffset(logicalPosition.line),
-            editor.document.getLineEndOffset(logicalPosition.line))))
-        val firstSymbolPos = editor.offsetToXY(editor.document.getLineStartOffset(logicalPosition.line) + alignment.length)
+        val alignment = findAlignment(
+            editor.document.getText(
+                TextRange(
+                    editor.document.getLineStartOffset(logicalPosition.line),
+                    editor.document.getLineEndOffset(logicalPosition.line)
+                )
+            )
+        )
+        val firstSymbolPos =
+            editor.offsetToXY(editor.document.getLineStartOffset(logicalPosition.line) + alignment.length)
         val context = DataManager.getInstance().getDataContext(editor.contentComponent)
         val renderer = PanelRenderer(firstSymbolPos, editor, listOf(
             "\uD83D\uDC4D Approve (Tab)" to { TabPressedAction.actionPerformed(editor, context) },
@@ -122,7 +129,10 @@ class Inlayer(val editor: Editor) : Disposable {
                             rangeHighlighters.add(
                                 editor.markupModel.addRangeHighlighter(
                                     getOffsetFromStringNumber(det.source.position + i, smallDelta.source.position),
-                                    getOffsetFromStringNumber(det.source.position + i, smallDelta.source.position + smallDelta.source.size()),
+                                    getOffsetFromStringNumber(
+                                        det.source.position + i,
+                                        smallDelta.source.position + smallDelta.source.size()
+                                    ),
                                     99999,
                                     TextAttributes().apply {
                                         backgroundColor = veryRedColor

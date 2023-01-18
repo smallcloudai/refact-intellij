@@ -37,7 +37,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var usageStatsMessagesCache: MutableMap<String, Int> = HashMap()
     var useForceCompletion: Boolean = false
     var useMultipleFilesCompletion: Boolean = false
-    var diffIntendsHistory: List<String> = emptyList()
+    var diffIntentsHistory: List<String> = emptyList()
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus

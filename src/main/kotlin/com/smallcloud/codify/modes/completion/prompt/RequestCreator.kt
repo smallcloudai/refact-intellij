@@ -8,7 +8,10 @@ import com.smallcloud.codify.struct.SMCRequestBody
 object RequestCreator {
     private const val symbolsBudget: Long = 20000
     fun create(
-        fileName: String, text: String, offset: Int, scope: String,
+        fileName: String, text: String,
+        startOffset: Int, endOffset: Int,
+        scope: String,
+        intent: String, functionName: String,
         promptInfo: List<PromptInfo>
     ): SMCRequest? {
         var currentBudget = text.length
@@ -34,10 +37,10 @@ object RequestCreator {
 
         val requestBody = SMCRequestBody(
             sources,
-            "Infill",
-            "infill",
+            intent,
+            functionName,
             fileName,
-            offset, offset,
+            startOffset, endOffset,
             50,
             1,
             listOf("\n\n")

@@ -19,6 +19,6 @@ data class SMCPrediction(
     val uploaded: Float,
     @SerializedName("generated_tokens_n") val generatedTokensN: Int,
     val choices: List<Choice>?,
-    @SerializedName("highlight_tokens") val highlightTokens: List<String>,
-    @SerializedName("highlight_lines") val highlightLines: List<String>,
+    @SerializedName("highlight_tokens") val highlightTokens: List<List<Float>>,
+    @SerializedName("highlight_lines") val highlightLines: List<List<Float>>,
 )

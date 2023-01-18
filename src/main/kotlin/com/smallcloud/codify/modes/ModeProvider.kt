@@ -14,18 +14,26 @@ import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.listeners.GlobalCaretListener
 import com.smallcloud.codify.listeners.GlobalFocusListener
 import com.smallcloud.codify.modes.completion.CompletionMode
+import com.smallcloud.codify.modes.diff.DiffMode
+import com.smallcloud.codify.modes.highlight.HighlightMode
 import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
 
 
 enum class ModeType {
     Completion,
+    Diff,
+    Highlight
 }
 
 
 class ModeProvider(
     editor: Editor,
-    private var modes: Map<ModeType, Mode> = mapOf(ModeType.Completion to CompletionMode()),
+    private var modes: Map<ModeType, Mode> = mapOf(
+        ModeType.Completion to CompletionMode(),
+        ModeType.Diff to DiffMode(),
+        ModeType.Highlight to HighlightMode()
+    ),
     private var activeMode: Mode? = null,
     private val pluginState: PluginState = PluginState.instance,
 ) : Disposable {
@@ -39,10 +47,16 @@ class ModeProvider(
     fun modeInActiveState(): Boolean = activeMode?.isInActiveState() == true
 
     fun isInCompletionMode(): Boolean = activeMode === modes[ModeType.Completion]
+    fun isInDiffMode(): Boolean = activeMode === modes[ModeType.Diff]
+    fun isInHighlightMode(): Boolean = activeMode === modes[ModeType.Highlight]
     fun getCompletionMode(): Mode = modes[ModeType.Completion]!!
+    fun getDiffMode(): DiffMode = (modes[ModeType.Diff] as DiffMode?)!!
+    fun getHighlightMode(): HighlightMode = (modes[ModeType.Highlight] as HighlightMode?)!!
 
-    fun switchMode() {
-
+    fun switchMode(newMode: ModeType = ModeType.Completion) {
+        if (activeMode == modes[newMode]) return
+        activeMode?.cleanup()
+        activeMode = modes[newMode]
     }
 
     fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {
@@ -60,6 +74,7 @@ class ModeProvider(
 
     fun onCaretChange(event: CaretEvent) {
         if (!isEnabled) return
+        activeMode?.onCaretChange(event)
     }
 
     fun focusGained() {

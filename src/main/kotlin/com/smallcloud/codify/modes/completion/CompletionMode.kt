@@ -33,7 +33,7 @@ data class EditorState(
     val text: String
 )
 
-class CompletionMode : Mode(), CaretListener {
+class CompletionMode : Mode, CaretListener {
     var needToRender: Boolean = true
     private val scope: String = "completion"
     private val app = ApplicationManager.getApplication()
@@ -140,7 +140,8 @@ class CompletionMode : Mode(), CaretListener {
             }
         }
         val request = RequestCreator.create(
-            fileName, state.text, state.offset, scope, promptInfo
+            fileName, state.text, state.offset, state.offset,
+            scope, "Infill", "infill", promptInfo
         ) ?: return
 
         processTask = scheduler.schedule({
@@ -301,12 +302,17 @@ class CompletionMode : Mode(), CaretListener {
         cancelOrClose(editor)
     }
 
+    override fun onCaretChange(event: CaretEvent) {}
+
     override fun caretPositionChanged(event: CaretEvent) {
         logger.debug("caretPositionChanged cancelOrClose request")
         cancelOrClose(event.editor)
     }
 
     override fun isInActiveState(): Boolean = completionLayout != null && completionLayout!!.rendered && needToRender
+    override fun cleanup() {
+        cancelOrClose(null)
+    }
 
     private fun shouldIgnoreChange(event: DocumentEvent?, editor: Editor, offset: Int): Boolean {
         if (event == null) return false
@@ -330,7 +336,7 @@ class CompletionMode : Mode(), CaretListener {
         return file?.presentableName
     }
 
-    private fun cancelOrClose(editor: Editor) {
+    private fun cancelOrClose(editor: Editor?) {
         try {
             processTask?.cancel(true)
             processTask?.get()
@@ -343,7 +349,7 @@ class CompletionMode : Mode(), CaretListener {
             hasOneLineCompletionBefore = completionLayout?.completionData?.isFromCache ?: false
             completionLayout?.dispose()
             completionLayout = null
-            editor.caretModel.removeCaretListener(this)
+            editor?.caretModel?.removeCaretListener(this)
         }
     }
 }

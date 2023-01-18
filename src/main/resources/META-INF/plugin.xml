@@ -73,10 +73,13 @@ Stay tuned for code refactoring and human-machine symbiosis! Check out preview v
                                  id="codify_advanced_settings"
                                  displayName="Advanced"/>
         <actionPromoter implementation="com.smallcloud.codify.listeners.InlineActionsPromoter"/>
+        <actionPromoter implementation="com.smallcloud.codify.listeners.DiffActionsPromoter"/>
+        <actionPromoter implementation="com.smallcloud.codify.listeners.CancelActionsPromoter"/>
 
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.UsageStats"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.modes.diff.DiffIntendProvider"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.codify.listeners.TabPressedAction"
@@ -93,6 +96,14 @@ Stay tuned for code refactoring and human-machine symbiosis! Check out preview v
                 id="ForceCompletionAction"
                 text="Make A Force Completion">
             <keyboard-shortcut first-keystroke="alt SLASH" keymap="$default"/>
+        </action>
+        <action
+                id="DiffAction"
+                class="com.smallcloud.codify.listeners.DiffInvokeAction"
+                text="Codify Diff"
+                description="Codify Diff action">
+            <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
     </actions>
 </idea-plugin>

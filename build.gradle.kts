@@ -5,11 +5,11 @@ plugins {
 }
 
 dependencies {
-    "implementation"("dev.gitlive:kotlin-diff-utils:4.1.4")
+    implementation("dev.gitlive:kotlin-diff-utils:5.0.7")
 }
 
 group = "com.smallcloud"
-version = "0.2.14"
+version = "0.2.26"
 
 repositories {
     mavenCentral()

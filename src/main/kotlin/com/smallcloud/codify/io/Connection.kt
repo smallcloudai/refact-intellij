@@ -22,6 +22,7 @@ import org.apache.http.impl.execchain.RequestAbortedException
 import org.apache.http.util.EntityUtils
 import java.net.SocketException
 import java.net.URI
+import java.nio.charset.Charset
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
@@ -85,7 +86,7 @@ class Connection(uri: URI): Disposable {
         scope: String = ""
     ): RequestJob {
         val post = HttpPost(uri)
-        post.entity = StringEntity(body)
+        post.entity = StringEntity(body, Charset.forName("UTF-16"))
         return send(post, headers, requestProperties, needVerify=needVerify, scope=scope)
     }
 

@@ -61,7 +61,7 @@ class Inlayer(val editor: Editor) : Disposable {
     }
 
     private fun renderPanel(msg: String, offset: Int) {
-        val finalOffset = minOf(editor.selectionModel.selectionStart, offset)
+        val finalOffset = offset
         val logicalPosition = editor.offsetToLogicalPosition(finalOffset)
         val alignment = findAlignment(
             editor.document.getText(
@@ -75,9 +75,9 @@ class Inlayer(val editor: Editor) : Disposable {
             editor.offsetToXY(editor.document.getLineStartOffset(logicalPosition.line) + alignment.length)
         val context = DataManager.getInstance().getDataContext(editor.contentComponent)
         val renderer = PanelRenderer(firstSymbolPos, editor, listOf(
-            "\uD83D\uDC4D Approve (Tab)" to { TabPressedAction.actionPerformed(editor, context) },
-            "\uD83D\uDC4E Reject (ESC)" to { CancelPressedAction.actionPerformed(editor, context) },
-            "Rerun \"${msg}\" (F1)" to {
+            "${getAcceptSymbol()} Approve (Tab)" to { TabPressedAction.actionPerformed(editor, context) },
+            "${getRejectSymbol()} Reject (ESC)" to { CancelPressedAction.actionPerformed(editor, context) },
+            "${getRerunSymbol()} Rerun \"${msg}\" (F1)" to {
                 val action = ActionManager.getInstance().getAction("DiffAction")
                 val event = AnActionEvent.createFromAnAction(action, null, ActionPlaces.UNKNOWN, context)
                 ActionUtil.performActionDumbAwareWithCallbacks(action, event)
@@ -167,7 +167,28 @@ class Inlayer(val editor: Editor) : Disposable {
                 else -> {}
             }
         }
-        renderPanel(msg, getOffsetFromStringNumber(sortedDeltas[0].source.position))
+        renderPanel(msg, getOffsetFromStringNumber(sortedDeltas.minOf { it.source.position }))
         return this
+    }
+
+    private fun getAcceptSymbol(): String {
+        return when(System.getProperty("os.name")) {
+            "Mac OS X" -> "\uD83D\uDC4D"
+            else -> "✓"
+        }
+    }
+
+    private fun getRejectSymbol(): String {
+        return when(System.getProperty("os.name")) {
+            "Mac OS X" -> "\uD83D\uDC4E"
+            else -> "×"
+        }
+    }
+
+    private fun getRerunSymbol(): String {
+        return when(System.getProperty("os.name")) {
+            "Mac OS X" -> "\uD83D\uDD03"
+            else -> "↻"
+        }
     }
 }

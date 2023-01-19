@@ -136,14 +136,15 @@ class DiffMode : Mode {
                 listOf()
             ) ?: return
             startPosition = editor.offsetToLogicalPosition(startSelectionOffset)
-            finishPosition = editor.offsetToLogicalPosition(endSelectionOffset)
+            finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1)
             selectionModel.removeSelection()
             getOrCreateModeProvider(editor).switchMode(ModeType.Diff)
         } else {
-            request = diffLayout!!.request
+            val lastDiffLayout = diffLayout ?: return
+            request = lastDiffLayout.request
             startPosition = editor.offsetToLogicalPosition(request.body.cursor0)
             finishPosition = editor.offsetToLogicalPosition(request.body.cursor1)
-            diffLayout?.cancelPreview()
+            lastDiffLayout.cancelPreview()
             diffLayout = null
         }
 
@@ -211,7 +212,7 @@ class DiffMode : Mode {
 
             diffLayout = DiffLayout(editor, request, patch)
             app.invokeAndWait {
-                diffLayout!!.render()
+                diffLayout?.render()
             }
         } catch (_: InterruptedException) {
             finishRenderRainbow()

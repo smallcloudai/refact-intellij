@@ -61,8 +61,7 @@ class Inlayer(val editor: Editor) : Disposable {
     }
 
     private fun renderPanel(msg: String, offset: Int) {
-        val finalOffset = offset
-        val logicalPosition = editor.offsetToLogicalPosition(finalOffset)
+        val logicalPosition = editor.offsetToLogicalPosition(offset)
         val alignment = findAlignment(
             editor.document.getText(
                 TextRange(
@@ -84,7 +83,7 @@ class Inlayer(val editor: Editor) : Disposable {
             }
         ))
         editor.inlayModel
-            .addBlockElement(finalOffset, false, true, 1, renderer)
+            .addBlockElement(offset, false, true, 1, renderer)
             ?.also {
                 Disposer.register(this, it)
                 Disposer.register(it, renderer)
@@ -95,6 +94,12 @@ class Inlayer(val editor: Editor) : Disposable {
 
     fun render(msg: String, patch: Patch<String>): Inlayer {
         val sortedDeltas = patch.getDeltas().sortedBy { it.source.position }
+        val offset: Int = if (sortedDeltas.first().type == DeltaType.INSERT) {
+            getOffsetFromStringNumber(sortedDeltas.first().source.position - 1, column = 0)
+        } else {
+            getOffsetFromStringNumber(sortedDeltas.first().source.position, column = 0)
+        }
+        editor.caretModel.moveToOffset(offset)
         for (det in sortedDeltas) {
             if (det.target.lines == null) continue
             when (det.type) {
@@ -167,7 +172,7 @@ class Inlayer(val editor: Editor) : Disposable {
                 else -> {}
             }
         }
-        renderPanel(msg, getOffsetFromStringNumber(sortedDeltas.minOf { it.source.position }))
+        renderPanel(msg, offset)
         return this
     }
 

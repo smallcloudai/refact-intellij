@@ -15,7 +15,8 @@ data class SMCRequestBody(
     @SerializedName("stop") var stopTokens: List<String>,
     var temperature: Float = 0.8f,
     var client: String = "",
-    var model: String = ""
+    var model: String = "",
+    var stream: Boolean = false
 )
 
 data class SMCRequest(

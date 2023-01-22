@@ -5,16 +5,17 @@ import com.intellij.codeInsight.lookup.LookupListener
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.jetbrains.rd.util.getOrCreate
+import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.modes.ModeProvider
 
 class CompletionLookupListener(editor: Editor): LookupListener {
     private val modeProvider: ModeProvider = ModeProvider.getOrCreateModeProvider(editor)
-    private val completionMode: CompletionMode = modeProvider.getCompletionMode() as CompletionMode
+    private val completionMode: Mode = modeProvider.getCompletionMode()
     private val logger = Logger.getInstance("CompletionLookupListener")
 
     override fun lookupShown(event: LookupEvent) {
         logger.info("lookupShown")
-        completionMode.hideCompletion()
+        completionMode.hide()
         completionMode.needToRender = false
     }
 
@@ -30,7 +31,7 @@ class CompletionLookupListener(editor: Editor): LookupListener {
 
     override fun lookupCanceled(event: LookupEvent) {
         logger.info("lookupCanceled")
-        completionMode.showCompletion()
+        completionMode.show()
         completionMode.needToRender = true
     }
 

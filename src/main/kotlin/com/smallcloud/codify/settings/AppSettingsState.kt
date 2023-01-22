@@ -23,12 +23,40 @@ import java.net.URI
 @State(name = "com.smallcloud.userSettings.AppSettingsState", storages = [Storage("CodifySettings.xml")])
 class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var apiKey: String? = null
+        set(value) {
+            if (value == field) return
+            field = value
+            messageBus
+                .syncPublisher(SettingsChangedNotifier.TOPIC)
+                .tokenTextChanged(field)
+        }
     var temperature: Float? = null
+        set(value) {
+            if (value == field) return
+            field = value
+            messageBus
+                .syncPublisher(SettingsChangedNotifier.TOPIC)
+                .temperatureChanged(field)
+        }
     var model: String? = null
+        set(value) {
+            if (value == field) return
+            field = value
+            messageBus
+                .syncPublisher(SettingsChangedNotifier.TOPIC)
+                .modelChanged(field)
+        }
     var userLoggedIn: String? = null
     var streamlinedLoginTicket: String? = null
     var inferenceUri: String? = null
     var userInferenceUri: String? = null
+        set(value) {
+            if (value == field) return
+            field = value
+            messageBus
+                .syncPublisher(SettingsChangedNotifier.TOPIC)
+                .inferenceUriChanged(field)
+        }
     var activePlan: String? = null
     var loginMessage: String? = null
     var tooltipMessage: String? = null
@@ -36,7 +64,29 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var pluginIsEnabled: Boolean = true
     var usageStatsMessagesCache: MutableMap<String, Int> = HashMap()
     var useForceCompletion: Boolean = false
+        set(value) {
+            if (value == field) return
+            field = value
+            messageBus
+                .syncPublisher(SettingsChangedNotifier.TOPIC)
+                .useForceCompletionModeChanged(field)
+        }
     var useMultipleFilesCompletion: Boolean = false
+        set(value) {
+            if (value == field) return
+            field = value
+            messageBus
+                .syncPublisher(SettingsChangedNotifier.TOPIC)
+                .useMultipleFilesCompletionChanged(field)
+        }
+    var useStreamingCompletion: Boolean = false
+        set(value) {
+            if (value == field) return
+            field = value
+            messageBus
+                .syncPublisher(SettingsChangedNotifier.TOPIC)
+                .useStreamingCompletionChanged(field)
+        }
     var diffIntentsHistory: List<String> = emptyList()
 
     @Transient

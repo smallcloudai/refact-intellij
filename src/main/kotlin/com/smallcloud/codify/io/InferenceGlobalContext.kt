@@ -13,10 +13,24 @@ import java.net.URI
 object InferenceGlobalContext {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
     var connection: Connection? = inferenceUri?.let { makeConnection(it) }
+    var inferenceConnection: AsyncConnection? = inferenceUri?.let { makeAsyncConnection(it) }
 
     private fun makeConnection(uri: URI): Connection? {
         return try {
             val conn = Connection(uri)
+            status = ConnectionStatus.CONNECTED
+            lastErrorMsg = null
+            conn
+        } catch (e: Exception) {
+            status = ConnectionStatus.DISCONNECTED
+            lastErrorMsg = e.message
+            null
+        }
+    }
+
+    private fun makeAsyncConnection(uri: URI): AsyncConnection? {
+        return try {
+            val conn = AsyncConnection(uri)
             status = ConnectionStatus.CONNECTED
             lastErrorMsg = null
             conn
@@ -58,6 +72,7 @@ object InferenceGlobalContext {
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .userInferenceUriChanged(newInferenceUrl)
             connection = inferenceUri?.let { makeConnection(it) }
+            inferenceConnection = inferenceUri?.let { makeAsyncConnection(it) }
             inferenceLogin()
         }
 
@@ -69,6 +84,7 @@ object InferenceGlobalContext {
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .inferenceUriChanged(newInferenceUrl)
             connection = inferenceUri?.let { Connection(it) }
+            inferenceConnection = inferenceUri?.let { makeAsyncConnection(it) }
         }
 
     fun hasUserInferenceUri(): Boolean {

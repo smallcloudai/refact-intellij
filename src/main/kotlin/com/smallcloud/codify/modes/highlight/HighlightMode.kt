@@ -26,7 +26,9 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 
-class HighlightMode : Mode {
+class HighlightMode(
+    override var needToRender: Boolean = true
+) : Mode {
     private var layout: HighlightLayout? = null
     private val scope: String = "highlight"
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CodifyHighlightScheduler", 2)
@@ -103,6 +105,14 @@ class HighlightMode : Mode {
                 layout != null
     }
 
+    override fun show() {
+        TODO("Not yet implemented")
+    }
+
+    override fun hide() {
+        TODO("Not yet implemented")
+    }
+
     override fun cleanup() {
         layout?.dispose()
         layout = null
@@ -167,8 +177,8 @@ class HighlightMode : Mode {
                 return
             }
 
-            val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
-            val finishReason = prediction.choices?.firstOrNull()?.finishReason
+            val predictedText = prediction.choices.firstOrNull()?.files?.get(request.body.cursorFile)
+            val finishReason = prediction.choices.firstOrNull()?.finishReason
             if (predictedText == null || finishReason == null) {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = "Request was succeeded but there is no predicted data"

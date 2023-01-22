@@ -6,10 +6,11 @@ plugins {
 
 dependencies {
     implementation("dev.gitlive:kotlin-diff-utils:5.0.7")
+    implementation("org.apache.httpcomponents:httpasyncclient:4.1.4")
 }
 
 group = "com.smallcloud"
-version = "0.2.28"
+version = "0.2.30"
 
 repositories {
     mavenCentral()

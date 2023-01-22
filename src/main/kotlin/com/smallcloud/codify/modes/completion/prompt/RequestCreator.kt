@@ -12,7 +12,8 @@ object RequestCreator {
         startOffset: Int, endOffset: Int,
         scope: String,
         intent: String, functionName: String,
-        promptInfo: List<PromptInfo>
+        promptInfo: List<PromptInfo>,
+        stream: Boolean = false
     ): SMCRequest? {
         var currentBudget = text.length
         val sources = mutableMapOf(fileName to text)
@@ -43,7 +44,8 @@ object RequestCreator {
             startOffset, endOffset,
             50,
             1,
-            listOf("\n\n")
+            listOf("\n\n"),
+            stream = stream
         )
 
         return InferenceGlobalContext.makeRequest(requestBody)?.also {

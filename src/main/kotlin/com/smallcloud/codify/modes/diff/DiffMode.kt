@@ -29,7 +29,9 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 
 
-class DiffMode : Mode {
+class DiffMode(
+    override var needToRender: Boolean = true
+) : Mode {
     private val scope: String = "query_diff"
     private val logger = Logger.getInstance(DiffMode::class.java)
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CodifyDiffScheduler", 2)
@@ -99,6 +101,14 @@ class DiffMode : Mode {
         return isInRenderState() ||
                 (processTask != null && !processTask!!.isDone && !processTask!!.isCancelled) ||
                 diffLayout != null
+    }
+
+    override fun show() {
+        TODO("Not yet implemented")
+    }
+
+    override fun hide() {
+        TODO("Not yet implemented")
     }
 
     override fun cleanup() {

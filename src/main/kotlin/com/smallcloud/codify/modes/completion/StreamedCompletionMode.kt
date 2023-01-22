@@ -9,10 +9,7 @@ import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.smallcloud.codify.io.ConnectionStatus
-import com.smallcloud.codify.io.InferenceGlobalContext
-import com.smallcloud.codify.io.RequestJob
-import com.smallcloud.codify.io.inferenceFetch
+import com.smallcloud.codify.io.*
 import com.smallcloud.codify.modes.EditorTextHelper
 import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.modes.completion.prompt.FilesCollector
@@ -20,20 +17,13 @@ import com.smallcloud.codify.modes.completion.prompt.PromptCooker
 import com.smallcloud.codify.modes.completion.prompt.PromptInfo
 import com.smallcloud.codify.modes.completion.prompt.RequestCreator
 import com.smallcloud.codify.settings.AppSettingsState
-import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
-data class EditorState(
-    val modificationStamp: Long,
-    val offset: Int,
-    val text: String
-)
-
-class CompletionMode(
+class StreamedCompletionMode(
     override var needToRender: Boolean = true
 ) : Mode, CaretListener {
     private val scope: String = "completion"
@@ -41,7 +31,7 @@ class CompletionMode(
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CompletionScheduler", 1)
     private var processTask: Future<*>? = null
     private var completionLayout: CompletionLayout? = null
-    private val logger = Logger.getInstance("CompletionMode")
+    private val logger = Logger.getInstance("StreamedCompletionMode")
 
     private var autocompleteSymbolBefore: String = ""
     private var hasOneLineCompletionBefore: Boolean = false
@@ -142,7 +132,8 @@ class CompletionMode(
         }
         val request = RequestCreator.create(
             fileName, state.text, state.offset, state.offset,
-            scope, "Infill", "infill", promptInfo
+            scope, "Infill", "infill", promptInfo,
+            stream = true
         ) ?: return
 
         processTask = scheduler.schedule({
@@ -223,62 +214,69 @@ class CompletionMode(
         editorHelper: EditorTextHelper,
         force: Boolean,
     ) {
-        var maybeLastReqJob: RequestJob? = null
-        try {
-            val completionState = CompletionState(editorHelper, force = force)
-            if (!force && !completionState.readyForCompletion) return
-            if (!force && !completionState.multiline && hasOneLineCompletionBefore) return
-            if (force) {
-                request.body.maxTokens = 512
-            }
-
-            request.body.stopTokens = completionState.stopTokens
-
-            if (InferenceGlobalContext.status == ConnectionStatus.CONNECTED) {
-                InferenceGlobalContext.status = ConnectionStatus.PENDING
-            }
-            maybeLastReqJob = inferenceFetch(request)
-            val lastReqJob = maybeLastReqJob ?: return
-
-            logger.info("Making a completion request: multiline=${completionState.multiline}")
-            val prediction = lastReqJob.future.get() as SMCPrediction
-
+        val completionState = CompletionState(editorHelper, force = force)
+        if (!force && !completionState.readyForCompletion) return
+        if (!force && !completionState.multiline && hasOneLineCompletionBefore) return
+        if (force) {
+            request.body.maxTokens = 512
+        }
+        request.body.stopTokens = completionState.stopTokens
+        InferenceGlobalContext.status = ConnectionStatus.PENDING
+        streamedInferenceFetch(request, onDataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.lastErrorMsg = null
+        }) { prediction ->
             if (prediction.status == null) {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR
                 InferenceGlobalContext.lastErrorMsg = "Parameters are not correct"
-                return
+                return@streamedInferenceFetch
             }
 
-            val predictedText = prediction.choices.firstOrNull()?.files?.get(request.body.cursorFile)
-            val finishReason = prediction.choices.firstOrNull()?.finishReason
-            if (predictedText == null || finishReason == null) {
-                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-                InferenceGlobalContext.lastErrorMsg = "Request was succeeded but there is no predicted data"
-                return
-            } else {
-                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-                InferenceGlobalContext.lastErrorMsg = null
-            }
+            val headMidTail =
+                prediction.choices.firstOrNull()?.filesHeadMidTail?.get(request.body.cursorFile)
+                    ?: return@streamedInferenceFetch
 
-            val completionData = completionState.difference(predictedText, finishReason) ?: return
-            if (!completionData.isMakeSense()) return
+            val head = minOf(editorHelper.document.text.length, headMidTail.head)
+            val firstEosIndex = editorHelper.document.text.substring(head).indexOfFirst { it == '\n' }
+            var tail = head + (if (firstEosIndex == -1) 0 else firstEosIndex)
+            tail = minOf(editorHelper.document.text.length, tail)
+            val completionData = Completion(
+                originalText = editorHelper.document.text,
+                predictedText = editorHelper.document.text.substring(0, head) +
+                        headMidTail.mid +
+                        editorHelper.document.text.substring(head),
+                completion = headMidTail.mid,
+                currentLinesAreEqual = false,
+                multiline = completionState.multiline,
+                startIndex = head,
+                endIndex = tail,
+                createdTs = System.currentTimeMillis(),
+                isSingleLineComplete = !completionState.multiline
+            )
+            if (!completionData.isMakeSense()) return@streamedInferenceFetch
             synchronized(this) {
                 CompletionCache.addCompletion(completionData)
             }
             app.invokeAndWait {
+                completionLayout?.dispose()
+                completionLayout = null
+                editor.caretModel.removeCaretListener(this)
                 renderCompletion(editor, state, completionData)
             }
-        } catch (_: InterruptedException) {
-            maybeLastReqJob?.let {
-                maybeLastReqJob.request?.abort()
+        }?.also {
+            try {
+                it.future.get()
+            } catch (_: InterruptedException) {
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+                it.request?.abort()
                 logger.debug("lastReqJob abort")
+            } catch (e: ExecutionException) {
+                catchNetExceptions(e.cause)
+            } catch (e: Exception) {
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+                InferenceGlobalContext.lastErrorMsg = e.message
+                logger.warn("Exception while completion request processing", e)
             }
-        } catch (e: ExecutionException) {
-            catchNetExceptions(e.cause)
-        } catch (e: Exception) {
-            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-            InferenceGlobalContext.lastErrorMsg = e.message
-            logger.warn("Exception while completion request processing", e)
         }
     }
 

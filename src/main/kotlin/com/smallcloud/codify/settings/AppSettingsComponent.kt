@@ -1,5 +1,6 @@
 package com.smallcloud.codify.settings
 
+import com.intellij.ui.JBSplitter
 import com.intellij.ui.components.*
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
@@ -109,16 +110,19 @@ class GhostText(textfield: JTextField, ghostText: String) : FocusListener,
 
 
 class AppSettingsComponent {
-    val panel: JPanel
+    val splitter: JBSplitter = JBSplitter(true, 0.3f)
+    private val mainPanel: JPanel
+    private val experimentalPanel: JPanel
     val myTokenText = JBTextField()
     private val myModelText = JBTextField()
     private val myTemperatureText = JBTextField()
     private val myContrastUrlText = JBTextField()
     private val myUseForceCompletionMode = JCheckBox()
     private val myUseMultipleFilesCompletion = JCheckBox()
+    private val myUseStreamingCompletion = JCheckBox()
 
     init {
-        panel = FormBuilder.createFormBuilder().run {
+        mainPanel = FormBuilder.createFormBuilder().run {
             addLabeledComponent(JBLabel("Secret API Key: "), myTokenText, 1, false)
             addLabeledComponent(JBLabel("Model: "), myModelText, 1, false)
             addComponentToRightColumn(
@@ -148,6 +152,11 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
+            addComponentFillVertically(JPanel(), 0)
+        }.panel
+
+        experimentalPanel = FormBuilder.createFormBuilder().run {
+            addLabeledComponent(JBLabel("Experimental features "), myUseMultipleFilesCompletion, 0, true)
             addLabeledComponent(JBLabel("Use multiple files completion mode: "), myUseMultipleFilesCompletion, 1, false)
             addComponentToRightColumn(
                 JBLabel(
@@ -155,8 +164,19 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
+            addLabeledComponent(JBLabel("Use streaming completion mode: "), myUseStreamingCompletion, 1, false)
+            addComponentToRightColumn(
+                JBLabel(
+                    "In this mode plugin will render the completion text as soon as it comes",
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
             addComponentFillVertically(JPanel(), 0)
         }.panel
+
+        splitter.firstComponent = mainPanel
+        splitter.secondComponent = experimentalPanel
+        splitter.isShowDividerControls = true
     }
 
     val preferredFocusedComponent: JComponent
@@ -202,5 +222,13 @@ class AppSettingsComponent {
         }
         set(value) {
             myUseMultipleFilesCompletion.isSelected = value
+        }
+
+    var useStreamingCompletion: Boolean
+        get() {
+            return myUseStreamingCompletion.isSelected
+        }
+        set(value) {
+            myUseStreamingCompletion.isSelected = value
         }
 }

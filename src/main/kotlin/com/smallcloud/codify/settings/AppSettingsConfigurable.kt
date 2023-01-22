@@ -21,7 +21,7 @@ class AppSettingsConfigurable : Configurable {
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun apiKeyChanged(newApiKey: String?) {
                     mySettingsComponent?.myTokenText?.let { it.text = newApiKey }
-                    mySettingsComponent?.panel?.revalidate()
+                    mySettingsComponent?.splitter?.revalidate()
                 }
             })
     }
@@ -38,7 +38,7 @@ class AppSettingsConfigurable : Configurable {
 
     override fun createComponent(): JComponent {
         mySettingsComponent = AppSettingsComponent()
-        return mySettingsComponent!!.panel
+        return mySettingsComponent!!.splitter
     }
 
     override fun isModified(): Boolean {
@@ -66,6 +66,7 @@ class AppSettingsConfigurable : Configurable {
 
         modified = modified || mySettingsComponent!!.useForceCompletion != AppSettingsState.instance.useForceCompletion
         modified = modified || mySettingsComponent!!.useMultipleFilesCompletion != AppSettingsState.instance.useMultipleFilesCompletion
+        modified = modified || mySettingsComponent!!.useStreamingCompletion != AppSettingsState.instance.useStreamingCompletion
 
         return modified
     }
@@ -98,6 +99,7 @@ class AppSettingsConfigurable : Configurable {
                 makeUrlGreat(mySettingsComponent!!.contrastUrlText)
         AppSettingsState.instance.useForceCompletion = mySettingsComponent!!.useForceCompletion
         AppSettingsState.instance.useMultipleFilesCompletion = mySettingsComponent!!.useMultipleFilesCompletion
+        AppSettingsState.instance.useStreamingCompletion = mySettingsComponent!!.useStreamingCompletion
     }
 
     override fun reset() {
@@ -109,6 +111,7 @@ class AppSettingsConfigurable : Configurable {
             if (InferenceGlobalContext.hasUserInferenceUri()) InferenceGlobalContext.inferenceUri.toString() else ""
         mySettingsComponent!!.useForceCompletion = AppSettingsState.instance.useForceCompletion
         mySettingsComponent!!.useMultipleFilesCompletion = AppSettingsState.instance.useMultipleFilesCompletion
+        mySettingsComponent!!.useStreamingCompletion = AppSettingsState.instance.useStreamingCompletion
     }
 
     override fun disposeUIResources() {

@@ -8,11 +8,14 @@ import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.DocumentEvent
 
 interface Mode {
+    var needToRender: Boolean
     fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor)
     fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean)
     fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext)
     fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext)
     fun onCaretChange(event: CaretEvent)
     fun isInActiveState(): Boolean
+    fun show()
+    fun hide()
     fun cleanup()
 }

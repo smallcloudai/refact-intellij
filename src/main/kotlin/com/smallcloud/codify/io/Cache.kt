@@ -121,3 +121,47 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
 
     return job
 }
+
+fun streamedInferenceFetch(
+    request: SMCRequest,
+    onDataReceiveEnded: () -> Unit,
+    onDataReceived: (data: SMCPrediction) -> Unit
+): RequestJob? {
+    val cache = Cache.getFromCache(request)
+    if (cache != null)
+        return RequestJob(CompletableFuture.supplyAsync {
+            return@supplyAsync cache
+        }, null)
+    val gson = Gson()
+    val uri = request.uri
+    val body = gson.toJson(request.body)
+    val headers = mapOf(
+        "Content-Type" to "application/json",
+        "Authorization" to "Bearer ${request.token}",
+        "redirect" to "follow",
+        "cache" to "no-cache",
+        "referrer" to "no-referrer"
+    )
+
+    if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return null
+    val now = System.currentTimeMillis()
+    val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCoolDown * 1000
+    if (needToVerify) lastInferenceVerifyTs = now
+
+    val job = InferenceGlobalContext.inferenceConnection?.post(
+        uri, body, headers,
+        needVerify = needToVerify, scope = request.scope,
+        onDataReceiveEnded = onDataReceiveEnded
+    ) {
+        val errorMsg = lookForCommonErrors(gson.fromJson(it, JsonObject::class.java), request)
+        if (errorMsg != null) {
+            throw Exception(errorMsg)
+        }
+        val json = gson.fromJson(it, SMCPrediction::class.java)
+        InferenceGlobalContext.lastAutoModel = json.model
+        UsageStats.addStatistic(true, request.scope, request.uri.toString(), "")
+        onDataReceived(json)
+    }
+
+    return job
+}

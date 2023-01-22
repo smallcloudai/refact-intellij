@@ -118,6 +118,15 @@ object InferenceGlobalContext {
                 .modelChanged(newModel)
         }
 
+    var longThinkModel: String?
+        get() = AppSettingsState.instance.longThinkModel
+        set(newModel) {
+            if (newModel == longThinkModel) return
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .longThinkModelChanged(newModel)
+        }
+
     var useForceCompletion: Boolean
         get() = AppSettingsState.instance.useForceCompletion
         set(newValue) {
@@ -145,11 +154,18 @@ object InferenceGlobalContext {
                 .useStreamingCompletionChanged(newValue)
         }
 
-    fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
+    fun makeRequest(
+        requestData: SMCRequestBody,
+        isLongThinkModel: Boolean
+    ): SMCRequest? {
         val apiKey = AccountManager.apiKey
         if (apiKey.isNullOrEmpty()) return null
 
-        requestData.model = if (model != null) model!! else Resources.defaultModel
+        if (!isLongThinkModel) {
+            requestData.model = if (model != null) model!! else Resources.defaultModel
+        } else {
+            requestData.model = if (longThinkModel != null) longThinkModel!! else Resources.defaultLongThinkModel
+        }
         requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
         requestData.client = "${Resources.client}-${Resources.version}"
         return inferenceUri?.let { SMCRequest(it, requestData, apiKey) }

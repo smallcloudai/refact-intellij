@@ -125,25 +125,32 @@ class DiffMode(
         val request: SMCRequest
         if (diffLayout == null || highlightContext != null) {
             val intent: String
+            val isLongThinkModel: Boolean
+            var functionName = if (highlightContext == null) "diff-selection" else "diff-atcursor"
             if (highlightContext == null) {
                 val dialog = DiffDialog(editor.project)
                 if (!dialog.showAndGet()) return
                 intent = dialog.messageText
-                DiffIntentProvider.instance.pushFrontHistoryIntent(intent)
+                isLongThinkModel = dialog.isLongThinkModel
+                if (!isLongThinkModel) {
+                    DiffIntentProvider.instance.pushFrontHistoryIntent(intent)
+                } else {
+                    functionName = DiffIntentProvider.instance.thirdPartyFunctionsToId.getValue(intent)
+                }
                 lastFromHL = false
             } else {
                 intent = highlightContext.intent
                 startSelectionOffset = highlightContext.startOffset
                 endSelectionOffset = highlightContext.endOffset
+                isLongThinkModel = false
                 lastFromHL = true
             }
 
             request = RequestCreator.create(
                 fileName, editor.document.text,
                 startSelectionOffset, endSelectionOffset,
-                scope, intent,
-                if (highlightContext == null) "diff-selection" else "diff-atcursor",
-                listOf()
+                scope, intent, functionName, listOf(),
+                isLongThinkModel = isLongThinkModel
             ) ?: return
             startPosition = editor.offsetToLogicalPosition(startSelectionOffset)
             finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1)

@@ -25,6 +25,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var apiKey: String? = null
     var temperature: Float? = null
     var model: String? = null
+    var longThinkModel: String? = null
     var userLoggedIn: String? = null
     var streamlinedLoginTicket: String? = null
     var inferenceUri: String? = null

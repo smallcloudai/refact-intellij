@@ -13,6 +13,27 @@ class DiffIntentProvider {
                 "Add docstrings"
             )
         }
+    val defaultThirdPartyFunctions: List<String>
+        get(): List<String> {
+            return listOf(
+                "Explain code",
+                "Fix bugs",
+                "Complete selected code",
+                "Explain error",
+                "Add console logs",
+                "Make code shorter"
+            )
+        }
+
+    val thirdPartyFunctionsToId: Map<String, String> = hashMapOf(
+        defaultThirdPartyFunctions[0] to "explain-code",
+        defaultThirdPartyFunctions[1] to "fix-bug",
+        defaultThirdPartyFunctions[2] to "complete-selected-code",
+        defaultThirdPartyFunctions[3] to "explain-error",
+        defaultThirdPartyFunctions[4] to "add-console-logs",
+        defaultThirdPartyFunctions[5] to "make-code-shorter",
+    )
+
     var historyIntents
         set(newVal) {
             AppSettingsState.instance.diffIntentsHistory = newVal

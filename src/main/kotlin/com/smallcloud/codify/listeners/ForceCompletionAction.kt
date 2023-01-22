@@ -8,8 +8,8 @@ import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.EditorAction
 import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
+import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.modes.ModeProvider
-import com.smallcloud.codify.settings.AppSettingsState
 
 object ForceCompletionAction :
     EditorAction(InlineCompletionHandler()),
@@ -29,7 +29,7 @@ object ForceCompletionAction :
             caret: Caret,
             dataContext: DataContext
         ): Boolean {
-            return AppSettingsState.instance.useForceCompletion
+            return InferenceGlobalContext.useForceCompletion
         }
     }
 }

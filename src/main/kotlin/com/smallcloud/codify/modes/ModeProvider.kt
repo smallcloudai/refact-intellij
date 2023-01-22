@@ -14,14 +14,14 @@ import com.intellij.util.messages.MessageBus
 import com.intellij.util.xmlb.annotations.Transient
 import com.jetbrains.rd.util.getOrCreate
 import com.smallcloud.codify.PluginState
+import com.smallcloud.codify.io.InferenceGlobalContext
+import com.smallcloud.codify.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.codify.listeners.GlobalCaretListener
 import com.smallcloud.codify.listeners.GlobalFocusListener
 import com.smallcloud.codify.modes.completion.CompletionMode
 import com.smallcloud.codify.modes.completion.StreamedCompletionMode
 import com.smallcloud.codify.modes.diff.DiffMode
 import com.smallcloud.codify.modes.highlight.HighlightMode
-import com.smallcloud.codify.settings.AppSettingsState
-import com.smallcloud.codify.settings.SettingsChangedNotifier
 import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
 
@@ -36,7 +36,6 @@ enum class ModeType {
 
 class ModeProvider(
     editor: Editor,
-    private val appInstance: AppSettingsState = AppSettingsState.instance,
     private val modes: Map<ModeType, Mode> = mapOf(
         ModeType.Completion to CompletionMode(),
         ModeType.StreamingCompletion to StreamedCompletionMode(),
@@ -45,19 +44,21 @@ class ModeProvider(
     ),
     private var activeMode: Mode? = null,
     private val pluginState: PluginState = PluginState.instance,
-) : Disposable, SettingsChangedNotifier {
+) : Disposable, InferenceGlobalContextChangedNotifier {
     private val isEnabled: Boolean
         get() = pluginState.isEnabled
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
 
     init {
-        activeMode = if (appInstance.useStreamingCompletion) {
+        activeMode = if (InferenceGlobalContext.useStreamingCompletion) {
             modes[ModeType.StreamingCompletion]
         } else {
             modes[ModeType.Completion]
         }
-        messageBus.connect(this).subscribe(SettingsChangedNotifier.TOPIC, this)
+        messageBus.connect(this).subscribe(
+            InferenceGlobalContextChangedNotifier.TOPIC, this
+        )
     }
 
     fun modeInActiveState(): Boolean = activeMode?.isInActiveState() == true
@@ -67,7 +68,7 @@ class ModeProvider(
 
     fun isInDiffMode(): Boolean = activeMode === modes[ModeType.Diff]
     fun isInHighlightMode(): Boolean = activeMode === modes[ModeType.Highlight]
-    fun getCompletionMode(): Mode = if (appInstance.useStreamingCompletion)
+    fun getCompletionMode(): Mode = if (InferenceGlobalContext.useStreamingCompletion)
         modes[ModeType.StreamingCompletion]!! else modes[ModeType.Completion]!!
 
     fun getDiffMode(): DiffMode = (modes[ModeType.Diff] as DiffMode?)!!

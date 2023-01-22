@@ -118,6 +118,33 @@ object InferenceGlobalContext {
                 .modelChanged(newModel)
         }
 
+    var useForceCompletion: Boolean
+        get() = AppSettingsState.instance.useForceCompletion
+        set(newValue) {
+            if (newValue == useForceCompletion) return
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .useForceCompletionModeChanged(newValue)
+        }
+
+    var useMultipleFilesCompletion: Boolean
+        get() = AppSettingsState.instance.useMultipleFilesCompletion
+        set(newValue) {
+            if (newValue == useMultipleFilesCompletion) return
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .useMultipleFilesCompletionChanged(newValue)
+        }
+
+    var useStreamingCompletion: Boolean
+        get() = AppSettingsState.instance.useStreamingCompletion
+        set(newValue) {
+            if (newValue == useStreamingCompletion) return
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .useStreamingCompletionChanged(newValue)
+        }
+
     fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
         val apiKey = AccountManager.apiKey
         if (apiKey.isNullOrEmpty()) return null

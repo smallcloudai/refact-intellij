@@ -19,7 +19,6 @@ import com.smallcloud.codify.modes.completion.prompt.FilesCollector
 import com.smallcloud.codify.modes.completion.prompt.PromptCooker
 import com.smallcloud.codify.modes.completion.prompt.PromptInfo
 import com.smallcloud.codify.modes.completion.prompt.RequestCreator
-import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import java.util.concurrent.CancellationException
@@ -128,7 +127,7 @@ class CompletionMode(
         if (!editorHelper.isValid()) return
 
         var promptInfo: List<PromptInfo> = listOf()
-        if (AppSettingsState.instance.useMultipleFilesCompletion) {
+        if (InferenceGlobalContext.useMultipleFilesCompletion) {
             editor.project?.let {
                 promptInfo = PromptCooker.cook(
                     editorHelper,

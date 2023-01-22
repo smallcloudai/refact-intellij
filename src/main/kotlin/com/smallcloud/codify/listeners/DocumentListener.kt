@@ -7,8 +7,8 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.BulkAwareDocumentListener
 import com.intellij.openapi.editor.event.DocumentEvent
+import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.modes.ModeProvider
-import com.smallcloud.codify.settings.AppSettingsState
 
 
 class DocumentListener : BulkAwareDocumentListener {
@@ -21,7 +21,7 @@ class DocumentListener : BulkAwareDocumentListener {
 
     override fun documentChangedNonBulk(event: DocumentEvent) {
         Logger.getInstance("DocumentListener").debug("documentChangedNonBulk")
-        if (AppSettingsState.instance.useForceCompletion) return
+        if (InferenceGlobalContext.useForceCompletion) return
         val editor = getActiveEditor(event.document) ?: return
         val provider = ModeProvider.getOrCreateModeProvider(editor)
         provider.onTextChange(event, editor, false)

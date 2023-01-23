@@ -190,12 +190,11 @@ class DiffDialog(project: Project?, private val fromHL: Boolean = false) : Dialo
             addComponentFillVertically(msgTextField, 1)
             addComponent(JBLabel("History:"), 6)
             addComponent(historyScrollPane, 1)
-            addComponentFillVertically(JPanel(), 0)
+            addComponentFillVertically(JPanel(), 6)
             if (!fromHL) {
-                addComponentFillVertically(JPanel(), 0)
                 addComponent(JBLabel("Use big model:"), 6)
                 addComponent(thirdPartyScrollPane, 6)
-                addComponentFillVertically(JPanel(), 0)
+                addComponentFillVertically(JPanel(), 6)
             }
             this
         }.panel

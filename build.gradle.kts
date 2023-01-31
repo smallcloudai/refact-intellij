@@ -12,7 +12,7 @@ dependencies {
 }
 
 group = "com.smallcloud"
-version = "1.0.1"
+version = "1.0.2"
 
 repositories {
     mavenCentral()
@@ -38,7 +38,7 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("213")
+        sinceBuild.set("221")
         untilBuild.set("223.*")
     }
 

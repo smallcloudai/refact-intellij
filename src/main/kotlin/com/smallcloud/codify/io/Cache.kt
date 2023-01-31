@@ -72,6 +72,13 @@ private fun lookForCommonErrors(json: JsonObject, request: SMCRequest): String? 
         )
         return json.get("human_readable_message").asString
     }
+    if (json.has("status") && json.get("status").asString == "error") {
+        UsageStats.addStatistic(
+            false, request.scope,
+            request.uri.toString(), json.get("human_readable_message").asString
+        )
+        return json.get("human_readable_message").asString
+    }
     if (json.has("error")) {
         UsageStats.addStatistic(
             false, request.scope,

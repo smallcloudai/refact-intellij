@@ -194,7 +194,7 @@ class DiffMode(
             val lastReqJob = maybeLastReqJob ?: return
 
             val prediction = lastReqJob.future.get() as SMCPrediction
-            if (prediction.status == null) {
+            if (prediction.status == null || prediction.status == "error") {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR
                 InferenceGlobalContext.lastErrorMsg = "Parameters are not correct"
                 return

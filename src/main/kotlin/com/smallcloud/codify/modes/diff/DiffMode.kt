@@ -220,7 +220,7 @@ class DiffMode(
                 }
             }
             finishRenderRainbow()
-            if (patch == null || patch.getDeltas().isEmpty()) return
+            if (patch == null) return
 
             diffLayout = DiffLayout(editor, request, patch)
             app.invokeAndWait {

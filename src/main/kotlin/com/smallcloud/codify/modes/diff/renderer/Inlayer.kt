@@ -94,10 +94,14 @@ class Inlayer(val editor: Editor) : Disposable {
 
     fun render(msg: String, patch: Patch<String>): Inlayer {
         val sortedDeltas = patch.getDeltas().sortedBy { it.source.position }
-        val offset: Int = if (sortedDeltas.first().type == DeltaType.INSERT) {
-            getOffsetFromStringNumber(sortedDeltas.first().source.position - 1, column = 0)
+        val offset: Int = if (sortedDeltas.isNotEmpty()) {
+            if (sortedDeltas.first().type == DeltaType.INSERT) {
+                getOffsetFromStringNumber(sortedDeltas.first().source.position - 1, column = 0)
+            } else {
+                getOffsetFromStringNumber(sortedDeltas.first().source.position, column = 0)
+            }
         } else {
-            getOffsetFromStringNumber(sortedDeltas.first().source.position, column = 0)
+            editor.selectionModel.selectionStart
         }
         editor.caretModel.moveToOffset(offset)
         for (det in sortedDeltas) {

@@ -1,86 +1,197 @@
 package com.smallcloud.codify.modes.diff.dialog
 
-import com.intellij.openapi.project.Project
+import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
+import com.smallcloud.codify.CodifyBundle
+import com.smallcloud.codify.Resources
+import com.smallcloud.codify.modes.diff.DiffIntendEntry
 import com.smallcloud.codify.modes.diff.DiffIntentProvider
-import java.awt.event.KeyEvent
-import java.awt.event.KeyListener
-import java.awt.event.MouseEvent
-import java.awt.event.MouseListener
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.ListSelectionModel
-import javax.swing.ScrollPaneConstants
+import org.bouncycastle.oer.OERDefinition.placeholder
+import java.awt.Component
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.awt.event.*
+import javax.swing.*
 
 
-class DiffDialog(project: Project?, private val fromHL: Boolean = false) : DialogWrapper(project, true) {
+class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false) :
+    DialogWrapper(editor.project, true) {
     private val msgTextField: JBTextField
-    private val descriptionDiffStr: String = "What would you like to do with the selected code?"
-    private val descriptionHLStr: String = "What would you like to do? (this action highlights code first)"
+    private val warningPrefixText = CodifyBundle.message("diffDialog.selectCodeFirstTo")
+    private val warning: JBLabel = JBLabel(warningPrefixText)
+    private val descriptionDiffStr: String = CodifyBundle.message("diffDialog.descriptionDiffStr")
+    private val descriptionHLStr: String = CodifyBundle.message("diffDialog.descriptionHLStr")
     private val descriptionLabel: JBLabel = JBLabel()
-    private val historyList: JBList<String>
-    private val historyScrollPane: JBScrollPane
-    private val thirdPartyList: JBList<String>
+    private val thirdPartyList: JBList<DiffIntendEntry>
     private val thirdPartyScrollPane: JBScrollPane
-    private var _messageText: String? = null
-    private var _isLongThinkModel: Boolean = false
-    private var intents: List<String>
-    private var thirdPartyFunctions: List<String>
+    private var _entry: DiffIntendEntry = DiffIntendEntry("")
+    private var thirdPartyFunctions: List<DiffIntendEntry>
     private lateinit var panel: JPanel
-    private var previousIntent: String? = null
+    private var previousIntent: String = ""
+
+    private fun canUseEntry(entry: DiffIntendEntry) : Boolean {
+        return if (fromHL) {
+            !entry.selectionRequired
+        } else {
+            true
+        }
+    }
 
     init {
-        title = "Codify"
+        isResizable = false
+        title = Resources.codifyStr
         descriptionLabel.text = if (fromHL) descriptionHLStr else descriptionDiffStr
+//        warning.foreground = JBUI.CurrentTheme.Table.BACKGROUND
 
-        val defaultIntents = DiffIntentProvider.instance.defaultIntents
-        var historyIntents = DiffIntentProvider.instance.historyIntents
-        intents = defaultIntents
+        val historyIntents = DiffIntentProvider.instance.historyIntents
         thirdPartyFunctions = DiffIntentProvider.instance.defaultThirdPartyFunctions
-        if (historyIntents.isNotEmpty()) {
-            intents = emptyList()
-            historyIntents = historyIntents.filter { !it.isEmpty() }
+        var lastSelectedIndex = 0
 
-            var i = 0
-            while (i < historyIntents.size) {
-                if (historyIntents[i] !in intents) {
-                    intents = intents + listOf(historyIntents[i])
-                }
-                i++
-            }
+        thirdPartyList = object : JBList<DiffIntendEntry>(thirdPartyFunctions) {
+            init {
+                selectionMode = ListSelectionModel.SINGLE_SELECTION
+                border = JBUI.Borders.empty()
+                visibleRowCount = 6
+                cellRenderer =
+                    object : DefaultListCellRenderer() {
+                        override fun getListCellRendererComponent(
+                            list: JList<*>,
+                            value: Any,
+                            index: Int,
+                            isSelected: Boolean,
+                            cellHasFocus: Boolean
+                        ): Component {
+                            val c: Component
+                            if (thirdPartyFunctions[index].metering) {
+                                foreground = editor.colorsScheme.defaultForeground
+                                c = super.getListCellRendererComponent(list, (value as DiffIntendEntry).intend + " \uD83E\uDDE0",
+                                    index, isSelected, cellHasFocus)
+                            } else {
+                                foreground = JBColor.GRAY
+                                c = super.getListCellRendererComponent(list, (value as DiffIntendEntry).intend,
+                                    index, isSelected, cellHasFocus)
+                            }
+                            return c
+                        }
 
-            defaultIntents.forEach {
-                if (it !in intents) {
-                    intents = intents + listOf(it)
+                    }
+                selectionModel = object : DefaultListSelectionModel() {
+                    override fun setSelectionInterval(index0: Int, index1: Int) {
+                        if (true/*canUseEntry(thirdPartyFunctions[index0])*/)
+                            super.setSelectionInterval(index0, index1)
+                    }
                 }
+//                actionMap.put("selectNextRow", object : AbstractAction() {
+//                    override fun actionPerformed(e: ActionEvent?) {
+//                        val index: Int = selectedIndex
+//                        for (i in index + 1 until thirdPartyFunctions.size) {
+//                            if (canUseEntry(thirdPartyFunctions[i])) {
+//                                selectedIndex = i
+//                                break
+//                            }
+//                        }
+//                    }
+//                })
+//                actionMap.put("selectPreviousRow", object : AbstractAction() {
+//                    override fun actionPerformed(e: ActionEvent?) {
+//                        val index: Int = selectedIndex
+//                        for (i in index - 1 downTo 0) {
+//                            if (canUseEntry(thirdPartyFunctions[i])) {
+//                                selectedIndex = i
+//                                break
+//                            }
+//                        }
+//                    }
+//                })
             }
         }
-        msgTextField = JBTextField()
-        historyList = JBList(intents)
-        thirdPartyList = JBList(thirdPartyFunctions)
+        msgTextField = object : JBTextField() {
+            private var hint: String = "↓ commands; ↑ history"
+            var historyIndex = -1
+            init {
+                addKeyListener(object : KeyListener {
+                    override fun keyTyped(e: KeyEvent?) {}
+                    override fun keyReleased(e: KeyEvent?) {}
+                    override fun keyPressed(e: KeyEvent?) {
+                        entry = DiffIntendEntry(text)
+                        if (e?.keyCode == KeyEvent.VK_UP || e?.keyCode == KeyEvent.VK_DOWN) {
+                            if (e.keyCode == KeyEvent.VK_UP) {
+                                historyIndex++
+                            } else if (e.keyCode == KeyEvent.VK_DOWN) {
+                                historyIndex--
+                            }
+                            historyIndex = minOf(maxOf(historyIndex, -2), historyIntents.size - 1)
+                            if (historyIndex > -1) {
+                                entry = historyIntents[historyIndex]
+                                text = entry.intend + if (entry.metering) " \uD83E\uDDE0" else ""
+                            } else if (historyIndex == -1) {
+                                text = previousIntent
+                                entry = DiffIntendEntry("")
+                            } else if (historyIndex == -2) {
+                                previousIntent = text
+                                thirdPartyList.requestFocus()
+                                thirdPartyList.selectedIndex = lastSelectedIndex
+                            }
+                        }
+                    }
+                })
+                addFocusListener(object : FocusListener {
+                    override fun focusGained(e: FocusEvent?) {
+                        entry = DiffIntendEntry(text)
+                        thirdPartyList.clearSelection()
+                    }
 
-        historyList.also {
-            it.selectionMode = ListSelectionModel.SINGLE_SELECTION
-            it.border = JBUI.Borders.empty()
-            it.visibleRowCount = if (!fromHL) 5 else 8
+                    override fun focusLost(e: FocusEvent?) {}
+
+                })
+            }
+
+            override fun paintComponent(pG: Graphics) {
+                val g = pG.create() as Graphics2D
+                val oldForeground = foreground
+                if (!canUseEntry(entry))
+                    foreground = JBUI.CurrentTheme.Label.disabledForeground()
+                super.paintComponent(pG)
+                if (!canUseEntry(entry))
+                    foreground = oldForeground
+                if (hint.isEmpty() || text.isNotEmpty()) {
+                    return
+                }
+
+                g.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+                )
+                g.color = JBUI.CurrentTheme.Label.disabledForeground()
+                g.font = editor.component.font
+                g.drawString(hint,
+                    margin.left + insets.left,
+                    pG.fontMetrics.maxAscent + margin.top + insets.top)
+            }
+
+        }
+        thirdPartyList.also {
             it.addMouseListener(object : MouseListener {
                 override fun mouseClicked(event: MouseEvent?) {
                     if (event == null) return
-                    msgTextField.text = it.selectedValue
+                    msgTextField.text = it.selectedValue.intend
                     if (event.clickCount == 2 && event.button == MouseEvent.BUTTON1) {
-                        _messageText = it.selectedValue
-                        _isLongThinkModel = false
-                        doOKAction()
+                        entry = it.selectedValue
+                        lastSelectedIndex = it.selectedIndex
                     }
-                    thirdPartyList.clearSelection()
                 }
-
                 override fun mousePressed(e: MouseEvent?) {}
                 override fun mouseReleased(e: MouseEvent?) {}
                 override fun mouseEntered(e: MouseEvent?) {}
@@ -88,89 +199,40 @@ class DiffDialog(project: Project?, private val fromHL: Boolean = false) : Dialo
             })
             it.addListSelectionListener { e ->
                 if (e == null) return@addListSelectionListener
-                val selectedIndex = it.selectedIndex
-                msgTextField.text = it.selectedValue
-                thirdPartyList.clearSelection()
-                it.selectedIndex = selectedIndex
+                try {
+                    entry = it.selectedValue
+                    msgTextField.text = entry.intend + if (entry.metering) " \uD83E\uDDE0" else ""
+                } catch (e: Exception) {
+                    Logger.getInstance(DiffDialog::class.java).warn(e.message)
+                }
             }
             it.addKeyListener(object : KeyListener {
                 override fun keyTyped(e: KeyEvent?) {}
                 override fun keyPressed(e: KeyEvent?) {
-                    if (e == null) return
-                    if (e.keyCode == KeyEvent.VK_ENTER) {
-                        _messageText = it.selectedValue
-                        _isLongThinkModel = false
-                        doOKAction()
+                    if (e?.keyCode == KeyEvent.VK_ENTER && canUseEntry(it.selectedValue)) {
+                        entry = it.selectedValue
                     }
                 }
                 override fun keyReleased(e: KeyEvent?) {
                     if (e == null) return
-                    if (e.keyCode == KeyEvent.VK_UP && it.selectedIndex == 0) {
-                        msgTextField.requestFocus()
-                        it.clearSelection()
-                        msgTextField.text = previousIntent
-                        thirdPartyList.clearSelection()
+                    if (e.keyCode == KeyEvent.VK_UP || e.keyCode == KeyEvent.VK_DOWN) {
+                        if (e.keyCode == KeyEvent.VK_UP && lastSelectedIndex == thirdPartyList.selectedIndex) {
+                            msgTextField.requestFocus()
+                            msgTextField.text = previousIntent
+                            msgTextField.historyIndex = -1
+                            entry = DiffIntendEntry(msgTextField.text)
+                            thirdPartyList.clearSelection()
+                        } else lastSelectedIndex = thirdPartyList.selectedIndex
                     }
                 }
             })
-        }
-        thirdPartyList.also {
-            it.selectionMode = ListSelectionModel.SINGLE_SELECTION
-            it.border = JBUI.Borders.empty()
-            it.visibleRowCount = 5
-            it.addMouseListener(object : MouseListener {
-                override fun mouseClicked(event: MouseEvent?) {
-                    if (event == null) return
-                    msgTextField.text = it.selectedValue
-                    if (event.clickCount == 2 && event.button == MouseEvent.BUTTON1) {
-                        _messageText = it.selectedValue
-                        _isLongThinkModel = true
-                        doOKAction()
-                    }
-                    historyList.clearSelection()
-                }
-                override fun mousePressed(e: MouseEvent?) {}
-                override fun mouseReleased(e: MouseEvent?) {}
-                override fun mouseEntered(e: MouseEvent?) {}
-                override fun mouseExited(e: MouseEvent?) {}
-            })
-            it.addListSelectionListener { e ->
-                if (e == null) return@addListSelectionListener
-                val selectedIndex = it.selectedIndex
-                historyList.clearSelection()
-                msgTextField.text = it.selectedValue
-                it.selectedIndex = selectedIndex
-            }
         }
 
-        historyScrollPane = JBScrollPane(
-            historyList,
-            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        )
         thirdPartyScrollPane = JBScrollPane(
             thirdPartyList,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         )
-        msgTextField.addKeyListener(object : KeyListener {
-            override fun keyTyped(e: KeyEvent?) {}
-            override fun keyPressed(e: KeyEvent?) {
-                if (e == null) return
-                if (e.keyCode == KeyEvent.VK_ENTER) {
-                    _messageText = msgTextField.text
-                    _isLongThinkModel = false
-                    doOKAction()
-                } else if (e.keyCode == KeyEvent.VK_DOWN) {
-                    previousIntent = msgTextField.text
-                    historyList.requestFocus()
-                    historyList.selectedIndex = 0
-                    thirdPartyList.clearSelection()
-                }
-            }
-
-            override fun keyReleased(e: KeyEvent?) {}
-        })
         init()
     }
 
@@ -178,26 +240,36 @@ class DiffDialog(project: Project?, private val fromHL: Boolean = false) : Dialo
         return msgTextField
     }
 
-    val messageText: String
-        get() = if (_messageText == null) msgTextField.text else _messageText!!
-
-    val isLongThinkModel: Boolean
-        get() = _isLongThinkModel
+    var entry: DiffIntendEntry
+        get() = _entry
+        set(newVal) {
+            if (newVal == _entry) return
+            _entry = newVal
+            val canUse = canUseEntry(_entry)
+            okAction.isEnabled = canUse
+            if (!canUse) {
+                warning.foreground = JBColor.RED
+                warning.text = "$warningPrefixText ${_entry.intend}"
+            } else {
+                warning.foreground = JBUI.CurrentTheme.Table.BACKGROUND
+            }
+        }
 
     override fun createCenterPanel(): JComponent {
         panel = FormBuilder.createFormBuilder().run {
             addComponent(descriptionLabel, 1)
             addComponentFillVertically(msgTextField, 1)
-            addComponent(JBLabel("History:"), 6)
-            addComponent(historyScrollPane, 1)
+            addComponentToRightColumn(warning, 0)
             addComponentFillVertically(JPanel(), 6)
-            if (!fromHL) {
-                addComponent(JBLabel("Use big model:"), 6)
-                addComponent(thirdPartyScrollPane, 6)
-                addComponentFillVertically(JPanel(), 6)
-            }
+            addComponent(JBLabel("${CodifyBundle.message("diffDialog.usefulCommands")}:"), 6)
+            addComponent(thirdPartyScrollPane, 6)
+            addComponentFillVertically(JPanel(), 6)
             this
         }.panel
         return panel
+    }
+
+    private fun getVirtualFile(editor: Editor): VirtualFile? {
+        return FileDocumentManager.getInstance().getFile(editor.document)
     }
 }

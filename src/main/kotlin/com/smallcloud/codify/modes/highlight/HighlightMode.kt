@@ -7,9 +7,9 @@ import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.CaretEvent
-import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.smallcloud.codify.Resources
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.RequestJob
@@ -18,6 +18,8 @@ import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.modes.ModeProvider
 import com.smallcloud.codify.modes.ModeType
 import com.smallcloud.codify.modes.completion.prompt.RequestCreator
+import com.smallcloud.codify.modes.completion.structs.DocumentEventExtra
+import com.smallcloud.codify.modes.diff.DiffIntendEntry
 import com.smallcloud.codify.modes.diff.DiffIntentProvider
 import com.smallcloud.codify.modes.diff.dialog.DiffDialog
 import com.smallcloud.codify.struct.SMCPrediction
@@ -25,16 +27,18 @@ import com.smallcloud.codify.struct.SMCRequest
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 class HighlightMode(
     override var needToRender: Boolean = true
 ) : Mode {
     private var layout: HighlightLayout? = null
     private val scope: String = "highlight"
-    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CodifyHighlightScheduler", 2)
+    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CodifyHighlightScheduler", 3)
     private val app = ApplicationManager.getApplication()
     private var processTask: Future<*>? = null
     private var renderTask: Future<*>? = null
+    private var goToDiffTask: Future<*>? = null
     private val logger = Logger.getInstance(HighlightMode::class.java)
     private var needAnimation = false
 
@@ -53,23 +57,30 @@ class HighlightMode(
             processTask?.get()
         } catch (_: CancellationException) {
         } finally {
+            if (InferenceGlobalContext.status != ConnectionStatus.DISCONNECTED &&
+                InferenceGlobalContext.status != ConnectionStatus.ERROR
+            ) {
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            }
             finishAnimation()
-            cleanup()
-            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            layout?.dispose()
+            layout = null
             if (editor != null) {
                 ModeProvider.getOrCreateModeProvider(editor).switchMode()
             }
         }
     }
 
-    override fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {
-        cancel(editor)
-        ModeProvider.getOrCreateModeProvider(editor).switchMode()
+    override fun beforeDocumentChangeNonBulk(event: DocumentEventExtra) {
+        if (event.editor.getUserData(Resources.ExtraUserDataKeys.addedFromHL) == true) {
+            event.editor.putUserData(Resources.ExtraUserDataKeys.addedFromHL, false)
+            return
+        }
+        app.invokeAndWait { cancel(event.editor) }
+        ModeProvider.getOrCreateModeProvider(event.editor).switchMode()
     }
 
-    override fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean) {
-        cancel(editor)
-        ModeProvider.getOrCreateModeProvider(editor).switchMode()
+    override fun onTextChange(event: DocumentEventExtra) {
     }
 
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {}
@@ -80,16 +91,20 @@ class HighlightMode(
     }
 
     override fun onCaretChange(event: CaretEvent) {
+        goToDiffTask?.cancel(false)
         val offsets = event.caret?.let { layout?.getHighlightsOffsets(it.offset) }
-        val intent = DiffIntentProvider.instance.lastHistoryIntent()
-        if (offsets != null && intent != null) {
-            cleanup()
-            ModeProvider.getOrCreateModeProvider(event.editor)
-                .getDiffMode().actionPerformed(
-                    event.editor, HighlightContext(
-                        intent, offsets[0], offsets[1]
-                    )
-                )
+        val entry = DiffIntentProvider.instance.lastHistoryEntry()
+        if (offsets != null && entry != null) {
+            goToDiffTask = scheduler.schedule({
+                // cleanup must be called from render thread; scheduler creates worker thread only
+                app.invokeAndWait {
+                    cleanup()
+                    ModeProvider.getOrCreateModeProvider(event.editor)
+                        .getDiffMode().actionPerformed(
+                            event.editor, HighlightContext(entry, offsets[0], offsets[1])
+                        )
+                }
+            }, 300, TimeUnit.MILLISECONDS)
         }
 
     }
@@ -114,21 +129,24 @@ class HighlightMode(
     }
 
     override fun cleanup() {
-        layout?.dispose()
-        layout = null
+        cancel(null)
     }
 
     fun actionPerformed(editor: Editor, fromDiff: Boolean = false) {
-        if (layout != null) return
+        if (layout != null) {
+            layout?.dispose()
+            layout = null
+        }
+        if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
 
-        val intent: String
-        if (fromDiff && DiffIntentProvider.instance.lastHistoryIntent() != null) {
-            intent = DiffIntentProvider.instance.lastHistoryIntent()!!
+        val entry: DiffIntendEntry
+        if (fromDiff && DiffIntentProvider.instance.lastHistoryEntry() != null) {
+            entry = DiffIntentProvider.instance.lastHistoryEntry()!!
         } else {
-            val dialog = DiffDialog(editor.project, true)
+            val dialog = DiffDialog(editor, true)
             if (!dialog.showAndGet()) return
-            intent = dialog.messageText
-            DiffIntentProvider.instance.pushFrontHistoryIntent(intent)
+            entry = dialog.entry
+            DiffIntentProvider.instance.pushFrontHistoryIntent(entry)
         }
 
         val fileName = getActiveFile(editor.document) ?: return
@@ -137,7 +155,8 @@ class HighlightMode(
         val request = RequestCreator.create(
             fileName, editor.document.text,
             startSelectionOffset, endSelectionOffset,
-            scope, intent, "highlight", listOf()
+            scope, entry.intend, "highlight", listOf(),
+            model = entry.model ?: (InferenceGlobalContext.model ?: Resources.defaultModel)
         ) ?: return
         ModeProvider.getOrCreateModeProvider(editor).switchMode(ModeType.Highlight)
 
@@ -160,15 +179,9 @@ class HighlightMode(
             request.body.stopTokens = listOf()
             request.body.maxTokens = 0
 
-            if (InferenceGlobalContext.status == ConnectionStatus.CONNECTED) {
-                InferenceGlobalContext.status = ConnectionStatus.PENDING
-            }
+            InferenceGlobalContext.status = ConnectionStatus.PENDING
             maybeLastReqJob = inferenceFetch(request)
             val lastReqJob = maybeLastReqJob ?: return
-
-            if (InferenceGlobalContext.status == ConnectionStatus.CONNECTED) {
-                InferenceGlobalContext.status = ConnectionStatus.PENDING
-            }
 
             val prediction = lastReqJob.future.get() as SMCPrediction
             if (prediction.status == null) {
@@ -202,14 +215,15 @@ class HighlightMode(
                 maybeLastReqJob.request?.abort()
                 logger.debug("lastReqJob abort")
             }
+            cancel(editor)
             ModeProvider.getOrCreateModeProvider(editor).switchMode()
         } catch (e: ExecutionException) {
             catchNetExceptions(e.cause)
             ModeProvider.getOrCreateModeProvider(editor).switchMode()
         } catch (e: Exception) {
-            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.status = ConnectionStatus.ERROR
             InferenceGlobalContext.lastErrorMsg = e.message
-            logger.warn("Exception while completion request processing", e)
+            logger.warn("Exception while highlight request processing", e)
             ModeProvider.getOrCreateModeProvider(editor).switchMode()
         }
     }
@@ -217,7 +231,7 @@ class HighlightMode(
     private fun catchNetExceptions(e: Throwable?) {
         InferenceGlobalContext.status = ConnectionStatus.ERROR
         InferenceGlobalContext.lastErrorMsg = e?.message
-        logger.warn("Exception while completion request processing", e)
+        logger.warn("Exception while highlight request processing", e)
     }
 
     private fun getActiveFile(document: Document): String? {

@@ -18,4 +18,5 @@ fun notificationStartup() {
                     emitInfo(newMsg)
             }
         })
+    startup()
 }

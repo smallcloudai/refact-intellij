@@ -3,80 +3,104 @@ package com.smallcloud.codify.modes.completion.renderer
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.Inlay
-import com.intellij.openapi.editor.markup.HighlighterTargetArea
-import com.intellij.openapi.editor.markup.RangeHighlighter
-import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.util.Disposer
-import com.smallcloud.codify.modes.EditorTextHelper
-import com.smallcloud.codify.modes.completion.Completion
-import java.awt.Color
 
-class Inlayer(val editor: Editor) : Disposable {
+class AsyncInlayer(
+    val editor: Editor,
+    private val offset: Int
+) : Disposable {
+    private var lineRenderer: AsyncLineRenderer? = null
     private var lineInlay: Inlay<*>? = null
+    private var blockRenderer: AsyncBlockElementRenderer? = null
     private var blockInlay: Inlay<*>? = null
-    private var rangeHighlighters: MutableList<RangeHighlighter> = mutableListOf()
+    private var collectedText: String = ""
+    private var disposed: Boolean = false
+    private var hidden: Boolean = false
 
     override fun dispose() {
-        lineInlay?.let {
-            it.dispose()
-            lineInlay = null
+        synchronized(this) {
+            disposed = true
+            lineInlay?.let {
+                it.dispose()
+                lineInlay = null
+            }
+            blockInlay?.let {
+                it.dispose()
+                blockInlay = null
+            }
         }
-        blockInlay?.let {
-            it.dispose()
-            blockInlay = null
-        }
-        rangeHighlighters.forEach { editor.markupModel.removeHighlighter(it) }
-        rangeHighlighters.clear()
     }
 
-    private fun renderLine(line: String, offset: Int) {
-        val renderer = LineRenderer(editor, line, false)
-        val element = editor
+    fun hide() {
+        synchronized(this) {
+            if (disposed) return
+            hidden = true
+            lineInlay?.let {
+                it.dispose()
+                lineInlay = null
+            }
+            blockInlay?.let {
+                it.dispose()
+                blockInlay = null
+            }
+        }
+    }
+
+    fun show() {
+        synchronized(this) {
+            if (disposed) return
+            hidden = false
+            addText("")
+            lineInlay?.update()
+            blockInlay?.update()
+        }
+    }
+
+    private fun createLine(initialText: String) {
+        lineRenderer = AsyncLineRenderer(initialText, editor, false)
+        lineInlay = editor
             .inlayModel
-            .addInlineElement(offset, true, renderer)
-        element?.let { Disposer.register(this, it) }
-        lineInlay = element
+            .addInlineElement(offset, true, lineRenderer!!)
+            ?.also { Disposer.register(this, it) }
     }
 
-    private fun renderBlock(lines: List<String>, offset: Int) {
-        val renderer = BlockElementRenderer(editor, lines, false)
-        val element = editor
+    private fun createBlock(initialLines: List<String>) {
+        blockRenderer = AsyncBlockElementRenderer(initialLines, editor, false)
+        blockInlay = editor
             .inlayModel
-            .addBlockElement(offset, false, false, 1, renderer)
-        element?.let { Disposer.register(this, it) }
-        blockInlay = element
+            .addBlockElement(offset, false, false, 1, blockRenderer!!)
+            ?.also { Disposer.register(this, it) }
     }
 
-    fun render(completionData: Completion): Inlayer {
-        if (!completionData.multiline) {
-            renderLine(completionData.completion, completionData.startIndex)
-            if (completionData.endIndex > completionData.startIndex) {
-                rangeHighlighters.add(
-                    editor.markupModel.addRangeHighlighter(
-                        completionData.startIndex,
-                        completionData.endIndex,
-                        99999,
-                        TextAttributes().apply {
-                            backgroundColor = Color(200, 0, 0, 100)
-                        },
-                        HighlighterTargetArea.EXACT_RANGE
-                    )
-                )
+    fun addText(text: String) {
+        synchronized(this) {
+            if (disposed) return
+            collectedText += text
+            val lines = collectedText.split('\n')
+
+            if (lineInlay == null) {
+                createLine(lines[0])
+            } else {
+                lineRenderer?.text = lines[0]
+                lineInlay?.update()
             }
-        } else {
-            val helper = EditorTextHelper(editor, completionData.startIndex)
-            val afterCursor = completionData.originalText.substring(helper.offset, helper.currentLineEndOffset)
-            val lines = completionData.completion.split('\n')
-            if (lines.isEmpty()) return this
-            val firstLine = lines.first()
-            val otherLines = lines.drop(1)
-            if (firstLine.isNotEmpty() && !completionData.currentLinesAreEqual) {
-                renderLine(firstLine, completionData.startIndex)
-            }
-            if (otherLines.isNotEmpty()) {
-                renderBlock(otherLines, completionData.startIndex)
+
+            if (lines.size > 1) {
+                val subList = lines.subList(1, lines.size)
+                if (blockInlay == null) {
+                    createBlock(subList)
+                } else {
+                    blockRenderer?.blockText = subList
+                    blockInlay?.update()
+                }
             }
         }
-        return this
+    }
+
+    fun addTextWithoutRendering(text: String) {
+        synchronized(this) {
+            if (disposed) return
+            collectedText += text
+        }
     }
 }

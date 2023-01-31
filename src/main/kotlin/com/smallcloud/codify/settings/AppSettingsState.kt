@@ -12,6 +12,7 @@ import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.io.InferenceGlobalContextChangedNotifier
+import com.smallcloud.codify.modes.diff.DiffIntendEntry
 import java.net.URI
 
 
@@ -38,8 +39,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var usageStatsMessagesCache: MutableMap<String, Int> = HashMap()
     var useForceCompletion: Boolean = false
     var useMultipleFilesCompletion: Boolean = false
-    var useStreamingCompletion: Boolean = false
-    var diffIntentsHistory: List<String> = emptyList()
+    var diffIntentEntriesHistory: List<DiffIntendEntry> = emptyList()
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -85,6 +85,13 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     override fun temperatureChanged(newTemp: Float?) {
                         instance.temperature = newTemp
                     }
+
+                    override fun useForceCompletionModeChanged(newValue: Boolean) {
+                        instance.useForceCompletion = newValue
+                    }
+                    override fun useMultipleFilesCompletionChanged(newValue: Boolean) {
+                        instance.useMultipleFilesCompletion = newValue
+                    }
                 })
         messageBus
             .connect(PluginState.instance)
@@ -127,4 +134,5 @@ fun settingsStartup() {
     val settings = AppSettingsState.instance
     PluginState.startup(settings)
     AccountManager.startup()
+    PrivacyState.instance
 }

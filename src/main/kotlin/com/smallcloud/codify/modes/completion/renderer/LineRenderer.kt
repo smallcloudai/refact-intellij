@@ -8,12 +8,25 @@ import java.awt.Color
 import java.awt.Graphics
 import java.awt.Rectangle
 
-class LineRenderer(private val editor: Editor, private val suffix: String, private val deprecated: Boolean) :
-    EditorCustomElementRenderer {
+class AsyncLineRenderer(
+    initialText: String,
+    private val editor: Editor,
+    private val deprecated: Boolean
+) : EditorCustomElementRenderer {
     private var color: Color? = null
+    var text: String = initialText
+        set(value) {
+            synchronized(this) {
+                field = value
+            }
+        }
+
     override fun calcWidthInPixels(inlay: Inlay<*>): Int {
-        return editor.contentComponent
-            .getFontMetrics(RenderHelper.getFont(editor, deprecated)).stringWidth(suffix)
+        synchronized(this) {
+            val width = editor.contentComponent
+                .getFontMetrics(RenderHelper.getFont(editor, deprecated)).stringWidth(text)
+            return maxOf(width, 1)
+        }
     }
 
     override fun paint(
@@ -22,9 +35,11 @@ class LineRenderer(private val editor: Editor, private val suffix: String, priva
         targetRegion: Rectangle,
         textAttributes: TextAttributes
     ) {
-        color = color ?: RenderHelper.color
-        g.color = color
-        g.font = RenderHelper.getFont(editor, deprecated)
-        g.drawString(suffix, targetRegion.x, targetRegion.y + editor.ascent)
+        synchronized(this) {
+            color = color ?: RenderHelper.color
+            g.color = color
+            g.font = RenderHelper.getFont(editor, deprecated)
+            g.drawString(text, targetRegion.x, targetRegion.y + editor.ascent)
+        }
     }
 }

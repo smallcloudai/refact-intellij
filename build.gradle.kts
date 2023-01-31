@@ -1,16 +1,18 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij") version "1.11.0"
+    id("org.jetbrains.intellij") version "1.12.0"
     id("org.jetbrains.kotlin.jvm") version "1.7.22"
 }
 
 dependencies {
     implementation("dev.gitlive:kotlin-diff-utils:5.0.7")
-    implementation("org.apache.httpcomponents:httpasyncclient:4.1.4")
+    implementation("org.apache.httpcomponents.client5:httpclient5:5.2.1") {
+        exclude("org.slf4j")
+    }
 }
 
 group = "com.smallcloud"
-version = "0.2.30"
+version = "0.2.49"
 
 repositories {
     mavenCentral()

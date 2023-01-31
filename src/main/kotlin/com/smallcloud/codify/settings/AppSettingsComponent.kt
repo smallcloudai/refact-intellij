@@ -1,9 +1,11 @@
 package com.smallcloud.codify.settings
 
 import com.intellij.ui.JBSplitter
+import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.*
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
+import com.smallcloud.codify.CodifyBundle
 import java.awt.Color
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
@@ -14,141 +16,40 @@ import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
 
-/**
- * Supports creating and managing a [JPanel] for the Settings Dialog.
- */
-
-
-class GhostText(textfield: JTextField, ghostText: String) : FocusListener,
-    DocumentListener, PropertyChangeListener {
-    private val textfield: JTextField
-    private var isEmpty = false
-    private var ghostColor: Color
-    private var foregroundColor: Color? = null
-    private val ghostText: String
-
-    init {
-        this.textfield = textfield
-        this.ghostText = ghostText
-        ghostColor = Color.LIGHT_GRAY
-        textfield.addFocusListener(this)
-        registerListeners()
-        updateState()
-        if (!this.textfield.hasFocus()) {
-            focusLost(null)
-        }
-    }
-
-    fun delete() {
-        unregisterListeners()
-        textfield.removeFocusListener(this)
-    }
-
-    private fun registerListeners() {
-        textfield.document.addDocumentListener(this)
-        textfield.addPropertyChangeListener("foreground", this)
-    }
-
-    private fun unregisterListeners() {
-        textfield.document.removeDocumentListener(this)
-        textfield.removePropertyChangeListener("foreground", this)
-    }
-
-    fun getGhostColor(): Color {
-        return ghostColor
-    }
-
-    fun setGhostColor(ghostColor: Color) {
-        this.ghostColor = ghostColor
-    }
-
-    private fun updateState() {
-        isEmpty = textfield.text.isEmpty()
-        foregroundColor = textfield.foreground
-    }
-
-    override fun focusGained(e: FocusEvent?) {
-        if (isEmpty) {
-            unregisterListeners()
-            try {
-                textfield.text = ""
-                textfield.foreground = foregroundColor
-            } finally {
-                registerListeners()
-            }
-        }
-    }
-
-    override fun focusLost(e: FocusEvent?) {
-        if (isEmpty) {
-            unregisterListeners()
-            try {
-                textfield.text = ghostText
-                textfield.foreground = ghostColor
-            } finally {
-                registerListeners()
-            }
-        }
-    }
-
-    override fun propertyChange(evt: PropertyChangeEvent?) {
-        updateState()
-    }
-
-    override fun changedUpdate(e: DocumentEvent?) {
-        updateState()
-    }
-
-    override fun insertUpdate(e: DocumentEvent?) {
-        updateState()
-    }
-
-    override fun removeUpdate(e: DocumentEvent?) {
-        updateState()
-    }
-}
-
-
 class AppSettingsComponent {
     val splitter: JBSplitter = JBSplitter(true, 0.3f)
     private val mainPanel: JPanel
     private val experimentalPanel: JPanel
     val myTokenText = JBTextField()
     private val myModelText = JBTextField()
-    private val myTemperatureText = JBTextField()
     private val myContrastUrlText = JBTextField()
-    private val myUseForceCompletionMode = JCheckBox()
-    private val myUseMultipleFilesCompletion = JCheckBox()
-    private val myUseStreamingCompletion = JCheckBox()
+    private val myUseForceCompletionMode = JCheckBox(CodifyBundle.message("advancedSettings.useForceCompletionMode"))
+    private val myUseMultipleFilesCompletion = JCheckBox(CodifyBundle.message("advancedSettings.useMultipleFilesCompletion"))
 
     init {
         mainPanel = FormBuilder.createFormBuilder().run {
-            addLabeledComponent(JBLabel("Secret API Key: "), myTokenText, 1, false)
-            addLabeledComponent(JBLabel("Model: "), myModelText, 1, false)
+            addLabeledComponent(JBLabel("${CodifyBundle.message("advancedSettings.secretApiKey")}: "),
+                myTokenText, 1, false)
+            addLabeledComponent(JBLabel("${CodifyBundle.message("advancedSettings.model")}: "), myModelText,
+                (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
             addComponentToRightColumn(
                 JBLabel(
-                    "Leave empty if not sure", UIUtil.ComponentStyle.SMALL,
+                    CodifyBundle.message("advancedSettings.leaveIfNotSure"), UIUtil.ComponentStyle.SMALL,
                     UIUtil.FontColor.BRIGHTER
                 ), 0
             )
-            addLabeledComponent(JBLabel("Temperature: "), myTemperatureText, 1, false)
+            addLabeledComponent(JBLabel("${CodifyBundle.message("advancedSettings.inferenceURL")}: "),
+                myContrastUrlText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
             addComponentToRightColumn(
                 JBLabel(
-                    "Leave empty if not sure", UIUtil.ComponentStyle.SMALL,
-                    UIUtil.FontColor.BRIGHTER
-                ), 0
-            )
-            addLabeledComponent(JBLabel("Inference URL: "), myContrastUrlText, 1, false)
-            addComponentToRightColumn(
-                JBLabel(
-                    "Fill this if you are using your own inference server",
+                    CodifyBundle.message("advancedSettings.inferenceURLDescription"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
-            addLabeledComponent(JBLabel("Use force completion mode: "), myUseForceCompletionMode, 1, false)
-            addComponentToRightColumn(
+            addComponent(myUseForceCompletionMode, (UIUtil.DEFAULT_VGAP * 1.5).toInt())
+            addComponent(
                 JBLabel(
-                    "In this mode use the `alt + /` combination to trigger the completion",
+                    CodifyBundle.message("advancedSettings.useForceCompletionModeDescription","alt + /"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
@@ -156,18 +57,11 @@ class AppSettingsComponent {
         }.panel
 
         experimentalPanel = FormBuilder.createFormBuilder().run {
-            addLabeledComponent(JBLabel("Experimental features "), myUseMultipleFilesCompletion, 0, true)
-            addLabeledComponent(JBLabel("Use multiple files completion mode: "), myUseMultipleFilesCompletion, 1, false)
-            addComponentToRightColumn(
+            addComponent(TitledSeparator(CodifyBundle.message("advancedSettings.experimentalFeatures")))
+            addComponent(myUseMultipleFilesCompletion, UIUtil.LARGE_VGAP)
+            addComponent(
                 JBLabel(
-                    "In this mode plugin uses multiple files in its context",
-                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ), 0
-            )
-            addLabeledComponent(JBLabel("Use streaming completion mode: "), myUseStreamingCompletion, 1, false)
-            addComponentToRightColumn(
-                JBLabel(
-                    "In this mode plugin will render the completion text as soon as it comes",
+                    CodifyBundle.message("advancedSettings.useMultipleFilesCompletionDescription"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
@@ -200,14 +94,6 @@ class AppSettingsComponent {
             myContrastUrlText.text = newText
         }
 
-    var temperatureText: String
-        get() {
-            return myTemperatureText.text
-        }
-        set(newText) {
-            myTemperatureText.text = newText
-        }
-
     var useForceCompletion: Boolean
         get() {
             return myUseForceCompletionMode.isSelected
@@ -222,13 +108,5 @@ class AppSettingsComponent {
         }
         set(value) {
             myUseMultipleFilesCompletion.isSelected = value
-        }
-
-    var useStreamingCompletion: Boolean
-        get() {
-            return myUseStreamingCompletion.isSelected
-        }
-        set(value) {
-            myUseStreamingCompletion.isSelected = value
         }
 }

@@ -7,9 +7,11 @@ import com.intellij.openapi.diagnostic.Logger
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.UsageStats
 import com.smallcloud.codify.notifications.emitError
+import com.smallcloud.codify.struct.SMCExceptions
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Future
 
 private object Cache {
     private val buffer = EvictingQueue.create<Pair<Int, SMCPrediction>>(15)
@@ -93,7 +95,6 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
     val headers = mapOf(
         "Content-Type" to "application/json",
         "Authorization" to "Bearer ${request.token}",
-        "redirect" to "follow",
         "cache" to "no-cache",
         "referrer" to "no-referrer"
     )
@@ -126,21 +127,12 @@ fun streamedInferenceFetch(
     request: SMCRequest,
     onDataReceiveEnded: () -> Unit,
     onDataReceived: (data: SMCPrediction) -> Unit
-): RequestJob? {
-    val cache = Cache.getFromCache(request)
-    if (cache != null)
-        return RequestJob(CompletableFuture.supplyAsync {
-            return@supplyAsync cache
-        }, null)
+): CompletableFuture<Future<*>>? {
     val gson = Gson()
     val uri = request.uri
     val body = gson.toJson(request.body)
     val headers = mapOf(
-        "Content-Type" to "application/json",
         "Authorization" to "Bearer ${request.token}",
-        "redirect" to "follow",
-        "cache" to "no-cache",
-        "referrer" to "no-referrer"
     )
 
     if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return null
@@ -155,7 +147,7 @@ fun streamedInferenceFetch(
     ) {
         val errorMsg = lookForCommonErrors(gson.fromJson(it, JsonObject::class.java), request)
         if (errorMsg != null) {
-            throw Exception(errorMsg)
+            throw SMCExceptions(errorMsg)
         }
         val json = gson.fromJson(it, SMCPrediction::class.java)
         InferenceGlobalContext.lastAutoModel = json.model

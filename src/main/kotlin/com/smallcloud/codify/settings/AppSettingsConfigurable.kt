@@ -53,20 +53,13 @@ class AppSettingsConfigurable : Configurable {
         modified = modified or (mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model != null)
 
         modified =
-            modified or (mySettingsComponent!!.temperatureText.isNotEmpty() && (InferenceGlobalContext.temperature == null ||
-                    mySettingsComponent!!.temperatureText.toFloat() != InferenceGlobalContext.temperature))
-        modified =
-            modified or (mySettingsComponent!!.temperatureText.isEmpty() && InferenceGlobalContext.temperature != null)
-
-        modified =
             modified or (mySettingsComponent!!.contrastUrlText.isNotEmpty() && (!InferenceGlobalContext.hasUserInferenceUri() ||
                     makeUrlGreat(mySettingsComponent!!.contrastUrlText) != InferenceGlobalContext.inferenceUri))
         modified =
             modified or (mySettingsComponent!!.contrastUrlText.isEmpty() && InferenceGlobalContext.hasUserInferenceUri())
 
-        modified = modified || mySettingsComponent!!.useForceCompletion != AppSettingsState.instance.useForceCompletion
-        modified = modified || mySettingsComponent!!.useMultipleFilesCompletion != AppSettingsState.instance.useMultipleFilesCompletion
-        modified = modified || mySettingsComponent!!.useStreamingCompletion != AppSettingsState.instance.useStreamingCompletion
+        modified = modified || mySettingsComponent!!.useForceCompletion != InferenceGlobalContext.useForceCompletion
+        modified = modified || mySettingsComponent!!.useMultipleFilesCompletion != InferenceGlobalContext.useMultipleFilesCompletion
 
         return modified
     }
@@ -85,33 +78,20 @@ class AppSettingsConfigurable : Configurable {
     override fun apply() {
         AccountManager.apiKey = mySettingsComponent!!.tokenText.ifEmpty { null }
         InferenceGlobalContext.model = mySettingsComponent!!.modelText.ifEmpty { null }
-        if (mySettingsComponent!!.temperatureText.isEmpty()) {
-            InferenceGlobalContext.temperature = null
-        } else {
-            try {
-                InferenceGlobalContext.temperature = mySettingsComponent!!.temperatureText.toFloat()
-            } catch (e: Exception) {
-                InferenceGlobalContext.temperature
-            }
-        }
         InferenceGlobalContext.inferenceUri =
             if (mySettingsComponent!!.contrastUrlText.isEmpty()) null else
                 makeUrlGreat(mySettingsComponent!!.contrastUrlText)
-        AppSettingsState.instance.useForceCompletion = mySettingsComponent!!.useForceCompletion
-        AppSettingsState.instance.useMultipleFilesCompletion = mySettingsComponent!!.useMultipleFilesCompletion
-        AppSettingsState.instance.useStreamingCompletion = mySettingsComponent!!.useStreamingCompletion
+        InferenceGlobalContext.useForceCompletion = mySettingsComponent!!.useForceCompletion
+        InferenceGlobalContext.useMultipleFilesCompletion = mySettingsComponent!!.useMultipleFilesCompletion
     }
 
     override fun reset() {
         mySettingsComponent!!.tokenText = AccountManager.apiKey ?: ""
         mySettingsComponent!!.modelText = InferenceGlobalContext.model ?: ""
-        mySettingsComponent!!.temperatureText =
-            if (InferenceGlobalContext.temperature == null) "" else InferenceGlobalContext.temperature.toString()
         mySettingsComponent!!.contrastUrlText =
             if (InferenceGlobalContext.hasUserInferenceUri()) InferenceGlobalContext.inferenceUri.toString() else ""
-        mySettingsComponent!!.useForceCompletion = AppSettingsState.instance.useForceCompletion
-        mySettingsComponent!!.useMultipleFilesCompletion = AppSettingsState.instance.useMultipleFilesCompletion
-        mySettingsComponent!!.useStreamingCompletion = AppSettingsState.instance.useStreamingCompletion
+        mySettingsComponent!!.useForceCompletion = InferenceGlobalContext.useForceCompletion
+        mySettingsComponent!!.useMultipleFilesCompletion = InferenceGlobalContext.useMultipleFilesCompletion
     }
 
     override fun disposeUIResources() {

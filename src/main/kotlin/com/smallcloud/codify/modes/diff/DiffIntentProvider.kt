@@ -1,53 +1,45 @@
 package com.smallcloud.codify.modes.diff
 
+import com.google.gson.annotations.SerializedName
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.util.xmlb.annotations.OptionTag
 import com.smallcloud.codify.settings.AppSettingsState
 
+data class DiffIntendEntry(
+    @OptionTag @SerializedName("label") val intend: String = "",
+    @OptionTag val model: String? = null,
+    @OptionTag @SerializedName("selection-required") val selectionRequired: Boolean = false,
+    @OptionTag @SerializedName("selected_lines_min") val selectedLinesMin: Int = 0,
+    @OptionTag @SerializedName("selected_lines_max") val selectedLinesMax: Int = 99999,
+    @OptionTag val metering: Boolean = false,
+    @OptionTag var functionName: String = ""
+)
+
 class DiffIntentProvider {
-    val defaultIntents: List<String>
-        get(): List<String> {
-            return listOf(
-                "Add type hints",
-                "Remove type hints",
-                "Convert to list comprehension",
-                "Add docstrings"
-            )
-        }
-    val defaultThirdPartyFunctions: List<String>
-        get(): List<String> {
-            return listOf(
-                "Explain code",
-                "Fix bugs",
-                "Complete selected code",
-                "Explain error",
-                "Add console logs",
-                "Make code shorter"
-            )
+    private var _cloudIntents: List<DiffIntendEntry> = emptyList()
+    var defaultThirdPartyFunctions: List<DiffIntendEntry>
+        get(): List<DiffIntendEntry> = _cloudIntents
+        set(newList) {
+            _cloudIntents = newList
         }
 
-    val thirdPartyFunctionsToId: Map<String, String> = hashMapOf(
-        defaultThirdPartyFunctions[0] to "explain-code",
-        defaultThirdPartyFunctions[1] to "fix-bug",
-        defaultThirdPartyFunctions[2] to "complete-selected-code",
-        defaultThirdPartyFunctions[3] to "explain-error",
-        defaultThirdPartyFunctions[4] to "add-console-logs",
-        defaultThirdPartyFunctions[5] to "make-code-shorter",
-    )
 
     var historyIntents
         set(newVal) {
-            AppSettingsState.instance.diffIntentsHistory = newVal
+            AppSettingsState.instance.diffIntentEntriesHistory = newVal
         }
-        get() = AppSettingsState.instance.diffIntentsHistory
+        get() = AppSettingsState.instance.diffIntentEntriesHistory
 
-    fun pushFrontHistoryIntent(newStr: String) {
-        var srcHints = AppSettingsState.instance.diffIntentsHistory.filter { it != newStr }
-        srcHints = srcHints.subList(0, minOf(srcHints.size, 12))
-        AppSettingsState.instance.diffIntentsHistory = listOf(newStr) + srcHints
+
+
+    fun pushFrontHistoryIntent(newStr: DiffIntendEntry) {
+        var srcHints = AppSettingsState.instance.diffIntentEntriesHistory.filter { it != newStr }
+        srcHints = srcHints.subList(0, minOf(srcHints.size, 20))
+        AppSettingsState.instance.diffIntentEntriesHistory = listOf(newStr) + srcHints
     }
 
-    fun lastHistoryIntent(): String? {
-        return AppSettingsState.instance.diffIntentsHistory.firstOrNull()
+    fun lastHistoryEntry(): DiffIntendEntry? {
+        return AppSettingsState.instance.diffIntentEntriesHistory.firstOrNull()
     }
 
     companion object {

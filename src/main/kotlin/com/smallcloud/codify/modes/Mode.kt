@@ -5,12 +5,12 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.CaretEvent
-import com.intellij.openapi.editor.event.DocumentEvent
+import com.smallcloud.codify.modes.completion.structs.DocumentEventExtra
 
 interface Mode {
     var needToRender: Boolean
-    fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor)
-    fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean)
+    fun beforeDocumentChangeNonBulk(event: DocumentEventExtra)
+    fun onTextChange(event: DocumentEventExtra)
     fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext)
     fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext)
     fun onCaretChange(event: CaretEvent)

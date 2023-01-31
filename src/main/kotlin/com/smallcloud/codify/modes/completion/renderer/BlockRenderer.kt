@@ -1,6 +1,5 @@
 package com.smallcloud.codify.modes.completion.renderer
 
-
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorCustomElementRenderer
 import com.intellij.openapi.editor.Inlay
@@ -10,21 +9,32 @@ import java.awt.Graphics
 import java.awt.Rectangle
 
 
-class BlockElementRenderer(
+class AsyncBlockElementRenderer(
+    initialBlockText: List<String>,
     private val editor: Editor,
-    private val blockText: List<String>,
     private val deprecated: Boolean
 ) : EditorCustomElementRenderer {
     private var color: Color? = null
+    var blockText: List<String> = initialBlockText
+        set(value) {
+            synchronized(this) {
+                field = value
+            }
+        }
 
     override fun calcWidthInPixels(inlay: Inlay<*>): Int {
-        val line = blockText.maxByOrNull { it.length }
-        return editor.contentComponent
-            .getFontMetrics(RenderHelper.getFont(editor, deprecated)).stringWidth(line!!)
+        synchronized(this) {
+            val line = blockText.maxByOrNull { it.length }
+            val width = editor.contentComponent
+                .getFontMetrics(RenderHelper.getFont(editor, deprecated)).stringWidth(line!!)
+            return maxOf(width, 1)
+        }
     }
 
     override fun calcHeightInPixels(inlay: Inlay<*>): Int {
-        return editor.lineHeight * blockText.size
+        synchronized(this) {
+            return maxOf(editor.lineHeight * blockText.size, 1)
+        }
     }
 
     override fun paint(
@@ -33,16 +43,18 @@ class BlockElementRenderer(
         targetRegion: Rectangle,
         textAttributes: TextAttributes
     ) {
-        color = color ?: RenderHelper.color
-        g.color = color
-        g.font = RenderHelper.getFont(editor, deprecated)
+        synchronized(this) {
+            color = color ?: RenderHelper.color
+            g.color = color
+            g.font = RenderHelper.getFont(editor, deprecated)
 
-        blockText.withIndex().forEach { (i, line) ->
-            g.drawString(
-                line,
-                0,
-                targetRegion.y + i * editor.lineHeight + editor.ascent
-            )
+            blockText.withIndex().forEach { (i, line) ->
+                g.drawString(
+                    line,
+                    0,
+                    targetRegion.y + i * editor.lineHeight + editor.ascent
+                )
+            }
         }
     }
 }

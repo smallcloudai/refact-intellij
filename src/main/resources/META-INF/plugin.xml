@@ -65,9 +65,9 @@ Stay tuned for code refactoring and human-machine symbiosis! Check out preview v
                                 implementationClass="com.smallcloud.codify.modes.completion.PopupCompletionContributor"
                                 order="first"/>
 
-        <applicationConfigurable parentId="tools" instance="com.smallcloud.codify.settings.AppRootConfigurable"
-                                 id="codify_root"
-                                 displayName="Codify"/>
+        <projectConfigurable parentId="tools" instance="com.smallcloud.codify.settings.AppRootConfigurable"
+                             id="codify_root"
+                             displayName="Codify"/>
         <applicationConfigurable parentId="codify_root"
                                  instance="com.smallcloud.codify.settings.AppSettingsConfigurable"
                                  id="codify_advanced_settings"
@@ -76,6 +76,8 @@ Stay tuned for code refactoring and human-machine symbiosis! Check out preview v
         <actionPromoter implementation="com.smallcloud.codify.listeners.DiffActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.codify.listeners.CancelActionsPromoter"/>
 
+        <applicationService serviceImplementation="com.smallcloud.codify.settings.PrivacyState"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.privacy.PrivacyService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.UsageStats"/>
@@ -105,5 +107,9 @@ Stay tuned for code refactoring and human-machine symbiosis! Check out preview v
             <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
+        <group id="CodifyPrivacy" popup="true" class="com.smallcloud.codify.privacy.CodifyPrivacyGroupAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </group>
     </actions>
+    <resource-bundle>bundles.Codify</resource-bundle>
 </idea-plugin>

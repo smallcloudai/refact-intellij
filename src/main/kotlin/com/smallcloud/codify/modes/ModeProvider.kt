@@ -10,25 +10,26 @@ import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.util.ObjectUtils
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
 import com.intellij.util.xmlb.annotations.Transient
 import com.jetbrains.rd.util.getOrCreate
 import com.smallcloud.codify.PluginState
-import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.codify.listeners.GlobalCaretListener
 import com.smallcloud.codify.listeners.GlobalFocusListener
 import com.smallcloud.codify.modes.completion.CompletionMode
-import com.smallcloud.codify.modes.completion.StreamedCompletionMode
+import com.smallcloud.codify.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.codify.modes.diff.DiffMode
 import com.smallcloud.codify.modes.highlight.HighlightMode
 import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.TimeUnit
 
 
 enum class ModeType {
     Completion,
-    StreamingCompletion,
     Diff,
     Highlight
 }
@@ -38,7 +39,6 @@ class ModeProvider(
     editor: Editor,
     private val modes: Map<ModeType, Mode> = mapOf(
         ModeType.Completion to CompletionMode(),
-        ModeType.StreamingCompletion to StreamedCompletionMode(),
         ModeType.Diff to DiffMode(),
         ModeType.Highlight to HighlightMode()
     ),
@@ -47,29 +47,57 @@ class ModeProvider(
 ) : Disposable, InferenceGlobalContextChangedNotifier {
     private val isEnabled: Boolean
         get() = pluginState.isEnabled
+
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
+    private val beforeTextChangeEventsQueue: ConcurrentLinkedQueue<DocumentEventExtra> = ConcurrentLinkedQueue()
+    private val onTextChangeEventsQueue: ConcurrentLinkedQueue<DocumentEventExtra> = ConcurrentLinkedQueue()
+    private val eventDebounceScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
+        "EventDebounceScheduler", 1
+    )
 
     init {
-        activeMode = if (InferenceGlobalContext.useStreamingCompletion) {
-            modes[ModeType.StreamingCompletion]
-        } else {
-            modes[ModeType.Completion]
-        }
+        activeMode = modes[ModeType.Completion]
         messageBus.connect(this).subscribe(
             InferenceGlobalContextChangedNotifier.TOPIC, this
         )
+        eventDebounceScheduler.scheduleWithFixedDelay({
+            checkAndSendEvents()
+        }, 0, 2, TimeUnit.MILLISECONDS)
+    }
+
+    private fun checkAndSendEvents() {
+        if (beforeTextChangeEventsQueue.isEmpty() || onTextChangeEventsQueue.isEmpty()) {
+            return
+        }
+
+        val now = currentTimeMillis()
+        val oldestBeforeTextEvent = beforeTextChangeEventsQueue.first()
+        if (now - oldestBeforeTextEvent.ts < 20) {
+            return
+        }
+
+        val beforeEvents: MutableList<DocumentEventExtra> = mutableListOf()
+        val onTextEvents: MutableList<DocumentEventExtra> = mutableListOf()
+        beforeTextChangeEventsQueue.forEach { beforeEvents.add(it) }
+        onTextChangeEventsQueue.forEach { onTextEvents.add(it) }
+        beforeTextChangeEventsQueue.clear()
+        onTextChangeEventsQueue.clear()
+
+        val (beforeEvent, afterEvent) = EventAdapter.eventProcess(beforeEvents, onTextEvents)
+
+        activeMode?.beforeDocumentChangeNonBulk(beforeEvent)
+        activeMode?.onTextChange(afterEvent)
     }
 
     fun modeInActiveState(): Boolean = activeMode?.isInActiveState() == true
 
     fun isInCompletionMode(): Boolean =
-        activeMode === modes[ModeType.Completion] || activeMode === modes[ModeType.StreamingCompletion]
+        activeMode === modes[ModeType.Completion]
 
     fun isInDiffMode(): Boolean = activeMode === modes[ModeType.Diff]
     fun isInHighlightMode(): Boolean = activeMode === modes[ModeType.Highlight]
-    fun getCompletionMode(): Mode = if (InferenceGlobalContext.useStreamingCompletion)
-        modes[ModeType.StreamingCompletion]!! else modes[ModeType.Completion]!!
+    fun getCompletionMode(): Mode = modes[ModeType.Completion]!!
 
     fun getDiffMode(): DiffMode = (modes[ModeType.Diff] as DiffMode?)!!
     fun getHighlightMode(): HighlightMode = (modes[ModeType.Highlight] as HighlightMode?)!!
@@ -83,14 +111,13 @@ class ModeProvider(
     fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {
         if (!isEnabled) return
         if (event?.newFragment.toString() == DUMMY_IDENTIFIER) return
-        activeMode?.beforeDocumentChangeNonBulk(event, editor)
+        beforeTextChangeEventsQueue.add(DocumentEventExtra(event, editor, currentTimeMillis()))
     }
-
 
     fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean) {
         if (!isEnabled) return
         if (event?.newFragment.toString() == DUMMY_IDENTIFIER) return
-        activeMode?.onTextChange(event, editor, force)
+        onTextChangeEventsQueue.add(DocumentEventExtra(event, editor, currentTimeMillis(), force))
     }
 
     fun onCaretChange(event: CaretEvent) {
@@ -101,7 +128,6 @@ class ModeProvider(
     fun focusGained() {
         if (!isEnabled) return
     }
-
 
     fun focusLost() {
         if (!isEnabled) return
@@ -115,17 +141,6 @@ class ModeProvider(
     fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
         if (!isEnabled) return
         activeMode?.onEscPressed(editor, caret, dataContext)
-    }
-
-    override fun useStreamingCompletionChanged(newValue: Boolean) {
-        if (isInCompletionMode()) {
-            activeMode?.cleanup()
-            activeMode = if (newValue) {
-                modes[ModeType.StreamingCompletion]
-            } else {
-                modes[ModeType.Completion]
-            }
-        }
     }
 
     override fun dispose() {

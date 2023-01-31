@@ -14,7 +14,7 @@ object RequestCreator {
         scope: String,
         intent: String, functionName: String,
         promptInfo: List<PromptInfo>,
-        isLongThinkModel: Boolean = false,
+        model: String,
         stream: Boolean = false
     ): SMCRequest? {
         var currentBudget = text.length
@@ -52,11 +52,12 @@ object RequestCreator {
             maxEdits = 1,
             stopTokens = listOf("\n\n"),
             stream = stream,
-            poi = poi
+            poi = poi,
+            model = model
         )
 
         return InferenceGlobalContext.makeRequest(
-            requestBody, isLongThinkModel
+            requestBody
         )?.also {
             it.scope = scope
             it.uri = it.uri.resolve(Resources.defaultContrastUrlSuffix)

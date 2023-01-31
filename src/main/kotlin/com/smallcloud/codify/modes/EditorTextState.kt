@@ -3,7 +3,7 @@ package com.smallcloud.codify.modes
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 
-class EditorTextHelper(
+class EditorTextState(
     editor: Editor,
     customOffset: Int
 ) {

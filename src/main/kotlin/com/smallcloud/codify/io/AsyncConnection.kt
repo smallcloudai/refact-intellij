@@ -5,55 +5,63 @@ import com.intellij.openapi.Disposable
 import com.intellij.util.text.findTextRange
 import com.smallcloud.codify.UsageStats.Companion.addStatistic
 import com.smallcloud.codify.account.inferenceLogin
-import io.ktor.utils.io.streams.*
-import org.apache.http.HttpException
-import org.apache.http.HttpResponse
-import org.apache.http.client.config.RequestConfig
-import org.apache.http.client.methods.HttpPost
-import org.apache.http.client.methods.HttpRequestBase
-import org.apache.http.config.ConnectionConfig
-import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy
-import org.apache.http.impl.execchain.RequestAbortedException
-import org.apache.http.impl.nio.client.CloseableHttpAsyncClient
-import org.apache.http.impl.nio.client.HttpAsyncClients
-import org.apache.http.impl.nio.reactor.IOReactorConfig
-import org.apache.http.nio.IOControl
-import org.apache.http.nio.client.methods.AsyncByteConsumer
-import org.apache.http.nio.client.methods.HttpAsyncMethods
-import org.apache.http.protocol.HttpContext
-import java.io.IOException
-import java.net.SocketException
+import com.smallcloud.codify.struct.SMCExceptions
+import org.apache.hc.client5.http.async.methods.AbstractBinResponseConsumer
+import org.apache.hc.client5.http.async.methods.SimpleHttpRequest
+import org.apache.hc.client5.http.config.RequestConfig
+import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
+import org.apache.hc.client5.http.impl.async.HttpAsyncClients
+import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder
+import org.apache.hc.core5.http.*
+import org.apache.hc.core5.http.message.BasicHeader
+import org.apache.hc.core5.http.nio.AsyncRequestProducer
+import org.apache.hc.core5.http.nio.entity.AsyncEntityProducers
+import org.apache.hc.core5.http.nio.support.BasicRequestProducer
+import org.apache.hc.core5.http.ssl.TLS
+import org.apache.hc.core5.http.support.BasicRequestBuilder
+import org.apache.hc.core5.reactor.IOReactorConfig
+import org.apache.hc.core5.ssl.SSLContexts
+import org.apache.hc.core5.util.TimeValue
 import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Future
 
 
 class AsyncConnection(uri: URI) : Disposable {
-    private val ioConfig = IOReactorConfig.custom()
-        .setIoThreadCount(4)
-        .setConnectTimeout(100000)
-        .setSoTimeout(100000)
-        .build()
-    private val requestConfig = RequestConfig.custom()
-        .setSocketTimeout(100000)
-        .setConnectTimeout(100000)
-        .build()
-    private val connectionConfig = ConnectionConfig.custom()
-        .setBufferSize(1024)
-        .build()
-    private val client: CloseableHttpAsyncClient = HttpAsyncClients.custom()
-        .setDefaultIOReactorConfig(ioConfig)
-        .setDefaultConnectionConfig(connectionConfig)
-        .setDefaultRequestConfig(requestConfig)
-        .setMaxConnTotal(4000)
-        .setMaxConnPerRoute(1000)
-        .setKeepAliveStrategy(DefaultConnectionKeepAliveStrategy.INSTANCE)
+    private val client: CloseableHttpAsyncClient = HttpAsyncClients.customHttp2()
+        .setTlsStrategy(
+            ClientTlsStrategyBuilder.create()
+                .setSslContext(SSLContexts.createSystemDefault())
+                .setTlsVersions(TLS.V_1_3, TLS.V_1_2)
+                .build()
+        )
+        .setIOReactorConfig(
+            IOReactorConfig.custom()
+                .setIoThreadCount(8)
+                .setSelectInterval(TimeValue.ofMilliseconds(5))
+                .setTcpNoDelay(true)
+                .build()
+        )
+        .setDefaultRequestConfig(
+            RequestConfig.custom()
+                .setConnectionKeepAlive(TimeValue.ofSeconds(1))
+                .setHardCancellationEnabled(true)
+                .build()
+        )
+        .setDefaultHeaders(
+            listOf<Header>(
+                BasicHeader(HttpHeaders.CONTENT_TYPE, "application/json"),
+                BasicHeader(HttpHeaders.CACHE_CONTROL, "no-cache"),
+                BasicHeader(HttpHeaders.REFERER, "no-referrer"),
+            )
+        )
         .build()
 
     init {
         client.start()
+        client.execute(SimpleHttpRequest.create(Method.GET, uri), null).get()
     }
 
     fun post(
@@ -65,75 +73,86 @@ class AsyncConnection(uri: URI) : Disposable {
         scope: String = "",
         onDataReceiveEnded: () -> Unit,
         onDataReceived: (String) -> Unit
-    ): RequestJob {
-        val post = HttpPost(uri)
-        post.entity = StringEntity(body, Charset.forName("UTF-16"))
+    ): CompletableFuture<Future<*>> {
+        val requestProducer: AsyncRequestProducer = BasicRequestProducer(
+            BasicRequestBuilder
+                .post(uri)
+                .also { builder ->
+                    headers?.forEach { builder.addHeader(it.key, it.value) }
+                    requestProperties?.forEach { builder.addHeader(it.key, it.value) }
+                }
+                .build(),
+            AsyncEntityProducers.create(body, ContentType.APPLICATION_JSON)
+        )
+
         return send(
-            post, headers, requestProperties,
+            requestProducer, uri,
             needVerify = needVerify, scope = scope,
-            onDataReceiveEnded = onDataReceiveEnded, onDataReceived = onDataReceived
+            dataReceiveEnded = onDataReceiveEnded, dataReceived = onDataReceived
         )
     }
 
     private fun send(
-        req: HttpRequestBase,
-        headers: Map<String, String>? = null,
-        requestProperties: Map<String, String>? = null,
+        requestProducer: AsyncRequestProducer,
+        uri: URI,
         needVerify: Boolean = false,
         scope: String = "",
-        onDataReceiveEnded: () -> Unit,
-        onDataReceived: (String) -> Unit
-    ): RequestJob {
-        headers?.forEach { req.addHeader(it.key, it.value) }
-        requestProperties?.forEach { req.addHeader(it.key, it.value) }
-
-        val future = CompletableFuture.supplyAsync {
+        dataReceiveEnded: () -> Unit,
+        dataReceived: (String) -> Unit
+    ): CompletableFuture<Future<*>> {
+        return CompletableFuture.supplyAsync {
             if (needVerify) inferenceLogin()
-        }.thenApplyAsync {
-            try {
-                client.execute(
-                    HttpAsyncMethods.create(req),
-                    object : AsyncByteConsumer<Void?>() {
-                        var bufferStr = ""
+        }.thenApply {
+            return@thenApply client.execute(
+                requestProducer,
+                object : AbstractBinResponseConsumer<Void?>() {
+                    var bufferStr = ""
 
-                        @Throws(IOException::class)
-                        override fun onByteReceived(buffer: ByteBuffer, ioctrl: IOControl?) {
-                            bufferStr += Charset.forName("UTF-8").decode(buffer)
-                            val (dataPieces, maybeLeftOverBuffer) = lookForCompletedDataInStreamingBuf(bufferStr)
-                            dataPieces.forEach { onDataReceived(it) }
-                            if (maybeLeftOverBuffer == null) {
-                                return
-                            } else {
-                                bufferStr = maybeLeftOverBuffer
-                            }
-                        }
+                    override fun releaseResources() {
+                    }
 
-                        @Throws(HttpException::class, IOException::class)
-                        override fun onResponseReceived(response: HttpResponse) {
-                        }
+                    override fun capacityIncrement(): Int {
+                        return 128
+                    }
 
-                        @Throws(java.lang.Exception::class)
-                        override fun buildResult(context: HttpContext?): Void? {
-                            onDataReceiveEnded()
-                            return null
+                    override fun informationResponse(
+                        response: HttpResponse?,
+                        context: org.apache.hc.core5.http.protocol.HttpContext?
+                    ) {
+                    }
+
+                    override fun data(src: ByteBuffer?, endOfStream: Boolean) {
+                        src ?: return
+                        bufferStr += Charset.forName("UTF-8").decode(src)
+                        if (bufferStr.indexOf("error") != -1 ||
+                            bufferStr.indexOf("human_readable_message") != -1) {
+                            dataReceived(bufferStr)
+                            return
                         }
-                    },
-                    null
-                ).get()
-            } catch (e: SocketException) {
-                // request aborted, it's ok for small files
-                throw e
-            } catch (e: RequestAbortedException) {
-                // request aborted, it's ok
-                throw e
-            } catch (e: Exception) {
-                addStatistic(false, scope, req.uri.toString(), e.toString())
-                throw e
-            } finally {
-                req.releaseConnection()
-            }
+                        val (dataPieces, maybeLeftOverBuffer) = lookForCompletedDataInStreamingBuf(bufferStr)
+                        dataPieces.forEach { dataReceived(it) }
+                        if (maybeLeftOverBuffer == null) {
+                            return
+                        } else {
+                            bufferStr = maybeLeftOverBuffer
+                        }
+                    }
+
+                    override fun start(response: HttpResponse?, contentType: ContentType?) {
+                    }
+
+                    override fun buildResult(): Void? {
+                        dataReceiveEnded()
+                        return null
+                    }
+
+                    override fun failed(cause: Exception?) {
+                        if (cause !is SMCExceptions)
+                            addStatistic(false, scope, uri.toString(), cause.toString())
+                    }
+                }, null
+            )
         }
-        return RequestJob(future, req)
     }
 
 

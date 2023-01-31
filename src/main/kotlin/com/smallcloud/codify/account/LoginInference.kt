@@ -37,7 +37,10 @@ fun inferenceLogin(): String {
             if (body.has("inference_message") && body.get("inference_message").asString.isNotEmpty()) {
                 PluginState.instance.inferenceMessage = body.get("codify_message").asString
             }
-            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED
+                || InferenceGlobalContext.status == ConnectionStatus.ERROR) {
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            }
             return "OK"
         } else if (body.has("detail")) {
             logError("inference_login", body.get("detail").asString)

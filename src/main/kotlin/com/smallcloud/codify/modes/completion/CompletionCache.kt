@@ -1,10 +1,7 @@
 package com.smallcloud.codify.modes.completion
 
-
-data class CompletionHash(
-    val text: String,
-    val offset: Int,
-)
+import com.smallcloud.codify.modes.completion.structs.Completion
+import com.smallcloud.codify.modes.completion.structs.CompletionHash
 
 
 object CompletionCache : LinkedHashMap<CompletionHash, Completion>() {
@@ -18,16 +15,16 @@ object CompletionCache : LinkedHashMap<CompletionHash, Completion>() {
     fun addCompletion(completion: Completion, maxSize: Int = 1600) {
         cleanup(maxSize)
 
-        for (i in 0 until completion.completion.length) {
+        for (i in 0 until completion.visualizedCompletion.length) {
             val newCompletion = completion.copy(
                 originalText = completion.originalText.substring(0, completion.startIndex) +
-                        completion.completion.substring(0, i) +
+                        completion.realCompletion.substring(0, i) +
                         completion.originalText.substring(completion.startIndex),
-                predictedText = completion.predictedText.substring(0, completion.startIndex) +
-                        completion.predictedText.substring(completion.startIndex + i),
-                completion = completion.completion.substring(i),
+                visualizedCompletion = completion.visualizedCompletion.substring(i),
+                realCompletion = completion.realCompletion.substring(i),
                 startIndex = completion.startIndex + i,
-                endIndex = completion.endIndex + i,
+                visualizedEndIndex = completion.visualizedEndIndex + i,
+                realCompletionIndex = completion.realCompletionIndex + i,
                 isFromCache = true
             )
             this[CompletionHash(newCompletion.originalText, newCompletion.startIndex)] = newCompletion
@@ -41,12 +38,11 @@ object CompletionCache : LinkedHashMap<CompletionHash, Completion>() {
             val newCompletion = completion.copy(
                 originalText = completion.originalText.substring(0, completion.startIndex - i) +
                         completion.originalText.substring(completion.startIndex),
-                predictedText = completion.predictedText.substring(0, completion.startIndex - i) +
-                        completion.originalText.substring(completion.startIndex - i, completion.startIndex) +
-                        completion.predictedText.substring(completion.startIndex + i),
-                completion = beforeLeft.substring(0, i).reversed() + completion.completion,
+                visualizedCompletion = beforeLeft.substring(0, i).reversed() + completion.visualizedCompletion,
+                realCompletion = beforeLeft.substring(0, i).reversed() + completion.realCompletion,
                 startIndex = completion.startIndex - i,
-                endIndex = completion.endIndex - i,
+                visualizedEndIndex = completion.visualizedEndIndex - i,
+                realCompletionIndex = completion.realCompletionIndex - i,
                 isFromCache = true
             )
             this[CompletionHash(newCompletion.originalText, newCompletion.startIndex)] = newCompletion

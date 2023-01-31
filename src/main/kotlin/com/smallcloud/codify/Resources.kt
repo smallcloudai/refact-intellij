@@ -2,6 +2,7 @@ package com.smallcloud.codify
 
 import com.intellij.ide.plugins.PluginManager
 import com.intellij.openapi.util.IconLoader
+import com.intellij.openapi.util.Key
 import java.net.URI
 import javax.swing.Icon
 
@@ -20,13 +21,11 @@ object Resources {
     val defaultReportUrl: URI = URI("https://www.smallcloud.ai/v1/usage-stats")
     const val defaultTemperature: Float = 0.2f
     const val defaultModel: String = "CONTRASTcode"
-    const val defaultLongThinkModel: String = "longthink/experimental"
     val version: String = getVersion()
     const val client: String = "jetbrains"
     const val loginCoolDown: Int = 30 // sec
     const val inferenceLoginCoolDown: Int = 300 // sec
-    const val waitWebsiteLoginStr: String = "Waiting for website login..."
-    const val pluginDescriptionStr: String = "Codify: AI autocomplete and refactoring"
+    const val codifyStr: String = "Codify"
 
     object Icons {
         val LOGO_FULL_WHITE: Icon = IconLoader.getIcon("/icons/logo-full-white.svg", Resources::class.java)
@@ -36,5 +35,9 @@ object Resources {
         val LOGO_RED_16x16: Icon = IconLoader.getIcon("/icons/codify_red_16x16.svg", Resources::class.java)
         val LOGO_LIGHT_16x16: Icon = IconLoader.getIcon("/icons/codify_light_16x16.svg", Resources::class.java)
         val LOGO_DARK_16x16: Icon = IconLoader.getIcon("/icons/codify_dark_16x16.svg", Resources::class.java)
+    }
+
+    object ExtraUserDataKeys {
+        val addedFromHL = Key.create<Boolean>("codify.added_from_hl")
     }
 }

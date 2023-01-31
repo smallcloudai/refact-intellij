@@ -37,21 +37,24 @@ class FilesCollector(
 ) : FileEditorManagerListener {
     private val fileEditorManager: FileEditorManager = FileEditorManager.getInstance(project)
     private var filesInformation: LinkedHashSet<FileInformationEntry> = linkedSetOf()
-    private val projectPaths: List<Path> = ModuleRootManager.getInstance(
-        ModuleManager.getInstance(project).modules[0]).sourceRoots.map {
-            makePath(it.path)
-    }
+    private val projectPaths: List<Path> =
+        ModuleManager.getInstance(project).modules
+            .map {
+                ModuleRootManager.getInstance(it)
+            }
+            .map {
+                it.sourceRoots.map {
+                    makePath(it.path)
+                }
+            }
+            .flatten()
 
     init {
-        FilenameIndex.getAllFilenames(project)
-            .mapNotNull {
-                FilenameIndex.getVirtualFilesByName(it, ProjectScope.getProjectScope(project))
-                    .find { virtualFile ->
-                        virtualFile.isValid && virtualFile.exists() && virtualFile.isInLocalFileSystem
-                                && !virtualFile.isDirectory
+        FilenameIndex.getAllFilenames(project).mapNotNull {
+                FilenameIndex.getVirtualFilesByName(it, ProjectScope.getProjectScope(project)).find { virtualFile ->
+                        virtualFile.isValid && virtualFile.exists() && virtualFile.isInLocalFileSystem && !virtualFile.isDirectory
                     }
-            }
-            .forEach {
+            }.forEach {
                 makeEntry(it, projectPaths)
             }
 
@@ -65,10 +68,11 @@ class FilesCollector(
         }
 
         val filePath = makePath(file.path)
-        val relativeFilePath = projectPaths
-            .map {filePath.relativeTo(it).toString() }
-            .minBy { it.length }
-
+        val relativeFilePath: String = if (projectPaths.isNotEmpty()) {
+            projectPaths.map { filePath.relativeTo(it).toString() }.minBy { it.length }
+        } else {
+            filePath.toString()
+        }
         val entry = FileInformationEntry(file, 0, relativeFilePath, fileEditorManager)
         filesInformation.add(entry)
         entry.getEditor()?.let { editor ->
@@ -77,13 +81,11 @@ class FilesCollector(
             }
 
             ObjectUtils.consumeIfCast((editor as PsiAwareTextEditorImpl).editor, EditorEx::class.java) {
-                it?.addFocusListener(
-                    object : FocusChangeListener {
-                        override fun focusGained(editor: Editor) {
-                            entry.lastEditorShown = System.currentTimeMillis()
-                        }
+                it?.addFocusListener(object : FocusChangeListener {
+                    override fun focusGained(editor: Editor) {
+                        entry.lastEditorShown = System.currentTimeMillis()
                     }
-                )
+                })
             }
         }
     }

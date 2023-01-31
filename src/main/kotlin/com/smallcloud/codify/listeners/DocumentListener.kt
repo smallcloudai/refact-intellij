@@ -7,6 +7,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.BulkAwareDocumentListener
 import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.modes.ModeProvider
 

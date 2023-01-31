@@ -8,9 +8,9 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.CaretEvent
-import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.smallcloud.codify.Resources
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.RequestJob
@@ -19,6 +19,7 @@ import com.smallcloud.codify.modes.Mode
 import com.smallcloud.codify.modes.ModeProvider.Companion.getOrCreateModeProvider
 import com.smallcloud.codify.modes.ModeType
 import com.smallcloud.codify.modes.completion.prompt.RequestCreator
+import com.smallcloud.codify.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.codify.modes.diff.dialog.DiffDialog
 import com.smallcloud.codify.modes.highlight.HighlightContext
 import com.smallcloud.codify.struct.SMCPrediction
@@ -27,7 +28,6 @@ import dev.gitlive.difflib.DiffUtils
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
-
 
 class DiffMode(
     override var needToRender: Boolean = true
@@ -58,26 +58,33 @@ class DiffMode(
             processTask?.get()
         } catch (_: CancellationException) {
         } finally {
-            finishRenderRainbow()
-            diffLayout?.cancelPreview()
-            diffLayout = null
-            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            if (InferenceGlobalContext.status != ConnectionStatus.DISCONNECTED &&
+                InferenceGlobalContext.status != ConnectionStatus.ERROR
+            ) {
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            }
+            app.invokeAndWait {
+                finishRenderRainbow()
+                diffLayout?.cancelPreview()
+                diffLayout = null
+            }
             if (editor != null) {
                 getOrCreateModeProvider(editor).switchMode()
             }
         }
     }
 
-    override fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {
-        cancel(editor)
+    override fun beforeDocumentChangeNonBulk(event: DocumentEventExtra) {
+        cancel(event.editor)
     }
 
-    override fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean) {
+    override fun onTextChange(event: DocumentEventExtra) {
     }
 
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
         diffLayout?.applyPreview()
         diffLayout = null
+        editor.putUserData(Resources.ExtraUserDataKeys.addedFromHL, lastFromHL)
         if (lastFromHL) {
             getOrCreateModeProvider(editor).getHighlightMode().actionPerformed(editor, true)
         } else {
@@ -123,34 +130,28 @@ class DiffMode(
         val startPosition: LogicalPosition
         val finishPosition: LogicalPosition
         val request: SMCRequest
+        if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         if (diffLayout == null || highlightContext != null) {
-            val intent: String
-            val isLongThinkModel: Boolean
+            val entry: DiffIntendEntry
             var functionName = if (highlightContext == null) "diff-selection" else "diff-atcursor"
             if (highlightContext == null) {
-                val dialog = DiffDialog(editor.project)
+                val dialog = DiffDialog(editor)
                 if (!dialog.showAndGet()) return
-                intent = dialog.messageText
-                isLongThinkModel = dialog.isLongThinkModel
-                if (!isLongThinkModel) {
-                    DiffIntentProvider.instance.pushFrontHistoryIntent(intent)
-                } else {
-                    functionName = DiffIntentProvider.instance.thirdPartyFunctionsToId.getValue(intent)
-                }
+                entry = dialog.entry
+                DiffIntentProvider.instance.pushFrontHistoryIntent(entry)
                 lastFromHL = false
             } else {
-                intent = highlightContext.intent
+                entry = highlightContext.entry
                 startSelectionOffset = highlightContext.startOffset
                 endSelectionOffset = highlightContext.endOffset
-                isLongThinkModel = false
                 lastFromHL = true
             }
 
             request = RequestCreator.create(
                 fileName, editor.document.text,
                 startSelectionOffset, endSelectionOffset,
-                scope, intent, functionName, listOf(),
-                isLongThinkModel = isLongThinkModel
+                scope, entry.intend, functionName, listOf(),
+                model = entry.model ?: (InferenceGlobalContext.model ?: Resources.defaultModel)
             ) ?: return
             startPosition = editor.offsetToLogicalPosition(startSelectionOffset)
             finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1)
@@ -188,15 +189,9 @@ class DiffMode(
             request.body.maxTokens = 550
             request.body.maxEdits = if (request.body.functionName == "diff-atcursor") 1 else 10
 
-            if (InferenceGlobalContext.status == ConnectionStatus.CONNECTED) {
-                InferenceGlobalContext.status = ConnectionStatus.PENDING
-            }
+            InferenceGlobalContext.status = ConnectionStatus.PENDING
             maybeLastReqJob = inferenceFetch(request)
             val lastReqJob = maybeLastReqJob ?: return
-
-            if (InferenceGlobalContext.status == ConnectionStatus.CONNECTED) {
-                InferenceGlobalContext.status = ConnectionStatus.PENDING
-            }
 
             val prediction = lastReqJob.future.get() as SMCPrediction
             if (prediction.status == null) {
@@ -205,8 +200,8 @@ class DiffMode(
                 return
             }
 
-            val predictedText = prediction.choices?.firstOrNull()?.files?.get(request.body.cursorFile)
-            val finishReason = prediction.choices?.firstOrNull()?.finishReason
+            val predictedText = prediction.choices.firstOrNull()?.files?.get(request.body.cursorFile)
+            val finishReason = prediction.choices.firstOrNull()?.finishReason
             if (predictedText == null || finishReason == null) {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = "Request was succeeded but there is no predicted data"
@@ -239,14 +234,12 @@ class DiffMode(
             }
             getOrCreateModeProvider(editor).switchMode()
         } catch (e: ExecutionException) {
-            finishRenderRainbow()
             catchNetExceptions(e.cause)
             getOrCreateModeProvider(editor).switchMode()
         } catch (e: Exception) {
-            finishRenderRainbow()
-            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.status = ConnectionStatus.ERROR
             InferenceGlobalContext.lastErrorMsg = e.message
-            logger.warn("Exception while completion request processing", e)
+            logger.warn("Exception while diff request processing", e)
             getOrCreateModeProvider(editor).switchMode()
         }
     }
@@ -254,7 +247,7 @@ class DiffMode(
     private fun catchNetExceptions(e: Throwable?) {
         InferenceGlobalContext.status = ConnectionStatus.ERROR
         InferenceGlobalContext.lastErrorMsg = e?.message
-        logger.warn("Exception while completion request processing", e)
+        logger.warn("Exception while diff request processing", e)
     }
 
     private fun getActiveFile(document: Document): String? {

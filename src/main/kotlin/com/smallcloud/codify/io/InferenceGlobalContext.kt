@@ -145,27 +145,12 @@ object InferenceGlobalContext {
                 .useMultipleFilesCompletionChanged(newValue)
         }
 
-    var useStreamingCompletion: Boolean
-        get() = AppSettingsState.instance.useStreamingCompletion
-        set(newValue) {
-            if (newValue == useStreamingCompletion) return
-            messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .useStreamingCompletionChanged(newValue)
-        }
-
     fun makeRequest(
         requestData: SMCRequestBody,
-        isLongThinkModel: Boolean
     ): SMCRequest? {
         val apiKey = AccountManager.apiKey
         if (apiKey.isNullOrEmpty()) return null
 
-        if (!isLongThinkModel) {
-            requestData.model = if (model != null) model!! else Resources.defaultModel
-        } else {
-            requestData.model = if (longThinkModel != null) longThinkModel!! else Resources.defaultLongThinkModel
-        }
         requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
         requestData.client = "${Resources.client}-${Resources.version}"
         return inferenceUri?.let { SMCRequest(it, requestData, apiKey) }

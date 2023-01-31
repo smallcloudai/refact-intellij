@@ -294,7 +294,8 @@ class CompletionMode(
         cancelOrClose()
     }
 
-    override fun onCaretChange(event: CaretEvent) {}
+    override fun onCaretChange(event: CaretEvent) {
+    }
 
     override fun caretPositionChanged(event: CaretEvent) {
         cancelOrClose()

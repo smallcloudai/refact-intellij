@@ -55,21 +55,19 @@ class CompletionState(
     ): Completion {
         val startIndex: Int
         var endIndex: Int
-        if (editorState.offset < requestedText.length && requestedText[editorState.offset] != '\n') {
-            startIndex = minOf(requestedText.length, headIndex)
-            val firstEosIndex = requestedText.substring(startIndex).indexOfFirst { it == '\n' }
-            endIndex = startIndex + (if (firstEosIndex == -1) 0 else firstEosIndex)
-            endIndex = minOf(requestedText.length, endIndex)
-        } else {
-            startIndex = minOf(requestedText.length, editorState.offset)
-            endIndex = startIndex
-        }
+        startIndex = minOf(requestedText.length, headIndex)
+        val firstEosIndex = requestedText.substring(startIndex).indexOfFirst { it == '\n' }
+        endIndex = startIndex + (if (firstEosIndex == -1) 0 else firstEosIndex)
+        endIndex = minOf(requestedText.length, endIndex)
 
         val lines = completion.split('\n')
         val hasMultiline = lines.size > 1
         var firstLine = lines.first()
         var offset = 0
-        val editorCurrentLineWithOffset = editorState.currentLine.substring(editorState.offsetByCurrentLine - 1)
+
+        val editorCurrentLineWithOffset = if (editorState.offsetByCurrentLine - 1 > 1)
+            editorState.currentLine.substring(editorState.offsetByCurrentLine - 1)
+        else editorState.currentLine
         for (i in -1 downTo -firstLine.length) {
             if (editorCurrentLineWithOffset.length <= -i) {
                 break

@@ -73,12 +73,12 @@ class AsyncInlayer(
     }
 
     fun addText(text: String) {
+        if (disposed) { dispose() }
         synchronized(this) {
-            if (disposed) return
             collectedText += text
             val lines = collectedText.split('\n')
 
-            if (lineInlay == null) {
+            if (lineInlay == null && !disposed) {
                 createLine(lines[0])
             } else {
                 lineRenderer?.text = lines[0]
@@ -87,7 +87,7 @@ class AsyncInlayer(
 
             if (lines.size > 1) {
                 val subList = lines.subList(1, lines.size)
-                if (blockInlay == null) {
+                if (blockInlay == null && !disposed) {
                     createBlock(subList)
                 } else {
                     blockRenderer?.blockText = subList

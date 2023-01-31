@@ -37,7 +37,11 @@ object EventAdapter {
     }
 
     fun eventProcess(beforeText: List<DocumentEventExtra>, afterText: List<DocumentEventExtra>)
-            : Pair<DocumentEventExtra, DocumentEventExtra> {
+            : Pair<DocumentEventExtra?, DocumentEventExtra?> {
+        if (beforeText.isNotEmpty() && afterText.isEmpty()) {
+            return beforeText.last() to null
+        }
+
         if (afterText.last().force) {
             return beforeText.last() to afterText.last()
         }

@@ -67,7 +67,7 @@ class ModeProvider(
     }
 
     private fun checkAndSendEvents() {
-        if (beforeTextChangeEventsQueue.isEmpty() || onTextChangeEventsQueue.isEmpty()) {
+        if (beforeTextChangeEventsQueue.isEmpty()) {
             return
         }
 
@@ -86,8 +86,8 @@ class ModeProvider(
 
         val (beforeEvent, afterEvent) = EventAdapter.eventProcess(beforeEvents, onTextEvents)
 
-        activeMode?.beforeDocumentChangeNonBulk(beforeEvent)
-        activeMode?.onTextChange(afterEvent)
+        beforeEvent?.let { activeMode?.beforeDocumentChangeNonBulk(it) }
+        afterEvent?.let { activeMode?.onTextChange(it) }
     }
 
     fun modeInActiveState(): Boolean = activeMode?.isInActiveState() == true

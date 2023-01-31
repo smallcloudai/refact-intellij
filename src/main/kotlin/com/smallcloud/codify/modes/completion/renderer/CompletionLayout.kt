@@ -13,10 +13,12 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.util.alsoIfNull
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.text.findTextRange
 import com.smallcloud.codify.modes.completion.structs.Completion
 import org.jetbrains.annotations.NotNull
 import java.awt.Color
+import java.util.concurrent.Future
 
 class AsyncCompletionLayout(
     private val editor: Editor
@@ -26,12 +28,16 @@ class AsyncCompletionLayout(
     private var inlayer: AsyncInlayer? = null
     private var blockEvents: Boolean = false
     private var textCache: String = ""
+    private var isUpdating: Boolean = true
+    private var updateTask: Future<*>? = null
+    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("AsyncCompletionLayout", 1)
     var rendered: Boolean = false
-    var highlighted: Boolean = false
+    private var highlighted: Boolean = false
     var lastCompletionData: Completion? = null
     private var rangeHighlighters: MutableList<RangeHighlighter> = mutableListOf()
 
     override fun dispose() {
+        stopUpdate()
         ApplicationManager.getApplication().invokeAndWait {
             rendered = false
             highlighted = false
@@ -42,31 +48,43 @@ class AsyncCompletionLayout(
         }
     }
 
+    private fun stopUpdate() {
+        isUpdating = false
+        updateTask?.let {
+            it.get()
+            updateTask = null
+        }
+    }
+
     fun update(
         completionData: Completion,
         needToRender: Boolean,
         animation: Boolean
-    ) {
-        val textRange = completionData.visualizedCompletion.findTextRange(textCache) ?: return
-        val newText = completionData.visualizedCompletion.substring(textRange.length)
-        if (newText.isEmpty()) return
-        textCache = completionData.visualizedCompletion
-        lastCompletionData = completionData
-        try {
-            blockEvents = true
-            editor.document.startGuardedBlockChecking()
-            inlayer.alsoIfNull {
-                inlayer = AsyncInlayer(editor, completionData.startIndex)
+    ): Future<*>? {
+        if (!isUpdating) return null
+        updateTask = scheduler.submit {
+            val textRange = completionData.visualizedCompletion.findTextRange(textCache) ?: return@submit
+            val newText = completionData.visualizedCompletion.substring(textRange.length)
+            if (newText.isEmpty()) return@submit
+            textCache = completionData.visualizedCompletion
+            lastCompletionData = completionData
+            try {
+                blockEvents = true
+                editor.document.startGuardedBlockChecking()
+                inlayer.alsoIfNull {
+                    inlayer = AsyncInlayer(editor, completionData.startIndex)
+                }
+                highlight(completionData)
+                renderAndUpdateState(needToRender, animation, newText)
+            } catch (ex: Exception) {
+                Disposer.dispose(this)
+                throw ex
+            } finally {
+                editor.document.stopGuardedBlockChecking()
+                blockEvents = false
             }
-            highlight(completionData)
-            renderAndUpdateState(needToRender, animation, newText)
-        } catch (ex: Exception) {
-            Disposer.dispose(this)
-            throw ex
-        } finally {
-            editor.document.stopGuardedBlockChecking()
-            blockEvents = false
         }
+        return updateTask
     }
 
     private fun renderAndUpdateState(
@@ -118,6 +136,7 @@ class AsyncCompletionLayout(
         caret ?: return
         val project = editor.project ?: return
         try {
+            stopUpdate()
             ApplicationManager.getApplication().invokeAndWait {
                 val file: PsiFile =
                     PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return@invokeAndWait

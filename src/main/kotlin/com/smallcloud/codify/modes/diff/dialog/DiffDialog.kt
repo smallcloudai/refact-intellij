@@ -11,6 +11,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
+import com.intellij.ui.layout.listCellRenderer
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.smallcloud.codify.CodifyBundle
@@ -43,9 +44,9 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
 
     private fun canUseEntry(entry: DiffIntendEntry) : Boolean {
         return if (fromHL) {
-            !entry.selectionRequired
+            entry.supportHighlight
         } else {
-            true
+            entry.supportSelection
         }
     }
 
@@ -53,7 +54,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
         isResizable = false
         title = Resources.codifyStr
         descriptionLabel.text = if (fromHL) descriptionHLStr else descriptionDiffStr
-//        warning.foreground = JBUI.CurrentTheme.Table.BACKGROUND
+        warning.foreground = JBUI.CurrentTheme.Table.BACKGROUND
 
         val historyIntents = DiffIntentProvider.instance.historyIntents
         thirdPartyFunctions = DiffIntentProvider.instance.defaultThirdPartyFunctions
@@ -74,7 +75,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                             cellHasFocus: Boolean
                         ): Component {
                             val c: Component
-                            if (thirdPartyFunctions[index].metering) {
+                            if (thirdPartyFunctions[index].metering > 0) {
                                 foreground = editor.colorsScheme.defaultForeground
                                 c = super.getListCellRendererComponent(list, (value as DiffIntendEntry).intend + " \uD83E\uDDE0",
                                     index, isSelected, cellHasFocus)
@@ -135,7 +136,6 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                             historyIndex = minOf(maxOf(historyIndex, -2), historyIntents.size - 1)
                             if (historyIndex > -1) {
                                 entry = historyIntents[historyIndex]
-                                text = entry.intend + if (entry.metering) " \uD83E\uDDE0" else ""
                             } else if (historyIndex == -1) {
                                 text = previousIntent
                                 entry = DiffIntendEntry("")
@@ -161,11 +161,16 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
             override fun paintComponent(pG: Graphics) {
                 val g = pG.create() as Graphics2D
                 val oldForeground = foreground
-                if (!canUseEntry(entry))
+                val oldText = text
+                if (!canUseEntry(entry)) {
                     foreground = JBUI.CurrentTheme.Label.disabledForeground()
+                }
+                if (entry.metering > 0) {
+                    text = "$text \uD83E\uDDE0"
+                }
                 super.paintComponent(pG)
-                if (!canUseEntry(entry))
-                    foreground = oldForeground
+                foreground = oldForeground
+                text = oldText
                 if (hint.isEmpty() || text.isNotEmpty()) {
                     return
                 }
@@ -186,10 +191,12 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
             it.addMouseListener(object : MouseListener {
                 override fun mouseClicked(event: MouseEvent?) {
                     if (event == null) return
-                    msgTextField.text = it.selectedValue.intend
-                    if (event.clickCount == 2 && event.button == MouseEvent.BUTTON1) {
+                    if (event.button == MouseEvent.BUTTON1) {
                         entry = it.selectedValue
                         lastSelectedIndex = it.selectedIndex
+                    }
+                    if (event.clickCount == 2 && event.button == MouseEvent.BUTTON1) {
+                        doOKAction()
                     }
                 }
                 override fun mousePressed(e: MouseEvent?) {}
@@ -201,7 +208,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                 if (e == null) return@addListSelectionListener
                 try {
                     entry = it.selectedValue
-                    msgTextField.text = entry.intend + if (entry.metering) " \uD83E\uDDE0" else ""
+//                    msgTextField.text = entry.intend
                 } catch (e: Exception) {
                     Logger.getInstance(DiffDialog::class.java).warn(e.message)
                 }
@@ -247,6 +254,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
             _entry = newVal
             val canUse = canUseEntry(_entry)
             okAction.isEnabled = canUse
+            msgTextField.text = entry.intend
             if (!canUse) {
                 warning.foreground = JBColor.RED
                 warning.text = "$warningPrefixText ${_entry.intend}"

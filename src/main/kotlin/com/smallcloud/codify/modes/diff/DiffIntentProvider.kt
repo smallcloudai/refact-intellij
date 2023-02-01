@@ -8,10 +8,12 @@ import com.smallcloud.codify.settings.AppSettingsState
 data class DiffIntendEntry(
     @OptionTag @SerializedName("label") val intend: String = "",
     @OptionTag val model: String? = null,
-    @OptionTag @SerializedName("selection-required") val selectionRequired: Boolean = false,
+    @OptionTag @SerializedName("supports_highlight") val supportHighlight: Boolean = true,
+    @OptionTag @SerializedName("supports_selection") val supportSelection: Boolean = true,
     @OptionTag @SerializedName("selected_lines_min") val selectedLinesMin: Int = 0,
     @OptionTag @SerializedName("selected_lines_max") val selectedLinesMax: Int = 99999,
-    @OptionTag val metering: Boolean = false,
+    @OptionTag val metering: Int = 0,
+    @OptionTag @SerializedName("3rd_party") val thirdParty: Boolean = false,
     @OptionTag var functionName: String = ""
 )
 

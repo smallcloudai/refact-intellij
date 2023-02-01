@@ -1,6 +1,5 @@
 package com.smallcloud.codify.modes.diff.dialog
 
-import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -11,14 +10,12 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
-import com.intellij.ui.layout.listCellRenderer
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.smallcloud.codify.CodifyBundle
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.modes.diff.DiffIntendEntry
 import com.smallcloud.codify.modes.diff.DiffIntentProvider
-import org.bouncycastle.oer.OERDefinition.placeholder
 import java.awt.Component
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -42,7 +39,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
     private lateinit var panel: JPanel
     private var previousIntent: String = ""
 
-    private fun canUseEntry(entry: DiffIntendEntry) : Boolean {
+    private fun canUseEntry(entry: DiffIntendEntry): Boolean {
         return if (fromHL) {
             entry.supportHighlight
         } else {
@@ -77,12 +74,20 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                             val c: Component
                             if (thirdPartyFunctions[index].metering > 0) {
                                 foreground = editor.colorsScheme.defaultForeground
-                                c = super.getListCellRendererComponent(list, (value as DiffIntendEntry).intend + " \uD83E\uDDE0",
-                                    index, isSelected, cellHasFocus)
+                                var suffix = " \uD83E\uDDE0"
+                                if (thirdPartyFunctions[index].thirdParty) {
+                                    suffix += " (coming up)"
+                                }
+                                c = super.getListCellRendererComponent(
+                                    list, (value as DiffIntendEntry).intend + suffix,
+                                    index, isSelected, cellHasFocus
+                                )
                             } else {
                                 foreground = JBColor.GRAY
-                                c = super.getListCellRendererComponent(list, (value as DiffIntendEntry).intend,
-                                    index, isSelected, cellHasFocus)
+                                c = super.getListCellRendererComponent(
+                                    list, (value as DiffIntendEntry).intend,
+                                    index, isSelected, cellHasFocus
+                                )
                             }
                             return c
                         }
@@ -121,6 +126,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
         msgTextField = object : JBTextField() {
             private var hint: String = "↓ commands; ↑ history"
             var historyIndex = -1
+
             init {
                 addKeyListener(object : KeyListener {
                     override fun keyTyped(e: KeyEvent?) {}
@@ -162,11 +168,14 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                 val g = pG.create() as Graphics2D
                 val oldForeground = foreground
                 val oldText = text
-                if (!canUseEntry(entry)) {
+                if (!canUseEntry(entry) || entry.thirdParty) {
                     foreground = JBUI.CurrentTheme.Label.disabledForeground()
                 }
                 if (entry.metering > 0) {
                     text = "$text \uD83E\uDDE0"
+                }
+                if (entry.thirdParty) {
+                    text = "$text (coming up)"
                 }
                 super.paintComponent(pG)
                 foreground = oldForeground
@@ -181,9 +190,11 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                 )
                 g.color = JBUI.CurrentTheme.Label.disabledForeground()
                 g.font = editor.component.font
-                g.drawString(hint,
+                g.drawString(
+                    hint,
                     margin.left + insets.left,
-                    pG.fontMetrics.maxAscent + margin.top + insets.top)
+                    pG.fontMetrics.maxAscent + margin.top + insets.top
+                )
             }
 
         }
@@ -199,6 +210,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                         doOKAction()
                     }
                 }
+
                 override fun mousePressed(e: MouseEvent?) {}
                 override fun mouseReleased(e: MouseEvent?) {}
                 override fun mouseEntered(e: MouseEvent?) {}
@@ -220,6 +232,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                         entry = it.selectedValue
                     }
                 }
+
                 override fun keyReleased(e: KeyEvent?) {
                     if (e == null) return
                     if (e.keyCode == KeyEvent.VK_UP || e.keyCode == KeyEvent.VK_DOWN) {
@@ -252,7 +265,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
         set(newVal) {
             if (newVal == _entry) return
             _entry = newVal
-            val canUse = canUseEntry(_entry)
+            val canUse = canUseEntry(_entry) && !_entry.thirdParty
             okAction.isEnabled = canUse
             msgTextField.text = entry.intend
             if (!canUse) {

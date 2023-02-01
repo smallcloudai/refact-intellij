@@ -1,20 +1,22 @@
 package com.smallcloud.codify.settings
 
-import com.intellij.BundleUtil
+//import com.smallcloud.codify.Resources.pluginDescriptionStr
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.*
+import com.intellij.openapi.ui.DoNotAskOption
+import com.intellij.openapi.ui.MessageDialogBuilder
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.codify.CodifyBundle
 import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.Resources
-//import com.smallcloud.codify.Resources.pluginDescriptionStr
 import com.smallcloud.codify.account.*
 import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.account.AccountManager.logout
@@ -25,9 +27,8 @@ import com.smallcloud.codify.settings.renderer.PrivacyOverridesTable
 import com.smallcloud.codify.settings.renderer.privacyToString
 import java.awt.event.ItemEvent
 import java.awt.event.ItemListener
-import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 import javax.swing.*
-import kotlin.io.path.name
 
 
 private enum class SettingsState {
@@ -58,8 +59,9 @@ class AppRootComponent(private val project: Project) {
         CodifyBundle.message("privacy.level0ExtraDescription"),
         UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
     )
-    private val privacyDefaultsRBCodify = JBRadioButton("${CodifyBundle.message("privacy.level1Name")}: " +
-            CodifyBundle.message("privacy.level1ShortDescription")
+    private val privacyDefaultsRBCodify = JBRadioButton(
+        "${CodifyBundle.message("privacy.level1Name")}: " +
+                CodifyBundle.message("privacy.level1ShortDescription")
     )
     private val privacyDefaultsRBCodifyDescription = JBLabel(
         CodifyBundle.message("privacy.level1ExtraDescription"),
@@ -79,10 +81,12 @@ class AppRootComponent(private val project: Project) {
     private val privacyOverridesScrollPane: JBScrollPane
 
     private fun askDialog(project: Project, newPrivacy: Privacy): Int {
-        return if (MessageDialogBuilder.okCancel(Resources.codifyStr, "Be careful! " +
-                    "You are about to change global privacy default to:\n\n<b>${privacyToString[newPrivacy]}</b>\n\n" +
-                    "Access settings for\n<b>${project.basePath}</b>\nwill remain at " +
-                    "<b>${privacyToString[PrivacyService.instance.getPrivacy(project.basePath!!)]}</b>")
+        return if (MessageDialogBuilder.okCancel(
+                Resources.codifyStr, "Be careful! " +
+                        "You are about to change global privacy default to:\n\n<b>${privacyToString[newPrivacy]}</b>\n\n" +
+                        "Access settings for\n<b>${project.basePath}</b>\nwill remain at " +
+                        "<b>${privacyToString[PrivacyService.instance.getPrivacy(project.basePath!!)]}</b>"
+            )
                 .yesText(Messages.getOkButton())
                 .noText(Messages.getCancelButton())
                 .icon(Messages.getQuestionIcon())
@@ -199,6 +203,15 @@ class AppRootComponent(private val project: Project) {
         forceLoginButton.addActionListener {
             ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
         }
+        forceLoginButton.addActionListener {
+            activePlanLabel.text = "${CodifyBundle.message("rootSettings.activePlan")}: ⏳"
+            AppExecutorUtil.getAppScheduledExecutorService().schedule(
+                {
+                    activePlanLabel.text =
+                        "${CodifyBundle.message("rootSettings.activePlan")}: ${AccountManager.activePlan}"
+                }, 500, TimeUnit.MILLISECONDS
+            )
+        }
     }
 
     private var myPanel: JPanel = recreatePanel()
@@ -216,7 +229,7 @@ class AppRootComponent(private val project: Project) {
         forceLoginButton.isVisible = currentState != SettingsState.UNSIGNED
         waitLoginLabel.text = if (currentState == SettingsState.WAITING)
             "${CodifyBundle.message("rootSettings.waitWebsiteLoginStr")} $loginCounter" else
-                "${CodifyBundle.message("rootSettings.loggedAs")} ${AccountManager.user}"
+            "${CodifyBundle.message("rootSettings.loggedAs")} ${AccountManager.user}"
         waitLoginLabel.isVisible = currentState != SettingsState.UNSIGNED
 
         privacyTitledSeparator.isVisible = currentState == SettingsState.SIGNED

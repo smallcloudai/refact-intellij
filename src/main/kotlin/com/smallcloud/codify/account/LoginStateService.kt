@@ -10,6 +10,7 @@ class LoginStateService {
     private var lastWebsiteLoginStatus: String = "OK"
     private var lastInferenceLoginStatus: String = "OK"
     private var popupLoginMessageOnce: Boolean = false
+    private var lastLoginTime: Long = 0
 
     fun getLastWebsiteLoginStatus(): String {
         return lastWebsiteLoginStatus
@@ -20,6 +21,10 @@ class LoginStateService {
     }
 
     fun tryToWebsiteLogin(force: Boolean = false) {
+        if (System.currentTimeMillis() - lastLoginTime < 30_000) {
+            return
+        }
+        lastLoginTime = System.currentTimeMillis()
         AppExecutorUtil.getAppExecutorService().submit {
             try {
                 Logger.getInstance("check_login").warn("call")

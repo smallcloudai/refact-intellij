@@ -50,6 +50,23 @@ Stay tuned for code refactoring and human-machine symbiosis! Check out preview v
 <p>For more information, visit <a href="https://codify.smallcloud.ai">https://codify.smallcloud.ai</a></p>
   ]]></description>
 
+
+    <change-notes><![CDATA[
+<h2>New Features</h2>
+<p>An amazing release you should check out!</p>
+<ul>
+  <li>Completion now uses streaming</li>
+  <li>Fine-grained privacy: now you can tell which files this plugin should never touch</li>
+  <li>Highlight & Fix (press F1)</li>
+  <li>Select & Refactor (select code and press F1)</li>
+</ul>
+<h2>Please Update Often</h2>
+<p>The plugin in rapid development at this moment, older versions might not work properly.
+We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in a couple of months.
+</p>
+]]></change-notes>
+
+
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>

@@ -94,6 +94,7 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
         <actionPromoter implementation="com.smallcloud.codify.listeners.CancelActionsPromoter"/>
 
         <applicationService serviceImplementation="com.smallcloud.codify.settings.PrivacyState"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.statistic.StatisticService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.privacy.PrivacyService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>

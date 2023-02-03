@@ -24,6 +24,8 @@ import com.smallcloud.codify.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.codify.modes.completion.structs.EditorState
 import com.smallcloud.codify.privacy.Privacy
 import com.smallcloud.codify.privacy.PrivacyService
+import com.smallcloud.codify.statistic.CompletionStatistic
+import com.smallcloud.codify.statistic.StatisticService
 import com.smallcloud.codify.struct.SMCRequest
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
@@ -39,7 +41,7 @@ class CompletionMode(
     private var processTask: Future<*>? = null
     private var completionLayout: AsyncCompletionLayout? = null
     private val logger = Logger.getInstance("StreamedCompletionMode")
-
+    private var lastStatistic: CompletionStatistic? = null
     private var hasOneLineCompletionBefore: Boolean = false
     private var completionInProgress: Boolean = false
 
@@ -51,6 +53,13 @@ class CompletionMode(
     }
 
     override fun onTextChange(event: DocumentEventExtra) {
+        lastStatistic?.let {
+            if (completionLayout != null) {
+                it.addStatistic("cancel", "document_changed")
+                StatisticService.instance.addCompletionStatistic(it)
+                lastStatistic = null
+            }
+        }
         val fileName = getActiveFile(event.editor.document) ?: return
         if (PrivacyService.instance.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
             == Privacy.DISABLED) return
@@ -58,6 +67,7 @@ class CompletionMode(
         var maybeState: EditorState? = null
         val debounceMs: Long
         val editor = event.editor
+        lastStatistic = CompletionStatistic()
         if (!event.force) {
             val docEvent = event.event ?: return
             if (docEvent.offset + docEvent.newLength > editor.document.text.length) return
@@ -67,12 +77,12 @@ class CompletionMode(
                 docEvent.offset + docEvent.newLength + event.offsetCorrection,
                 editor.document.text
             )
-
             val completionData = CompletionCache.getCompletion(maybeState.text, maybeState.offset)
             if (completionData != null) {
                 processTask = scheduler.submit {
                     synchronized(this) {
                         renderCompletion(editor, maybeState!!, completionData, false)
+                        lastStatistic?.addStatistic("cacheRendered")
                     }
                 }
                 return
@@ -173,6 +183,9 @@ class CompletionMode(
             logger.warn("Exception while rendering completion", ex)
             logger.debug("Exception while rendering completion cancelOrClose request")
             cancelOrClose()
+            lastStatistic?.let {
+                lastStatistic = null
+            }
         }
     }
 
@@ -257,15 +270,26 @@ class CompletionMode(
             } catch (e: InterruptedException) {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 requestFuture?.cancel(true)
+                lastStatistic?.let {
+                    lastStatistic?.addStatistic("cancel","request_abort")
+                    StatisticService.instance.addCompletionStatistic(lastStatistic!!)
+                    lastStatistic = null
+                }
                 cancelOrClose()
                 logger.debug("lastReqJob abort")
             } catch (e: ExecutionException) {
                 cancelOrClose()
                 catchNetExceptions(e.cause)
+                lastStatistic?.let {
+                    lastStatistic = null
+                }
             } catch (e: Exception) {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR
                 InferenceGlobalContext.lastErrorMsg = e.message
                 cancelOrClose()
+                lastStatistic?.let {
+                    lastStatistic = null
+                }
                 logger.warn("Exception while completion request processing", e)
             }
         }
@@ -278,6 +302,13 @@ class CompletionMode(
     }
 
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
+        lastStatistic?.let {
+            if (completionLayout != null) {
+                it.addStatistic("accept", "tab")
+                StatisticService.instance.addCompletionStatistic(it)
+                lastStatistic = null
+            }
+        }
         synchronized(this) {
             completionLayout?.apply {
                 applyPreview(caret ?: editor.caretModel.currentCaret)
@@ -292,6 +323,13 @@ class CompletionMode(
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
+        lastStatistic?.let {
+            if (completionLayout != null) {
+                it.addStatistic("cancel", "esc")
+                StatisticService.instance.addCompletionStatistic(it)
+                lastStatistic = null
+            }
+        }
         cancelOrClose()
     }
 
@@ -299,12 +337,30 @@ class CompletionMode(
     }
 
     override fun caretPositionChanged(event: CaretEvent) {
+        lastStatistic?.let {
+            fun isWriting(): Boolean {
+                return event.newPosition.line == event.oldPosition.line &&
+                        event.newPosition.column == (event.oldPosition.column + 1)
+            }
+            if (completionLayout != null && !isWriting()) {
+                it.addStatistic("cancel", "caret_changed")
+                StatisticService.instance.addCompletionStatistic(it)
+                lastStatistic = null
+            }
+        }
         cancelOrClose()
     }
 
     override fun isInActiveState(): Boolean = completionLayout != null && completionLayout!!.rendered && needToRender
 
     override fun cleanup() {
+        lastStatistic?.let {
+            if (completionLayout != null) {
+                it.addStatistic("cancel", "mode_changed")
+                StatisticService.instance.addCompletionStatistic(it)
+                lastStatistic = null
+            }
+        }
         cancelOrClose()
     }
 
@@ -330,6 +386,7 @@ class CompletionMode(
     }
 
     private fun cancelOrClose() {
+        lastStatistic = null
         try {
             processTask?.cancel(true)
             processTask?.get(1, TimeUnit.SECONDS)

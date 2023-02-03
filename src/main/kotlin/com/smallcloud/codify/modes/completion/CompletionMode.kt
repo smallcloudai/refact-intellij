@@ -219,10 +219,8 @@ class CompletionMode(
         request.body.stopTokens = completionState.stopTokens
         InferenceGlobalContext.status = ConnectionStatus.PENDING
         completionInProgress = true
-        streamedInferenceFetch(request, onDataReceiveEnded = {
-            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-            InferenceGlobalContext.lastErrorMsg = null
-        }) { prediction ->
+        lastStatistic = CompletionStatistic()
+        streamedInferenceFetch(request) { prediction ->
             if (!completionInProgress) {
                 return@streamedInferenceFetch
             }
@@ -252,6 +250,9 @@ class CompletionMode(
             try {
                 requestFuture = it.get()
                 requestFuture.get()
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+                InferenceGlobalContext.lastErrorMsg = null
+                lastStatistic?.addStatistic("requestRendered")
                 logger.debug("Completion request finished")
             } catch (e: InterruptedException) {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED

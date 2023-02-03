@@ -71,7 +71,6 @@ class AsyncConnection(uri: URI) : Disposable {
         requestProperties: Map<String, String>? = null,
         needVerify: Boolean = false,
         scope: String = "",
-        onDataReceiveEnded: () -> Unit,
         onDataReceived: (String) -> Unit
     ): CompletableFuture<Future<*>> {
         val requestProducer: AsyncRequestProducer = BasicRequestProducer(
@@ -88,7 +87,7 @@ class AsyncConnection(uri: URI) : Disposable {
         return send(
             requestProducer, uri,
             needVerify = needVerify, scope = scope,
-            dataReceiveEnded = onDataReceiveEnded, dataReceived = onDataReceived
+            dataReceived = onDataReceived
         )
     }
 
@@ -97,7 +96,6 @@ class AsyncConnection(uri: URI) : Disposable {
         uri: URI,
         needVerify: Boolean = false,
         scope: String = "",
-        dataReceiveEnded: () -> Unit,
         dataReceived: (String) -> Unit
     ): CompletableFuture<Future<*>> {
         return CompletableFuture.supplyAsync {
@@ -142,7 +140,6 @@ class AsyncConnection(uri: URI) : Disposable {
                     }
 
                     override fun buildResult(): Void? {
-                        dataReceiveEnded()
                         return null
                     }
 

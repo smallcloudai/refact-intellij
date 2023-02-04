@@ -37,6 +37,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var inferenceMessage: String? = null
     var pluginIsEnabled: Boolean = true
     var usageStatsMessagesCache: MutableMap<String, Int> = HashMap()
+    var usageAcceptRejectMetricsCache: MutableList<String> = mutableListOf()
     var useForceCompletion: Boolean = false
     var useMultipleFilesCompletion: Boolean = false
     var diffIntentEntriesHistory: List<DiffIntendEntry> = emptyList()

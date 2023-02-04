@@ -9,11 +9,14 @@ import com.smallcloud.codify.Resources
 import com.smallcloud.codify.UsageStats
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.io.sendRequest
+import com.smallcloud.codify.settings.AppSettingsState.Companion.instance as Settings
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
 class StatisticService {
-    private val stats = mutableListOf<CompletionStatistic>()
+    private val stats: MutableList<String>
+        get() = Settings.usageAcceptRejectMetricsCache
+
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "CodifyStatisticScheduler", 1
     )
@@ -39,19 +42,17 @@ class StatisticService {
         )
         val url = Resources.defaultAcceptRejectReportUrl
         val usage = mutableMapOf<String, Int>()
-        var oldStats = mutableListOf<CompletionStatistic>()
+        var oldStats = mutableListOf<String>()
         synchronized(this) {
             oldStats = stats.toMutableList()
             stats.clear()
         }
 
         oldStats.forEach {
-            it.getMetrics().forEach { key ->
-                if (usage.containsKey(key)) {
-                    usage[key] = usage[key]!! + 1
-                } else {
-                    usage[key] = 1
-                }
+            if (usage.containsKey(it)) {
+                usage[it] = usage[it]!! + 1
+            } else {
+                usage[it] = 1
             }
         }
 
@@ -89,11 +90,11 @@ class StatisticService {
 
     fun addCompletionStatistic(stat: CompletionStatistic) {
         synchronized(this) {
-            stats.add(stat)
+            stats += stat.getMetrics()
         }
     }
 
-    private fun mergeMessages(newStats: List<CompletionStatistic>) {
+    private fun mergeMessages(newStats: List<String>) {
         synchronized(this) {
             stats += newStats
         }

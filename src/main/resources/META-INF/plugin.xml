@@ -14,40 +14,31 @@
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-<h4 id="codify-features">Codify strives to be the only AI coding assistant you'll ever need!</h4>
-<ul>
-<li>Open source plugin.</li>
-<li>State of the art code generation models (see website for details).</li>
-<li>20+ programming languages.</li>
-<li>Cloud subscription and a free self-hosted version.</li>
-<li>Experimental features!</li>
+<h2>Codify: The AI Assistant for Code Writing and Refactoring.</h2>
+<p>Boost your productivity by employing AI to pair program with you or make more fun out of your work by delegating boring tasks to the AI.
+</p>
+<h3 style="margin-bottom:0"><b>Features:</b></h3>
+<ul style="margin-top:5">
+<li><b>Code Completion:</b> satisfying, smart and relevant code completion that can suggest whole functions or classes. It suggests commonly used programming patterns, libraries and APIs usage, and helps with typing. This helps you write code faster and with fewer errors.</li>
+<br>
+<li><b>Code Transformation:</b> use natural language commands to ask the AI to search, transform, or optimize your code. Whether you're looking to optimize, search, or refactor your code, Codify has you covered.</li>
+<br>
+<li><b>Privacy of your code guaranteed:</b> Codify allows you to restrict access to particular files or projects, ensuring that your private code or confidential files are protected. And we never store your code on the server side.</li>
+<br>
+<li><b>User-Friendly Interface:</b> Codify has a simple, user-friendly interface that makes it easy to use, even for those new to AI tools. Codify will assist by completing your code or by accessing the AI toolbox function (use F1 to open)</li>
+<br>
+<li><b>It’s fast!</b> And supports Python, Java, PHP, C++, Javascript, TypeScript and 20 more programming languages.</li>
 </ul>
-<br />
-<h4 id="open-source">Open Source</h4>
-<p>
-The plugin is open source: you can verify for yourself it cares about your data as advertised.
-</p>
-<br />
-<h4 id="open-source">Code Completion</h4>
-<p>
-As you type in code, this feature offers suggestions to increase your productivity. It can offer commonly used commands, functions, and variables.
+<br>
+<p>Codify is a cutting-edge AI tool designed to assist developers in writing and refining code.
+Whether you're working on a brand new project or modifying existing code, Codify can help you save time and streamline your coding process.</p>
 
-By looking up and down the cursor, it can make more informed suggestions based on surrounding code, natural language comments, and other contextual information.
+<p>If you have your own NVIDIA GPU, you can try <a href="https://codify.smallcloud.ai/docker">the self-hosted version</a>.
+Our proprietary <a href="https://www.smallcloud.ai/">AI model behind</a> Codify is state-of-the-art (for the size and latency). The weights are free to download on <a href="https://huggingface.co/smallcloudai">Huggingface</a>.
+</p>
+<h3><b>Crowdsourcing Human Feedback</b></h3>
+<p>No one likes big corporations taking over our development toolchain, right? You can improve independent code tools like this one simply by turning your privacy settings to a relaxed position for some of your projects. We’ll tune the model to better follow YOUR commands and the tool will get better for everybody!</p>
 
-It also works fast!
-</p>
-<br />
-<h4 id="cloud-subscription">Cloud subscription</h4>
-<p>
-You can start with free trial, switch to a paid subscription later. Alternatively, you can run your own self-hosted version.
-</p>
-<br />
-<h4 id="experimental-features">Experimental features</h4>
-<p>
-Stay tuned for code refactoring and human-machine symbiosis! Check out preview videos on our website.
-</p>
-<br />
-<p>For more information, visit <a href="https://codify.smallcloud.ai">https://codify.smallcloud.ai</a></p>
   ]]></description>
 
 

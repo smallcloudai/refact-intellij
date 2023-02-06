@@ -31,6 +31,8 @@ class CompletionStatistic {
 
     fun getMetrics() : List<String> {
         val res = mutableListOf<String>()
+        if (this.toString().contains("cacheRendered"))
+            return res
         val lastElem = statistics.last()
         val reason = if (lastElem.reason == "esc") {
             "esc"

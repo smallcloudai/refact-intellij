@@ -37,7 +37,7 @@ class CompletionMode(
 ) : Mode, CaretListener {
     private val scope: String = "completion"
     private val app = ApplicationManager.getApplication()
-    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CompletionScheduler", 1)
+    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CodifyCompletionScheduler", 1)
     private var processTask: Future<*>? = null
     private var completionLayout: AsyncCompletionLayout? = null
     private val logger = Logger.getInstance("StreamedCompletionMode")

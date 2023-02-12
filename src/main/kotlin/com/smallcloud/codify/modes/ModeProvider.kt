@@ -53,7 +53,7 @@ class ModeProvider(
     private val beforeTextChangeEventsQueue: ConcurrentLinkedQueue<DocumentEventExtra> = ConcurrentLinkedQueue()
     private val onTextChangeEventsQueue: ConcurrentLinkedQueue<DocumentEventExtra> = ConcurrentLinkedQueue()
     private val eventDebounceScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
-        "EventDebounceScheduler", 1
+        "CodifyEventDebounceScheduler", 1
     )
 
     init {

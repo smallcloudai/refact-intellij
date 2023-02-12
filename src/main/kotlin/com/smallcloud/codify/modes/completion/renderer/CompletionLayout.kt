@@ -9,6 +9,7 @@ import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Condition
 import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
@@ -30,16 +31,18 @@ class AsyncCompletionLayout(
     private var textCache: String = ""
     private var isUpdating: Boolean = true
     private var updateTask: Future<*>? = null
-    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("AsyncCompletionLayout", 1)
+    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("CodifyAsyncCompletionLayout", 1)
     var rendered: Boolean = false
+    private var needToRender: Boolean = true
     private var highlighted: Boolean = false
     var lastCompletionData: Completion? = null
     private var rangeHighlighters: MutableList<RangeHighlighter> = mutableListOf()
 
     override fun dispose() {
         stopUpdate()
-        ApplicationManager.getApplication().invokeAndWait {
+        ApplicationManager.getApplication().invokeLater {
             rendered = false
+            needToRender = false
             highlighted = false
             blockEvents = false
             rangeHighlighters.forEach { editor.markupModel.removeHighlighter(it) }
@@ -95,15 +98,15 @@ class AsyncCompletionLayout(
         if (needToRender) {
             if (animation) {
                 for (ch in text.chunked(renderChunkSize)) {
-                    ApplicationManager.getApplication().invokeLater {
+                    ApplicationManager.getApplication().invokeLater({
                         inlayer?.addText(ch)
-                    }
+                    }, { !this.needToRender })
                     Thread.sleep(renderChunkTimeoutMs)
                 }
             } else {
-                ApplicationManager.getApplication().invokeAndWait {
+                ApplicationManager.getApplication().invokeLater({
                     inlayer?.addText(text)
-                }
+                }, { !this.needToRender })
             }
             rendered = true
         } else {
@@ -115,7 +118,7 @@ class AsyncCompletionLayout(
         if (highlighted) return
 
         if (completionData.visualizedEndIndex > completionData.startIndex) {
-            ApplicationManager.getApplication().invokeAndWait {
+            ApplicationManager.getApplication().invokeLater({
                 rangeHighlighters.add(
                     editor.markupModel.addRangeHighlighter(
                         completionData.startIndex,
@@ -127,7 +130,7 @@ class AsyncCompletionLayout(
                         HighlighterTargetArea.EXACT_RANGE
                     )
                 )
-            }
+            }, { !needToRender })
             highlighted = true
         }
     }
@@ -137,7 +140,7 @@ class AsyncCompletionLayout(
         val project = editor.project ?: return
         try {
             stopUpdate()
-            ApplicationManager.getApplication().invokeAndWait {
+            ApplicationManager.getApplication().invokeAndWait{
                 val file: PsiFile =
                     PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return@invokeAndWait
                 applyPreviewInternal(caret.offset, project, file)
@@ -157,7 +160,7 @@ class AsyncCompletionLayout(
     }
 
     fun hide() {
-        ApplicationManager.getApplication().invokeAndWait {
+        ApplicationManager.getApplication().invokeAndWait{
             if (!rendered) return@invokeAndWait
             rendered = false
             blockEvents = false

@@ -15,11 +15,12 @@ private fun getVersion(): String {
 }
 
 object Resources {
+    val defaultCodifyUrl: URI = URI("https://www.smallcloud.ai")
     val defaultContrastUrlSuffix = URI("v1/contrast")
-    val defaultRecallUrl: URI = URI("https://www.smallcloud.ai/v1/streamlined-login-recall-ticket")
-    val defaultLoginUrl: URI = URI("https://www.smallcloud.ai/v1/login")
-    val defaultReportUrl: URI = URI("https://www.smallcloud.ai/v1/usage-stats")
-    val defaultAcceptRejectReportUrl: URI = URI("https://www.smallcloud.ai/v1/accept-reject-stats")
+    val defaultRecallUrl: URI = defaultCodifyUrl.resolve("/v1/streamlined-login-recall-ticket")
+    val defaultLoginUrl: URI = defaultCodifyUrl.resolve("/v1/login")
+    val defaultReportUrl: URI = defaultCodifyUrl.resolve("/v1/usage-stats")
+    val defaultAcceptRejectReportUrl: URI = defaultCodifyUrl.resolve("/v1/accept-reject-stats")
     const val defaultTemperature: Float = 0.2f
     const val defaultModel: String = "CONTRASTcode"
     val version: String = getVersion()

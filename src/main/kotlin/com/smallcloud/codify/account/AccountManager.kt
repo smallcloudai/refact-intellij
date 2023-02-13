@@ -37,10 +37,10 @@ object AccountManager {
                 .apiKeyChanged(newApiKey)
             checkLoggedInAndNotifyIfNeed()
         }
-    var activePlan: String?
-        get() = AppSettingsState.instance.activePlan
+    var activePlan: String? = null
         set(newPlan) {
-            if (newPlan == activePlan) return
+            if (newPlan == field) return
+            field = newPlan
             ApplicationManager.getApplication()
                 .messageBus
                 .syncPublisher(AccountManagerChangedNotifier.TOPIC)

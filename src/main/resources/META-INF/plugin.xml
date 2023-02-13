@@ -91,6 +91,7 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.UsageStats"/>
         <applicationService serviceImplementation="com.smallcloud.codify.modes.diff.DiffIntentProvider"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.io.ConnectivityManager"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.codify.listeners.TabPressedAction"

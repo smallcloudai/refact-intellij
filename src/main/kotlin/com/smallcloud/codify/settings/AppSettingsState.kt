@@ -26,12 +26,10 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var apiKey: String? = null
     var temperature: Float? = null
     var model: String? = null
-    var longThinkModel: String? = null
     var userLoggedIn: String? = null
     var streamlinedLoginTicket: String? = null
     var inferenceUri: String? = null
     var userInferenceUri: String? = null
-    var activePlan: String? = null
     var loginMessage: String? = null
     var tooltipMessage: String? = null
     var inferenceMessage: String? = null
@@ -59,10 +57,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
 
                 override fun apiKeyChanged(newApiKey: String?) {
                     instance.apiKey = newApiKey
-                }
-
-                override fun planStatusChanged(newPlan: String?) {
-                    instance.activePlan = newPlan
                 }
             })
         messageBus

@@ -132,7 +132,8 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
 
 fun streamedInferenceFetch(
     request: SMCRequest,
-    onDataReceived: (data: SMCPrediction) -> Unit
+    onDataReceiveEnded: () -> Unit,
+    onDataReceived: (data: SMCPrediction) -> Unit,
 ): CompletableFuture<Future<*>>? {
     val gson = Gson()
     val uri = request.uri
@@ -149,6 +150,7 @@ fun streamedInferenceFetch(
     val job = InferenceGlobalContext.inferenceConnection?.post(
         uri, body, headers,
         needVerify = needToVerify, scope = request.scope,
+        onDataReceiveEnded = onDataReceiveEnded
     ) {
         val errorMsg = lookForCommonErrors(gson.fromJson(it, JsonObject::class.java), request)
         if (errorMsg != null) {

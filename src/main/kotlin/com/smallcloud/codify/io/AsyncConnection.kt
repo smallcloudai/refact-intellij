@@ -12,6 +12,7 @@ import org.apache.hc.client5.http.config.RequestConfig
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients
 import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder
+import org.apache.hc.core5.concurrent.FutureCallback
 import org.apache.hc.core5.http.*
 import org.apache.hc.core5.http.message.BasicHeader
 import org.apache.hc.core5.http.nio.AsyncRequestProducer
@@ -27,6 +28,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 
 class AsyncConnection(uri: URI) : Disposable {
@@ -40,12 +42,16 @@ class AsyncConnection(uri: URI) : Disposable {
         .setIOReactorConfig(
             IOReactorConfig.custom()
                 .setIoThreadCount(8)
+//                .setConnectTimeout()
+                .setSoTimeout(30, TimeUnit.SECONDS)
                 .setSelectInterval(TimeValue.ofMilliseconds(5))
                 .setTcpNoDelay(true)
                 .build()
         )
         .setDefaultRequestConfig(
             RequestConfig.custom()
+//                .setConnectionRequestTimeout(1, TimeUnit.SECONDS)
+//                .setResponseTimeout(1, TimeUnit.SECONDS)
                 .setConnectionKeepAlive(TimeValue.ofSeconds(1))
                 .setHardCancellationEnabled(true)
                 .build()
@@ -71,6 +77,7 @@ class AsyncConnection(uri: URI) : Disposable {
         requestProperties: Map<String, String>? = null,
         needVerify: Boolean = false,
         scope: String = "",
+        onDataReceiveEnded: () -> Unit,
         onDataReceived: (String) -> Unit
     ): CompletableFuture<Future<*>> {
         val requestProducer: AsyncRequestProducer = BasicRequestProducer(
@@ -87,7 +94,7 @@ class AsyncConnection(uri: URI) : Disposable {
         return send(
             requestProducer, uri,
             needVerify = needVerify, scope = scope,
-            dataReceived = onDataReceived
+            onDataReceiveEnded = onDataReceiveEnded, dataReceived = onDataReceived
         )
     }
 
@@ -96,6 +103,7 @@ class AsyncConnection(uri: URI) : Disposable {
         uri: URI,
         needVerify: Boolean = false,
         scope: String = "",
+        onDataReceiveEnded: () -> Unit,
         dataReceived: (String) -> Unit
     ): CompletableFuture<Future<*>> {
         return CompletableFuture.supplyAsync {
@@ -143,11 +151,25 @@ class AsyncConnection(uri: URI) : Disposable {
                         return null
                     }
 
-                    override fun failed(cause: Exception?) {
-                        if (cause !is SMCExceptions)
-                            addStatistic(false, scope, uri.toString(), cause.toString())
+                    override fun failed(cause: Exception?) {}
+                },
+                object : FutureCallback<Void?> {
+                    override fun completed(result: Void?) {
+                        onDataReceiveEnded()
                     }
-                }, null
+
+                    override fun failed(ex: java.lang.Exception?) {
+                        if (ex !is SMCExceptions)
+                            addStatistic(false, scope, uri.toString(), ex.toString())
+                        if (ex is java.net.SocketException ||
+                            ex is java.net.UnknownHostException) {
+                            InferenceGlobalContext.status = ConnectionStatus.DISCONNECTED
+                        }
+                    }
+
+                    override fun cancelled() {}
+
+                }
             )
         }
     }

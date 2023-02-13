@@ -12,8 +12,12 @@ import java.net.URI
 
 object InferenceGlobalContext {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
-    var connection: Connection? = inferenceUri?.let { makeConnection(it) }
-    var inferenceConnection: AsyncConnection? = inferenceUri?.let { makeAsyncConnection(it) }
+    var connection: Connection? = null
+    var inferenceConnection: AsyncConnection? = null
+
+    init {
+        reconnect()
+    }
 
     private fun makeConnection(uri: URI): Connection? {
         return try {
@@ -39,6 +43,11 @@ object InferenceGlobalContext {
             lastErrorMsg = e.message
             null
         }
+    }
+
+    fun reconnect() {
+        connection = inferenceUri?.let { makeConnection(it) }
+        inferenceConnection = inferenceUri?.let { makeAsyncConnection(it) }
     }
 
     var status: ConnectionStatus = ConnectionStatus.DISCONNECTED
@@ -71,8 +80,7 @@ object InferenceGlobalContext {
             messageBus
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .userInferenceUriChanged(newInferenceUrl)
-            connection = inferenceUri?.let { makeConnection(it) }
-            inferenceConnection = inferenceUri?.let { makeAsyncConnection(it) }
+            reconnect()
             inferenceLogin()
         }
 
@@ -83,8 +91,7 @@ object InferenceGlobalContext {
             messageBus
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .inferenceUriChanged(newInferenceUrl)
-            connection = inferenceUri?.let { Connection(it) }
-            inferenceConnection = inferenceUri?.let { makeAsyncConnection(it) }
+            reconnect()
         }
 
     fun hasUserInferenceUri(): Boolean {
@@ -116,15 +123,6 @@ object InferenceGlobalContext {
             messageBus
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .modelChanged(newModel)
-        }
-
-    var longThinkModel: String?
-        get() = AppSettingsState.instance.longThinkModel
-        set(newModel) {
-            if (newModel == longThinkModel) return
-            messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .longThinkModelChanged(newModel)
         }
 
     var useForceCompletion: Boolean

@@ -8,7 +8,6 @@ interface InferenceGlobalContextChangedNotifier {
     fun userInferenceUriChanged(newUrl: URI?) {}
     fun temperatureChanged(newTemp: Float?) {}
     fun modelChanged(newModel: String?) {}
-    fun longThinkModelChanged(newModel: String?) {}
     fun lastAutoModelChanged(newModel: String?) {}
     fun useForceCompletionModeChanged(newValue: Boolean) {}
     fun useMultipleFilesCompletionChanged(newValue: Boolean) {}

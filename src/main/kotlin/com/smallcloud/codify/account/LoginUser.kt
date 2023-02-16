@@ -11,7 +11,7 @@ import com.smallcloud.codify.UsageStats.Companion.addStatistic
 import com.smallcloud.codify.io.ConnectionStatus
 import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.sendRequest
-import com.smallcloud.codify.modes.diff.DiffIntendEntry
+import com.smallcloud.codify.modes.diff.DiffIntentEntry
 import com.smallcloud.codify.modes.diff.DiffIntentProvider.Companion.instance as DiffIntentProviderInstance
 import java.net.URI
 
@@ -134,7 +134,7 @@ fun checkLogin(force: Boolean = false): String {
 
             if (body.has("longthink-functions-today")) {
                 val cloudEntries = body.get("longthink-functions-today").asJsonObject.entrySet().map {
-                    val elem = gson.fromJson(it.value, DiffIntendEntry::class.java)
+                    val elem = gson.fromJson(it.value, DiffIntentEntry::class.java)
                     elem.functionName = it.key
                     return@map elem
                 }

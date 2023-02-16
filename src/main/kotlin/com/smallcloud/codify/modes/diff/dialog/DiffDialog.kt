@@ -14,7 +14,7 @@ import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.smallcloud.codify.CodifyBundle
 import com.smallcloud.codify.Resources
-import com.smallcloud.codify.modes.diff.DiffIntendEntry
+import com.smallcloud.codify.modes.diff.DiffIntentEntry
 import com.smallcloud.codify.modes.diff.DiffIntentProvider
 import java.awt.Component
 import java.awt.Graphics
@@ -32,14 +32,14 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
     private val descriptionDiffStr: String = CodifyBundle.message("diffDialog.descriptionDiffStr")
     private val descriptionHLStr: String = CodifyBundle.message("diffDialog.descriptionHLStr")
     private val descriptionLabel: JBLabel = JBLabel()
-    private val thirdPartyList: JBList<DiffIntendEntry>
+    private val thirdPartyList: JBList<DiffIntentEntry>
     private val thirdPartyScrollPane: JBScrollPane
-    private var _entry: DiffIntendEntry = DiffIntendEntry("")
-    private var thirdPartyFunctions: List<DiffIntendEntry>
+    private var _entry: DiffIntentEntry = DiffIntentEntry("")
+    private var thirdPartyFunctions: List<DiffIntentEntry>
     private lateinit var panel: JPanel
     private var previousIntent: String = ""
 
-    private fun canUseEntry(entry: DiffIntendEntry): Boolean {
+    private fun canUseEntry(entry: DiffIntentEntry): Boolean {
         return if (fromHL) {
             entry.supportHighlight
         } else {
@@ -57,7 +57,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
         thirdPartyFunctions = DiffIntentProvider.instance.defaultThirdPartyFunctions
         var lastSelectedIndex = 0
 
-        thirdPartyList = object : JBList<DiffIntendEntry>(thirdPartyFunctions) {
+        thirdPartyList = object : JBList<DiffIntentEntry>(thirdPartyFunctions) {
             init {
                 selectionMode = ListSelectionModel.SINGLE_SELECTION
                 border = JBUI.Borders.empty()
@@ -79,13 +79,13 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                                     suffix += " (coming up)"
                                 }
                                 c = super.getListCellRendererComponent(
-                                    list, (value as DiffIntendEntry).intend + suffix,
+                                    list, (value as DiffIntentEntry).intent + suffix,
                                     index, isSelected, cellHasFocus
                                 )
                             } else {
                                 foreground = JBColor.GRAY
                                 c = super.getListCellRendererComponent(
-                                    list, (value as DiffIntendEntry).intend,
+                                    list, (value as DiffIntentEntry).intent,
                                     index, isSelected, cellHasFocus
                                 )
                             }
@@ -132,7 +132,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                     override fun keyTyped(e: KeyEvent?) {}
                     override fun keyReleased(e: KeyEvent?) {}
                     override fun keyPressed(e: KeyEvent?) {
-                        entry = DiffIntendEntry(text)
+                        entry = DiffIntentEntry(text)
                         if (e?.keyCode == KeyEvent.VK_UP || e?.keyCode == KeyEvent.VK_DOWN) {
                             if (e.keyCode == KeyEvent.VK_UP) {
                                 historyIndex++
@@ -144,7 +144,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                                 entry = historyIntents[historyIndex]
                             } else if (historyIndex == -1) {
                                 text = previousIntent
-                                entry = DiffIntendEntry("")
+                                entry = DiffIntentEntry("")
                             } else if (historyIndex == -2) {
                                 previousIntent = text
                                 thirdPartyList.requestFocus()
@@ -155,7 +155,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                 })
                 addFocusListener(object : FocusListener {
                     override fun focusGained(e: FocusEvent?) {
-                        entry = DiffIntendEntry(text)
+                        entry = DiffIntentEntry(text)
                         thirdPartyList.clearSelection()
                     }
 
@@ -220,7 +220,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                 if (e == null) return@addListSelectionListener
                 try {
                     entry = it.selectedValue
-//                    msgTextField.text = entry.intend
+//                    msgTextField.text = entry.intent
                 } catch (e: Exception) {
                     Logger.getInstance(DiffDialog::class.java).warn(e.message)
                 }
@@ -240,7 +240,7 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
                             msgTextField.requestFocus()
                             msgTextField.text = previousIntent
                             msgTextField.historyIndex = -1
-                            entry = DiffIntendEntry(msgTextField.text)
+                            entry = DiffIntentEntry(msgTextField.text)
                             thirdPartyList.clearSelection()
                         } else lastSelectedIndex = thirdPartyList.selectedIndex
                     }
@@ -260,17 +260,17 @@ class DiffDialog(private val editor: Editor, private val fromHL: Boolean = false
         return msgTextField
     }
 
-    var entry: DiffIntendEntry
+    var entry: DiffIntentEntry
         get() = _entry
         set(newVal) {
             if (newVal == _entry) return
             _entry = newVal
             val canUse = canUseEntry(_entry) && !_entry.thirdParty
             okAction.isEnabled = canUse
-            msgTextField.text = entry.intend
+            msgTextField.text = entry.intent
             if (!canUse) {
                 warning.foreground = JBColor.RED
-                warning.text = "$warningPrefixText ${_entry.intend}"
+                warning.text = "$warningPrefixText ${_entry.intent}"
             } else {
                 warning.foreground = JBUI.CurrentTheme.Table.BACKGROUND
             }

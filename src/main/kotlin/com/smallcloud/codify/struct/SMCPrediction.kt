@@ -3,8 +3,8 @@ package com.smallcloud.codify.struct
 import com.google.gson.annotations.SerializedName
 
 data class HeadMidTail(
-    val head: Int,
-    val mid: String,
+    var head: Int,
+    var mid: String,
     val tail: Int
 )
 

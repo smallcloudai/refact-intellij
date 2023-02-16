@@ -19,7 +19,7 @@ import com.smallcloud.codify.modes.ModeProvider
 import com.smallcloud.codify.modes.ModeType
 import com.smallcloud.codify.modes.completion.prompt.RequestCreator
 import com.smallcloud.codify.modes.completion.structs.DocumentEventExtra
-import com.smallcloud.codify.modes.diff.DiffIntendEntry
+import com.smallcloud.codify.modes.diff.DiffIntentEntry
 import com.smallcloud.codify.modes.diff.DiffIntentProvider
 import com.smallcloud.codify.modes.diff.dialog.DiffDialog
 import com.smallcloud.codify.struct.SMCPrediction
@@ -139,7 +139,7 @@ class HighlightMode(
         }
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
 
-        val entry: DiffIntendEntry
+        val entry: DiffIntentEntry
         if (fromDiff && DiffIntentProvider.instance.lastHistoryEntry() != null) {
             entry = DiffIntentProvider.instance.lastHistoryEntry()!!
         } else {
@@ -155,7 +155,7 @@ class HighlightMode(
         val request = RequestCreator.create(
             fileName, editor.document.text,
             startSelectionOffset, endSelectionOffset,
-            scope, entry.intend, "highlight", listOf(),
+            scope, entry.intent, "highlight", listOf(),
             model = entry.model ?: (InferenceGlobalContext.model ?: Resources.defaultModel)
         ) ?: return
         ModeProvider.getOrCreateModeProvider(editor).switchMode(ModeType.Highlight)

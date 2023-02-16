@@ -7,7 +7,7 @@ object EventAdapter {
         beforeText: List<DocumentEventExtra>,
         afterText: List<DocumentEventExtra>
     ): Pair<Boolean, Pair<DocumentEventExtra, DocumentEventExtra>?> {
-        if (beforeText.size < 2 || afterText.size < 2) {
+        if (beforeText.size != 2 || afterText.size != 2) {
             return false to null
         }
 

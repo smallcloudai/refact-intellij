@@ -5,8 +5,8 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.xmlb.annotations.OptionTag
 import com.smallcloud.codify.settings.AppSettingsState
 
-data class DiffIntendEntry(
-    @OptionTag @SerializedName("label") val intend: String = "",
+data class DiffIntentEntry(
+    @OptionTag @SerializedName("label") val intent: String = "",
     @OptionTag val model: String? = null,
     @OptionTag @SerializedName("supports_highlight") val supportHighlight: Boolean = true,
     @OptionTag @SerializedName("supports_selection") val supportSelection: Boolean = true,
@@ -18,9 +18,9 @@ data class DiffIntendEntry(
 )
 
 class DiffIntentProvider {
-    private var _cloudIntents: List<DiffIntendEntry> = emptyList()
-    var defaultThirdPartyFunctions: List<DiffIntendEntry>
-        get(): List<DiffIntendEntry> = _cloudIntents
+    private var _cloudIntents: List<DiffIntentEntry> = emptyList()
+    var defaultThirdPartyFunctions: List<DiffIntentEntry>
+        get(): List<DiffIntentEntry> = _cloudIntents
         set(newList) {
             _cloudIntents = newList
         }
@@ -34,13 +34,13 @@ class DiffIntentProvider {
 
 
 
-    fun pushFrontHistoryIntent(newStr: DiffIntendEntry) {
+    fun pushFrontHistoryIntent(newStr: DiffIntentEntry) {
         var srcHints = AppSettingsState.instance.diffIntentEntriesHistory.filter { it != newStr }
         srcHints = srcHints.subList(0, minOf(srcHints.size, 20))
         AppSettingsState.instance.diffIntentEntriesHistory = listOf(newStr) + srcHints
     }
 
-    fun lastHistoryEntry(): DiffIntendEntry? {
+    fun lastHistoryEntry(): DiffIntentEntry? {
         return AppSettingsState.instance.diffIntentEntriesHistory.firstOrNull()
     }
 

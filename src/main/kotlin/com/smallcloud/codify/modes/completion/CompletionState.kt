@@ -5,6 +5,7 @@ import com.smallcloud.codify.modes.EditorTextState
 import com.smallcloud.codify.modes.completion.structs.Completion
 import com.smallcloud.codify.modes.completion.structs.getChar
 import java.util.regex.Pattern
+import kotlin.math.abs
 
 
 class CompletionState(
@@ -16,7 +17,6 @@ class CompletionState(
     private val rightOfCursorSpecialChar = Pattern.compile("^[:\\s\\t\\n\\r),.\"'\\]]*\$")
 
     var multiline: Boolean = true
-    private var requestedText: String = ""
     private val logger = Logger.getInstance("CompletionUtils")
 
     @Suppress("RedundantSetter")
@@ -42,7 +42,7 @@ class CompletionState(
             val leftOfCursor = editorState.currentLine.substring(0, editorState.offsetByCurrentLine)
             multiline = leftOfCursor.replace(" ", "").replace("\t", "").isEmpty()
             multiline = multiline || force
-            requestedText = editorState.document.text
+            val requestedText = editorState.document.text
             if (!force && requestedText.length > maxTextSize) return@run
             readyForCompletion = true
         }
@@ -53,18 +53,32 @@ class CompletionState(
         completion: String,
         tailIndex: Int
     ): Completion {
-        val startIndex: Int
-        var endIndex: Int
-        startIndex = minOf(requestedText.length, headIndex)
-        val firstEosIndex = requestedText.substring(startIndex).indexOfFirst { it == '\n' }
-        endIndex = startIndex + (if (firstEosIndex == -1) 0 else firstEosIndex)
-        endIndex = minOf(requestedText.length, endIndex)
+        val requestedText = editorState.document.text
+        var textCurrentLine = editorState.currentLine
 
         val lines = completion.split('\n')
-        val hasMultiline = lines.size > 1
         var firstLine = lines.first()
-        var offset = 0
 
+        var headIndexUpdated = headIndex
+        var leftSymbolsToRemove = 0
+        if (editorState.currentLineIsEmptySymbols() && firstLine.isNotEmpty()) {
+            val firstNonNonEmptyIndex = firstLine.indexOfFirst { it !in setOf(' ', '\t') }
+            val diff = firstNonNonEmptyIndex - textCurrentLine.length
+            firstLine = firstLine.substring(if (diff <= 0) firstNonNonEmptyIndex else diff)
+            leftSymbolsToRemove = if (diff < 0) abs(diff) else 0
+            headIndexUpdated = headIndex + textCurrentLine.length
+        }
+
+        multiline = multiline && lines.size > 1
+        val startIndex: Int = minOf(requestedText.length, headIndexUpdated)
+        var endIndex = if (multiline) {
+            val firstEosIndex = requestedText.substring(startIndex).indexOfFirst { it == '\n' }
+            minOf(requestedText.length, startIndex + (if (firstEosIndex == -1) 0 else firstEosIndex))
+        } else {
+            startIndex
+        }
+
+        var offset = 0
         val editorCurrentLineWithOffset = if (editorState.offsetByCurrentLine - 1 > 1)
             editorState.currentLine.substring(editorState.offsetByCurrentLine - 1)
         else editorState.currentLine
@@ -79,24 +93,24 @@ class CompletionState(
             }
             offset += 1
         }
-        val visualizedEndIndex = endIndex - offset
+        val firstLineEndIndex = endIndex - offset
         firstLine = firstLine.substring(0, firstLine.length - offset)
-        val visualizedCompletion = if (hasMultiline) {
+        val editedCompletion = if (multiline) {
             firstLine + lines.subList(1, lines.size).joinToString("\n", prefix = "\n")
         } else {
             firstLine
         }
         return Completion(
             originalText = requestedText,
-            visualizedCompletion = visualizedCompletion,
-            realCompletion = completion,
+            completion = editedCompletion,
             currentLinesAreEqual = false,
-            multiline = completion.count { it == '\n' } > 0,
+            multiline = multiline,
             startIndex = startIndex,
-            visualizedEndIndex = maxOf(visualizedEndIndex, startIndex),
-            realCompletionIndex = maxOf(endIndex, startIndex),
+            firstLineEndIndex = firstLineEndIndex,
+            endIndex = maxOf(endIndex, startIndex),
             createdTs = System.currentTimeMillis(),
-            isSingleLineComplete = completion.count { it == '\n' } == 0
+            leftSymbolsToRemove = leftSymbolsToRemove,
+            isSingleLineComplete = !multiline
         )
     }
 }

@@ -12,7 +12,7 @@ import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.io.InferenceGlobalContextChangedNotifier
-import com.smallcloud.codify.modes.diff.DiffIntendEntry
+import com.smallcloud.codify.modes.diff.DiffIntentEntry
 import java.net.URI
 
 
@@ -38,7 +38,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var usageAcceptRejectMetricsCache: MutableList<String> = mutableListOf()
     var useForceCompletion: Boolean = false
     var useMultipleFilesCompletion: Boolean = false
-    var diffIntentEntriesHistory: List<DiffIntendEntry> = emptyList()
+    var diffIntentEntriesHistory: List<DiffIntentEntry> = emptyList()
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus

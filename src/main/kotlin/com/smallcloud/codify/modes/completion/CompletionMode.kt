@@ -21,7 +21,6 @@ import com.smallcloud.codify.modes.completion.prompt.PromptInfo
 import com.smallcloud.codify.modes.completion.prompt.RequestCreator
 import com.smallcloud.codify.modes.completion.structs.Completion
 import com.smallcloud.codify.modes.completion.structs.DocumentEventExtra
-import com.smallcloud.codify.modes.completion.structs.EditorState
 import com.smallcloud.codify.privacy.Privacy
 import com.smallcloud.codify.privacy.PrivacyService
 import com.smallcloud.codify.statistic.CompletionStatistic
@@ -64,7 +63,7 @@ class CompletionMode(
         if (PrivacyService.instance.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
             == Privacy.DISABLED) return
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
-        var maybeState: EditorState? = null
+        var maybeState: EditorTextState? = null
         val debounceMs: Long
         val editor = event.editor
         lastStatistic = CompletionStatistic()
@@ -72,18 +71,16 @@ class CompletionMode(
             val docEvent = event.event ?: return
             if (docEvent.offset + docEvent.newLength > editor.document.text.length) return
             if (docEvent.newLength + docEvent.oldLength <= 0) return
-            maybeState = EditorState(
+            maybeState = EditorTextState(
+                editor,
                 editor.document.modificationStamp,
-                docEvent.offset + docEvent.newLength + event.offsetCorrection,
-                editor.document.text
+                docEvent.offset + docEvent.newLength + event.offsetCorrection
             )
             val completionData = CompletionCache.getCompletion(maybeState.text, maybeState.offset)
             if (completionData != null) {
                 processTask = scheduler.submit {
-                    synchronized(this) {
-                        renderCompletion(editor, maybeState!!, completionData, false)
-                        lastStatistic?.addStatistic("cacheRendered")
-                    }
+                    renderCompletion(editor, maybeState!!, completionData, animation = false)
+                    lastStatistic?.addStatistic("cacheRendered")
                 }
                 return
             }
@@ -97,25 +94,25 @@ class CompletionMode(
             logger.debug("Debounce time: $debounceMs")
         } else {
             app.invokeAndWait {
-                maybeState = EditorState(
+                maybeState = EditorTextState(
+                    editor,
                     editor.document.modificationStamp,
-                    editor.caretModel.offset,
-                    editor.document.text
+                    editor.caretModel.offset
                 )
             }
             debounceMs = 0
         }
 
         val state = maybeState ?: return
-        val editorHelper = EditorTextState(editor, state.offset)
-        if (!editorHelper.isValid()) return
+        if (!state.isValid()) return
+        state.getRidOfLeftSpacesInplace()
 
         var promptInfo: List<PromptInfo> = listOf()
         if (InferenceGlobalContext.useMultipleFilesCompletion) {
             editor.project?.let {
                 app.invokeAndWait {
                     promptInfo = PromptCooker.cook(
-                        editorHelper,
+                        state,
                         FileDocumentManager.getInstance().getFile(editor.document)?.extension,
                         FilesCollector.getInstance(it).collect(),
                         mostImportantFilesMaxCount = if (event.force) 25 else 6,
@@ -125,6 +122,7 @@ class CompletionMode(
                 }
             }
         }
+
         val request = RequestCreator.create(
             fileName, state.text, state.offset, state.offset,
             scope, "Infill", "infill", promptInfo,
@@ -132,13 +130,13 @@ class CompletionMode(
         ) ?: return
 
         processTask = scheduler.schedule({
-            process(request, editor, state, editorHelper, event.force)
+            process(request, state, event.force)
         }, debounceMs, TimeUnit.MILLISECONDS)
     }
 
     private fun renderCompletion(
         editor: Editor,
-        state: EditorState,
+        state: EditorTextState,
         completionData: Completion,
         animation: Boolean
     ) {
@@ -169,8 +167,7 @@ class CompletionMode(
             "Completion rendering: offset: ${state.offset}," +
                     " modificationStamp: ${state.modificationStamp}"
         )
-        logger.info("Visualized completion data: ${completionData.visualizedCompletion}")
-        logger.info("Real completion data: ${completionData.realCompletion}")
+        logger.info("Completion data: ${completionData.completion}")
         try {
             completionLayout?.also {
                 it.update(completionData, needToRender, animation)
@@ -215,12 +212,10 @@ class CompletionMode(
 
     private fun process(
         request: SMCRequest,
-        editor: Editor,
-        state: EditorState,
-        editorHelper: EditorTextState,
+        editorState: EditorTextState,
         force: Boolean,
     ) {
-        val completionState = CompletionState(editorHelper, force = force)
+        val completionState = CompletionState(editorState, force = force)
         if (!force && !completionState.readyForCompletion) return
         if (!force && !completionState.multiline && hasOneLineCompletionBefore) {
             hasOneLineCompletionBefore = false
@@ -252,6 +247,7 @@ class CompletionMode(
                 prediction.choices.firstOrNull()?.filesHeadMidTail?.get(request.body.cursorFile)
                     ?: return@streamedInferenceFetch
 
+            editorState.restoreInplace()
             val completionData = completionState.makeCompletion(
                 headMidTail.head,
                 headMidTail.mid,
@@ -260,7 +256,9 @@ class CompletionMode(
             if (!completionData.isMakeSense()) return@streamedInferenceFetch
             synchronized(this) {
                 CompletionCache.addCompletion(completionData)
-                renderCompletion(editor, state, completionData, true)
+                renderCompletion(
+                    editorState.editor, editorState, completionData, true
+                )
             }
         }?.also {
             var requestFuture: Future<*>? = null
@@ -310,17 +308,16 @@ class CompletionMode(
                 lastStatistic = null
             }
         }
-        synchronized(this) {
-            completionLayout?.apply {
-                applyPreview(caret ?: editor.caretModel.currentCaret)
-                lastCompletionData?.let {
-                    val nextLine = it.visualizedEndIndex >= it.originalText.length || it.originalText[it.visualizedEndIndex] == '\n'
-                    hasOneLineCompletionBefore = it.isSingleLineComplete && nextLine
-                }
-                dispose()
+
+        completionLayout?.apply {
+            applyPreview(caret ?: editor.caretModel.currentCaret)
+            lastCompletionData?.let {
+                val nextLine = it.endIndex >= it.originalText.length || it.originalText[it.endIndex] == '\n'
+                hasOneLineCompletionBefore = it.isSingleLineComplete && nextLine
             }
-            completionLayout = null
+            dispose()
         }
+        completionLayout = null
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {

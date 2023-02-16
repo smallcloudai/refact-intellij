@@ -132,7 +132,7 @@ class DiffMode(
         val request: SMCRequest
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         if (diffLayout == null || highlightContext != null) {
-            val entry: DiffIntendEntry
+            val entry: DiffIntentEntry
             var functionName = if (highlightContext == null) "diff-selection" else "diff-atcursor"
             if (highlightContext == null) {
                 val dialog = DiffDialog(editor)
@@ -150,7 +150,7 @@ class DiffMode(
             request = RequestCreator.create(
                 fileName, editor.document.text,
                 startSelectionOffset, endSelectionOffset,
-                scope, entry.intend, functionName, listOf(),
+                scope, entry.intent, functionName, listOf(),
                 model = entry.model ?: (InferenceGlobalContext.model ?: Resources.defaultModel)
             ) ?: return
             startPosition = editor.offsetToLogicalPosition(startSelectionOffset)

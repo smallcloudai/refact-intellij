@@ -4,6 +4,7 @@ import com.google.common.collect.EvictingQueue
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.util.alsoIfNull
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.UsageStats
 import com.smallcloud.codify.notifications.emitError
@@ -146,6 +147,10 @@ fun streamedInferenceFetch(
     val now = System.currentTimeMillis()
     val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCoolDown * 1000
     if (needToVerify) lastInferenceVerifyTs = now
+
+    InferenceGlobalContext.inferenceConnection.alsoIfNull {
+        InferenceGlobalContext.reconnect()
+    }
 
     val job = InferenceGlobalContext.inferenceConnection?.post(
         uri, body, headers,

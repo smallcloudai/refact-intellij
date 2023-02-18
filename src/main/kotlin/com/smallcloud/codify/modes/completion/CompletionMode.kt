@@ -251,10 +251,11 @@ class CompletionMode(
             val completionData = completionState.makeCompletion(
                 headMidTail.head,
                 headMidTail.mid,
-                headMidTail.tail
+                headMidTail.tail,
+                prediction.choices.first().finishReason
             )
             if (!completionData.isMakeSense()) return@streamedInferenceFetch
-            if (headMidTail.head != editorState.offset) return@streamedInferenceFetch
+            if (!editorState.currentLineIsEmptySymbols() && headMidTail.head != editorState.offset) return@streamedInferenceFetch
             synchronized(this) {
                 CompletionCache.addCompletion(completionData)
                 renderCompletion(

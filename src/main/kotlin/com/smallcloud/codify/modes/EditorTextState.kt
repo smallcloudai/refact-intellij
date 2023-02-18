@@ -41,7 +41,7 @@ class EditorTextState(
     fun getRidOfLeftSpacesInplace() {
         if (!currentLineIsEmptySymbols()) return
 
-        val before = if (currentLineNumber == 1)
+        val before = if (currentLineNumber == 0)
             "" else lines.subList(0, currentLineNumber).joinToString("\n", postfix = "\n")
         val after = if (currentLineNumber == lines.size - 1)
             "" else lines.subList(currentLineNumber + 1, lines.size).joinToString("\n", prefix = "\n")
@@ -51,6 +51,7 @@ class EditorTextState(
 
     fun restoreInplace() {
         if (!currentLineIsEmptySymbols()) return
+        if (offset == initialOffset) return
 
         text = editor.document.text
         offset = initialOffset

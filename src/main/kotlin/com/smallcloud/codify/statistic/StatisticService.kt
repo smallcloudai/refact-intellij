@@ -31,10 +31,14 @@ class StatisticService {
         }, 5, TimeUnit.MINUTES)
     }
 
-    private fun report() {
-        if (stats.isEmpty()) return
+    fun forceReport() {
+        report()?.get()
+    }
+
+    private fun report(): Future<*>? {
+        if (stats.isEmpty()) return null
         val acc = AccountManager
-        val token: String = acc.apiKey ?: return
+        val token: String = acc.apiKey ?: return null
 
         val headers = mutableMapOf(
             "Content-Type" to "application/json",
@@ -67,7 +71,7 @@ class StatisticService {
                 )
             )
         )
-        AppExecutorUtil.getAppExecutorService().submit {
+        return AppExecutorUtil.getAppExecutorService().submit {
             try {
                 val res = sendRequest(url, "POST", headers, body)
                 if (res.body.isNullOrEmpty()) return@submit

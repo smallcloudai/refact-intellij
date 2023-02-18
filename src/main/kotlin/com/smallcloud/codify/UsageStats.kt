@@ -56,9 +56,13 @@ class UsageStats {
         }
     }
 
-    private fun report() {
+    fun forceReport() {
+        report()?.get()
+    }
+
+    private fun report(): Future<*>? {
         val acc = AccountManager
-        val token: String = acc.apiKey ?: return
+        val token: String = acc.apiKey ?: return null
 
         val headers = mutableMapOf(
             "Content-Type" to "application/json",
@@ -71,7 +75,7 @@ class UsageStats {
             messages.clear()
         }
 
-        if (lastMessages.isEmpty()) return
+        if (lastMessages.isEmpty()) return null
         var usage = ""
         lastMessages.forEach {
             usage += "${it.key}\t${it.value}\n"
@@ -83,7 +87,7 @@ class UsageStats {
                 "usage" to usage
             )
         )
-        AppExecutorUtil.getAppExecutorService().submit {
+        return AppExecutorUtil.getAppExecutorService().submit {
             try {
                 val res = sendRequest(url, "POST", headers, body)
                 if (res.body.isNullOrEmpty()) return@submit

@@ -39,6 +39,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var useForceCompletion: Boolean = false
     var useMultipleFilesCompletion: Boolean = false
     var diffIntentEntriesHistory: List<DiffIntentEntry> = emptyList()
+    var startupLoggedIn: Boolean = false
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus

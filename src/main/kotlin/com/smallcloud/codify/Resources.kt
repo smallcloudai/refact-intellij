@@ -1,17 +1,28 @@
 package com.smallcloud.codify
 
 import com.intellij.ide.plugins.PluginManager
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
 import java.net.URI
 import javax.swing.Icon
 
+private fun getThisPlugin() = PluginManager.getPlugins().find { it.name == Resources.codifyStr }
+
 private fun getVersion(): String {
-    val thisPlugin = PluginManager.getPlugins().find { it.name == "Codify" }
+    val thisPlugin = getThisPlugin()
     if (thisPlugin != null) {
         return thisPlugin.version
     }
     return ""
+}
+
+private fun getPluginId(): PluginId {
+    val thisPlugin = getThisPlugin()
+    if (thisPlugin != null) {
+        return thisPlugin.pluginId
+    }
+    return PluginId.getId("com.smallcloud.codify")
 }
 
 object Resources {
@@ -28,6 +39,7 @@ object Resources {
     const val loginCoolDown: Int = 30 // sec
     const val inferenceLoginCoolDown: Int = 300 // sec
     const val codifyStr: String = "Codify"
+    val pluginId: PluginId = getPluginId()
 
     object Icons {
         val LOGO_FULL_WHITE: Icon = IconLoader.getIcon("/icons/logo-full-white.svg", Resources::class.java)

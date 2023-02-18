@@ -1,6 +1,9 @@
 package com.smallcloud.codify.io
 
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.JsonSyntaxException
 import com.intellij.openapi.Disposable
 import com.intellij.util.text.findTextRange
 import com.smallcloud.codify.UsageStats.Companion.addStatistic
@@ -77,8 +80,9 @@ class AsyncConnection(uri: URI) : Disposable {
         requestProperties: Map<String, String>? = null,
         needVerify: Boolean = false,
         scope: String = "",
-        onDataReceiveEnded: () -> Unit,
-        onDataReceived: (String) -> Unit
+        dataReceiveEnded: () -> Unit,
+        dataReceived: (String) -> Unit,
+        errorDataReceived: (JsonObject) -> Unit
     ): CompletableFuture<Future<*>> {
         val requestProducer: AsyncRequestProducer = BasicRequestProducer(
             BasicRequestBuilder
@@ -94,7 +98,8 @@ class AsyncConnection(uri: URI) : Disposable {
         return send(
             requestProducer, uri,
             needVerify = needVerify, scope = scope,
-            onDataReceiveEnded = onDataReceiveEnded, dataReceived = onDataReceived
+            dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
+            errorDataReceived = errorDataReceived
         )
     }
 
@@ -103,8 +108,9 @@ class AsyncConnection(uri: URI) : Disposable {
         uri: URI,
         needVerify: Boolean = false,
         scope: String = "",
-        onDataReceiveEnded: () -> Unit,
-        dataReceived: (String) -> Unit
+        dataReceiveEnded: () -> Unit,
+        dataReceived: (String) -> Unit,
+        errorDataReceived: (JsonObject) -> Unit
     ): CompletableFuture<Future<*>> {
         return CompletableFuture.supplyAsync {
             if (needVerify) inferenceLogin()
@@ -130,10 +136,10 @@ class AsyncConnection(uri: URI) : Disposable {
                     override fun data(src: ByteBuffer?, endOfStream: Boolean) {
                         src ?: return
                         bufferStr += Charset.forName("UTF-8").decode(src)
-                        if (bufferStr.indexOf("error") != -1 ||
-                            bufferStr.indexOf("human_readable_message") != -1) {
-                            dataReceived(bufferStr)
-                            return
+                        try {
+                            val data = Gson().fromJson(bufferStr, JsonObject::class.java)
+                            errorDataReceived(data)
+                        } catch (_: JsonSyntaxException) {
                         }
                         val (dataPieces, maybeLeftOverBuffer) = lookForCompletedDataInStreamingBuf(bufferStr)
                         dataPieces.forEach { dataReceived(it) }
@@ -155,7 +161,7 @@ class AsyncConnection(uri: URI) : Disposable {
                 },
                 object : FutureCallback<Void?> {
                     override fun completed(result: Void?) {
-                        onDataReceiveEnded()
+                        dataReceiveEnded()
                     }
 
                     override fun failed(ex: java.lang.Exception?) {

@@ -228,7 +228,7 @@ class CompletionMode(
         InferenceGlobalContext.status = ConnectionStatus.PENDING
         completionInProgress = true
         lastStatistic = CompletionStatistic()
-        streamedInferenceFetch(request, onDataReceiveEnded = {
+        streamedInferenceFetch(request, dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             InferenceGlobalContext.lastErrorMsg = null
             lastStatistic?.addStatistic("requestRendered")
@@ -254,6 +254,7 @@ class CompletionMode(
                 headMidTail.tail
             )
             if (!completionData.isMakeSense()) return@streamedInferenceFetch
+            if (headMidTail.head != editorState.offset) return@streamedInferenceFetch
             synchronized(this) {
                 CompletionCache.addCompletion(completionData)
                 renderCompletion(
@@ -278,8 +279,10 @@ class CompletionMode(
                 logger.debug("lastReqJob abort")
             } catch (e: ExecutionException) {
                 cancelOrClose()
-                catchNetExceptions(e.cause)
+                requestFuture?.cancel(true)
                 lastStatistic?.let {
+                    lastStatistic?.addStatistic("cancel","request_abort")
+                    StatisticService.instance.addCompletionStatistic(lastStatistic!!)
                     lastStatistic = null
                 }
             } catch (e: Exception) {

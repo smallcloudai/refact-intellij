@@ -12,7 +12,7 @@ dependencies {
 }
 
 group = "com.smallcloud"
-version = "1.1.11dev"
+version = getVersionString("1.1.22")
 
 repositories {
     mavenCentral()
@@ -51,4 +51,31 @@ tasks {
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
+}
+
+fun String.runCommand(
+    workingDir: File = File("."),
+    timeoutAmount: Long = 60,
+    timeoutUnit: TimeUnit = TimeUnit.SECONDS
+): String = ProcessBuilder(split("\\s(?=(?:[^'\"`]*(['\"`])[^'\"`]*\\1)*[^'\"`]*$)".toRegex()))
+    .directory(workingDir)
+    .redirectOutput(ProcessBuilder.Redirect.PIPE)
+    .redirectError(ProcessBuilder.Redirect.PIPE)
+    .start()
+    .apply { waitFor(timeoutAmount, timeoutUnit) }
+    .run {
+        val error = errorStream.bufferedReader().readText().trim()
+        if (error.isNotEmpty()) {
+            throw Exception(error)
+        }
+        inputStream.bufferedReader().readText().trim()
+    }
+
+fun getVersionString(baseVersion: String): String {
+    val tag = "git tag -l --points-at HEAD".runCommand(workingDir = rootDir)
+    if (tag.isNotEmpty() && tag.contains(baseVersion)) return baseVersion
+
+    val branch = "git rev-parse --abbrev-ref HEAD".runCommand(workingDir = rootDir)
+    val commitId = "git rev-parse --short=8 HEAD".runCommand(workingDir = rootDir)
+    return "$baseVersion-$branch-$commitId"
 }

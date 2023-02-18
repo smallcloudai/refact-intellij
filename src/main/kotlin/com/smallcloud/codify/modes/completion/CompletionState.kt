@@ -79,19 +79,21 @@ class CompletionState(
         }
 
         var offset = 0
-        val editorCurrentLineWithOffset = if (editorState.offsetByCurrentLine - 1 > 1)
-            editorState.currentLine.substring(editorState.offsetByCurrentLine - 1)
-        else editorState.currentLine
-        for (i in -1 downTo -firstLine.length) {
-            if (editorCurrentLineWithOffset.length <= -i) {
-                break
+        if (multiline) {
+            val editorCurrentLineWithOffset = if (editorState.offsetByCurrentLine - 1 > 1)
+                editorState.currentLine.substring(editorState.offsetByCurrentLine - 1)
+            else editorState.currentLine
+            for (i in -1 downTo -firstLine.length) {
+                if (editorCurrentLineWithOffset.length <= -i) {
+                    break
+                }
+                val curCh = editorCurrentLineWithOffset.getChar(i)
+                val compCh = firstLine.getChar(i)
+                if (curCh != compCh) {
+                    break
+                }
+                offset += 1
             }
-            val curCh = editorCurrentLineWithOffset.getChar(i)
-            val compCh = firstLine.getChar(i)
-            if (curCh != compCh) {
-                break
-            }
-            offset += 1
         }
         val firstLineEndIndex = endIndex - offset
         firstLine = firstLine.substring(0, firstLine.length - offset)

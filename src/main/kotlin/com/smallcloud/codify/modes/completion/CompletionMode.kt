@@ -91,9 +91,6 @@ class CompletionMode(
             }
 
             debounceMs = CompletionTracker.calcDebounceTime(editor)
-            if (debounceMs.toInt() == 0) {
-                throw Exception("test")
-            }
             CompletionTracker.updateLastCompletionRequestTime(editor)
             logger.debug("Debounce time: $debounceMs")
         } else {

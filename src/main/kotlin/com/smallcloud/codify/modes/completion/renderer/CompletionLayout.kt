@@ -187,7 +187,10 @@ class AsyncCompletionLayout(
             val lines = it.completion.split('\n')
             var firstLine = lines.first()
             editor.document.replaceString(startIndex, firstLineEndIndex, firstLine)
-            val firstEosIndex = editor.document.text.substring(firstLineEndIndex).indexOfFirst { s -> s == '\n' }
+            var firstEosIndex = editor.document.text.substring(firstLineEndIndex).indexOfFirst { s -> s == '\n' }
+            if (firstEosIndex == -1) {
+                firstEosIndex = editor.document.text.substring(firstLineEndIndex).length
+            }
             editor.caretModel.moveToOffset(startIndex + firstEosIndex)
             if (it.multiline) {
                 startIndex += firstEosIndex

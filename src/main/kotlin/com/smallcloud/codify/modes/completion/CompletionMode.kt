@@ -26,6 +26,7 @@ import com.smallcloud.codify.privacy.PrivacyService
 import com.smallcloud.codify.statistic.CompletionStatistic
 import com.smallcloud.codify.statistic.StatisticService
 import com.smallcloud.codify.struct.SMCRequest
+import java.io.InterruptedIOException
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
@@ -90,6 +91,9 @@ class CompletionMode(
             }
 
             debounceMs = CompletionTracker.calcDebounceTime(editor)
+            if (debounceMs.toInt() == 0) {
+                throw Exception("test")
+            }
             CompletionTracker.updateLastCompletionRequestTime(editor)
             logger.debug("Debounce time: $debounceMs")
         } else {
@@ -269,21 +273,14 @@ class CompletionMode(
                 requestFuture.get()
                 logger.debug("Completion request finished")
             } catch (e: InterruptedException) {
-                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-                requestFuture?.cancel(true)
-                lastStatistic?.let {
-                    lastStatistic?.addStatistic("cancel","request_abort")
-                    StatisticService.instance.addCompletionStatistic(lastStatistic!!)
-                    lastStatistic = null
-                }
-                cancelOrClose()
-                logger.debug("lastReqJob abort")
+                handleInterruptedException(requestFuture)
+            } catch (e: InterruptedIOException) {
+                handleInterruptedException(requestFuture)
             } catch (e: ExecutionException) {
                 cancelOrClose()
                 requestFuture?.cancel(true)
+                catchNetExceptions(e.cause)
                 lastStatistic?.let {
-                    lastStatistic?.addStatistic("cancel","request_abort")
-                    StatisticService.instance.addCompletionStatistic(lastStatistic!!)
                     lastStatistic = null
                 }
             } catch (e: Exception) {
@@ -296,6 +293,18 @@ class CompletionMode(
                 logger.warn("Exception while completion request processing", e)
             }
         }
+    }
+
+    private fun handleInterruptedException(requestFuture: Future<*>?) {
+        InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+        requestFuture?.cancel(true)
+        lastStatistic?.let {
+            lastStatistic?.addStatistic("cancel", "request_abort")
+            StatisticService.instance.addCompletionStatistic(lastStatistic!!)
+            lastStatistic = null
+        }
+        cancelOrClose()
+        logger.debug("lastReqJob abort")
     }
 
     private fun catchNetExceptions(e: Throwable?) {

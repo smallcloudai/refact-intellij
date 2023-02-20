@@ -39,6 +39,7 @@ Our proprietary <a href="https://www.smallcloud.ai/">AI model behind</a> Codify 
 <h3><b>Crowdsourcing Human Feedback</b></h3>
 <p>No one likes big corporations taking over our development toolchain, right? You can improve independent code tools like this one simply by turning your privacy settings to a relaxed position for some of your projects. We’ll tune the model to better follow YOUR commands and the tool will get better for everybody!</p>
 
+<h5>IntelliSense, intelliCode, autocomplete, AI-assisted code completion, AI-powered code completion, AI copilot, AI code snippets, code suggestion, code prediction</h5>
   ]]></description>
 
 
@@ -80,6 +81,8 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
                                  instance="com.smallcloud.codify.settings.AppSettingsConfigurable"
                                  id="codify_advanced_settings"
                                  displayName="Advanced"/>
+        <errorHandler implementation="com.smallcloud.codify.PluginErrorReportSubmitter"/>
+
         <actionPromoter implementation="com.smallcloud.codify.listeners.InlineActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.codify.listeners.DiffActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.codify.listeners.CancelActionsPromoter"/>

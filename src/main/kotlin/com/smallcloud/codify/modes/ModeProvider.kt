@@ -15,6 +15,9 @@ import com.intellij.util.messages.MessageBus
 import com.intellij.util.xmlb.annotations.Transient
 import com.jetbrains.rd.util.getOrCreate
 import com.smallcloud.codify.PluginState
+import com.smallcloud.codify.UsageStats
+import com.smallcloud.codify.io.ConnectionStatus
+import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.codify.listeners.GlobalCaretListener
 import com.smallcloud.codify.listeners.GlobalFocusListener
@@ -55,6 +58,8 @@ class ModeProvider(
     private val eventDebounceScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "CodifyEventDebounceScheduler", 1
     )
+    private val stats: UsageStats
+        get() = ApplicationManager.getApplication().getService(UsageStats::class.java)
 
     init {
         activeMode = modes[ModeType.Completion]
@@ -86,8 +91,17 @@ class ModeProvider(
 
         val (beforeEvent, afterEvent) = EventAdapter.eventProcess(beforeEvents, onTextEvents)
 
-        beforeEvent?.let { activeMode?.beforeDocumentChangeNonBulk(it) }
-        afterEvent?.let { activeMode?.onTextChange(it) }
+        try {
+            beforeEvent?.let { activeMode?.beforeDocumentChangeNonBulk(it) }
+            afterEvent?.let { activeMode?.onTextChange(it) }
+        } catch (e: Exception) {
+            InferenceGlobalContext.status = ConnectionStatus.ERROR
+            InferenceGlobalContext.lastErrorMsg = e.message
+            stats.addStatistic(
+                false, "uncaught exceptions", "none",
+                e.toString()
+            )
+        }
     }
 
     fun modeInActiveState(): Boolean = activeMode?.isInActiveState() == true

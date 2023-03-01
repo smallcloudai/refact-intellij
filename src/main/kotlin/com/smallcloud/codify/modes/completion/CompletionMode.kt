@@ -134,7 +134,6 @@ class CompletionMode(
         }, debounceMs, TimeUnit.MILLISECONDS)
     }
 
-
     private fun renderCompletion(
         editor: Editor,
         state: EditorTextState,

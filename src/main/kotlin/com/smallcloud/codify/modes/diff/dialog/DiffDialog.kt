@@ -5,8 +5,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.observable.util.whenMouseReleased
-import com.intellij.openapi.observable.util.whenTextChanged
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -70,9 +68,20 @@ class DiffDialog(
         isEditable = false
         isOpaque = false
         margin = JBUI.insets(GLOBAL_MARGIN)
-        whenTextChanged {
-            caretPosition = 0
-        }
+        document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent?) {
+                caretPosition = 0
+            }
+
+            override fun removeUpdate(e: DocumentEvent?) {
+                caretPosition = 0
+            }
+
+            override fun changedUpdate(e: DocumentEvent?) {
+                caretPosition = 0
+            }
+
+        })
     }
 
     private val longthinkDescriptionScrollPane: JBScrollPane
@@ -355,30 +364,49 @@ class DiffDialog(
             minimumSize = Dimension(600, 400)
             preferredSize = Dimension(600, 400)
         }
-        runButton.whenMouseReleased {
-            doOKAction()
-        }
-        bookmarkButton.whenMouseReleased {
-            entry.isBookmarked = !entry.isBookmarked
-            (thirdPartyList.model as LongthinkTableModel).filter(msgTextField.text)
-            bookmarkButton.icon =
-                if (entry.isBookmarked) Resources.Icons.BOOKMARK_CHECKED_24x24 else Resources.Icons.BOOKMARK_UNCHECKED_24x24
-            ExtraState.insertLocalLongthinkInfo(entry.entryName, LocalLongthinkInfo.fromEntry(entry))
-        }
-        likeButton.whenMouseReleased {
-            entry.isLiked = !entry.isLiked
-            if (entry.isLiked) {
-                entry.likes++
-            } else {
-                entry.likes--
+        runButton.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) {}
+            override fun mousePressed(e: MouseEvent?) {}
+            override fun mouseEntered(e: MouseEvent?) {}
+            override fun mouseExited(e: MouseEvent?) {}
+            override fun mouseReleased(e: MouseEvent?) {
+                doOKAction()
             }
-            (thirdPartyList.model as LongthinkTableModel).isLikedChanged(entry)
-            (thirdPartyList.model as LongthinkTableModel).filter(msgTextField.text)
-            likeButton.icon =
-                if (entry.isLiked) Resources.Icons.LIKE_CHECKED_24x24 else Resources.Icons.LIKE_UNCHECKED_24x24
-            ExtraState.insertLocalLongthinkInfo(entry.entryName, LocalLongthinkInfo.fromEntry(entry))
-            ExtraInfoService.addLike(entry.entryName, entry.isLiked)
-        }
+        })
+
+        bookmarkButton.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) {}
+            override fun mousePressed(e: MouseEvent?) {}
+            override fun mouseEntered(e: MouseEvent?) {}
+            override fun mouseExited(e: MouseEvent?) {}
+            override fun mouseReleased(e: MouseEvent?) {
+                entry.isBookmarked = !entry.isBookmarked
+                (thirdPartyList.model as LongthinkTableModel).filter(msgTextField.text)
+                bookmarkButton.icon =
+                    if (entry.isBookmarked) Resources.Icons.BOOKMARK_CHECKED_24x24 else Resources.Icons.BOOKMARK_UNCHECKED_24x24
+                ExtraState.insertLocalLongthinkInfo(entry.entryName, LocalLongthinkInfo.fromEntry(entry))
+            }
+        })
+        likeButton.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) {}
+            override fun mousePressed(e: MouseEvent?) {}
+            override fun mouseEntered(e: MouseEvent?) {}
+            override fun mouseExited(e: MouseEvent?) {}
+            override fun mouseReleased(e: MouseEvent?) {
+                entry.isLiked = !entry.isLiked
+                if (entry.isLiked) {
+                    entry.likes++
+                } else {
+                    entry.likes--
+                }
+                (thirdPartyList.model as LongthinkTableModel).isLikedChanged(entry)
+                (thirdPartyList.model as LongthinkTableModel).filter(msgTextField.text)
+                likeButton.icon =
+                    if (entry.isLiked) Resources.Icons.LIKE_CHECKED_24x24 else Resources.Icons.LIKE_UNCHECKED_24x24
+                ExtraState.insertLocalLongthinkInfo(entry.entryName, LocalLongthinkInfo.fromEntry(entry))
+                ExtraInfoService.addLike(entry.entryName, entry.isLiked)
+            }
+        })
         init()
         buttonMap[okAction]?.isVisible = false
         buttonMap[cancelAction]?.isVisible = false

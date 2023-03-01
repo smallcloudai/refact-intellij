@@ -1,6 +1,5 @@
 package com.smallcloud.codify.listeners
 
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
@@ -8,7 +7,7 @@ import com.intellij.openapi.editor.Editor
 import com.smallcloud.codify.modes.ModeProvider.Companion.getOrCreateModeProvider
 import com.smallcloud.codify.privacy.ActionUnderPrivacy
 
-class DiffInvokeAction: ActionUnderPrivacy() {
+class AIToolboxInvokeAction: ActionUnderPrivacy() {
     private fun getEditor(dataContext: DataContext): Editor? {
         return CommonDataKeys.EDITOR.getData(dataContext)
     }

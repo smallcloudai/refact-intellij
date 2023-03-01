@@ -22,6 +22,7 @@ import com.smallcloud.codify.modes.completion.prompt.RequestCreator
 import com.smallcloud.codify.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.codify.modes.diff.dialog.DiffDialog
 import com.smallcloud.codify.modes.highlight.HighlightContext
+import com.smallcloud.codify.struct.LongthinkFunctionEntry
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import dev.gitlive.difflib.DiffUtils
@@ -132,10 +133,10 @@ class DiffMode(
         val request: SMCRequest
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         if (diffLayout == null || highlightContext != null) {
-            val entry: DiffIntentEntry
-            var functionName = if (highlightContext == null) "diff-selection" else "diff-atcursor"
+            val entry: LongthinkFunctionEntry
             if (highlightContext == null) {
-                val dialog = DiffDialog(editor)
+                val dialog = DiffDialog(editor, startPosition = editor.offsetToLogicalPosition(startSelectionOffset),
+                    finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1))
                 if (!dialog.showAndGet()) return
                 entry = dialog.entry
                 DiffIntentProvider.instance.pushFrontHistoryIntent(entry)
@@ -147,11 +148,15 @@ class DiffMode(
                 lastFromHL = true
             }
 
+            var funcName = (if (lastFromHL) entry.functionHlClick else entry.functionSelection)
+            if (funcName.isNullOrEmpty()) {
+                funcName = entry.functionName
+            }
             request = RequestCreator.create(
                 fileName, editor.document.text,
                 startSelectionOffset, endSelectionOffset,
-                scope, entry.intent, functionName, listOf(),
-                model = entry.model ?: (InferenceGlobalContext.model ?: Resources.defaultModel)
+                scope, entry.intent, funcName, listOf(),
+                model = InferenceGlobalContext.longthinkModel ?: entry.model ?: InferenceGlobalContext.model ?: Resources.defaultModel
             ) ?: return
             startPosition = editor.offsetToLogicalPosition(startSelectionOffset)
             finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1)

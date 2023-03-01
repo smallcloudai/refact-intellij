@@ -2,6 +2,7 @@ package com.smallcloud.codify
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -10,16 +11,16 @@ import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.io.sendRequest
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
-import com.smallcloud.codify.settings.AppSettingsState.Companion.instance as Settings
+import com.smallcloud.codify.settings.ExtraState.Companion.instance as ExtraState
 
 
-class UsageStats {
+class UsageStats: Disposable {
     private var messages: MutableMap<String, Int>
         set(newMap) {
-            Settings.usageStatsMessagesCache = newMap
+            ExtraState.usageStatsMessagesCache = newMap
         }
         get() {
-            return Settings.usageStatsMessagesCache
+            return ExtraState.usageStatsMessagesCache
         }
     private var task: Future<*>
 
@@ -120,5 +121,10 @@ class UsageStats {
             get() = ApplicationManager.getApplication().getService(UsageStats::class.java)
 
         val addStatistic = instance::addStatistic
+    }
+
+    override fun dispose() {
+        task.cancel(true)
+        forceReport()
     }
 }

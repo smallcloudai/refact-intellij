@@ -7,6 +7,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.alsoIfNull
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.UsageStats
+import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.notifications.emitError
 import com.smallcloud.codify.struct.SMCExceptions
 import com.smallcloud.codify.struct.SMCPrediction
@@ -63,8 +64,10 @@ fun fetch(request: SMCRequest): SMCPrediction? {
 
 private fun lookForCommonErrors(json: JsonObject, request: SMCRequest): String? {
     if (json.has("detail")) {
-        UsageStats.addStatistic(false, request.scope, request.uri.toString(), json.get("detail").asString)
-        return json.get("detail").asString
+        val gson = Gson()
+        val detail = gson.toJson(json.get("detail"))
+        UsageStats.addStatistic(false, request.scope, request.uri.toString(), detail)
+        return detail
     }
     if (json.has("retcode") && json.get("retcode").asString != "OK") {
         UsageStats.addStatistic(
@@ -117,9 +120,13 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
 
     if (job != null) {
         job.future = job.future.thenApplyAsync {
-            val errorMsg = lookForCommonErrors(gson.fromJson((it as String), JsonObject::class.java), request)
+            val rawObject = gson.fromJson((it as String), JsonObject::class.java)
+            val errorMsg = lookForCommonErrors(rawObject, request)
             if (errorMsg != null) {
                 throw Exception(errorMsg)
+            }
+            if (rawObject.has("metering_balance")) {
+                AccountManager.meteringBalance = rawObject.get("metering_balance").asInt
             }
             val json = gson.fromJson(it, SMCPrediction::class.java)
             InferenceGlobalContext.lastAutoModel = json.model

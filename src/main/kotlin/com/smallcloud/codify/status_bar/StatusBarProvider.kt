@@ -1,12 +1,14 @@
 package com.smallcloud.codify.status_bar
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidgetFactory
 import org.jetbrains.annotations.Nullable
 
-class SMCStatusBarWidgetFactory : StatusBarWidgetFactory {
+class SMCStatusBarWidgetFactory : StatusBarWidgetFactory, Disposable {
     override fun getId(): String {
         return "SMCStatusBarWidgetFactory"
     }
@@ -25,11 +27,15 @@ class SMCStatusBarWidgetFactory : StatusBarWidgetFactory {
     }
 
     override fun disposeWidget(widget: StatusBarWidget) {
-//        Disposer.dispose()
+        Disposer.dispose(widget)
     }
 
     override fun canBeEnabledOn(statusBar: StatusBar): Boolean {
         return true
+    }
+
+    override fun dispose() {
+        TODO("Not yet implemented")
     }
 
 }

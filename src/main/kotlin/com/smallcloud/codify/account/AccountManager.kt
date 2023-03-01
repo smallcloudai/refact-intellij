@@ -14,8 +14,13 @@ object AccountManager {
                 .messageBus
                 .syncPublisher(AccountManagerChangedNotifier.TOPIC)
                 .ticketChanged(newTicket)
+            AppSettingsState.instance.streamlinedLoginTicketWasCreatedTs = if (newTicket == null) null else
+                System.currentTimeMillis()
             checkLoggedInAndNotifyIfNeed()
         }
+
+    val ticketCreatedTs: Long?
+        get() = AppSettingsState.instance.streamlinedLoginTicketWasCreatedTs
 
     var user: String?
         get() = AppSettingsState.instance.userLoggedIn
@@ -51,6 +56,8 @@ object AccountManager {
         get() {
             return !apiKey.isNullOrEmpty() && !user.isNullOrEmpty()
         }
+
+    var meteringBalance: Int = 0
 
     private fun loadFromSettings() {
         previousLoggedInState = isLoggedIn

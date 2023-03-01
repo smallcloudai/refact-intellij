@@ -1,5 +1,6 @@
 package com.smallcloud.codify.settings
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
@@ -12,7 +13,6 @@ import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.io.InferenceGlobalContextChangedNotifier
-import com.smallcloud.codify.modes.diff.DiffIntentEntry
 import java.net.URI
 
 
@@ -22,24 +22,24 @@ import java.net.URI
  * these persistent application settings are stored.
  */
 @State(name = "com.smallcloud.userSettings.AppSettingsState", storages = [Storage("CodifySettings.xml")])
-class AppSettingsState : PersistentStateComponent<AppSettingsState> {
+class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable {
     var apiKey: String? = null
     var temperature: Float? = null
     var model: String? = null
     var userLoggedIn: String? = null
     var streamlinedLoginTicket: String? = null
+    var streamlinedLoginTicketWasCreatedTs: Long? = null
     var inferenceUri: String? = null
     var userInferenceUri: String? = null
     var loginMessage: String? = null
     var tooltipMessage: String? = null
     var inferenceMessage: String? = null
     var pluginIsEnabled: Boolean = true
-    var usageStatsMessagesCache: MutableMap<String, Int> = HashMap()
-    var usageAcceptRejectMetricsCache: MutableList<String> = mutableListOf()
     var useForceCompletion: Boolean = false
     var useMultipleFilesCompletion: Boolean = false
-    var diffIntentEntriesHistory: List<DiffIntentEntry> = emptyList()
     var startupLoggedIn: Boolean = false
+    var developerModeEnabled: Boolean = false
+    var longthinkModel: String? = null
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -88,6 +88,9 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     override fun useMultipleFilesCompletionChanged(newValue: Boolean) {
                         instance.useMultipleFilesCompletion = newValue
                     }
+                    override fun developerModeEnabledChanged(newValue: Boolean) {
+                        instance.developerModeEnabled = newValue
+                    }
                 })
         messageBus
             .connect(PluginState.instance)
@@ -124,6 +127,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
         val instance: AppSettingsState
             get() = ApplicationManager.getApplication().getService(AppSettingsState::class.java)
     }
+
+    override fun dispose() {}
 }
 
 fun settingsStartup() {

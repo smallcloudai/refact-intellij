@@ -87,12 +87,16 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
         <actionPromoter implementation="com.smallcloud.codify.listeners.DiffActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.codify.listeners.CancelActionsPromoter"/>
 
-        <applicationService serviceImplementation="com.smallcloud.codify.settings.PrivacyState"/>
-        <applicationService serviceImplementation="com.smallcloud.codify.statistic.StatisticService"/>
-        <applicationService serviceImplementation="com.smallcloud.codify.privacy.PrivacyService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.settings.PrivacyState"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.settings.ExtraState"/>
+
+        <applicationService serviceImplementation="com.smallcloud.codify.statistic.StatisticService"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.statistic.ExtraInfoService"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.privacy.PrivacyService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.account.LoginStateService"/>
         <applicationService serviceImplementation="com.smallcloud.codify.UsageStats"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.UpdateChecker"/>
         <applicationService serviceImplementation="com.smallcloud.codify.modes.diff.DiffIntentProvider"/>
         <applicationService serviceImplementation="com.smallcloud.codify.io.ConnectivityManager"/>
     </extensions>
@@ -113,10 +117,10 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
             <keyboard-shortcut first-keystroke="alt SLASH" keymap="$default"/>
         </action>
         <action
-                id="DiffAction"
-                class="com.smallcloud.codify.listeners.DiffInvokeAction"
-                text="Codify Diff"
-                description="Codify Diff action">
+                id="CodifyAIToolboxAction"
+                class="com.smallcloud.codify.listeners.AIToolboxInvokeAction"
+                text="Codify AI Toolbox"
+                description="Codify AI Toolbox action">
             <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
@@ -125,4 +129,10 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
         </group>
     </actions>
     <resource-bundle>bundles.Codify</resource-bundle>
+    <applicationListeners>
+        <listener class="com.smallcloud.codify.listeners.PluginListener"
+                  topic="com.intellij.ide.plugins.DynamicPluginListener"
+                  activeInHeadlessMode="true"
+        />
+    </applicationListeners>
 </idea-plugin>

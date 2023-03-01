@@ -19,9 +19,9 @@ import com.smallcloud.codify.modes.ModeProvider
 import com.smallcloud.codify.modes.ModeType
 import com.smallcloud.codify.modes.completion.prompt.RequestCreator
 import com.smallcloud.codify.modes.completion.structs.DocumentEventExtra
-import com.smallcloud.codify.modes.diff.DiffIntentEntry
 import com.smallcloud.codify.modes.diff.DiffIntentProvider
 import com.smallcloud.codify.modes.diff.dialog.DiffDialog
+import com.smallcloud.codify.struct.LongthinkFunctionEntry
 import com.smallcloud.codify.struct.SMCPrediction
 import com.smallcloud.codify.struct.SMCRequest
 import java.util.concurrent.CancellationException
@@ -139,7 +139,7 @@ class HighlightMode(
         }
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
 
-        val entry: DiffIntentEntry
+        val entry: LongthinkFunctionEntry
         if (fromDiff && DiffIntentProvider.instance.lastHistoryEntry() != null) {
             entry = DiffIntentProvider.instance.lastHistoryEntry()!!
         } else {
@@ -152,11 +152,14 @@ class HighlightMode(
         val fileName = getActiveFile(editor.document) ?: return
         val startSelectionOffset = editor.selectionModel.selectionStart
         val endSelectionOffset = editor.selectionModel.selectionEnd
+        val funcName = if (entry.functionHighlight.isNullOrEmpty()) entry.functionName else
+            entry.functionHighlight ?: return
         val request = RequestCreator.create(
             fileName, editor.document.text,
             startSelectionOffset, endSelectionOffset,
-            scope, entry.intent, "highlight", listOf(),
-            model = entry.model ?: (InferenceGlobalContext.model ?: Resources.defaultModel)
+            scope, entry.intent, funcName, listOf(),
+            model = InferenceGlobalContext.longthinkModel ?: entry.model
+                ?: InferenceGlobalContext.model ?: Resources.defaultModel
         ) ?: return
         ModeProvider.getOrCreateModeProvider(editor).switchMode(ModeType.Highlight)
 

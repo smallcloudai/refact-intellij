@@ -2,6 +2,7 @@ package com.smallcloud.codify.statistic
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -9,13 +10,13 @@ import com.smallcloud.codify.Resources
 import com.smallcloud.codify.UsageStats
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.io.sendRequest
-import com.smallcloud.codify.settings.AppSettingsState.Companion.instance as Settings
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.codify.settings.ExtraState.Companion.instance as ExtraState
 
-class StatisticService {
+class StatisticService: Disposable {
     private val stats: MutableList<String>
-        get() = Settings.usageAcceptRejectMetricsCache
+        get() = ExtraState.usageAcceptRejectMetricsCache
 
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "CodifyStatisticScheduler", 1
@@ -108,5 +109,11 @@ class StatisticService {
         @JvmStatic
         val instance: StatisticService
             get() = ApplicationManager.getApplication().getService(StatisticService::class.java)
+    }
+
+    override fun dispose() {
+        task?.cancel(true)
+        forceReport()
+        scheduler.shutdown()
     }
 }

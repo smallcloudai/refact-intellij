@@ -1,6 +1,7 @@
 package com.smallcloud.codify
 
 import com.intellij.ide.plugins.PluginInstaller
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
@@ -13,7 +14,7 @@ import com.smallcloud.codify.privacy.PrivacyService
 import com.smallcloud.codify.settings.AppSettingsState
 import com.smallcloud.codify.settings.settingsStartup
 
-class Initializer : StartupActivity.Background {
+class Initializer : StartupActivity.Background, Disposable {
 
     override fun runActivity(project: Project) {
         initialize(project)
@@ -26,12 +27,17 @@ class Initializer : StartupActivity.Background {
             AppSettingsState.instance.startupLoggedIn = true
             login()
         } else {
-            ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
+            ApplicationManager.getApplication().getService(LoginStateService::class.java)
+                .tryToWebsiteLogin(true)
         }
         settingsStartup()
         notificationStartup()
         UsageStats.instance
         PrivacyService.instance.projectOpened(project)
-        PluginInstaller.addStateListener(UninstallListener());
+        PluginInstaller.addStateListener(UninstallListener())
+        UpdateChecker.instance
+    }
+
+    override fun dispose() {
     }
 }

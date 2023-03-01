@@ -19,8 +19,8 @@ class ConnectivityManager : Disposable {
         task = scheduler.scheduleWithFixedDelay(
             {
                 try {
-                    if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED ||
-                        InferenceGlobalContext.status == ConnectionStatus.ERROR) {
+                    if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED /*||
+                        InferenceGlobalContext.status == ConnectionStatus.ERROR*/) {
                         val url = defaultCodifyUrl.toURL()
                         val connection: URLConnection = url.openConnection()
                         connection.connect()

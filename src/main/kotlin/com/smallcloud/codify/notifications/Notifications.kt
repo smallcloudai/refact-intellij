@@ -21,6 +21,7 @@ import com.smallcloud.codify.account.login
 import com.smallcloud.codify.privacy.Privacy
 import com.smallcloud.codify.privacy.PrivacyChangesNotifier
 import com.smallcloud.codify.settings.AppRootConfigurable
+import com.smallcloud.codify.utils.getLastUsedProject
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
 import com.smallcloud.codify.privacy.PrivacyService.Companion.instance as PrivacyServiceInstance
@@ -146,7 +147,7 @@ fun emitRegular(project: Project, editor: Editor) {
 
 fun emitInfo(msg: String) {
     removeLastNotification()
-    val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return
+    val project = getLastUsedProject()
     val notification = NotificationGroupManager.getInstance().getNotificationGroup("Codify Notification Group")
         .createNotification(Resources.codifyStr, msg, NotificationType.INFORMATION)
     notification.icon = Resources.Icons.LOGO_RED_16x16
@@ -160,7 +161,7 @@ fun emitInfo(msg: String) {
 
 fun emitError(msg: String) {
     removeLastNotification()
-    val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return
+    val project = getLastUsedProject()
     val notification = NotificationGroupManager.getInstance().getNotificationGroup("Codify Notification Group")
         .createNotification(Resources.codifyStr, msg, NotificationType.ERROR)
     notification.icon = Resources.Icons.LOGO_RED_16x16

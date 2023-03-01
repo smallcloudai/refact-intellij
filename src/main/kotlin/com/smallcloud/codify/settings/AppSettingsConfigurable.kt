@@ -7,6 +7,10 @@ import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.io.InferenceGlobalContext
 import org.jetbrains.annotations.Nls
+import java.awt.event.FocusEvent
+import java.awt.event.FocusListener
+import java.awt.event.KeyEvent
+import java.awt.event.KeyListener
 import java.net.URI
 import javax.swing.JComponent
 
@@ -61,6 +65,13 @@ class AppSettingsConfigurable : Configurable {
         modified = modified || mySettingsComponent!!.useForceCompletion != InferenceGlobalContext.useForceCompletion
         modified = modified || mySettingsComponent!!.useMultipleFilesCompletion != InferenceGlobalContext.useMultipleFilesCompletion
 
+        modified = modified || mySettingsComponent!!.useDeveloperMode != InferenceGlobalContext.developerModeEnabled
+        modified = modified or (mySettingsComponent!!.longthinkModel.isNotEmpty()
+                && (InferenceGlobalContext.longthinkModel == null ||
+                InferenceGlobalContext.longthinkModel != mySettingsComponent!!.longthinkModel))
+        modified = modified or (mySettingsComponent!!.longthinkModel.isEmpty()
+                && InferenceGlobalContext.longthinkModel != null)
+
         return modified
     }
 
@@ -83,6 +94,8 @@ class AppSettingsConfigurable : Configurable {
                 makeUrlGreat(mySettingsComponent!!.contrastUrlText)
         InferenceGlobalContext.useForceCompletion = mySettingsComponent!!.useForceCompletion
         InferenceGlobalContext.useMultipleFilesCompletion = mySettingsComponent!!.useMultipleFilesCompletion
+        InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
+        InferenceGlobalContext.longthinkModel = mySettingsComponent!!.longthinkModel.ifEmpty { null }
     }
 
     override fun reset() {
@@ -92,9 +105,13 @@ class AppSettingsConfigurable : Configurable {
             if (InferenceGlobalContext.hasUserInferenceUri()) InferenceGlobalContext.inferenceUri.toString() else ""
         mySettingsComponent!!.useForceCompletion = InferenceGlobalContext.useForceCompletion
         mySettingsComponent!!.useMultipleFilesCompletion = InferenceGlobalContext.useMultipleFilesCompletion
+        mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled
+        mySettingsComponent!!.longthinkModel = InferenceGlobalContext.longthinkModel ?: ""
     }
 
     override fun disposeUIResources() {
         mySettingsComponent = null
     }
+
+
 }

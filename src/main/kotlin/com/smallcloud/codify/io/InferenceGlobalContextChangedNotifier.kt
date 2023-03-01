@@ -11,6 +11,7 @@ interface InferenceGlobalContextChangedNotifier {
     fun lastAutoModelChanged(newModel: String?) {}
     fun useForceCompletionModeChanged(newValue: Boolean) {}
     fun useMultipleFilesCompletionChanged(newValue: Boolean) {}
+    fun developerModeEnabledChanged(newValue: Boolean) {}
 
     companion object {
         val TOPIC = Topic.create(

@@ -9,6 +9,8 @@ import com.smallcloud.codify.CodifyBundle
 import java.awt.Color
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
+import java.awt.event.KeyEvent
+import java.awt.event.KeyListener
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import javax.swing.*
@@ -20,11 +22,33 @@ class AppSettingsComponent {
     val splitter: JBSplitter = JBSplitter(true, 0.3f)
     private val mainPanel: JPanel
     private val experimentalPanel: JPanel
-    val myTokenText = JBTextField()
+    val myTokenText = JBTextField().apply {
+        addKeyListener(object : KeyListener {
+            override fun keyTyped(e: KeyEvent?) {}
+            override fun keyReleased(e: KeyEvent?) {}
+            override fun keyPressed(e: KeyEvent?) {
+                if (e?.keyCode == KeyEvent.VK_MINUS && e.isControlDown && e.isAltDown) {
+                    developerModeCheckBox.isVisible = true
+                    myLongthinkModelText.isVisible = true
+                    myLongthinkModelLabel.isVisible = true
+                }
+            }
+
+        })
+    }
     private val myModelText = JBTextField()
     private val myContrastUrlText = JBTextField()
     private val myUseForceCompletionMode = JCheckBox(CodifyBundle.message("advancedSettings.useForceCompletionMode"))
     private val myUseMultipleFilesCompletion = JCheckBox(CodifyBundle.message("advancedSettings.useMultipleFilesCompletion"))
+    private val developerModeCheckBox = JCheckBox(CodifyBundle.message("advancedSettings.developerMode")).apply {
+        isVisible = false
+    }
+    private val myLongthinkModelText = JBTextField().apply {
+        isVisible = false
+    }
+    private val myLongthinkModelLabel = JBLabel("Longthink model:").apply {
+        isVisible = false
+    }
 
     init {
         mainPanel = FormBuilder.createFormBuilder().run {
@@ -65,6 +89,8 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
+            addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
+            addLabeledComponent(myLongthinkModelLabel, myLongthinkModelText, UIUtil.LARGE_VGAP)
             addComponentFillVertically(JPanel(), 0)
         }.panel
 
@@ -109,4 +135,16 @@ class AppSettingsComponent {
         set(value) {
             myUseMultipleFilesCompletion.isSelected = value
         }
+
+    var useDeveloperMode: Boolean
+        get() = developerModeCheckBox.isSelected
+        set(newVal) {
+            developerModeCheckBox.isSelected = newVal
+        }
+    var longthinkModel: String
+        get() = myLongthinkModelText.text
+        set(newVal) {
+            myLongthinkModelText.text = newVal
+        }
+
 }

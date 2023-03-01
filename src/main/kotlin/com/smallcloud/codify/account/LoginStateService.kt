@@ -1,16 +1,24 @@
 package com.smallcloud.codify.account
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.notifications.emitLogin
+import com.smallcloud.codify.utils.getLastUsedProject
+import java.util.concurrent.Future
 
 
-class LoginStateService {
+class LoginStateService: Disposable {
+    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
+        "CodifyLoginStateServiceScheduler", 1
+    )
+    private var lastTask: Future<*>? = null
     private var lastWebsiteLoginStatus: String = "OK"
     private var lastInferenceLoginStatus: String = "OK"
     private var popupLoginMessageOnce: Boolean = false
     private var lastLoginTime: Long = 0
+    private var loginCounter: Int = 0
 
     fun getLastWebsiteLoginStatus(): String {
         return lastWebsiteLoginStatus
@@ -20,12 +28,18 @@ class LoginStateService {
         return lastInferenceLoginStatus
     }
 
-    fun tryToWebsiteLogin(force: Boolean = false) {
-        if (System.currentTimeMillis() - lastLoginTime < 30_000) {
-            return
+    fun tryToWebsiteLogin(force: Boolean = false, fromCounter: Boolean = false): Future<*>? {
+        if (!fromCounter && System.currentTimeMillis() - lastLoginTime < 30_000) {
+            return null
         }
-        lastLoginTime = System.currentTimeMillis()
-        AppExecutorUtil.getAppExecutorService().submit {
+        if (!fromCounter) {
+            loginCounter++
+            if (loginCounter > 3) {
+                lastLoginTime = System.currentTimeMillis()
+                loginCounter = 0
+            }
+        }
+        lastTask = scheduler.submit {
             try {
                 Logger.getInstance("check_login").warn("call")
                 lastWebsiteLoginStatus = checkLogin(force)
@@ -37,12 +51,17 @@ class LoginStateService {
                 popupLoginMessageOnce = true
             }
         }
+        return lastTask
     }
 
     private fun emitLoginIfNeeded() {
         if (!popupLoginMessageOnce && lastWebsiteLoginStatus.isEmpty()) {
-            val project = ProjectManager.getInstance().openProjects.firstOrNull() ?: return
-            emitLogin(project)
+            emitLogin(getLastUsedProject())
         }
+    }
+
+    override fun dispose() {
+        lastTask?.cancel(true)
+        scheduler.shutdown()
     }
 }

@@ -107,6 +107,15 @@ object InferenceGlobalContext {
                 .temperatureChanged(newTemp)
         }
 
+    var developerModeEnabled: Boolean
+        get() = AppSettingsState.instance.developerModeEnabled
+        set(newValue) {
+            if (newValue == developerModeEnabled) return
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .developerModeEnabledChanged(newValue)
+        }
+
     var lastAutoModel: String? = null
         set(newModel) {
             if (newModel == field) return
@@ -123,6 +132,12 @@ object InferenceGlobalContext {
             messageBus
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .modelChanged(newModel)
+        }
+    var longthinkModel: String?
+        get() = AppSettingsState.instance.longthinkModel
+        set(newModel) {
+            if (newModel == AppSettingsState.instance.longthinkModel) return
+            AppSettingsState.instance.longthinkModel = newModel
         }
 
     var useForceCompletion: Boolean

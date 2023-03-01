@@ -9,10 +9,11 @@ dependencies {
     implementation("org.apache.httpcomponents.client5:httpclient5:5.2.1") {
         exclude("org.slf4j")
     }
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
 }
 
 group = "com.smallcloud"
-version = getVersionString("1.1.22")
+version = getVersionString("1.1.25")
 
 repositories {
     mavenCentral()
@@ -77,5 +78,6 @@ fun getVersionString(baseVersion: String): String {
 
     val branch = "git rev-parse --abbrev-ref HEAD".runCommand(workingDir = rootDir)
     val commitId = "git rev-parse --short=8 HEAD".runCommand(workingDir = rootDir)
-    return "$baseVersion-$branch-$commitId"
+    val numberOfCommits = "git rev-list --count HEAD ^origin/main".runCommand(workingDir = rootDir)
+    return "$baseVersion-$branch-$numberOfCommits-$commitId"
 }

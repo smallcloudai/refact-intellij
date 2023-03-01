@@ -1,5 +1,6 @@
 package com.smallcloud.codify.listeners
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
@@ -12,7 +13,7 @@ import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.modes.ModeProvider
 
 
-class DocumentListener : BulkAwareDocumentListener {
+class DocumentListener : BulkAwareDocumentListener, Disposable {
     override fun beforeDocumentChangeNonBulk(event: DocumentEvent) {
         Logger.getInstance("DocumentListener").debug("beforeDocumentChangeNonBulk")
         val editor = getActiveEditor(event.document) ?: return
@@ -34,4 +35,6 @@ class DocumentListener : BulkAwareDocumentListener {
         }
         return EditorFactory.getInstance().getEditors(document).firstOrNull()
     }
+
+    override fun dispose() {}
 }

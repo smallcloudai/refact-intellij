@@ -1,47 +1,40 @@
 package com.smallcloud.codify.modes.diff
 
-import com.google.gson.annotations.SerializedName
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.util.xmlb.annotations.OptionTag
-import com.smallcloud.codify.settings.AppSettingsState
+import com.smallcloud.codify.settings.ExtraState.Companion.instance as ExtraState
+import com.smallcloud.codify.struct.LongthinkFunctionEntry
+import com.smallcloud.codify.struct.ShortLongthinkHistoryInfo
 
-data class DiffIntentEntry(
-    @OptionTag @SerializedName("label") val intent: String = "",
-    @OptionTag val model: String? = null,
-    @OptionTag @SerializedName("supports_highlight") val supportHighlight: Boolean = true,
-    @OptionTag @SerializedName("supports_selection") val supportSelection: Boolean = true,
-    @OptionTag @SerializedName("selected_lines_min") val selectedLinesMin: Int = 0,
-    @OptionTag @SerializedName("selected_lines_max") val selectedLinesMax: Int = 99999,
-    @OptionTag val metering: Int = 0,
-    @OptionTag @SerializedName("3rd_party") val thirdParty: Boolean = false,
-    @OptionTag var functionName: String = ""
-)
-
-class DiffIntentProvider {
-    private var _cloudIntents: List<DiffIntentEntry> = emptyList()
-    var defaultThirdPartyFunctions: List<DiffIntentEntry>
-        get(): List<DiffIntentEntry> = _cloudIntents
+class DiffIntentProvider: Disposable {
+    private var _cloudIntents: List<LongthinkFunctionEntry> = emptyList()
+    var defaultThirdPartyFunctions: List<LongthinkFunctionEntry>
+        get(): List<LongthinkFunctionEntry> = _cloudIntents
         set(newList) {
             _cloudIntents = newList
         }
 
-
-    var historyIntents
+    var historyIntents: List<LongthinkFunctionEntry>
         set(newVal) {
-            AppSettingsState.instance.diffIntentEntriesHistory = newVal
+            ExtraState.historyEntries = newVal.map { ShortLongthinkHistoryInfo.fromEntry(it) }
         }
-        get() = AppSettingsState.instance.diffIntentEntriesHistory
+        get() = ExtraState.historyEntries.map { shortInfo ->
+            var appropriateEntry = _cloudIntents.find { it.functionName == shortInfo.functionName } ?: return@map null
+            appropriateEntry = appropriateEntry.mergeShortInfo(shortInfo)
+            if (appropriateEntry.intent.isEmpty()) return@map null
+            appropriateEntry
+        }.filterNotNull()
 
 
-
-    fun pushFrontHistoryIntent(newStr: DiffIntentEntry) {
-        var srcHints = AppSettingsState.instance.diffIntentEntriesHistory.filter { it != newStr }
+    fun pushFrontHistoryIntent(newEntry: LongthinkFunctionEntry) {
+        if (newEntry.intent.isEmpty()) return
+        var srcHints = historyIntents.filter { it.intent != newEntry.intent }
         srcHints = srcHints.subList(0, minOf(srcHints.size, 20))
-        AppSettingsState.instance.diffIntentEntriesHistory = listOf(newStr) + srcHints
+        historyIntents = listOf(newEntry) + srcHints
     }
 
-    fun lastHistoryEntry(): DiffIntentEntry? {
-        return AppSettingsState.instance.diffIntentEntriesHistory.firstOrNull()
+    fun lastHistoryEntry(): LongthinkFunctionEntry? {
+        return historyIntents.firstOrNull()
     }
 
     companion object {
@@ -49,4 +42,6 @@ class DiffIntentProvider {
         val instance: DiffIntentProvider
             get() = ApplicationManager.getApplication().getService(DiffIntentProvider::class.java)
     }
+
+    override fun dispose() {}
 }

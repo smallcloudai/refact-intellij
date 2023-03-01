@@ -1,5 +1,6 @@
 package com.smallcloud.codify.privacy
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -72,7 +73,7 @@ data class PrivacyMember(
 }
 
 
-class PrivacyService : VetoableProjectManagerListener {
+class PrivacyService : VetoableProjectManagerListener, Disposable {
     private var privacyTree: MutableMap<String, PrivacyMember> = emptyMap<String, PrivacyMember>().toMutableMap()
 
     init {
@@ -232,5 +233,9 @@ class PrivacyService : VetoableProjectManagerListener {
 
     override fun canClose(project: Project): Boolean {
         return true
+    }
+
+    override fun dispose() {
+        ProjectManager.getInstance().removeProjectManagerListener(this)
     }
 }

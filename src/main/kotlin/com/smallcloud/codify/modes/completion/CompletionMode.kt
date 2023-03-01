@@ -114,7 +114,6 @@ class CompletionMode(
                 app.invokeAndWait {
                     promptInfo = PromptCooker.cook(
                         state,
-                        FileDocumentManager.getInstance().getFile(editor.document)?.extension,
                         FilesCollector.getInstance(it).collect(),
                         mostImportantFilesMaxCount = if (event.force) 25 else 6,
                         lessImportantFilesMaxCount = if (event.force) 10 else 2,
@@ -134,6 +133,7 @@ class CompletionMode(
             process(request, state, event.force)
         }, debounceMs, TimeUnit.MILLISECONDS)
     }
+
 
     private fun renderCompletion(
         editor: Editor,

@@ -1,5 +1,6 @@
 package com.smallcloud.codify.modes.completion.prompt
 
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.smallcloud.codify.modes.EditorTextState
 import info.debatty.java.stringsimilarity.Jaccard
@@ -25,17 +26,20 @@ object PromptCooker {
 
     fun cook(
         currentFileEditorHelper: EditorTextState,
-        currentExt: String?,
         files: List<FileInformationEntry>,
         mostImportantFilesMaxCount: Int,
         lessImportantFilesMaxCount: Int,
         maxFileSize: Int
     ): List<PromptInfo> {
+        val currentFile = FileDocumentManager.getInstance().getFile(currentFileEditorHelper.document)
+        val currentExt = currentFile?.extension
         val mostImportantFiles = files
+            .filter { it.file != currentFile }
             .filter { it.isOpened() }
             .sortedByDescending { it.lastEditorShown }
             .take(mostImportantFilesMaxCount)
         val lessImportantFiles = files
+            .filter { it.file != currentFile }
             .filter { !mostImportantFiles.contains(it) }
             .sortedByDescending { it.lastUpdatedTs }
             .take(lessImportantFilesMaxCount)
@@ -68,7 +72,7 @@ object PromptCooker {
             .filter { it.second != null }
             .mapNotNull { (info, lines) ->
                 lines!!
-                    .windowed(windowSize, step = windowSize, partialWindows = true) {
+                    .windowed(windowSize, step = windowSize / 2, partialWindows = true) {
                         it.joinToString("\n")
                     }
                     .map {

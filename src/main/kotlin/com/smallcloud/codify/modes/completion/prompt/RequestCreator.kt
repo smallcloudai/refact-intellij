@@ -7,7 +7,9 @@ import com.smallcloud.codify.struct.SMCRequest
 import com.smallcloud.codify.struct.SMCRequestBody
 
 object RequestCreator {
-    private const val symbolsBudget: Long = 20000
+    private const val symbolsBudget: Long = 10_000
+    private const val distanceThreshold: Double = 0.75
+
     fun create(
         fileName: String, text: String,
         startOffset: Int, endOffset: Int,
@@ -22,6 +24,7 @@ object RequestCreator {
         val poi = mutableListOf<POI>()
         promptInfo
             .filter { it.fileInfo.isOpened() }
+            .filter { it.distance < distanceThreshold }
             .sortedByDescending { it.fileInfo.lastEditorShown }
             .forEach {
                 if (currentBudget > symbolsBudget) return@forEach
@@ -33,11 +36,14 @@ object RequestCreator {
             }
         promptInfo
             .filter { !it.fileInfo.isOpened() }
+            .filter { it.distance < distanceThreshold }
             .sortedByDescending { it.fileInfo.lastUpdatedTs }
             .forEach {
                 if (currentBudget > symbolsBudget) return@forEach
                 if (sources.containsKey(it.fileName)) return@forEach
-                sources[it.fileName] = it.prompt
+                sources[it.fileName] = it.text
+                val cursors = it.cursors()
+                poi.add(POI(it.fileName, cursors.first, cursors.second, 1.0 - it.distance))
                 currentBudget += it.prompt.length
             }
 

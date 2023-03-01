@@ -15,6 +15,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.ProjectScope
 import com.intellij.util.ObjectUtils
+import com.smallcloud.codify.privacy.Privacy
+import com.smallcloud.codify.privacy.PrivacyService
 import java.nio.file.Path
 import kotlin.io.path.relativeTo
 import kotlin.io.path.Path as makePath
@@ -95,7 +97,9 @@ class FilesCollector(
     }
 
     fun collect(): List<FileInformationEntry> {
-        return filesInformation.filter { it.file.isValid && it.file.exists() }
+        return filesInformation.filter {
+            it.file.isValid && it.file.exists() && PrivacyService.instance.getPrivacy(it.file) != Privacy.DISABLED
+        }
     }
 
     companion object {

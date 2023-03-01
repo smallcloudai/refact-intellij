@@ -21,7 +21,7 @@ data class PromptInfo(
 }
 
 object PromptCooker {
-    private const val windowSize: Int = 60
+    private const val windowSize: Int = 40
     private val simAlg = Jaccard()
 
     fun cook(

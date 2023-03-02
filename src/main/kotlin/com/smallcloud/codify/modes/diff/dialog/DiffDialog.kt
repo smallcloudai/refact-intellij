@@ -157,7 +157,7 @@ class DiffDialog(
 
     private fun getDefaultEntry(): LongthinkFunctionEntry {
         return try {
-            (thirdPartyList.model as LongthinkTableModel).elementAt(0)
+            (thirdPartyList.model as LongthinkTableModel).elementAt(0).copy(intent = msgTextField.text)
         } catch (e: Exception) {
             LongthinkFunctionEntry(msgTextField.text)
         }
@@ -301,7 +301,7 @@ class DiffDialog(
             it.selectionModel.addListSelectionListener { e ->
                 if (e == null) return@addListSelectionListener
                 try {
-                    entry = it.selectedValue
+                    entry = it.selectedValue.copy(intent=msgTextField.text)
                 } catch (e: Exception) {
                     Logger.getInstance(DiffDialog::class.java).warn(e.message)
                 }
@@ -310,7 +310,6 @@ class DiffDialog(
                 override fun keyTyped(e: KeyEvent?) {
                     if (e?.isActionKey == false
                         && e.keyCode != KeyEvent.VK_ENTER
-                        && e.keyCode != KeyEvent.VK_UNDEFINED
                     ) {
                         msgTextField.text += e.keyChar
                         msgTextField.requestFocus()

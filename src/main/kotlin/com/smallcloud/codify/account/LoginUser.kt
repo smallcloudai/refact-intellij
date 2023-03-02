@@ -1,10 +1,8 @@
 package com.smallcloud.codify.account
 
-import org.apache.http.client.utils.URIBuilder
 import com.google.gson.JsonObject
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.util.queryParameters
 import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.Resources.defaultLoginUrl
 import com.smallcloud.codify.Resources.defaultRecallUrl
@@ -15,6 +13,7 @@ import com.smallcloud.codify.io.InferenceGlobalContext
 import com.smallcloud.codify.io.sendRequest
 import com.smallcloud.codify.struct.LongthinkFunctionEntry
 import com.smallcloud.codify.utils.makeGson
+import org.apache.http.client.utils.URIBuilder
 import java.net.URI
 import com.smallcloud.codify.modes.diff.DiffIntentProvider.Companion.instance as DiffIntentProviderInstance
 import com.smallcloud.codify.settings.ExtraState.Companion.instance as ExtraState
@@ -136,7 +135,7 @@ fun checkLogin(force: Boolean = false): String {
             acc.ticket = null
             if (body.get("inference_url") != null) {
                 if (body.get("inference_url").asString != "DISABLED") {
-                    infC.serverInferenceUri = URI(body.get("inference_url").asString)
+                    infC.codifyInferenceUri = URI(body.get("inference_url").asString)
                 }
             }
 

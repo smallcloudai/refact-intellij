@@ -31,5 +31,6 @@ data class SMCRequest(
     var uri: URI,
     var body: SMCRequestBody,
     var token: String,
-    var scope: String = ""
+    var scope: String = "",
+    var sendToCodifyServer: Boolean = false
 )

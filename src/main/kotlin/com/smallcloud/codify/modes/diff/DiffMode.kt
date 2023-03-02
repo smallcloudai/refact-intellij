@@ -156,7 +156,8 @@ class DiffMode(
                 fileName, editor.document.text,
                 startSelectionOffset, endSelectionOffset,
                 scope, entry.intent, funcName, listOf(),
-                model = InferenceGlobalContext.longthinkModel ?: entry.model ?: InferenceGlobalContext.model ?: Resources.defaultModel
+                model = InferenceGlobalContext.longthinkModel ?: entry.model ?: InferenceGlobalContext.model ?: Resources.defaultModel,
+                sendToCodifyServer = entry.thirdParty
             ) ?: return
             startPosition = editor.offsetToLogicalPosition(startSelectionOffset)
             finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1)

@@ -159,7 +159,8 @@ class HighlightMode(
             startSelectionOffset, endSelectionOffset,
             scope, entry.intent, funcName, listOf(),
             model = InferenceGlobalContext.longthinkModel ?: entry.model
-                ?: InferenceGlobalContext.model ?: Resources.defaultModel
+                ?: InferenceGlobalContext.model ?: Resources.defaultModel,
+            sendToCodifyServer = entry.thirdParty
         ) ?: return
         ModeProvider.getOrCreateModeProvider(editor).switchMode(ModeType.Highlight)
 

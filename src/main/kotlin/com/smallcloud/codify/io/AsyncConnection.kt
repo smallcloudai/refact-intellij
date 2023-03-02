@@ -15,6 +15,7 @@ import org.apache.hc.client5.http.config.RequestConfig
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients
 import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder
+import org.apache.hc.client5.http.ssl.TrustSelfSignedStrategy
 import org.apache.hc.core5.concurrent.FutureCallback
 import org.apache.hc.core5.http.*
 import org.apache.hc.core5.http.message.BasicHeader
@@ -34,18 +35,19 @@ import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
 
-class AsyncConnection(uri: URI) : Disposable {
+class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
     private val client: CloseableHttpAsyncClient = HttpAsyncClients.customHttp2()
         .setTlsStrategy(
             ClientTlsStrategyBuilder.create()
-                .setSslContext(SSLContexts.createSystemDefault())
+                .setSslContext(if (isCustomUrl)
+                    SSLContexts.custom().loadTrustMaterial(TrustSelfSignedStrategy()).build() else
+                        SSLContexts.createSystemDefault())
                 .setTlsVersions(TLS.V_1_3, TLS.V_1_2)
                 .build()
         )
         .setIOReactorConfig(
             IOReactorConfig.custom()
                 .setIoThreadCount(8)
-//                .setConnectTimeout()
                 .setSoTimeout(30, TimeUnit.SECONDS)
                 .setSelectInterval(TimeValue.ofMilliseconds(5))
                 .setTcpNoDelay(true)
@@ -53,8 +55,6 @@ class AsyncConnection(uri: URI) : Disposable {
         )
         .setDefaultRequestConfig(
             RequestConfig.custom()
-//                .setConnectionRequestTimeout(1, TimeUnit.SECONDS)
-//                .setResponseTimeout(1, TimeUnit.SECONDS)
                 .setConnectionKeepAlive(TimeValue.ofSeconds(1))
                 .setHardCancellationEnabled(true)
                 .build()

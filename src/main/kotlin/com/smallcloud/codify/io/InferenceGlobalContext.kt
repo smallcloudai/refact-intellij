@@ -12,8 +12,9 @@ import java.net.URI
 
 object InferenceGlobalContext {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
-    var connection: Connection? = null
-    var inferenceConnection: AsyncConnection? = null
+    private var сonnection_: Connection? = null
+    private var codifyInferenceConnection_: AsyncConnection? = null
+    private var userInferenceConnection_: AsyncConnection? = null
 
     init {
         reconnect()
@@ -46,8 +47,9 @@ object InferenceGlobalContext {
     }
 
     fun reconnect() {
-        connection = inferenceUri?.let { makeConnection(it) }
-        inferenceConnection = inferenceUri?.let { makeAsyncConnection(it) }
+        сonnection_ = codifyInferenceUri?.let { makeConnection(it) }
+        codifyInferenceConnection_ = codifyInferenceUri?.let { makeAsyncConnection(it) }
+        userInferenceConnection_ = userInferenceUri?.let { makeAsyncConnection(it) }
     }
 
     var status: ConnectionStatus = ConnectionStatus.DISCONNECTED
@@ -84,14 +86,35 @@ object InferenceGlobalContext {
             inferenceLogin()
         }
 
-    // _inferenceUri is uri from SMC server; must be change only in login method
-    var serverInferenceUri: URI? = null
+    // codifyInferenceUri is uri from SMC server; must be change only in login method
+    var codifyInferenceUri: URI?
         set(newInferenceUrl) {
             if (newInferenceUrl == AppSettingsState.instance.inferenceUri?.let { URI(it) }) return
             messageBus
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .inferenceUriChanged(newInferenceUrl)
             reconnect()
+        }
+        get() {
+            return AppSettingsState.instance.inferenceUri?.let { URI(it) }
+        }
+
+    private val userInferenceUri: URI?
+        get() {
+            return AppSettingsState.instance.userInferenceUri?.let { URI(it) }
+        }
+
+    val inferenceConnection: AsyncConnection?
+        get() {
+            return if (userInferenceConnection_ == null) codifyInferenceConnection_ else userInferenceConnection_
+        }
+    val codifyInferenceConnection: AsyncConnection?
+        get() {
+            return codifyInferenceConnection_
+        }
+    val connection: Connection?
+        get() {
+            return сonnection_
         }
 
     fun hasUserInferenceUri(): Boolean {
@@ -160,12 +183,17 @@ object InferenceGlobalContext {
 
     fun makeRequest(
         requestData: SMCRequestBody,
+        sendToCodifyServer: Boolean
     ): SMCRequest? {
         val apiKey = AccountManager.apiKey
         if (apiKey.isNullOrEmpty()) return null
 
         requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
         requestData.client = "${Resources.client}-${Resources.version}"
-        return inferenceUri?.let { SMCRequest(it, requestData, apiKey) }
+        return if (sendToCodifyServer) {
+            codifyInferenceUri?.let { SMCRequest(it, requestData, apiKey) }
+        } else {
+            inferenceUri?.let { SMCRequest(it, requestData, apiKey) }
+        }
     }
 }

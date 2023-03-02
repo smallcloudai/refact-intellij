@@ -2,11 +2,12 @@ package com.smallcloud.codify.account
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.smallcloud.codify.account.AccountManager.isLoggedIn
 import com.smallcloud.codify.notifications.emitLogin
 import com.smallcloud.codify.utils.getLastUsedProject
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 
 class LoginStateService: Disposable {
@@ -56,7 +57,11 @@ class LoginStateService: Disposable {
 
     private fun emitLoginIfNeeded() {
         if (!popupLoginMessageOnce && lastWebsiteLoginStatus.isEmpty()) {
-            emitLogin(getLastUsedProject())
+            AppExecutorUtil.getAppScheduledExecutorService().schedule({
+                if (!isLoggedIn) {
+                    emitLogin(getLastUsedProject())
+                }
+            }, 7, TimeUnit.SECONDS)
         }
     }
 

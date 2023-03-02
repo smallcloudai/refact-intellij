@@ -17,7 +17,8 @@ object RequestCreator {
         intent: String, functionName: String,
         promptInfo: List<PromptInfo>,
         model: String,
-        stream: Boolean = false
+        stream: Boolean = false,
+        sendToCodifyServer: Boolean = false
     ): SMCRequest? {
         var currentBudget = symbolsBudget
         val sources = mutableMapOf(fileName to text)
@@ -63,7 +64,8 @@ object RequestCreator {
         )
 
         return InferenceGlobalContext.makeRequest(
-            requestBody
+            requestBody,
+            sendToCodifyServer
         )?.also {
             it.scope = scope
             it.uri = it.uri.resolve(Resources.defaultContrastUrlSuffix)

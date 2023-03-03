@@ -69,6 +69,7 @@ object RequestCreator {
         )?.also {
             it.scope = scope
             it.uri = it.uri.resolve(Resources.defaultContrastUrlSuffix)
+            it.sendToCodifyServer = sendToCodifyServer
         }
     }
 }

@@ -25,7 +25,7 @@ intellij {
     version.set("2022.1.4")
     type.set("PY") // Target IDE Platform
 
-    plugins.set(listOf(/* Plugin Dependencies */))
+    plugins.set(listOf("org.intellij.plugins.markdown"))
 }
 
 tasks {
@@ -40,7 +40,7 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("221")
-        untilBuild.set("")
+        untilBuild.set("233.*")
     }
 
     signPlugin {

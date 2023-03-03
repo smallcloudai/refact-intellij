@@ -116,7 +116,7 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
     if (needToVerify) lastInferenceVerifyTs = now
 
     val connection = if (request.sendToCodifyServer) InferenceGlobalContext.codifyConnection else
-        InferenceGlobalContext.userConnection
+        InferenceGlobalContext.connection
     connection ?: return null
 
     val job = connection.post(uri, body, headers, needVerify = needToVerify, scope=request.scope)

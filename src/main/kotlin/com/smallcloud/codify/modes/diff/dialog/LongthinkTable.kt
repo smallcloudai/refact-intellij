@@ -138,6 +138,7 @@ internal class LikeRenderer : JLabel(), TableCellRenderer {
 }
 
 internal class LabelRenderer : JLabel(), TableCellRenderer {
+    private var boldFont: Font? = null
     init {
         isOpaque = true
     }
@@ -148,6 +149,9 @@ internal class LabelRenderer : JLabel(), TableCellRenderer {
         if (table == null) {
             return this
         }
+        if (boldFont == null) {
+            boldFont = JBFont.create(Font(font.family, Font.BOLD, table.font.size))
+        }
         if (isSelected) {
             foreground = table.selectionForeground
             background = table.selectionBackground
@@ -156,12 +160,7 @@ internal class LabelRenderer : JLabel(), TableCellRenderer {
             background = table.background
         }
         val entry = (table.model as LongthinkTableModel).elementAt(row)
-        font = if (entry.catchAllHighlight || entry.catchAllSelection) {
-            JBFont.create(Font(font.family, Font.BOLD, font.size));
-        } else {
-            table.font
-        }
-
+        font = if (entry.catchAllHighlight || entry.catchAllSelection) boldFont else table.font
         text = value.toString()
         return this
     }

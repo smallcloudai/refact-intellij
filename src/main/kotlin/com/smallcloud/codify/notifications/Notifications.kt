@@ -12,8 +12,8 @@ import com.intellij.openapi.editor.event.EditorFactoryEvent
 import com.intellij.openapi.editor.event.EditorFactoryListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.ToolWindowManager
 import com.smallcloud.codify.CodifyBundle
 import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.Resources
@@ -140,7 +140,16 @@ fun emitRegular(project: Project, editor: Editor) {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
         notification.expire()
     })
-    if (file != null) addDisableEnablePrivacy(notification, file, currentPrivacy)
+    val chat = ToolWindowManager.getInstance(project).getToolWindow("Codify AI Toolbox")
+    if (chat != null) {
+        notification.addAction(NotificationAction.createSimple("Chat") {
+            chat.show()
+            notification.expire()
+        })
+    }
+
+
+//    if (file != null) addDisableEnablePrivacy(notification, file, currentPrivacy)
     notification.notify(project)
     lastRegularNotification = notification
 }

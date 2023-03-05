@@ -2,7 +2,6 @@ package com.smallcloud.codify.modes.diff.renderer
 
 import com.intellij.ide.DataManager
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ex.ActionUtil
@@ -14,6 +13,7 @@ import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.TextRange
 import com.intellij.util.text.findTextRange
+import com.smallcloud.codify.listeners.AIToolboxInvokeAction
 import com.smallcloud.codify.listeners.CancelPressedAction
 import com.smallcloud.codify.listeners.TabPressedAction
 import com.smallcloud.codify.modes.diff.getOffsetFromStringNumber
@@ -77,7 +77,7 @@ class Inlayer(val editor: Editor) : Disposable {
             "${getAcceptSymbol()} Approve (Tab)" to { TabPressedAction.actionPerformed(editor, context) },
             "${getRejectSymbol()} Reject (ESC)" to { CancelPressedAction.actionPerformed(editor, context) },
             "${getRerunSymbol()} Rerun \"${msg}\" (F1)" to {
-                val action = ActionManager.getInstance().getAction("DiffAction")
+                val action = AIToolboxInvokeAction()
                 val event = AnActionEvent.createFromAnAction(action, null, ActionPlaces.UNKNOWN, context)
                 ActionUtil.performActionDumbAwareWithCallbacks(action, event)
             }

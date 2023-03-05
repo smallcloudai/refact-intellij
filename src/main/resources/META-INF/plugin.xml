@@ -88,6 +88,10 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
         <actionPromoter implementation="com.smallcloud.codify.listeners.DiffActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.codify.listeners.CancelActionsPromoter"/>
 
+        <toolWindow id="Codify AI Toolbox" anchor="right" icon="/icons/codify_red_16x16.svg"
+                    canCloseContents="true"
+                    factoryClass="com.smallcloud.codify.panes.CodifyAiToolboxPaneFactory"/>
+
         <applicationService serviceImplementation="com.smallcloud.codify.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.PrivacyState"/>
         <applicationService serviceImplementation="com.smallcloud.codify.settings.ExtraState"/>

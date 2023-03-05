@@ -18,6 +18,7 @@ import com.smallcloud.codify.CodifyBundle
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.modes.diff.DiffIntentProvider
+import com.smallcloud.codify.panes.CodifyAiToolboxPaneFactory
 import com.smallcloud.codify.privacy.Privacy
 import com.smallcloud.codify.struct.LocalLongthinkInfo
 import com.smallcloud.codify.struct.LongthinkFunctionEntry
@@ -44,7 +45,9 @@ class DiffDialog(
     private val editor: Editor,
     private val fromHL: Boolean = false,
     private val startPosition: LogicalPosition = LogicalPosition(0, 0),
-    private val finishPosition: LogicalPosition = LogicalPosition(0, 0)
+    private val finishPosition: LogicalPosition = LogicalPosition(0, 0),
+    private val selectedText: String = "",
+
 ) :
     DialogWrapper(editor.project, true) {
     private val msgTextField: JBTextField
@@ -110,6 +113,7 @@ class DiffDialog(
         if (entry.thirdParty && PrivacyService.getPrivacy(vFile) < Privacy.THIRDPARTY) {
             return CodifyBundle.message("aiToolbox.reasons.thirdParty")
         }
+        if (entry.intent.endsWith("?")) return null
         if (vFile != null && !entry.supportsLanguages.match(vFile.name)) {
             return CodifyBundle.message("aiToolbox.reasons.supportLang")
         }
@@ -151,13 +155,18 @@ class DiffDialog(
                     }
                 }
             }
-            super.doOKAction()
+            if (entry.intent.endsWith("?")) {
+                CodifyAiToolboxPaneFactory.gptChatPane.send(entry.intent, selectedText)
+                super.doCancelAction()
+            } else {
+                super.doOKAction()
+            }
         }
     }
 
     private fun getDefaultEntry(): LongthinkFunctionEntry {
         return try {
-            (thirdPartyList.model as LongthinkTableModel).elementAt(0).copy(intent = msgTextField.text)
+            (thirdPartyList.model as LongthinkTableModel).elementAt(0).apply { intent = msgTextField.text }
         } catch (e: Exception) {
             LongthinkFunctionEntry(msgTextField.text)
         }
@@ -301,7 +310,8 @@ class DiffDialog(
             it.selectionModel.addListSelectionListener { e ->
                 if (e == null) return@addListSelectionListener
                 try {
-                    entry = it.selectedValue.copy(intent=msgTextField.text)
+                    val tempEntry = it.selectedValue.apply { intent = msgTextField.text }
+                    entry = tempEntry
                 } catch (e: Exception) {
                     Logger.getInstance(DiffDialog::class.java).warn(e.message)
                 }
@@ -417,10 +427,11 @@ class DiffDialog(
         return msgTextField
     }
 
+    private var lastCopyEntry: LongthinkFunctionEntry = LongthinkFunctionEntry()
     var entry: LongthinkFunctionEntry
         get() = _entry
         set(newVal) {
-            if (activeMode != Mode.HISTORY && newVal == _entry) return
+            if (activeMode != Mode.HISTORY && newVal == lastCopyEntry) return
             _entry = newVal
             val reason = getReasonForEntry(_entry)
             if (activeMode == Mode.HISTORY) {
@@ -443,6 +454,7 @@ class DiffDialog(
                 Resources.Icons.BOOKMARK_UNCHECKED_24x24
             longthinkDescriptionPane.text = entry.miniHtml
             longthinkLabel.text = entry.label
+            lastCopyEntry = _entry.copy()
         }
 
     override fun createCenterPanel(): JComponent {

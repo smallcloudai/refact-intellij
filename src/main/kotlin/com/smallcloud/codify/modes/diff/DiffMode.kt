@@ -9,6 +9,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.util.TextRange
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.io.ConnectionStatus
@@ -136,7 +137,8 @@ class DiffMode(
             val entry: LongthinkFunctionEntry
             if (highlightContext == null) {
                 val dialog = DiffDialog(editor, startPosition = editor.offsetToLogicalPosition(startSelectionOffset),
-                    finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1))
+                    finishPosition = editor.offsetToLogicalPosition(endSelectionOffset),
+                    selectedText = editor.document.getText(TextRange(startSelectionOffset,endSelectionOffset)))
                 if (!dialog.showAndGet()) return
                 entry = dialog.entry
                 DiffIntentProvider.instance.pushFrontHistoryIntent(entry)

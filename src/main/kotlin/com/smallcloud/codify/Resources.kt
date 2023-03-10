@@ -30,6 +30,7 @@ private fun getPluginId(): PluginId {
 object Resources {
     val defaultCodifyUrl: URI = URI("https://www.smallcloud.ai")
     val defaultContrastUrlSuffix = URI("v1/contrast")
+    val defaultChatUrlSuffix = URI("chat-v1/completions")
     val defaultRecallUrl: URI = defaultCodifyUrl.resolve("/v1/streamlined-login-recall-ticket")
     val defaultLoginUrl: URI = defaultCodifyUrl.resolve("/v1/login")
     val defaultReportUrl: URI = defaultCodifyUrl.resolve("/v1/usage-stats")

@@ -1,12 +1,12 @@
 package com.smallcloud.codify.privacy
 
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.vfs.VirtualFile
 
-abstract class ActionUnderPrivacy : AnAction() {
+abstract class ActionUnderPrivacy : DumbAwareAction() {
     abstract fun setup(e: AnActionEvent)
     final override fun update(e: AnActionEvent) {
         setup(e)

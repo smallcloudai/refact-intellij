@@ -5,13 +5,8 @@ import com.smallcloud.codify.panes.gptchat.State
 import com.smallcloud.codify.panes.gptchat.State.Companion.instance as State
 
 object MsgBuilder {
-    fun build(conversation: List<State.QuestionAnswer>, doStream: Boolean): String {
-        val messages: MutableList<Map<String, Any>> = mutableListOf(
-                mapOf(
-                        "role" to "system",
-                        "content" to "You are a helpful assistant."
-                )
-        )
+    fun build(conversation: List<State.QuestionAnswer>): String {
+        val messages: MutableList<Map<String, Any>> = mutableListOf()
         for (questionAnswer in conversation) {
             messages.add(
                     mapOf(
@@ -33,8 +28,7 @@ object MsgBuilder {
 
         val msgDict = mutableMapOf(
                 "model" to "gpt-3.5-turbo",
-                "stream" to doStream,
-                "max_tokens" to 1000,
+                "stream" to true,
                 "messages" to messages
         )
 

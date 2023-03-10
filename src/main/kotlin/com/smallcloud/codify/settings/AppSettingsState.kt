@@ -67,7 +67,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
                 object : InferenceGlobalContextChangedNotifier {
                     override fun inferenceUriChanged(newUrl: URI?) {
                         instance.inferenceUri = newUrl?.toString()
-
                     }
 
                     override fun userInferenceUriChanged(newUrl: URI?) {

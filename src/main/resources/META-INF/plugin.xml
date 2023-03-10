@@ -104,6 +104,7 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
         <applicationService serviceImplementation="com.smallcloud.codify.UpdateChecker"/>
         <applicationService serviceImplementation="com.smallcloud.codify.modes.diff.DiffIntentProvider"/>
         <applicationService serviceImplementation="com.smallcloud.codify.io.ConnectivityManager"/>
+        <applicationService serviceImplementation="com.smallcloud.codify.io.ConnectionManager"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.codify.listeners.TabPressedAction"
@@ -132,6 +133,13 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
         <group id="CodifyPrivacy" popup="true" class="com.smallcloud.codify.privacy.CodifyPrivacyGroupAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </group>
+        <action
+                id="ActivateCodifyAIToolboxToolWindow"
+                class="com.smallcloud.codify.panes.gptchat.ChatGPTPaneInvokeAction">
+            <keyboard-shortcut first-keystroke="control shift C" keymap="$default"/>
+            <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X" replace-all="true"/>
+            <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X 10.5+" replace-all="true"/>
+        </action>
     </actions>
     <resource-bundle>bundles.Codify</resource-bundle>
     <applicationListeners>

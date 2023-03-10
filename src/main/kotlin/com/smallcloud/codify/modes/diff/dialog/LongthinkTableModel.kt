@@ -51,7 +51,7 @@ class LongthinkTableModel(private val source: List<LongthinkFunctionEntry>,
     }
 
     override fun getColumnCount(): Int {
-        return 4
+        return 3
     }
 
     fun isLikedChanged(entry: LongthinkFunctionEntry) {
@@ -71,8 +71,8 @@ class LongthinkTableModel(private val source: List<LongthinkFunctionEntry>,
         val rec = elementAt(rowIndex)
         when (columnIndex) {
             0 -> return rec.label
-            1 -> return rec.metering
-            2 -> return rec.isBookmarked
+//            1 -> return rec.metering
+            1 -> return rec.isBookmarked
             else -> return Pair(rec.likes, rec.isLiked)
         }
     }

@@ -1,7 +1,5 @@
 package com.smallcloud.codify.panes.gptchat
 
-import com.smallcloud.codify.panes.gptchat.utils.StringUtil
-
 class State {
     data class QuestionAnswer(val question: String, var answer: String = "", var code: String = "")
 
@@ -27,17 +25,14 @@ class State {
         conversations_.last().answer += answer
     }
 
-    fun buildConversations(): String? {
-        if (conversations.isEmpty()) return null
-        val sb = StringBuilder()
-        for (qa in conversations) {
-            sb.append(StringUtil.appendMe(qa.question, qa.code))
-            if (qa.answer.isNotEmpty()) {
-                sb.append(StringUtil.appendQuestion(qa.answer))
-            }
-        }
-        return sb.toString()
+    fun lastAnswer(): String {
+        return conversations_.last().answer
     }
+
+    fun clear() {
+        conversations_.clear()
+    }
+
 
     companion object {
         val instance = State()

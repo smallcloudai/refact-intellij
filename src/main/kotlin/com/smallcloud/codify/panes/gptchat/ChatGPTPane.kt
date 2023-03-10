@@ -1,85 +1,93 @@
 package com.smallcloud.codify.panes.gptchat
 
-import com.intellij.find.SearchTextArea
-import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
+import com.intellij.ide.lightEdit.LightEditCompatible
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.UIUtil
+import com.obiscr.chatgpt.ui.HistoryComponent
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
-import com.smallcloud.codify.panes.gptchat.listeneres.SendListener
-import com.smallcloud.codify.panes.gptchat.utils.HtmlUtil.md2html
-import org.intellij.plugins.markdown.ui.preview.jcef.MarkdownJCEFHtmlPanel
+import com.smallcloud.codify.panes.gptchat.ui.CustomSearchTextArea
+import com.smallcloud.codify.panes.gptchat.ui.MessageComponent
+import icons.CollaborationToolsIcons
 import java.awt.BorderLayout
-import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.JProgressBar
-import com.smallcloud.codify.panes.gptchat.State.Companion.instance as State
-
+import javax.swing.JTextArea
 
 
 class ChatGPTPane {
-    var searchTextArea: SearchTextArea = SearchTextArea(JBTextArea(), true)
-    var button: JButton = JButton("Send")
-    private val listener = SendListener(this)
-    private var contentPanel: MarkdownJCEFHtmlPanel? = null
+    private val sendAction = object : DumbAwareAction(CollaborationToolsIcons.Send), LightEditCompatible {
+        init {
+            templatePresentation.hoveredIcon = CollaborationToolsIcons.SendHovered
+            isEnabledInModalContext = AccountManager.isLoggedIn
+        }
+        override fun actionPerformed(e: AnActionEvent) {
+            listener.doActionPerformed()
+        }
+        fun setEnabled(enabled: Boolean) {
+            isEnabledInModalContext = enabled
+        }
+
+    }
+
+    var searchTextArea: CustomSearchTextArea = CustomSearchTextArea(JBTextArea(), false).also {
+        it.setExtraActions(sendAction)
+    }
+    private val listener = ChatGPTProvider(this)
+    private var contentPanel = HistoryComponent()
     private var progressBar: JProgressBar? = null
     private val splitter: OnePixelSplitter = OnePixelSplitter(true,.9f)
+
     init {
         searchTextArea.isEnabled = AccountManager.isLoggedIn
-        button.isEnabled = AccountManager.isLoggedIn
         ApplicationManager.getApplication().messageBus.connect()
                 .subscribe(AccountManagerChangedNotifier.TOPIC,object : AccountManagerChangedNotifier {
                     override fun isLoggedInChanged(isLoggedIn: Boolean) {
                         searchTextArea.isEnabled = isLoggedIn
-                        button.isEnabled = isLoggedIn
+                        sendAction.setEnabled(isLoggedIn)
                     }
                 })
 
-        splitter.setDividerWidth(2);
+        splitter.dividerWidth = 2;
         searchTextArea.textArea.addKeyListener(listener)
-        button.addActionListener(listener)
-        button.setUI(DarculaButtonUI())
 
         val top = JPanel(BorderLayout())
         progressBar = JProgressBar()
         top.add(progressBar, BorderLayout.NORTH)
         top.add(searchTextArea, BorderLayout.CENTER)
-        top.add(button, BorderLayout.EAST)
         top.border = UIUtil.getTextFieldBorder()
-        contentPanel = MarkdownJCEFHtmlPanel()
 
-        var helloString = "# Hi! \uD83D\uDC4B\n" +
-                "# This chat has more features and it's more responsive than a free one you might find on the web."
-        if (!AccountManager.isLoggedIn) {
-            helloString += " Don't forget to log in!"
-        }
-
-        val s: String = md2html(helloString)
-        contentPanel!!.setHtml(s, 0)
-
-        splitter.setFirstComponent(contentPanel!!.component)
-        splitter.setSecondComponent(top)
+        splitter.firstComponent = contentPanel
+        splitter.secondComponent = top
     }
     fun getComponent(): JPanel {
         return splitter
     }
+    fun getComponentForFocus(): JTextArea {
+        return searchTextArea.textArea
+    }
 
     fun aroundRequest(status: Boolean) {
         progressBar!!.isIndeterminate = status
-        button.isEnabled = !status
+        sendAction.setEnabled(!status)
     }
-
-    fun showContent(conversation: String? = null) {
-        val html = md2html(conversation ?: State.buildConversations() ?: "")
-        contentPanel!!.setHtml(html, html.length)
-        contentPanel!!.scrollBy(0, html.length)
-        contentPanel!!.component.repaint()
-    }
-
     fun send(msg: String, selectedText: String) {
+        contentPanel.clearHistory()
         listener.doActionPerformed(msg, selectedText)
+    }
+
+    fun add(messageComponent: MessageComponent) {
+        contentPanel.add(messageComponent)
+    }
+    fun scrollToBottom() {
+        contentPanel.scrollToBottom()
+    }
+    fun lastMessage(): MessageComponent {
+        return contentPanel.lastMessage()
     }
 
 }

@@ -2,10 +2,8 @@ package com.smallcloud.codify.modes.diff.dialog
 
 import com.intellij.ui.table.JBTable
 import com.intellij.util.IconUtil.colorize
-import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.smallcloud.codify.Resources.Icons.BOOKMARK_CHECKED_16x16
-import com.smallcloud.codify.Resources.Icons.COIN_16x16
 import com.smallcloud.codify.Resources.Icons.LIKE_CHECKED_16x16
 import com.smallcloud.codify.Resources.Icons.LIKE_UNCHECKED_16x16
 import com.smallcloud.codify.struct.LongthinkFunctionEntry
@@ -150,7 +148,7 @@ internal class LabelRenderer : JLabel(), TableCellRenderer {
             return this
         }
         if (boldFont == null) {
-            boldFont = JBFont.create(Font(font.family, Font.BOLD, table.font.size))
+            boldFont = font //JBFont.create(Font(font.family, Font.BOLD, table.font.size))
         }
         if (isSelected) {
             foreground = table.selectionForeground
@@ -184,7 +182,7 @@ class LongthinkTable(
             it.minWidth = 200
         }
 
-        val likeColumn = columnModel.getColumn(3).also {
+        val likeColumn = columnModel.getColumn(2).also {
             val renderer = LikeRenderer()
             it.cellRenderer = renderer
             val maxLikeLength = renderer.getFontMetrics(renderer.font).stringWidth("999+")
@@ -193,7 +191,7 @@ class LongthinkTable(
             it.maxWidth = renderer.icon.iconWidth + 4 + maxLikeLength
         }
 
-        val bookmarkColumn = columnModel.getColumn(2).also {
+        val bookmarkColumn = columnModel.getColumn(1).also {
             val renderer = IconRenderer(BOOKMARK_CHECKED_16x16)
             it.cellRenderer = renderer
             it.preferredWidth = renderer.originalIcon.iconWidth + 4
@@ -201,17 +199,17 @@ class LongthinkTable(
             it.maxWidth = renderer.originalIcon.iconWidth + 4
         }
 
-        val meteringColumn = columnModel.getColumn(1).also {
-            val renderer = IconRenderer(COIN_16x16)
-            it.cellRenderer = renderer
-            it.preferredWidth = renderer.originalIcon.iconWidth + 4
-            it.minWidth = renderer.originalIcon.iconWidth + 4
-            it.maxWidth = renderer.originalIcon.iconWidth + 4
-        }
+//        val meteringColumn = columnModel.getColumn(1).also {
+//            val renderer = IconRenderer(COIN_16x16)
+//            it.cellRenderer = renderer
+//            it.preferredWidth = renderer.originalIcon.iconWidth + 4
+//            it.minWidth = renderer.originalIcon.iconWidth + 4
+//            it.maxWidth = renderer.originalIcon.iconWidth + 4
+//        }
 
         minimumSize = Dimension(
             labelColumn.minWidth + bookmarkColumn.minWidth
-                    + likeColumn.minWidth + meteringColumn.minWidth, 0
+                    + likeColumn.minWidth /*+ meteringColumn.minWidth*/, 0
         )
     }
 

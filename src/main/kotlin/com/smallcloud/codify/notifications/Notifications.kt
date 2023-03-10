@@ -5,19 +5,25 @@ import com.intellij.notification.Notification
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.EditorFactoryEvent
 import com.intellij.openapi.editor.event.EditorFactoryListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.keymap.KeymapUtil
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindowManager
 import com.smallcloud.codify.CodifyBundle
 import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.Resources
 import com.smallcloud.codify.account.login
+import com.smallcloud.codify.listeners.AIToolboxInvokeAction
+import com.smallcloud.codify.panes.CodifyAiToolboxPaneFactory
 import com.smallcloud.codify.privacy.Privacy
 import com.smallcloud.codify.privacy.PrivacyChangesNotifier
 import com.smallcloud.codify.settings.AppRootConfigurable
@@ -116,9 +122,7 @@ fun emitLogin(project: Project) {
 
 private fun getStatusPrivacyString(currentPrivacy: Privacy): String {
     return when (currentPrivacy) {
-        Privacy.DISABLED -> "${CodifyBundle.message("privacy.level0Name")}: " +
-                CodifyBundle.message("privacy.level0ShortDescription")
-
+        Privacy.DISABLED -> "Codify can't access this file"
         Privacy.ENABLED -> CodifyBundle.message("privacy.level1Name")
         Privacy.THIRDPARTY -> CodifyBundle.message("privacy.level2Name")
     }
@@ -131,7 +135,7 @@ fun emitRegular(project: Project, editor: Editor) {
     val notification =
         NotificationGroupManager.getInstance().getNotificationGroup("Codify Notification Group").createNotification(
             Resources.codifyStr,
-            "Access ${getStatusPrivacyString(currentPrivacy)}",
+            "Privacy: ${getStatusPrivacyString(currentPrivacy)}",
             NotificationType.INFORMATION
         )
     notification.icon = Resources.Icons.LOGO_RED_16x16
@@ -140,13 +144,23 @@ fun emitRegular(project: Project, editor: Editor) {
         ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
         notification.expire()
     })
+
     val chat = ToolWindowManager.getInstance(project).getToolWindow("Codify AI Toolbox")
+    val chatShortcut = KeymapUtil.getShortcutText("ActivateCodifyAIToolboxToolWindow")
     if (chat != null) {
-        notification.addAction(NotificationAction.createSimple("Chat") {
-            chat.show()
+        notification.addAction(NotificationAction.createSimple("Chat ($chatShortcut)") {
+            chat?.activate{
+                CodifyAiToolboxPaneFactory.gptChatPane.getComponentForFocus().requestFocus()
+            }
             notification.expire()
         })
     }
+    val f1Shortcut = KeymapUtil.getShortcutText("CodifyAIToolboxAction")
+    notification.addAction(DumbAwareAction.create("Ai Toolbox ($f1Shortcut)") {
+        it.presentation.putClientProperty(Key(CommonDataKeys.EDITOR.name), editor)
+        AIToolboxInvokeAction().actionPerformed(it)
+        notification.expire()
+    })
 
 
 //    if (file != null) addDisableEnablePrivacy(notification, file, currentPrivacy)

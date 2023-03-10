@@ -17,8 +17,8 @@ class CodifyAiToolboxPaneFactory : ToolWindowFactory {
                 "ChatGPT",
                 false
         )
-        content.setCloseable(false);
-        toolWindow.getContentManager().addContent(content);
+        content.isCloseable = false
+        toolWindow.contentManager.addContent(content);
     }
 
     companion object {

@@ -1,12 +1,8 @@
 package com.smallcloud.codify.panes.gptchat.ui
 
-import com.intellij.featureStatistics.FeatureUsageTracker
 import com.intellij.find.FindBundle
-import com.intellij.find.FindInProjectSettings
-import com.intellij.find.editorHeaderActions.Utils
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
-import com.intellij.ide.lightEdit.LightEditCompatible
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ActionButtonComponent.ButtonState
 import com.intellij.openapi.actionSystem.ex.ActionButtonLook
@@ -22,15 +18,10 @@ import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.DocumentAdapter
-import com.intellij.ui.ExperimentalUI
-import com.intellij.ui.IconManager
 import com.intellij.ui.JBColor
-import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.panels.NonOpaquePanel
-import com.intellij.ui.popup.PopupState
 import com.intellij.ui.scale.JBUIScale
-import com.intellij.util.ArrayUtil
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.StartupUiUtil
@@ -57,7 +48,6 @@ class CustomSearchTextArea(val textArea: JTextArea, private val mySearchMode: Bo
     private val myClearButton: ActionButton
     private val myExtraActionsPanel = NonOpaquePanel()
     private val myScrollPane: JBScrollPane
-    private val myHistoryPopupButton: ActionButton
     private var myMultilineEnabled = true
 
     @Deprecated("infoMode is not used. Use the other constructor.")
@@ -84,7 +74,7 @@ class CustomSearchTextArea(val textArea: JTextArea, private val mySearchMode: Bo
         iconsPanelWrapper.border = JBUI.Borders.emptyTop(2)
         val p: JPanel = NonOpaquePanel(BorderLayout())
         p.add(myIconsPanel, BorderLayout.NORTH)
-        myIconsPanel.border = if (ExperimentalUI.isNewUI()) JBUI.Borders.emptyRight(8) else JBUI.Borders.emptyRight(5)
+        myIconsPanel.border = JBUI.Borders.emptyRight(5)
         iconsPanelWrapper.add(p, BorderLayout.WEST)
         iconsPanelWrapper.add(myExtraActionsPanel, BorderLayout.SOUTH)
         removeAll()
@@ -227,7 +217,6 @@ class CustomSearchTextArea(val textArea: JTextArea, private val mySearchMode: Bo
         myScrollPane.getViewport().isOpaque = false
         myScrollPane.getHorizontalScrollBar().putClientProperty(JBScrollPane.IGNORE_SCROLLBAR_IN_INSETS, java.lang.Boolean.TRUE)
         myScrollPane.setOpaque(false)
-        myHistoryPopupButton = MyActionButton(ShowHistoryAction(), false, true)
         myClearButton = MyActionButton(ClearAction(), false, false)
         myNewLineButton = MyActionButton(NewLineAction(), false, true)
         updateLayout()
@@ -266,27 +255,7 @@ class CustomSearchTextArea(val textArea: JTextArea, private val mySearchMode: Bo
     fun setInfoText(@Suppress("unused") info: String?) {
     }
 
-    private inner class ShowHistoryAction internal constructor() : DumbAwareAction(FindBundle.message(if (mySearchMode) "find.search.history" else "find.replace.history"),
-            FindBundle.message(if (mySearchMode) "find.search.history" else "find.replace.history"),
-            AllIcons.Actions.SearchWithHistory), LightEditCompatible {
-        private val myPopupState = PopupState.forPopup()
-
-        init {
-            registerCustomShortcutSet(KeymapUtil.getActiveKeymapShortcuts("ShowSearchHistory"), textArea)
-        }
-
-        override fun actionPerformed(e: AnActionEvent) {
-            val project = e.project
-            if (myPopupState.isRecentlyHidden || project == null) return  // do not show new popup
-            FeatureUsageTracker.getInstance().triggerFeatureUsed("find.recent.search")
-            val findInProjectSettings = FindInProjectSettings.getInstance(project)
-            val recent = if (mySearchMode) findInProjectSettings.recentFindStrings else findInProjectSettings.recentReplaceStrings
-            val historyList = JBList(*ArrayUtil.reverseArray(recent))
-            Utils.showCompletionPopup(this@CustomSearchTextArea, historyList, null, textArea, null, myPopupState)
-        }
-    }
-
-    private inner class ClearAction internal constructor() : DumbAwareAction(CLOSE_ICON), LightEditCompatible {
+    private inner class ClearAction internal constructor() : DumbAwareAction(CLOSE_ICON) {
         init {
             templatePresentation.hoveredIcon = CLOSE_HOVERED_ICON
         }
@@ -297,7 +266,7 @@ class CustomSearchTextArea(val textArea: JTextArea, private val mySearchMode: Bo
         }
     }
 
-    private inner class NewLineAction internal constructor() : DumbAwareAction(FindBundle.message("find.new.line"), null, AllIcons.Actions.SearchNewLine), LightEditCompatible {
+    private inner class NewLineAction internal constructor() : DumbAwareAction(FindBundle.message("find.new.line"), null, AllIcons.Actions.SearchNewLine) {
         init {
             shortcutSet = CustomShortcutSet(NEW_LINE_KEYSTROKE)
             templatePresentation.hoveredIcon = AllIcons.Actions.SearchNewLineHover
@@ -355,8 +324,8 @@ class CustomSearchTextArea(val textArea: JTextArea, private val mySearchMode: Bo
         private val BACKGROUND_COLOR = JBColor.namedColor("Editor.SearchField.background", UIUtil.getTextFieldBackground())
         const val JUST_CLEARED_KEY = "JUST_CLEARED"
         val NEW_LINE_KEYSTROKE = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.SHIFT_DOWN_MASK)
-        private val CLOSE_ICON = if (ExperimentalUI.isNewUI()) IconManager.getInstance().getIcon("expui/general/closeSmall.svg", AllIcons::class.java) else AllIcons.Actions.Close
-        private val CLOSE_HOVERED_ICON = if (ExperimentalUI.isNewUI()) IconManager.getInstance().getIcon("expui/general/closeSmallHovered.svg", AllIcons::class.java) else AllIcons.Actions.CloseHovered
+        private val CLOSE_ICON = AllIcons.Actions.Close
+        private val CLOSE_HOVERED_ICON = AllIcons.Actions.CloseHovered
         private val FIELD_INPLACE_LOOK: ActionButtonLook = object : IdeaActionButtonLook() {
             override fun paintBorder(g: Graphics, component: JComponent, @ButtonState state: Int) {
                 if (component.isFocusOwner && component.isEnabled) {

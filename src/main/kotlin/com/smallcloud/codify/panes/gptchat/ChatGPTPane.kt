@@ -1,6 +1,5 @@
 package com.smallcloud.codify.panes.gptchat
 
-import com.intellij.ide.lightEdit.LightEditCompatible
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.DumbAwareAction
@@ -20,7 +19,7 @@ import javax.swing.JTextArea
 
 
 class ChatGPTPane {
-    private val sendAction = object : DumbAwareAction(CollaborationToolsIcons.Send), LightEditCompatible {
+    private val sendAction = object : DumbAwareAction(CollaborationToolsIcons.Send) {
         init {
             templatePresentation.hoveredIcon = CollaborationToolsIcons.SendHovered
             isEnabledInModalContext = AccountManager.isLoggedIn

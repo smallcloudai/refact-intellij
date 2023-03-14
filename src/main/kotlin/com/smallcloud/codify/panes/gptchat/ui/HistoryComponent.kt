@@ -37,16 +37,17 @@ class ShiftedMessage(val message: MessageComponent): JPanel() {
     val shift = Box.createRigidArea(Dimension(30, 0))
     init {
         layout = VerticalLayout()
-        if (message.me) {
-//            layout = FlowLayout(FlowLayout.RIGHT)
-            add(shift/*, BorderLayout.WEST*/)
-//            add
-            add(message/*, BorderLayout.EAST*/)
-        } else {
-            add(message/*, BorderLayout.WEST*/)
-//            layout = FlowLayout(FlowLayout.LEFT)
-            add(shift/*, BorderLayout.EAST*/)
-        }
+
+        add(message)
+//        if (message.me) {
+////            layout = FlowLayout(FlowLayout.RIGHT)
+//            add(shift, BorderLayout.WEST)
+////            add
+//        } else {
+//            add(message, BorderLayout.EAST)
+////            layout = FlowLayout(FlowLayout.LEFT)
+////            add(shift/*, BorderLayout.EAST*/)
+//        }
     }
 }
 

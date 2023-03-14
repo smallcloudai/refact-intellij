@@ -2,13 +2,9 @@ package com.smallcloud.codify.panes.gptchat.ui
 
 import com.intellij.find.FindBundle
 import com.intellij.icons.AllIcons
-import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.*
-import com.intellij.openapi.actionSystem.ActionButtonComponent.ButtonState
-import com.intellij.openapi.actionSystem.ex.ActionButtonLook
 import com.intellij.openapi.actionSystem.ex.TooltipDescriptionProvider
 import com.intellij.openapi.actionSystem.impl.ActionButton
-import com.intellij.openapi.actionSystem.impl.IdeaActionButtonLook
 import com.intellij.openapi.editor.EditorCopyPasteHelper
 import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.keymap.KeymapUtil
@@ -274,33 +270,6 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         }
     }
 
-    private class MyActionButton(action: AnAction, focusable: Boolean, fieldInplaceLook: Boolean) : ActionButton(action, action.templatePresentation.clone(), ActionPlaces.UNKNOWN, ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE) {
-        init {
-            setLook(if (fieldInplaceLook) FIELD_INPLACE_LOOK else ActionButtonLook.INPLACE_LOOK)
-            isFocusable = focusable
-            updateIcon()
-        }
-
-        override fun getDataContext(): DataContext {
-            return DataManager.getInstance().getDataContext(this)
-        }
-
-        override fun getPopState(): Int {
-            return if (isSelected) SELECTED else super.getPopState()
-        }
-
-        val isRolloverState: Boolean
-            get() = super.isRollover()
-
-        override fun getIcon(): Icon {
-            if (isEnabled && isSelected) {
-                val selectedIcon = myPresentation.selectedIcon
-                if (selectedIcon != null) return selectedIcon
-            }
-            return super.getIcon()
-        }
-    }
-
     private class PseudoSeparatorBorder : Border {
         override fun paintBorder(c: Component, g: Graphics, x: Int, y: Int, width: Int, height: Int) {
             g.color = JBUI.CurrentTheme.CustomFrameDecorations.separatorForeground()
@@ -317,33 +286,11 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
     }
 
     companion object {
-        private val BUTTON_SELECTED_BACKGROUND = JBColor.namedColor("SearchOption.selectedBackground", 0xDAE4ED, 0x5C6164)
         private val BACKGROUND_COLOR = JBColor.namedColor("Editor.SearchField.background", UIUtil.getTextFieldBackground())
         const val JUST_CLEARED_KEY = "JUST_CLEARED"
         val NEW_LINE_KEYSTROKE = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.SHIFT_DOWN_MASK)
         private val CLOSE_ICON = AllIcons.Actions.Close
         private val CLOSE_HOVERED_ICON = AllIcons.Actions.CloseHovered
-        private val FIELD_INPLACE_LOOK: ActionButtonLook = object : IdeaActionButtonLook() {
-            override fun paintBorder(g: Graphics, component: JComponent, @ButtonState state: Int) {
-                if (component.isFocusOwner && component.isEnabled) {
-                    val rect = Rectangle(component.size)
-                    JBInsets.removeFrom(rect, component.insets)
-                    SYSTEM_LOOK.paintLookBorder(g, rect, JBUI.CurrentTheme.ActionButton.focusedBorder())
-                } else {
-                    super.paintBorder(g, component, ActionButtonComponent.NORMAL)
-                }
-            }
-
-            override fun paintBackground(g: Graphics, component: JComponent, state: Int) {
-                if ((component as MyActionButton).isRolloverState) {
-                    super.paintBackground(g, component, state)
-                } else if (state == ActionButtonComponent.SELECTED && component.isEnabled()) {
-                    val rect = Rectangle(component.getSize())
-                    JBInsets.removeFrom(rect, component.getInsets())
-                    paintLookBackground(g, rect, BUTTON_SELECTED_BACKGROUND)
-                }
-            }
-        }
         private val EMPTY_SCROLL_BORDER: Border = JBUI.Borders.empty(2, 6, 2, 2)
     }
 }

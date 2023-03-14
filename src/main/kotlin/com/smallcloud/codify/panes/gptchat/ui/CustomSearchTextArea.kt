@@ -42,16 +42,13 @@ import javax.swing.text.DefaultEditorKit.InsertBreakAction
 import javax.swing.text.PlainDocument
 
 
-class CustomSearchTextArea(val textArea: JTextArea, private val mySearchMode: Boolean) : JPanel(), PropertyChangeListener {
+class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeListener {
     private val myIconsPanel: JPanel = NonOpaquePanel()
     private val myNewLineButton: ActionButton
     private val myClearButton: ActionButton
     private val myExtraActionsPanel = NonOpaquePanel()
     private val myScrollPane: JBScrollPane
     private var myMultilineEnabled = true
-
-    @Deprecated("infoMode is not used. Use the other constructor.")
-    constructor(textArea: JTextArea, searchMode: Boolean, @Suppress("unused") infoMode: Boolean) : this(textArea, searchMode)
 
     override fun updateUI() {
         super.updateUI()

@@ -34,7 +34,7 @@ class ChatGPTPane : JPanel() {
         }
     }
 
-    var searchTextArea: CustomSearchTextArea = CustomSearchTextArea(JBTextArea(), false).also {
+    var searchTextArea: CustomSearchTextArea = CustomSearchTextArea(JBTextArea()).also {
         it.setExtraActions(sendAction)
     }
     private val listener = ChatGPTProvider()

@@ -150,7 +150,7 @@ fun emitRegular(project: Project, editor: Editor) {
     if (chat != null) {
         notification.addAction(NotificationAction.createSimple("Chat ($chatShortcut)") {
             chat?.activate{
-                CodifyAiToolboxPaneFactory.gptChatPane.getComponentForFocus().requestFocus()
+                CodifyAiToolboxPaneFactory.gptChatPanes?.requestFocus()
             }
             notification.expire()
         })

@@ -13,33 +13,36 @@ import com.smallcloud.codify.panes.gptchat.ui.CustomSearchTextArea
 import com.smallcloud.codify.panes.gptchat.ui.MessageComponent
 import icons.CollaborationToolsIcons
 import java.awt.BorderLayout
+import java.awt.event.KeyEvent
+import java.awt.event.KeyListener
 import javax.swing.JPanel
 import javax.swing.JProgressBar
 import javax.swing.JTextArea
 
 
-class ChatGPTPane {
+class ChatGPTPane : JPanel() {
     private val sendAction = object : DumbAwareAction(CollaborationToolsIcons.Send) {
         init {
             templatePresentation.hoveredIcon = CollaborationToolsIcons.SendHovered
             isEnabledInModalContext = AccountManager.isLoggedIn
         }
         override fun actionPerformed(e: AnActionEvent) {
-            listener.doActionPerformed()
+            listener.doActionPerformed(this@ChatGPTPane)
         }
         fun setEnabled(enabled: Boolean) {
             isEnabledInModalContext = enabled
         }
-
     }
 
     var searchTextArea: CustomSearchTextArea = CustomSearchTextArea(JBTextArea(), false).also {
         it.setExtraActions(sendAction)
     }
-    private val listener = ChatGPTProvider(this)
-    private var contentPanel = HistoryComponent()
+    private val listener = ChatGPTProvider()
+    val state = State()
+    private var contentPanel = HistoryComponent(state)
     private var progressBar: JProgressBar? = null
     private val splitter: OnePixelSplitter = OnePixelSplitter(true,.9f)
+
 
     init {
         searchTextArea.isEnabled = AccountManager.isLoggedIn
@@ -52,7 +55,18 @@ class ChatGPTPane {
                 })
 
         splitter.dividerWidth = 2;
-        searchTextArea.textArea.addKeyListener(listener)
+        searchTextArea.textArea.addKeyListener(object: KeyListener {
+            override fun keyTyped(e: KeyEvent?) {}
+            override fun keyReleased(e: KeyEvent?) {}
+            override fun keyPressed(e: KeyEvent?) {
+                if (e != null) {
+                    if (e.keyCode == KeyEvent.VK_ENTER && !e.isControlDown && !e.isShiftDown) {
+                        e.consume()
+                        listener.doActionPerformed(this@ChatGPTPane)
+                    }
+                }
+            }
+        })
 
         val top = JPanel(BorderLayout())
         progressBar = JProgressBar()
@@ -62,10 +76,10 @@ class ChatGPTPane {
 
         splitter.firstComponent = contentPanel
         splitter.secondComponent = top
+        layout = BorderLayout()
+        add(splitter, BorderLayout.CENTER)
     }
-    fun getComponent(): JPanel {
-        return splitter
-    }
+
     fun getComponentForFocus(): JTextArea {
         return searchTextArea.textArea
     }
@@ -76,7 +90,7 @@ class ChatGPTPane {
     }
     fun send(msg: String, selectedText: String) {
         contentPanel.clearHistory()
-        listener.doActionPerformed(msg, selectedText)
+        listener.doActionPerformed(this, msg, selectedText)
     }
 
     fun add(messageComponent: MessageComponent) {
@@ -85,8 +99,7 @@ class ChatGPTPane {
     fun scrollToBottom() {
         contentPanel.scrollToBottom()
     }
-    fun lastMessage(): MessageComponent {
-        return contentPanel.lastMessage()
+    fun cancelRequest() {
+        return listener.cancelOrClose()
     }
-
 }

@@ -155,8 +155,12 @@ class DiffDialog(
                     }
                 }
             }
-            if (entry.intent.endsWith("?")) {
-                CodifyAiToolboxPaneFactory.gptChatPane.send(entry.intent, selectedText)
+            var filteredIntent = entry.intent
+            while (filteredIntent.last().isWhitespace()) {
+                filteredIntent.dropLast(1)
+            }
+            if (filteredIntent.endsWith("?")) {
+                CodifyAiToolboxPaneFactory.gptChatPanes?.send(entry.intent, selectedText)
                 super.doCancelAction()
             } else {
                 super.doOKAction()

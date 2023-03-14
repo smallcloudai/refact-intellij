@@ -2,7 +2,6 @@ package com.smallcloud.codify.panes.gptchat.utils
 
 import com.google.gson.Gson
 import com.smallcloud.codify.panes.gptchat.State
-import com.smallcloud.codify.panes.gptchat.State.Companion.instance as State
 
 object MsgBuilder {
     fun build(conversation: List<State.QuestionAnswer>): String {
@@ -31,10 +30,6 @@ object MsgBuilder {
                 "stream" to true,
                 "messages" to messages
         )
-
-        if (!State.conversationId.isNullOrEmpty()) {
-            msgDict["conversation_id"] = State.conversationId!!
-        }
         val gson = Gson()
         return gson.toJson(msgDict)
     }

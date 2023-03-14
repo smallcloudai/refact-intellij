@@ -3,12 +3,7 @@ package com.smallcloud.codify.panes.gptchat
 class State {
     data class QuestionAnswer(val question: String, var answer: String = "", var code: String = "")
 
-    var conversationId: String? = null
     private val conversations_: MutableList<QuestionAnswer> = mutableListOf()
-
-//    init {
-//        accessToken = HttpConnection.instance["https://chat.openai.com/api/auth/session"]
-//    }
 
     val conversations: List<QuestionAnswer>
         get() = conversations_.toList()
@@ -33,8 +28,4 @@ class State {
         conversations_.clear()
     }
 
-
-    companion object {
-        val instance = State()
-    }
 }

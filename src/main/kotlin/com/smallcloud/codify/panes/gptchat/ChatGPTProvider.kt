@@ -20,17 +20,17 @@ import com.smallcloud.codify.panes.gptchat.utils.MsgBuilder
 import com.smallcloud.codify.panes.gptchat.utils.md2html
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
-import java.awt.event.KeyEvent
-import java.awt.event.KeyListener
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
 import java.net.URI
+import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import com.smallcloud.codify.io.ConnectionManager.Companion.instance as ConnectionManager
 
-class ChatGPTProvider(private val pane: ChatGPTPane) : ActionListener, KeyListener {
+class ChatGPTProvider : ActionListener {
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
             "CodifyChatProviderScheduler", 1
     )
@@ -39,6 +39,7 @@ class ChatGPTProvider(private val pane: ChatGPTPane) : ActionListener, KeyListen
     )
 
     private var connection: AsyncConnection? = null
+    private var processTask: Future<*>? = null
 
     init {
         codifyInferenceUri?.let {
@@ -58,13 +59,13 @@ class ChatGPTProvider(private val pane: ChatGPTPane) : ActionListener, KeyListen
 
     override fun actionPerformed(e: ActionEvent) {
         try {
-            doActionPerformed()
+            doActionPerformed(e.source as ChatGPTPane)
         } catch (ex: IOException) {
             throw RuntimeException(ex)
         }
     }
 
-    fun doActionPerformed(msg: String? = null, selectedText: String? = null) {
+    fun doActionPerformed(pane: ChatGPTPane, msg: String? = null, selectedText: String? = null) {
         if (connection == null) return
         var text: String = msg ?: pane.searchTextArea.textArea.text
         LOG.info("ChatGPT Search: $text")
@@ -73,9 +74,9 @@ class ChatGPTProvider(private val pane: ChatGPTPane) : ActionListener, KeyListen
         }
         pane.searchTextArea.textArea.text = ""
 
-        State.instance.pushQuestion(text)
+        pane.state.pushQuestion(text)
         if (selectedText != null) {
-            State.instance.pushCode(selectedText)
+            pane.state.pushCode(selectedText)
             text += "\n\n```\n$selectedText\n```\n"
         }
 
@@ -83,13 +84,13 @@ class ChatGPTProvider(private val pane: ChatGPTPane) : ActionListener, KeyListen
         val message = MessageComponent(listOf(ParsedText(null, "...", false)), false)
         pane.add(message)
         val req = ChatGPTRequest(codifyInferenceUri!!.resolve(defaultChatUrlSuffix),
-            AccountManager.apiKey, State.instance.conversations)
-        scheduler.submit {
-            process(req, message)
+            AccountManager.apiKey, pane.state.conversations)
+        processTask = scheduler.submit {
+            process(pane, req, message)
         }
     }
 
-    private fun process(req: ChatGPTRequest, message: MessageComponent) {
+    private fun process(pane: ChatGPTPane, req: ChatGPTRequest, message: MessageComponent) {
         pane.aroundRequest(true)
         try {
             val reqStr = MsgBuilder.build(req.conversation)
@@ -117,8 +118,8 @@ class ChatGPTProvider(private val pane: ChatGPTPane) : ActionListener, KeyListen
                         }
                         streamScheduler.submit {
                             for (s in line.chunked(1)) {
-                                State.instance.pushAnswer(s)
-                                val lastAnswer = State.instance.lastAnswer()
+                                pane.state.pushAnswer(s)
+                                val lastAnswer = pane.state.lastAnswer()
                                 ApplicationManager.getApplication().invokeLater {
                                     message.setContent(md2html(lastAnswer))
                                     pane.scrollToBottom()
@@ -136,9 +137,9 @@ class ChatGPTProvider(private val pane: ChatGPTPane) : ActionListener, KeyListen
                     requestFuture = it.get()
                     requestFuture.get()
                 } catch (e: InterruptedException) {
-//                    handleInterruptedException(requestFuture)
+                    handleInterruptedException(requestFuture)
                 } catch (e: InterruptedIOException) {
-//                    handleInterruptedException(requestFuture)
+                    handleInterruptedException(requestFuture)
                 } catch (e: ExecutionException) {
                     requestFuture?.cancel(true)
 //                    catchNetExceptions(e.cause)
@@ -169,16 +170,28 @@ class ChatGPTProvider(private val pane: ChatGPTPane) : ActionListener, KeyListen
             throw RuntimeException(ex)
         }
     }
-
-    override fun keyPressed(e: KeyEvent) {
-        if (e.keyCode == KeyEvent.VK_ENTER && !e.isControlDown && !e.isShiftDown) {
-            e.consume()
-            doActionPerformed()
+    fun cancelOrClose() {
+        try {
+            processTask?.cancel(true)
+            processTask?.get(1, TimeUnit.SECONDS)
+        } catch (_: CancellationException) {
+        } finally {
+            if (InferenceGlobalContext.status != ConnectionStatus.DISCONNECTED) {
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            }
+//            completionInProgress = false
+            processTask = null
+//            completionLayout?.dispose()
+//            completionLayout = null
         }
     }
-    override fun keyReleased(e: KeyEvent) {}
-    override fun keyTyped(e: KeyEvent) {}
 
+
+    private fun handleInterruptedException(requestFuture: Future<*>?) {
+        InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+        requestFuture?.cancel(true)
+        LOG.debug("lastReqJob abort")
+    }
     companion object {
         private val LOG: Logger = Logger.getInstance(ChatGPTProvider::class.java)
     }

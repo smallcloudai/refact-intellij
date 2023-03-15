@@ -9,6 +9,7 @@ import com.intellij.util.ui.UIUtil
 import com.obiscr.chatgpt.ui.HistoryComponent
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
+import com.smallcloud.codify.listeners.LastEditorGetterListener
 import com.smallcloud.codify.panes.gptchat.ui.CustomSearchTextArea
 import com.smallcloud.codify.panes.gptchat.ui.MessageComponent
 import icons.CollaborationToolsIcons
@@ -62,7 +63,12 @@ class ChatGPTPane : JPanel() {
                 if (e != null) {
                     if (e.keyCode == KeyEvent.VK_ENTER && !e.isControlDown && !e.isShiftDown) {
                         e.consume()
-                        listener.doActionPerformed(this@ChatGPTPane)
+                        var selectedText: String? = null
+                        if (searchTextArea.needToInline && LastEditorGetterListener.LAST_EDITOR != null) {
+                            selectedText = LastEditorGetterListener.LAST_EDITOR!!.selectionModel.selectedText
+                        }
+                        listener.doActionPerformed(this@ChatGPTPane, selectedText=selectedText)
+                        searchTextArea.needToInline = false
                     }
                 }
             }

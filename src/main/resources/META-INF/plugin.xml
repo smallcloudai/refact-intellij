@@ -62,13 +62,13 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
-    <depends>org.intellij.plugins.markdown</depends>
 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="com.smallcloud.codify.Initializer"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.codify.listeners.DocumentListener"/>
+        <editorFactoryListener implementation="com.smallcloud.codify.listeners.LastEditorGetterListener"/>
         <statusBarWidgetFactory implementation="com.smallcloud.codify.status_bar.SMCStatusBarWidgetFactory"/>
         <notificationGroup id="Codify Notification Group" displayType="BALLOON"/>
         <completion.contributor language="any"

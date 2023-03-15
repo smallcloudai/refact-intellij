@@ -22,11 +22,9 @@ import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.StartupUiUtil
 import com.intellij.util.ui.UIUtil
+import com.smallcloud.codify.CodifyBundle
 import java.awt.*
-import java.awt.event.ActionEvent
-import java.awt.event.InputEvent
-import java.awt.event.KeyAdapter
-import java.awt.event.KeyEvent
+import java.awt.event.*
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import javax.swing.*
@@ -42,6 +40,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
     private val myIconsPanel: JPanel = NonOpaquePanel()
     private val myNewLineButton: ActionButton
     private val myClearButton: ActionButton
+    private val myAddSelectedLinesCB: JCheckBox
     private val myExtraActionsPanel = NonOpaquePanel()
     private val myScrollPane: JBScrollPane
     private var myMultilineEnabled = true
@@ -71,10 +70,34 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         iconsPanelWrapper.add(p, BorderLayout.WEST)
         iconsPanelWrapper.add(myExtraActionsPanel, BorderLayout.SOUTH)
         removeAll()
-        layout = BorderLayout(JBUIScale.scale(3), 0)
         border = JBUI.Borders.empty(JBUI.insets("Editor.SearchField.borderInsets", JBUI.insets(if (SystemInfo.isLinux) 2 else 1)))
-        add(myScrollPane, BorderLayout.CENTER)
-        add(iconsPanelWrapper, BorderLayout.EAST)
+        layout = BorderLayout()
+        add(NonOpaquePanel().apply {
+            layout = GridBagLayout()
+            val gc = GridBagConstraints()
+            gc.gridx = 0
+            gc.gridy = 0
+            gc.anchor = GridBagConstraints.NORTHWEST
+            gc.fill = GridBagConstraints.BOTH
+            gc.weightx = 2.0
+            gc.weighty = 2.0
+            add(myScrollPane, gc)
+
+            gc.gridx = 0
+            gc.gridy = 1
+            gc.anchor = GridBagConstraints.SOUTHWEST
+            gc.fill = GridBagConstraints.NONE
+            add(myAddSelectedLinesCB, gc)
+
+            gc.gridx = 1
+            gc.gridy = 0
+            gc.gridheight = 2
+            gc.anchor = GridBagConstraints.EAST
+            gc.weightx = 0.0
+            gc.weighty = 2.0
+            gc.fill = GridBagConstraints.VERTICAL
+            add(iconsPanelWrapper, gc)
+        }, BorderLayout.CENTER)
         updateIconsLayout()
     }
 
@@ -212,6 +235,26 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         myScrollPane.setOpaque(false)
         myClearButton = MyActionButton(ClearAction(), false, false)
         myNewLineButton = MyActionButton(NewLineAction(), false, true)
+        myAddSelectedLinesCB = JCheckBox(CodifyBundle.message("aiToolbox.panes.chat.alsoSend")).apply {
+            isOpaque = false
+            addKeyListener(object : KeyListener {
+                override fun keyTyped(e: KeyEvent?) {
+                    textArea.requestFocus()
+                    textArea.dispatchEvent(e)
+                }
+
+                override fun keyPressed(e: KeyEvent?) {
+                    textArea.requestFocus()
+                    textArea.dispatchEvent(e)
+                }
+
+                override fun keyReleased(e: KeyEvent?) {
+                    textArea.requestFocus()
+                    textArea.dispatchEvent(e)
+                }
+
+            })
+        }
         updateLayout()
     }
 
@@ -234,6 +277,17 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
     override fun getMinimumSize(): Dimension {
         return preferredSize
     }
+
+    var needToInline: Boolean
+        get() : Boolean {
+            return myAddSelectedLinesCB.isSelected
+        }
+        set(value) {
+            if (value != myAddSelectedLinesCB.isSelected) {
+                myAddSelectedLinesCB.isSelected = value
+                updateIconsLayout()
+            }
+        }
 
     override fun propertyChange(evt: PropertyChangeEvent) {
         if ("background" == evt.propertyName) {

@@ -232,14 +232,6 @@ class DiffDialog(
                         }
                     }
                 })
-//                addFocusListener(object : FocusListener {
-//                    override fun focusGained(e: FocusEvent?) {
-//                        entry = getDefaultEntry()
-//                    }
-//
-//                    override fun focusLost(e: FocusEvent?) {}
-//
-//                })
                 document.addDocumentListener(object : DocumentListener {
                     override fun insertUpdate(e: DocumentEvent?) {
                         if (activeMode == Mode.FILTER) {
@@ -310,6 +302,7 @@ class DiffDialog(
                 override fun mouseExited(e: MouseEvent?) {}
             })
             it.selectionModel.addListSelectionListener { e ->
+                if (it.selectedIndex == -1) return@addListSelectionListener
                 if (e == null) return@addListSelectionListener
                 try {
                     val tempEntry = it.selectedValue.apply { intent = msgTextField.text }
@@ -341,7 +334,7 @@ class DiffDialog(
                             msgTextField.requestFocus()
                             msgTextField.text = previousIntent
                             historyIndex = -1
-                            entry = LongthinkFunctionEntry(msgTextField.text)
+                            entry = getDefaultEntry()
                         } else lastSelectedIndex = thirdPartyList.selectedIndex
                     }
                 }
@@ -457,6 +450,10 @@ class DiffDialog(
             longthinkLabel.text = entry.label
             lastCopyEntry = _entry.copy()
         }
+
+    init {
+        entry = getDefaultEntry()
+    }
 
     override fun createCenterPanel(): JComponent {
         panel = FormBuilder.createFormBuilder().run {

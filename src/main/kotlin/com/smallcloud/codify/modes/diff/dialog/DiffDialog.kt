@@ -113,7 +113,7 @@ class DiffDialog(
         if (entry.thirdParty && PrivacyService.getPrivacy(vFile) < Privacy.THIRDPARTY) {
             return CodifyBundle.message("aiToolbox.reasons.thirdParty")
         }
-        if (entry.intent.endsWith("?")) return null
+        if (getFilteredIntent(entry.intent).endsWith("?")) return null
         if (vFile != null && !entry.supportsLanguages.match(vFile.name)) {
             return CodifyBundle.message("aiToolbox.reasons.supportLang")
         }
@@ -122,7 +122,7 @@ class DiffDialog(
                 return CodifyBundle.message("aiToolbox.reasons.selectCodeFirst",
                     entry.selectedLinesMin, entry.selectedLinesMax)
             }
-            if (msgTextField.text.isEmpty() && (entry.catchAllHighlight || entry.catchAllSelection)) {
+            if (msgTextField.text.isEmpty() && (entry.catchAny())) {
                 return CodifyBundle.message("aiToolbox.reasons.writeSomething")
             }
         } else {
@@ -136,7 +136,7 @@ class DiffDialog(
             if (entry.selectedLinesMin > lines) {
                 return CodifyBundle.message("aiToolbox.reasons.linesLess", entry.selectedLinesMin)
             }
-            if (msgTextField.text.isEmpty() && (entry.catchAllHighlight || entry.catchAllSelection)) {
+            if (msgTextField.text.isEmpty() && (entry.catchAny())) {
                 return CodifyBundle.message("aiToolbox.reasons.writeSomething")
             }
         }
@@ -144,21 +144,27 @@ class DiffDialog(
         return null
     }
 
+    private fun getFilteredIntent(intent: String): String {
+        var filteredIntent = intent
+        while (filteredIntent.isNotEmpty() && filteredIntent.last().isWhitespace()) {
+            filteredIntent = filteredIntent.dropLast(1)
+        }
+        return filteredIntent
+    }
+
     override fun doOKAction() {
         if (getReasonForEntry(entry) == null) {
             entry = entry.copy().apply {
                 intent = entry.modelFixedIntent.ifEmpty {
-                    if (catchAllSelection || catchAllHighlight) {
+                    if (catchAny()) {
                         msgTextField.text
                     } else {
                         label
                     }
                 }
             }
-            var filteredIntent = msgTextField.text
-            while (filteredIntent.last().isWhitespace()) {
-                filteredIntent = filteredIntent.dropLast(1)
-            }
+
+            val filteredIntent = getFilteredIntent(entry.intent)
             if (filteredIntent.endsWith("?") || entry.model == Resources.openChatModel) {
                 CodifyAiToolboxPaneFactory.gptChatPanes?.send(filteredIntent, selectedText)
                 super.doCancelAction()
@@ -191,15 +197,7 @@ class DiffDialog(
 
             init {
                 addKeyListener(object : KeyListener {
-                    override fun keyTyped(e: KeyEvent?) {
-                        if (e?.isActionKey == false
-                            && e.keyCode != KeyEvent.VK_ENTER
-                            && e.keyCode != KeyEvent.VK_UNDEFINED
-                        ) {
-                            thirdPartyList.filter(text + e.keyChar)
-                            thirdPartyList.selectionModel.setSelectionInterval(0, 0)
-                        }
-                    }
+                    override fun keyTyped(e: KeyEvent?) {}
 
                     override fun keyReleased(e: KeyEvent?) {
                         if (e?.keyCode == KeyEvent.VK_ENTER) {
@@ -234,14 +232,14 @@ class DiffDialog(
                         }
                     }
                 })
-                addFocusListener(object : FocusListener {
-                    override fun focusGained(e: FocusEvent?) {
-                        entry = getDefaultEntry()
-                    }
-
-                    override fun focusLost(e: FocusEvent?) {}
-
-                })
+//                addFocusListener(object : FocusListener {
+//                    override fun focusGained(e: FocusEvent?) {
+//                        entry = getDefaultEntry()
+//                    }
+//
+//                    override fun focusLost(e: FocusEvent?) {}
+//
+//                })
                 document.addDocumentListener(object : DocumentListener {
                     override fun insertUpdate(e: DocumentEvent?) {
                         if (activeMode == Mode.FILTER) {
@@ -322,11 +320,10 @@ class DiffDialog(
             }
             it.addKeyListener(object : KeyListener {
                 override fun keyTyped(e: KeyEvent?) {
-                    if (e?.isActionKey == false
-                        && e.keyCode != KeyEvent.VK_ENTER
-                    ) {
-                        msgTextField.text += e.keyChar
+                    if (e?.keyChar?.isLetterOrDigit() == true) {
                         msgTextField.requestFocus()
+                        msgTextField.dispatchEvent(e)
+                        lastSelectedIndex = 0
                     }
                 }
 

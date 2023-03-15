@@ -38,7 +38,6 @@ import com.smallcloud.codify.notifications.emitRegular
 import com.smallcloud.codify.privacy.Privacy
 import com.smallcloud.codify.privacy.PrivacyChangesNotifier
 import com.smallcloud.codify.privacy.PrivacyService
-import com.smallcloud.codify.settings.PrivacyState
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.net.URI
@@ -185,6 +184,8 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return CodifyBundle.message("statusBar.clickToLogin")
         }
 
+        "Codify doesn’t work because of privacy"
+
         when (InferenceGlobalContext.status) {
             ConnectionStatus.DISCONNECTED -> {
                 return InferenceGlobalContext.lastErrorMsg
@@ -193,22 +194,26 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 return InferenceGlobalContext.lastErrorMsg
             }
             ConnectionStatus.CONNECTED -> {
-                var tooltipStr = "<html>"
-                if (InferenceGlobalContext.inferenceUri != null) {
-                    tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUri!!.resolve(defaultContrastUrlSuffix)}"
-                }
-                val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else
-                    if (InferenceGlobalContext.lastAutoModel != null) InferenceGlobalContext.lastAutoModel else null
-                val temp =
-                    if (InferenceGlobalContext.temperature != null) InferenceGlobalContext.temperature else defaultTemperature
-                if (model != null)
-                    tooltipStr += "<br>\uD83D\uDDD2 $model"
-                tooltipStr += "<br>\uD83C\uDF21️ $temp"
-                if (PluginState.instance.tooltipMessage != null)
-                    tooltipStr += "<br>${PluginState.instance.tooltipMessage}"
-                tooltipStr += "</html>"
+                if (isPrivacyEnabled()) {
+                    var tooltipStr = "<html>"
+                    if (InferenceGlobalContext.inferenceUri != null) {
+                        tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUri!!.resolve(defaultContrastUrlSuffix)}"
+                    }
+                    val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else
+                        if (InferenceGlobalContext.lastAutoModel != null) InferenceGlobalContext.lastAutoModel else null
+                    val temp =
+                            if (InferenceGlobalContext.temperature != null) InferenceGlobalContext.temperature else defaultTemperature
+                    if (model != null)
+                        tooltipStr += "<br>\uD83D\uDDD2 $model"
+                    tooltipStr += "<br>\uD83C\uDF21️ $temp"
+                    if (PluginState.instance.tooltipMessage != null)
+                        tooltipStr += "<br>${PluginState.instance.tooltipMessage}"
+                    tooltipStr += "</html>"
 
-                return tooltipStr
+                    return tooltipStr
+                } else {
+                    return CodifyBundle.message("statusBar.tooltipIfPrivacyDisabled")
+                }
             }
             else -> return Resources.codifyStr
         }

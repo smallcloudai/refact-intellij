@@ -31,6 +31,7 @@ data class LongthinkFunctionEntry(
 
     @OptionTag @SerializedName("catch_all_selection") var catchAllSelection: Boolean = false,
     @OptionTag @SerializedName("catch_all_hl") var catchAllHighlight: Boolean = false,
+    @OptionTag @SerializedName("catch_question_mark") var catchQuestionMark: Boolean = false,
 
     @OptionTag @SerializedName("third_party") val thirdParty: Boolean = false,
     @OptionTag @SerializedName("mini_html") var miniHtml: String = "",
@@ -46,6 +47,10 @@ data class LongthinkFunctionEntry(
     @OptionTag @SerializedName("custom_intent") var customIntent: Boolean = false,
     var isBookmarked: Boolean = false
 ) {
+    fun catchAny(): Boolean {
+        return catchAllSelection || catchAllHighlight || catchQuestionMark
+    }
+
     fun mergeLocalInfo(localInfo: LocalLongthinkInfo?): LongthinkFunctionEntry {
         if (localInfo == null) return this
         return this.copy().apply {

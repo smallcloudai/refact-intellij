@@ -87,6 +87,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             gc.gridy = 1
             gc.anchor = GridBagConstraints.SOUTHWEST
             gc.fill = GridBagConstraints.NONE
+            gc.insets = JBInsets(0, 5, 5, 0)
             add(myAddSelectedLinesCB, gc)
 
             gc.gridx = 1
@@ -95,6 +96,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             gc.anchor = GridBagConstraints.EAST
             gc.weightx = 0.0
             gc.weighty = 2.0
+            gc.insets = JBInsets(0, 0, 5, 0)
             gc.fill = GridBagConstraints.VERTICAL
             add(iconsPanelWrapper, gc)
         }, BorderLayout.CENTER)

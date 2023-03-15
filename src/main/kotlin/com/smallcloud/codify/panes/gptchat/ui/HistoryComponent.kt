@@ -6,6 +6,7 @@ import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.smallcloud.codify.CodifyBundle
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.panes.gptchat.State
 import com.smallcloud.codify.panes.gptchat.ui.MessageComponent
@@ -67,10 +68,9 @@ class HistoryComponent(private val state: State): JBPanel<HistoryComponent>(), N
         mainPanel.isOpaque = false
         mainPanel.border = JBUI.Borders.emptyLeft(8)
         add(mainPanel)
-        var helloString = "### Hi! \uD83D\uDC4B\n" +
-                "### This chat has more features and it's more responsive than a free one you might find on the web."
+        var helloString = CodifyBundle.message("aiToolbox.panes.chat.helloString", "\uD83D\uDC4B")
         if (!AccountManager.isLoggedIn) {
-            helloString += " Don't forget to log in!"
+            helloString += " ${CodifyBundle.message("aiToolbox.panes.chat.dontForgetLogin")}"
         }
         tip = MessageComponent(md2html(helloString), false)
         myList.isOpaque = true

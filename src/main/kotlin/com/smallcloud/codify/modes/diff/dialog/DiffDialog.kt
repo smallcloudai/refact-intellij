@@ -155,12 +155,12 @@ class DiffDialog(
                     }
                 }
             }
-            var filteredIntent = entry.intent
+            var filteredIntent = msgTextField.text
             while (filteredIntent.last().isWhitespace()) {
-                filteredIntent.dropLast(1)
+                filteredIntent = filteredIntent.dropLast(1)
             }
-            if (filteredIntent.endsWith("?")) {
-                CodifyAiToolboxPaneFactory.gptChatPanes?.send(entry.intent, selectedText)
+            if (filteredIntent.endsWith("?") || entry.model == Resources.openChatModel) {
+                CodifyAiToolboxPaneFactory.gptChatPanes?.send(filteredIntent, selectedText)
                 super.doCancelAction()
             } else {
                 super.doOKAction()

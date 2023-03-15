@@ -46,6 +46,7 @@ object Resources {
     const val codifyStr: String = "Codify"
     val pluginId: PluginId = getPluginId()
     const val stagingFilterPrefix: String = "STAGING"
+    const val openChatModel: String = "open-chat"
 
     object Icons {
         private fun brushForTheme(icon: Icon): Icon {

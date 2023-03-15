@@ -3,7 +3,6 @@ package com.smallcloud.codify.io
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.smallcloud.codify.PluginState
 import com.smallcloud.codify.Resources.defaultCodifyUrl
 import java.net.URLConnection
 import java.util.concurrent.Future
@@ -29,7 +28,7 @@ class ConnectivityManager : Disposable {
                 } catch (e: Exception) {
                     // Do nothing
                 }
-            }, 1, 1, TimeUnit.SECONDS
+            }, 1, 20, TimeUnit.SECONDS
         )
     }
 

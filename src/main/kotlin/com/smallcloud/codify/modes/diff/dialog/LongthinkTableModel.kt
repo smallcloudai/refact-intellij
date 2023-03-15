@@ -25,7 +25,7 @@ class LongthinkTableModel(private val source: List<LongthinkFunctionEntry>,
         return source.filter {
             it.label.lowercase().startsWith(realFilter) ||
                     it.label.lowercase().startsWith(realStagingFilter) ||
-                    it.catchAllHighlight || it.catchAllSelection
+                    it.catchAny()
         }
 
     }
@@ -36,6 +36,7 @@ class LongthinkTableModel(private val source: List<LongthinkFunctionEntry>,
             localFiltered.sortedWith(compareByDescending<LongthinkFunctionEntry> { it.isBookmarked }
                 .thenByDescending { it.catchAllHighlight }
                 .thenByDescending { it.catchAllSelection }
+                .thenByDescending { it.catchQuestionMark }
                 .thenByDescending { it.likes }
                 .thenByDescending { it.supportHighlight }
             )
@@ -43,6 +44,7 @@ class LongthinkTableModel(private val source: List<LongthinkFunctionEntry>,
             localFiltered.sortedWith(compareByDescending<LongthinkFunctionEntry> { it.isBookmarked }
                 .thenByDescending { it.catchAllSelection }
                 .thenByDescending { it.catchAllHighlight }
+                .thenByDescending { it.catchQuestionMark }
                 .thenByDescending { it.likes }
                 .thenByDescending { it.supportHighlight }
             )

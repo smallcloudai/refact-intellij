@@ -13,14 +13,12 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.codify.panes.gptchat.structs.ParsedText
 import org.jdesktop.swingx.VerticalLayout
-import java.awt.BorderLayout
-import java.awt.Component
-import java.awt.FlowLayout
-import java.awt.Toolkit
+import java.awt.*
 import java.awt.datatransfer.StringSelection
 import javax.accessibility.AccessibleContext
 import javax.swing.JEditorPane
 import javax.swing.JPanel
+import javax.swing.event.HyperlinkEvent
 import javax.swing.text.AttributeSet
 import javax.swing.text.html.StyleSheet
 
@@ -31,8 +29,10 @@ private class CopyClipboardAction(private val text: String?) : DumbAwareAction(A
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val clipboard = Toolkit.getDefaultToolkit().systemClipboard;
-        clipboard.setContents(StringSelection(text), null)
+        if (text != null) {
+            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+            clipboard.setContents(StringSelection(text), null)
+        }
     }
 }
 
@@ -99,15 +99,16 @@ class MessageComponent(val question: List<ParsedText>,
         component.putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY,
                 StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")))
         component.text = content
-
-//        val copyAction = JLabel(AllIcons.Actions.Copy)
-//        copyAction.cursor = Cursor(Cursor.HAND_CURSOR)
-//        copyAction.addMouseListener(object : MouseAdapter() {
-//            override fun mouseClicked(e: MouseEvent?) {
-//                val clipboard = Toolkit.getDefaultToolkit().systemClipboard;
-//                clipboard.setContents(StringSelection(rawTexts[index]), null)
-//            }
-//        })
+        component.addHyperlinkListener { e ->
+            if (HyperlinkEvent.EventType.ACTIVATED == e.eventType) {
+                val desktop: Desktop = Desktop.getDesktop()
+                try {
+                    desktop.browse(e.url.toURI())
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                }
+            }
+        }
         if (isCode) {
             wrapper.add(JPanel(BorderLayout()).also {
                 it.add(MyActionButton(CopyClipboardAction(rawTexts[index]), false, true), BorderLayout.EAST)

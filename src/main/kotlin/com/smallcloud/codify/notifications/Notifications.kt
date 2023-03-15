@@ -156,7 +156,7 @@ fun emitRegular(project: Project, editor: Editor) {
         })
     }
     val f1Shortcut = KeymapUtil.getShortcutText("CodifyAIToolboxAction")
-    notification.addAction(DumbAwareAction.create("Ai Toolbox ($f1Shortcut)") {
+    notification.addAction(DumbAwareAction.create("AI Toolbox ($f1Shortcut)") {
         it.presentation.putClientProperty(Key(CommonDataKeys.EDITOR.name), editor)
         AIToolboxInvokeAction().actionPerformed(it)
         notification.expire()

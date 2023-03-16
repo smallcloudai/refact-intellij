@@ -70,8 +70,9 @@ class CompletionState(
             headIndexUpdated = headIndex + textCurrentLine.length
         }
 
-        multiline = multiline && lines.size > 1
+        val currentMultiline = multiline && lines.size > 1
         val startIndex: Int = minOf(requestedText.length, headIndexUpdated)
+        logger.info("Finish reason: $finishReason, firstLine: $firstLine")
         var endIndex = if (finishReason == "ins-stoptoken") {
             startIndex
         } else {
@@ -80,7 +81,7 @@ class CompletionState(
         }
 
         var offset = 0
-        if (multiline) {
+        if (currentMultiline) {
             val editorCurrentLineWithOffset = if (editorState.offsetByCurrentLine - 1 > 1)
                 editorState.currentLine.substring(editorState.offsetByCurrentLine - 1)
             else editorState.currentLine
@@ -98,7 +99,7 @@ class CompletionState(
         }
         val firstLineEndIndex = endIndex - offset
         firstLine = firstLine.substring(0, firstLine.length - offset)
-        val editedCompletion = if (multiline) {
+        val editedCompletion = if (currentMultiline) {
             firstLine + lines.subList(1, lines.size).joinToString("\n", prefix = "\n")
         } else {
             firstLine
@@ -107,13 +108,12 @@ class CompletionState(
             originalText = requestedText,
             completion = editedCompletion,
             currentLinesAreEqual = false,
-            multiline = multiline,
+            multiline = currentMultiline,
             startIndex = startIndex,
             firstLineEndIndex = firstLineEndIndex,
             endIndex = maxOf(endIndex, startIndex),
             createdTs = System.currentTimeMillis(),
             leftSymbolsToRemove = leftSymbolsToRemove,
-            isSingleLineComplete = !multiline
         )
     }
 }

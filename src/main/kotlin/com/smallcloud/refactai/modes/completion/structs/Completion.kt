@@ -10,7 +10,6 @@ data class Completion(
     val firstLineEndIndex: Int,
     val endIndex: Int,
     val createdTs: Long,
-    val isSingleLineComplete: Boolean,
     val leftSymbolsToRemove: Int,
     val leftSymbolsToSkip: Int = 0,
     val isFromCache: Boolean = false

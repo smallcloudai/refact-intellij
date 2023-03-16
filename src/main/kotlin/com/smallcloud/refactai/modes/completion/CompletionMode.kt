@@ -335,7 +335,7 @@ class CompletionMode(
             applyPreview(caret ?: editor.caretModel.currentCaret)
             lastCompletionData?.let {
                 val nextLine = it.endIndex >= it.originalText.length || it.originalText[it.endIndex] == '\n'
-                hasOneLineCompletionBefore = it.isSingleLineComplete && nextLine
+                hasOneLineCompletionBefore = !it.multiline && nextLine
             }
             dispose()
         }

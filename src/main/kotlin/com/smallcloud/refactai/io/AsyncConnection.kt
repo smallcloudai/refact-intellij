@@ -5,6 +5,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.text.findTextRange
 import com.smallcloud.refactai.account.inferenceLogin
 import com.smallcloud.refactai.statistic.UsageStatistic
@@ -141,6 +142,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
                         try {
                             val data = Gson().fromJson(bufferStr, JsonObject::class.java)
                             errorDataReceived(data)
+                            return
                         } catch (_: JsonSyntaxException) {
                         }
                         val (dataPieces, maybeLeftOverBuffer) = lookForCompletedDataInStreamingBuf(bufferStr)

@@ -1,7 +1,10 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij") version "1.13.0"
-    id("org.jetbrains.kotlin.jvm") version "1.7.22"
+    id("org.jetbrains.intellij") version "1.13.2"
+    id("org.jetbrains.kotlin.jvm") version "1.8.10"
+    id("org.jetbrains.changelog") version "2.0.0"
+    id("org.jetbrains.qodana") version "0.1.13"
+    id("org.jetbrains.kotlinx.kover") version "0.6.1"
 }
 
 dependencies {
@@ -57,7 +60,7 @@ tasks {
 
 fun String.runCommand(
     workingDir: File = File("."),
-    timeoutAmount: Long = 60,
+    timeoutAmount: Long = 10,
     timeoutUnit: TimeUnit = TimeUnit.SECONDS
 ): String = ProcessBuilder(split("\\s(?=(?:[^'\"`]*(['\"`])[^'\"`]*\\1)*[^'\"`]*$)".toRegex()))
     .directory(workingDir)
@@ -79,6 +82,11 @@ fun getVersionString(baseVersion: String): String {
 
     val branch = "git rev-parse --abbrev-ref HEAD".runCommand(workingDir = rootDir)
     val commitId = "git rev-parse --short=8 HEAD".runCommand(workingDir = rootDir)
-    val numberOfCommits = "git rev-list --count HEAD ^origin/main".runCommand(workingDir = rootDir)
+    val numberOfCommits = if (branch == "main") {
+        val lastTag = "git describe --tags --abbrev=0 @^".runCommand(workingDir = rootDir)
+        "git rev-list ${lastTag}..HEAD --count".runCommand(workingDir = rootDir)
+    } else {
+        "git rev-list --count HEAD ^origin/main".runCommand(workingDir = rootDir)
+    }
     return "$baseVersion-$branch-$numberOfCommits-$commitId"
 }

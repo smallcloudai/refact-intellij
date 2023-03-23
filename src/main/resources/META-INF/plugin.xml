@@ -131,6 +131,8 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
         <group id="CodifyPrivacy" popup="true" class="com.smallcloud.codify.privacy.CodifyPrivacyGroupAction">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </group>
         <action

@@ -23,12 +23,13 @@ import javax.swing.text.AttributeSet
 import javax.swing.text.html.StyleSheet
 
 
-private class CopyClipboardAction(private val text: String?) : DumbAwareAction(AllIcons.Actions.Copy) {
+private class CopyClipboardAction(private val pane: JEditorPane) : DumbAwareAction(AllIcons.Actions.Copy) {
     init {
         templatePresentation.hoveredIcon = AllIcons.General.CopyHovered
     }
 
     override fun actionPerformed(e: AnActionEvent) {
+        val text = pane.getClientProperty("rawText") as String?
         if (text != null) {
             val clipboard = Toolkit.getDefaultToolkit().systemClipboard
             clipboard.setContents(StringSelection(text), null)
@@ -111,7 +112,7 @@ class MessageComponent(val question: List<ParsedText>,
         }
         if (isCode) {
             wrapper.add(JPanel(BorderLayout()).also {
-                it.add(MyActionButton(CopyClipboardAction(rawTexts[index]), false, true), BorderLayout.EAST)
+                it.add(MyActionButton(CopyClipboardAction(component), false, true), BorderLayout.EAST)
                 it.isOpaque = false
             }, BorderLayout.NORTH)
         }
@@ -141,6 +142,7 @@ class MessageComponent(val question: List<ParsedText>,
                 return@forEachIndexed
             } else {
                 editor.text = element.htmlText
+                editor.putClientProperty("rawText", element.rawText)
             }
             editor.updateUI()
         }

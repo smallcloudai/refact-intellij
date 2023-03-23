@@ -184,8 +184,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return CodifyBundle.message("statusBar.clickToLogin")
         }
 
-        "Codify doesn’t work because of privacy"
-
         when (InferenceGlobalContext.status) {
             ConnectionStatus.DISCONNECTED -> {
                 return InferenceGlobalContext.lastErrorMsg

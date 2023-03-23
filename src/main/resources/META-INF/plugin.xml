@@ -66,94 +66,93 @@ We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <postStartupActivity implementation="com.smallcloud.refact.Initializer"/>
-        <editorFactoryDocumentListener implementation="com.smallcloud.refact.listeners.DocumentListener"/>
-        <editorFactoryListener implementation="com.smallcloud.refact.listeners.LastEditorGetterListener"/>
-        <statusBarWidgetFactory implementation="com.smallcloud.refact.status_bar.SMCStatusBarWidgetFactory"/>
-        <notificationGroup id="Codify Notification Group" displayType="BALLOON"/>
+        <postStartupActivity implementation="com.smallcloud.refactai.Initializer"/>
+        <editorFactoryDocumentListener implementation="com.smallcloud.refactai.listeners.DocumentListener"/>
+        <editorFactoryListener implementation="com.smallcloud.refactai.listeners.LastEditorGetterListener"/>
+        <statusBarWidgetFactory implementation="com.smallcloud.refactai.status_bar.SMCStatusBarWidgetFactory"/>
+        <notificationGroup id="Refact AI Notification Group" displayType="BALLOON"/>
         <completion.contributor language="any"
-                                implementationClass="com.smallcloud.refact.modes.completion.PopupCompletionContributor"
+                                implementationClass="com.smallcloud.refactai.modes.completion.PopupCompletionContributor"
                                 order="first"/>
 
-        <projectConfigurable parentId="tools" instance="com.smallcloud.refact.settings.AppRootConfigurable"
-                             id="codify_root"
-                             displayName="Codify"/>
-        <applicationConfigurable parentId="codify_root"
-                                 instance="com.smallcloud.refact.settings.AppSettingsConfigurable"
-                                 id="codify_advanced_settings"
+        <projectConfigurable parentId="tools" instance="com.smallcloud.refactai.settings.AppRootConfigurable"
+                             id="refactai_root"
+                             displayName="Refact AI"/>
+        <applicationConfigurable parentId="refactai_root"
+                                 instance="com.smallcloud.refactai.settings.AppSettingsConfigurable"
+                                 id="refactai_advanced_settings"
                                  displayName="Advanced"/>
-        <errorHandler implementation="com.smallcloud.refact.PluginErrorReportSubmitter"/>
+        <errorHandler implementation="com.smallcloud.refactai.PluginErrorReportSubmitter"/>
 
-        <actionPromoter implementation="com.smallcloud.refact.listeners.InlineActionsPromoter"/>
-        <actionPromoter implementation="com.smallcloud.refact.listeners.DiffActionsPromoter"/>
-        <actionPromoter implementation="com.smallcloud.refact.listeners.CancelActionsPromoter"/>
+        <actionPromoter implementation="com.smallcloud.refactai.listeners.InlineActionsPromoter"/>
+        <actionPromoter implementation="com.smallcloud.refactai.listeners.DiffActionsPromoter"/>
+        <actionPromoter implementation="com.smallcloud.refactai.listeners.CancelActionsPromoter"/>
 
-        <toolWindow id="Codify AI Toolbox" anchor="right" icon="/icons/codify_red_16x16.svg"
+        <toolWindow id="Refact AI Toolbox" anchor="right"
                     canCloseContents="true"
-                    factoryClass="com.smallcloud.refact.panes.CodifyAiToolboxPaneFactory"/>
+                    factoryClass="com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory"/>
 
-        <applicationService serviceImplementation="com.smallcloud.refact.settings.AppSettingsState"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.settings.PrivacyState"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.settings.ExtraState"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.settings.AppSettingsState"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.settings.PrivacyState"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.settings.ExtraState"/>
 
-        <applicationService serviceImplementation="com.smallcloud.refact.statistic.StatisticService"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.statistic.ExtraInfoService"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.privacy.PrivacyService"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.account.LoginStateService"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.UsageStats"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.UpdateChecker"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.modes.diff.DiffIntentProvider"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.io.ConnectivityManager"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.io.ConnectionManager"/>
-        <applicationService serviceImplementation="com.smallcloud.refact.listeners.QuickLongthinkActionsService"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.statistic.StatisticService"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.statistic.ExtraInfoService"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.privacy.PrivacyService"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.account.LoginStateService"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.UsageStats"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.UpdateChecker"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.modes.diff.DiffIntentProvider"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectivityManager"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectionManager"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.listeners.QuickLongthinkActionsService"/>
     </extensions>
     <actions>
-        <action class="com.smallcloud.refact.listeners.TabPressedAction"
+        <action class="com.smallcloud.refactai.listeners.TabPressedAction"
                 id="TabPressedAction"
                 text="Accept Inline Completion">
             <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>
         </action>
-        <action class="com.smallcloud.refact.listeners.CancelPressedAction"
+        <action class="com.smallcloud.refactai.listeners.CancelPressedAction"
                 id="CancelPressedAction"
                 text="Cancel Inline Completion">
             <keyboard-shortcut first-keystroke="ESCAPE" keymap="$default"/>
         </action>
-        <action class="com.smallcloud.refact.listeners.ForceCompletionAction"
+        <action class="com.smallcloud.refactai.listeners.ForceCompletionAction"
                 id="ForceCompletionAction"
                 text="Make A Force Completion">
             <keyboard-shortcut first-keystroke="alt SLASH" keymap="$default"/>
         </action>
-        <action
-                id="CodifyAIToolboxAction"
-                class="com.smallcloud.refact.listeners.AIToolboxInvokeAction"
-                text="Codify AI Toolbox"
-                description="Codify AI Toolbox action">
+        <action id="RefactAIToolboxAction"
+                class="com.smallcloud.refactai.listeners.AIToolboxInvokeAction"
+                text="Refact AI Toolbox"
+                description="Refact AI Toolbox action">
             <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
-        <group id="CodifyPrivacy" popup="true" class="com.smallcloud.refact.privacy.CodifyPrivacyGroupAction">
+        <group id="RefactAIPrivacy" popup="true" class="com.smallcloud.refactai.privacy.RefactAIPrivacyGroupAction">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </group>
         <action
-                id="ActivateCodifyAIToolboxToolWindow"
-                class="com.smallcloud.refact.panes.gptchat.ChatGPTPaneInvokeAction">
+                id="ActivateRefactAIToolboxToolWindow"
+                class="com.smallcloud.refactai.panes.gptchat.ChatGPTPaneInvokeAction">
             <keyboard-shortcut first-keystroke="control shift C" keymap="$default"/>
             <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X" replace-all="true"/>
             <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X 10.5+" replace-all="true"/>
         </action>
-        <group id="CodifyChatGroup">
-            <action id="CodifyAskChat" class="com.smallcloud.refact.listeners.AskChatAction"/>
+        <group id="RefactAIChatGroup">
+            <action id="RefactAIAskChat" class="com.smallcloud.refactai.listeners.AskChatAction"/>
             <separator/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <separator/>
         </group>
 
     </actions>
-    <resource-bundle>bundles.Codify</resource-bundle>
+    <resource-bundle>bundles.RefactAI</resource-bundle>
     <applicationListeners>
-        <listener class="com.smallcloud.refact.listeners.PluginListener"
+        <listener class="com.smallcloud.refactai.listeners.PluginListener"
                   topic="com.intellij.ide.plugins.DynamicPluginListener"
                   activeInHeadlessMode="true"
         />

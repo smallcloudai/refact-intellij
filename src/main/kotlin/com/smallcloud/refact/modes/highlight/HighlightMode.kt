@@ -161,7 +161,7 @@ class HighlightMode(
         val request = RequestCreator.create(
             fileName, editor.document.text,
             startSelectionOffset, endSelectionOffset,
-            scope, entry.intent, funcName, listOf(),
+                "${scope}:${entry.functionName}", entry.intent, funcName, listOf(),
             model = InferenceGlobalContext.longthinkModel ?: entry.model
                 ?: InferenceGlobalContext.model ?: Resources.defaultModel,
             sendToCodifyServer = entry.thirdParty

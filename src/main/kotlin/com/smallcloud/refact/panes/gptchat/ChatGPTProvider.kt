@@ -130,7 +130,9 @@ class ChatGPTProvider : ActionListener {
                     },
                     dataReceiveEnded = {
                         pane.aroundRequest(false)
-                    },errorDataReceived = {}
+                    },
+                    errorDataReceived = {},
+                    scope="chatgpt"
             ).also {
                 var requestFuture: Future<*>? = null
                 try {

@@ -5,9 +5,7 @@ import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
 import com.intellij.util.IconUtil
-import com.intellij.util.IconUtil.colorize
 import com.intellij.util.ui.StartupUiUtil
-import java.awt.Color
 import java.net.URI
 import javax.swing.Icon
 
@@ -71,9 +69,16 @@ object Resources {
             return brushForTheme(resizeSquaredIcon(IconLoader.getIcon(path, Resources::class.java), 24))
         }
 
-        val LOGO_RED_12x12: Icon = colorize(makeIcon12("/icons/refactai_logo.svg"), Color.decode("#FF3636"))
+        val LOGO_RED_12x12: Icon = resizeSquaredIcon(
+                IconLoader.getIcon("/icons/refactai_logo_red.svg", Resources::class.java),
+                12)
+        val LOGO_RED_13x13: Icon = resizeSquaredIcon(
+                IconLoader.getIcon("/icons/refactai_logo_red.svg", Resources::class.java),
+                13)
         val LOGO_12x12: Icon = makeIcon12("/icons/refactai_logo.svg")
-        val LOGO_RED_16x16: Icon = colorize(makeIcon16("/icons/refactai_logo.svg"), Color.decode("#FF3636"))
+        val LOGO_RED_16x16: Icon = resizeSquaredIcon(
+                IconLoader.getIcon("/icons/refactai_logo_red.svg", Resources::class.java),
+                16)
 
         val LIKE_CHECKED_16x16: Icon = makeIcon16("/icons/like_checked.svg")
         val LIKE_UNCHECKED_16x16: Icon = makeIcon16("/icons/like_unchecked.svg")
@@ -85,6 +90,7 @@ object Resources {
         val BOOKMARK_UNCHECKED_24x24: Icon = makeIcon24("/icons/bookmark_unchecked.svg")
 
         val COIN_16x16: Icon = makeIcon16("/icons/coin.svg")
+        val HAND_12x12: Icon = makeIcon12("/icons/hand.svg")
     }
 
     object ExtraUserDataKeys {

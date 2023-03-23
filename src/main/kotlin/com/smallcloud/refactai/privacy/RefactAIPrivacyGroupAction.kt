@@ -1,6 +1,5 @@
 package com.smallcloud.refactai.privacy
 
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -56,7 +55,7 @@ class RefactAIPrivacyGroupAction : ActionGroup() {
         if (PrivacyService.instance.getPrivacy(files.first()) != Privacy.DISABLED) {
             event.presentation.icon = Resources.Icons.LOGO_RED_16x16
         } else {
-            event.presentation.icon = AllIcons.Diff.Lock
+            event.presentation.icon = Resources.Icons.HAND_12x12
         }
     }
 }

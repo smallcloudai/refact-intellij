@@ -12,7 +12,7 @@ import com.smallcloud.refactai.panes.gptchat.ChatGPTPanes
 class RefactAIToolboxPaneFactory : ToolWindowFactory {
     override fun init(toolWindow: ToolWindow) {
         gptChatPanes = ChatGPTPanes(toolWindow.project, toolWindow.disposable)
-        toolWindow.setIcon(Resources.Icons.LOGO_RED_16x16)
+        toolWindow.setIcon(Resources.Icons.LOGO_RED_13x13)
         super.init(toolWindow)
     }
 

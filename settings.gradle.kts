@@ -1,1 +1,1 @@
-rootProject.name = "codify"
+rootProject.name = "refact"

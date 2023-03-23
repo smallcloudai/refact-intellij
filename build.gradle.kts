@@ -15,6 +15,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
 }
 
+
 group = "com.smallcloud"
 version = getVersionString("1.1.31")
 

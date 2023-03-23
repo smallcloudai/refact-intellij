@@ -96,14 +96,17 @@ class HistoryComponent(private val state: State): JBPanel<HistoryComponent>(), N
         myList.removeAll()
     }
 
-    fun add(messageComponent: MessageComponent) {
+    fun add(messageComponent: MessageComponent): Boolean {
+        var removedTip = false
         if (myList.componentCount > 0 && (myList.getComponent(0) as ShiftedMessage).message == tip) {
             myList.remove(0)
+            removedTip = true
         }
         myList.add(ShiftedMessage(messageComponent))
         updateLayout()
         scrollToBottom()
         updateUI()
+        return removedTip
     }
     fun lastMessage(): MessageComponent {
         return (myList.getComponent(myList.componentCount - 1) as ShiftedMessage).message

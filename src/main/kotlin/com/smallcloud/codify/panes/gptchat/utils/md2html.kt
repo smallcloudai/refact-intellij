@@ -82,7 +82,7 @@ fun md2html(text: String): List<ParsedText> {
             while (m.find()) {
                 fragment = m.replaceAll("<a href=\"$1\">$1</a>")
             }
-            res.add(ParsedText(null, if (fragment.isEmpty()) html else fragment, false))
+            res.add(ParsedText(it.lastChild?.chars.toString(), fragment.ifEmpty { html }, false))
         }
     }
 

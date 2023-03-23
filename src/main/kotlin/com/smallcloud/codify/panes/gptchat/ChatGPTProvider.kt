@@ -81,7 +81,7 @@ class ChatGPTProvider : ActionListener {
         }
 
         pane.add(MessageComponent(md2html(text), true))
-        val message = MessageComponent(listOf(ParsedText(null, "...", false)), false)
+        val message = MessageComponent(listOf(ParsedText("...", "...", false)), false)
         pane.add(message)
         val req = ChatGPTRequest(codifyInferenceUri!!.resolve(defaultChatUrlSuffix),
             AccountManager.apiKey, pane.state.conversations)

@@ -17,7 +17,14 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
     private val paneBaseName = "Chat"
     private val panes = JBRunnerTabs(project, parent)
 
-    private fun getTabNextText(): String {
+    private fun getTabNextText(intent: String): String {
+        if (intent.isNotEmpty()) {
+            if (intent.length > 18) {
+                return intent.substring(0, 18) + "..."
+            }
+            return intent
+        }
+
         val allNames = panes.tabs.map { it.text }
         var counter = 0
         for (name in allNames) {
@@ -45,7 +52,7 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
             newPane.send(intent, selectedText)
         }
         val info = TabInfo(newPane)
-        info.text = getTabNextText()
+        info.text = getTabNextText(intent)
         info.preferredFocusableComponent = newPane.getComponentForFocus()
         info.setActions(DefaultActionGroup(object : AnAction(AllIcons.General.Add) {
             override fun actionPerformed(e: AnActionEvent) {
@@ -67,6 +74,11 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
 
     fun getVisibleTabs(): List<TabInfo?> {
         return ContainerUtil.filter(panes.tabs) { tabInfo -> !tabInfo.isHidden }
+    }
+
+    fun renameTab(pane: ChatGPTPane, intent: String) {
+        val tabInfo = panes.tabs.find { it.component == pane }
+        tabInfo?.text = getTabNextText(intent)
     }
 
     fun requestFocus() {

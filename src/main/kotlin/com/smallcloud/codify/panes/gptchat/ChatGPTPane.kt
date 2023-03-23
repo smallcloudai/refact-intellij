@@ -10,6 +10,7 @@ import com.obiscr.chatgpt.ui.HistoryComponent
 import com.smallcloud.codify.account.AccountManager
 import com.smallcloud.codify.account.AccountManagerChangedNotifier
 import com.smallcloud.codify.listeners.LastEditorGetterListener
+import com.smallcloud.codify.panes.CodifyAiToolboxPaneFactory.Companion.gptChatPanes
 import com.smallcloud.codify.panes.gptchat.ui.CustomSearchTextArea
 import com.smallcloud.codify.panes.gptchat.ui.MessageComponent
 import icons.CollaborationToolsIcons
@@ -100,7 +101,10 @@ class ChatGPTPane : JPanel() {
     }
 
     fun add(messageComponent: MessageComponent) {
-        contentPanel.add(messageComponent)
+        val removedTip = contentPanel.add(messageComponent)
+        if (removedTip) {
+            gptChatPanes?.renameTab(this, messageComponent.question[0].rawText)
+        }
     }
     fun scrollToBottom() {
         contentPanel.scrollToBottom()

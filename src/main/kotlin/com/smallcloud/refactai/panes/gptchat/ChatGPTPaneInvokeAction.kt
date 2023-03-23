@@ -8,11 +8,14 @@ import com.smallcloud.refactai.utils.getLastUsedProject
 
 class ChatGPTPaneInvokeAction: AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        doActionPerformed()
+        val chat = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact Chat")
+        chat?.activate{
+            gptChatPanes?.requestFocus()
+        }
     }
 
     fun doActionPerformed(needToInlineCode: Boolean = false) {
-        val chat = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact AI Toolbox")
+        val chat = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact Chat")
         chat?.activate{
             gptChatPanes?.addTab(needInsertCode=needToInlineCode)
         }

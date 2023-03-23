@@ -18,7 +18,7 @@ import com.intellij.util.Consumer
 import com.smallcloud.refactai.ExtraInfoChangedNotifier
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
-import com.smallcloud.refactai.Resources
+import com.smallcloud.refactai.Resources.Icons.HAND_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_RED_12x12
 import com.smallcloud.refactai.Resources.defaultContrastUrlSuffix
@@ -128,7 +128,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     override fun getComponent(): JComponent {
         val component = WithIconAndArrows()
         component.icon = getIcon()
-        component.text = Resources.titleStr
+        component.text = "Refact.ai"
         component.toolTipText = tooltipText
         component.addMouseListener(
             object : MouseAdapter() {
@@ -159,7 +159,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         return when (InferenceGlobalContext.status) {
             ConnectionStatus.DISCONNECTED -> AllIcons.Debugger.ThreadStates.Socket
             ConnectionStatus.ERROR -> AllIcons.Debugger.Db_exception_breakpoint
-            ConnectionStatus.CONNECTED -> if (isPrivacyEnabled()) LOGO_RED_12x12 else AllIcons.Diff.Lock
+            ConnectionStatus.CONNECTED -> if (isPrivacyEnabled()) LOGO_RED_12x12 else HAND_12x12
             ConnectionStatus.PENDING -> AnimatedIcon.Default()
         }
     }
@@ -207,7 +207,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     return RefactAIBundle.message("statusBar.tooltipIfPrivacyDisabled")
                 }
             }
-            else -> return Resources.titleStr
+            else -> return "Refact.ai"
         }
     }
 

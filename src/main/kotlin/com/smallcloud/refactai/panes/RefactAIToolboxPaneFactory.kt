@@ -21,7 +21,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
 
         val content: Content = contentFactory.createContent(
                 gptChatPanes?.getComponent(),
-                "Refact AI Chat",
+                null,//"Refact AI Chat",
                 false
         )
         content.isCloseable = false

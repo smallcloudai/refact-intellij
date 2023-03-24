@@ -22,6 +22,7 @@ import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.struct.LocalLongthinkInfo
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
+import com.smallcloud.refactai.utils.makeLinksPanel
 import java.awt.*
 import java.awt.event.*
 import javax.swing.*
@@ -47,9 +48,7 @@ class DiffDialog(
     private val startPosition: LogicalPosition = LogicalPosition(0, 0),
     private val finishPosition: LogicalPosition = LogicalPosition(0, 0),
     private val selectedText: String = "",
-
-) :
-    DialogWrapper(editor.project, true) {
+) : DialogWrapper(editor.project, true) {
     private val msgTextField: JBTextField
     private val warningPrefixText = RefactAIBundle.message("aiToolbox.selectCodeFirstTo")
     private val warning: JBLabel = JBLabel(warningPrefixText)
@@ -487,7 +486,10 @@ class DiffDialog(
             addComponent(JPanel(BorderLayout()).also {
                 val meteringBalance = JPanel()
                 meteringBalance.layout = BoxLayout(meteringBalance, BoxLayout.X_AXIS)
-                meteringBalance.add(meteringBalanceLabel)
+                meteringBalance.add(FormBuilder.createFormBuilder()
+                        .addComponent(meteringBalanceLabel)
+                        .addComponent(makeLinksPanel())
+                        .panel)
                 it.add(meteringBalance, BorderLayout.LINE_START)
 
                 val runWarning = JPanel()

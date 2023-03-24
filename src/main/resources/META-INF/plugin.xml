@@ -15,47 +15,72 @@
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
 <h2>Refact.ai: The AI Assistant for Code Writing and Refactoring.</h2>
-<p>Boost your productivity by employing AI to pair program with you or make more fun out of your work by delegating boring tasks to the AI.
+<p>
+Refact is a cutting-edge AI tool designed to assist developers in writing and refining code.
+It’s fast and supports Python, Java, PHP, C++, Javascript, TypeScript, and 20 more programming languages.
 </p>
-<h3 style="margin-bottom:0"><b>Features:</b></h3>
+<p>
+Try for free today and make your programming more enjoyable!
+</p>
+<p>
+🔒 We put your privacy first. Refact allows you to restrict access to particular files or projects,
+ensuring that your private code or confidential files are protected. And we don't collect datasets on the server side.
+</p>
+
+<h3 style="margin-bottom:0"><b>Functions That You Can Use in Refact:</b></h3>
 <ul style="margin-top:5">
-<li><b>Code Completion:</b> satisfying, smart and relevant code completion that can suggest whole functions or classes. It suggests commonly used programming patterns, libraries and APIs usage, and helps with typing. This helps you write code faster and with fewer errors.</li>
-<br>
-<li><b>Code Transformation:</b> use natural language commands to ask the AI to search, transform, or optimize your code. Whether you're looking to optimize, search, or refactor your code, Refact.ai has you covered.</li>
-<br>
-<li><b>Privacy of your code guaranteed:</b> Refact.ai allows you to restrict access to particular files or projects, ensuring that your private code or confidential files are protected. And we never store your code on the server side.</li>
-<br>
-<li><b>User-Friendly Interface:</b> Refact.ai has a simple, user-friendly interface that makes it easy to use, even for those new to AI tools. Refact.ai will assist by completing your code or by accessing the AI toolbox function (use F1 to open)</li>
-<br>
-<li><b>It’s fast!</b> And supports Python, Java, PHP, C++, Javascript, TypeScript and 20 more programming languages.</li>
+    <li><b>Code Completion:</b> As you write code, Refact suggests potential code completions based on the
+    context of your code, looking up and down. It can suggest whole functions, classes,
+    commonly used programming patterns, libraries, and APIs usage.</li>
+    <br>
+    <li><b>Code Transformation:</b> You can automatically make your code shorter, cleaner,
+    and fix bugs — improving your efficiency as an engineer. Whether you're looking to optimize,
+    improve, or explain your code, Refact has got you covered.</li>
+    <br>
+    <li><b>Integrated Chat:</b> Use natural language to generate, modify, and refine your code.
+    Chat can automatically pick up the selected code and put back the results.
+    It also provides you with documentation links.</li>
+    <br>
 </ul>
-<br>
-<p>Refact.ai is a cutting-edge AI tool designed to assist developers in writing and refining code.
-Whether you're working on a brand new project or modifying existing code, Refact.ai can help you save time and streamline your coding process.</p>
+<h3><b>Getting Started</b></h3>
+<p>Once installed, look for the Refact.ai logo in the status bar or the sidebar,
+click 'login', and agree to T\&C. Start typing some code,
+and autocomplete will make suggestions automatically! Press F1 to access the AI toolbox functions.
+Refact has a simple, user-friendly interface that makes it easy to use, even for those new to AI tools.</p>
 
-<p>If you have your own NVIDIA GPU, you can try <a href="https://refact.ai/docker">the self-hosted version</a>.
-Our proprietary <a href="https://www.smallcloud.ai/">AI model behind</a> Refact.ai is state-of-the-art (for the size and latency). The weights are free to download on <a href="https://huggingface.co/smallcloudai">Huggingface</a>.
+<h3><b>Self-Hosting</b></h3>
+<p>
+Our own AI model behind Refact.ai is state-of-the-art (for the size and latency).
+The weights are free to download on <a href="https://huggingface.co/smallcloudai">Huggingface</a>.
 </p>
-<h3><b>Crowdsourcing Human Feedback</b></h3>
-<p>No one likes big corporations taking over our development toolchain, right? You can improve independent code tools like this one simply by turning your privacy settings to a relaxed position for some of your projects. We’ll tune the model to better follow YOUR commands and the tool will get better for everybody!</p>
+<p>
+If you have your own NVIDIA GPU, you can try the <a href="https://refact.smallcloud.ai/docker">self-hosted version</a>.
+</p>
 
-<h5>IntelliSense, intelliCode, autocomplete, AI-assisted code completion, AI-powered code completion, AI copilot, AI code snippets, code suggestion, code prediction, chatGPT, code GPT, codeGPT, GPT</h5>
+<h3><b>Support \& Feedback</b></h3>
+<p>Join our <a href="https://www.smallcloud.ai/discord">Discord</a> to get to know other community members, send us feedback or suggestions and get support.</p>
+
+<h5>IntelliSense, intelliCode, autocomplete, AI-assisted code completion, AI-powered code completion,
+AI copilot, AI code snippets, code suggestion, code prediction, chatGPT, code GPT, codeGPT, GPT, GPT4, gpt4, GPT 4, gpt 4</h5>
   ]]></description>
 
 
     <change-notes><![CDATA[
-<h2>New Features</h2>
-<p>An amazing release you should check out!</p>
+<p>Refact.ai is an AI coding assistant, available for JetBrains IDEs and Visual Studio Code. In this major release, we introduce</p>
 <ul>
-  <li>Completion now uses streaming</li>
-  <li>Fine-grained privacy: now you can tell which files this plugin should never touch</li>
-  <li>Highlight & Fix (press F1)</li>
-  <li>Select & Refactor (select code and press F1)</li>
+  <li>All new AI Toolbox, that allows you to operate on existing code.
+  You can automatically make your code shorter, cleaner, and fix bugs — improving your efficiency as an engineer.</li>
+  <li>The new Refact.ai Chat integration is ready to give you hints on APIs usage, documentation links, and much more.</li>
+  <li>The new Privacy Settings page lets you point out which code is OK to send to the cloud for inference,
+  and which isn’t. This works on per project and even per file basis.</li>
 </ul>
-<h2>Please Update Often</h2>
-<p>The plugin in rapid development at this moment, older versions might not work properly.
-We know updating sometimes is a hassle! Hopefully, the plugin will stabilize in a couple of months.
+<p>Our code completion is fast & responsive, looks up and down from the cursor position,
+and works with 20+ programming languages!
 </p>
+<p>In the Pro version, you can enjoy all of those AI features,
+integrated into a single package that follows your privacy settings.
+</p>
+<p>Check out our Trial version, ready to start working for you in seconds!</p>
 ]]></change-notes>
 
 

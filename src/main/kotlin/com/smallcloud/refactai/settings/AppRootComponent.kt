@@ -24,6 +24,7 @@ import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
 import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.settings.renderer.PrivacyOverridesTable
 import com.smallcloud.refactai.settings.renderer.privacyToString
+import com.smallcloud.refactai.utils.makeLinksPanel
 import java.awt.event.ItemEvent
 import java.awt.event.ItemListener
 import java.util.concurrent.TimeUnit
@@ -42,6 +43,7 @@ class AppRootComponent(private val project: Project) {
     private var currentState: SettingsState = SettingsState.UNSIGNED
     private val loginButton = JButton(RefactAIBundle.message("rootSettings.loginOrRegister"))
     private val logoutButton = JButton(RefactAIBundle.message("rootSettings.logout"))
+    private val linksPanel: JPanel = makeLinksPanel()
     private val forceLoginButton = JButton(AllIcons.Actions.Refresh)
     private val waitLoginLabel = JBLabel()
     private val activePlanLabel = JBLabel("")
@@ -268,8 +270,8 @@ class AppRootComponent(private val project: Project) {
             addComponent(privacyDefaultsRBRefactAIPlusDescription, 0)
             addComponent(privacyOverridesLabel, UIUtil.LARGE_VGAP)
             addComponent(privacyOverridesScrollPane)
-
-            addComponentFillVertically(JPanel(), 0).panel
+            addComponentFillVertically(JPanel(), 0)
+            addComponent(linksPanel).panel
         }
     }
 

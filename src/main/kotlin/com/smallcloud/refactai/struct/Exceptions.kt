@@ -1,3 +1,3 @@
 package com.smallcloud.refactai.struct
 
-class SMCExceptions(msg: String) : Exception(msg) {}
+class SMCExceptions(msg: String? = null) : Exception(msg)

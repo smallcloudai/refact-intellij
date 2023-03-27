@@ -82,7 +82,8 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         scope: String = "",
         dataReceiveEnded: () -> Unit,
         dataReceived: (String) -> Unit,
-        errorDataReceived: (JsonObject) -> Unit
+        errorDataReceived: (JsonObject) -> Unit,
+        failedDataReceiveEnded: (Throwable?) -> Unit = {},
     ): CompletableFuture<Future<*>> {
         val requestProducer: AsyncRequestProducer = BasicRequestProducer(
             BasicRequestBuilder
@@ -99,7 +100,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
             requestProducer, uri,
             needVerify = needVerify, scope = scope,
             dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
-            errorDataReceived = errorDataReceived
+            errorDataReceived = errorDataReceived, failedDataReceiveEnded=failedDataReceiveEnded
         )
     }
 
@@ -110,7 +111,8 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         scope: String = "",
         dataReceiveEnded: () -> Unit,
         dataReceived: (String) -> Unit,
-        errorDataReceived: (JsonObject) -> Unit
+        errorDataReceived: (JsonObject) -> Unit,
+        failedDataReceiveEnded: (Throwable?) -> Unit = {},
     ): CompletableFuture<Future<*>> {
         return CompletableFuture.supplyAsync {
             if (needVerify) inferenceLogin()
@@ -130,11 +132,11 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
                     override fun informationResponse(
                         response: HttpResponse?,
                         context: org.apache.hc.core5.http.protocol.HttpContext?
-                    ) {
-                    }
+                    ) {}
 
                     override fun data(src: ByteBuffer?, endOfStream: Boolean) {
                         src ?: return
+                        if (endOfStream) return
                         bufferStr += Charset.forName("UTF-8").decode(src)
                         try {
                             val data = Gson().fromJson(bufferStr, JsonObject::class.java)
@@ -171,6 +173,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
                             ex is java.net.UnknownHostException) {
                             InferenceGlobalContext.status = ConnectionStatus.DISCONNECTED
                         }
+                        failedDataReceiveEnded(ex)
                     }
 
                     override fun cancelled() {}
@@ -190,6 +193,9 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
             outputStreamingBuffer = outputStreamingBuffer.substring(offset + 2)
             assert(currentBuffer.substring(0, 6) == "data: ")
             currentBuffer = currentBuffer.substring(6)
+            if (currentBuffer == "[ERROR]") {
+                throw Exception("[ERROR]")
+            }
             if (currentBuffer == "[DONE]") {
                 return dataPieces to null
             }

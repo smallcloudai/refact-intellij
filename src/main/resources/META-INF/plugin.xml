@@ -1,68 +1,74 @@
+<?xml version="1.0" ?>
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
-<idea-plugin>
-    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+<idea-plugin require-restart="true" url="https://refact.ai/">
     <id>com.smallcloud.codify</id>
-
-    <!-- Public plugin name should be written in Title Case.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
     <name>Refact.ai</name>
-
-    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <vendor email="info@smallcloud.ai" url="https://refact.ai/">smallcloudai</vendor>
 
-    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
 <h2>Refact.ai: The AI Assistant for Code Writing and Refactoring.</h2>
 <p>
-Refact is a cutting-edge AI tool designed to assist developers in writing and refining code.
-It’s fast and supports Python, Java, PHP, C++, Javascript, TypeScript, and 20 more programming languages.
+    Refact is a cutting-edge AI tool designed to assist developers in writing and refining code.
+    It’s fast and supports Python, Java, PHP, C++, Javascript, TypeScript, and 20 more programming languages.
 </p>
 <p>
-Try for free today and make your programming more enjoyable!
+    Try for free today and make your programming more enjoyable!
 </p>
 <p>
-🔒 We put your privacy first. Refact allows you to restrict access to particular files or projects,
-ensuring that your private code or confidential files are protected. And we don't collect datasets on the server side.
+    🔒 We put your privacy first. Refact allows you to restrict access to particular files or projects,
+    ensuring that your private code or confidential files are protected. And we don't collect datasets on the server
+    side.
 </p>
 
-<h3 style="margin-bottom:0"><b>Functions That You Can Use in Refact:</b></h3>
+<h3 style="margin-bottom:0">Functions That You Can Use in Refact:</h3>
 <ul style="margin-top:5">
     <li><b>Code Completion:</b> As you write code, Refact suggests potential code completions based on the
-    context of your code, looking up and down. It can suggest whole functions, classes,
-    commonly used programming patterns, libraries, and APIs usage.</li>
+        context of your code, looking up and down. It can suggest whole functions, classes,
+        commonly used programming patterns, libraries, and APIs usage.
+    </li>
     <br>
     <li><b>Code Transformation:</b> You can automatically make your code shorter, cleaner,
-    and fix bugs — improving your efficiency as an engineer. Whether you're looking to optimize,
-    improve, or explain your code, Refact has got you covered.</li>
+        and fix bugs — improving your efficiency as an engineer. Whether you're looking to optimize,
+        improve, or explain your code, Refact has got you covered.
+    </li>
     <br>
     <li><b>Integrated Chat:</b> Use natural language to generate, modify, and refine your code.
-    Chat can automatically pick up the selected code and put back the results.
-    It also provides you with documentation links.</li>
+        Chat can automatically pick up the selected code and put back the results.
+        It also provides you with documentation links.
+    </li>
     <br>
 </ul>
-<h3><b>Getting Started</b></h3>
-<p>Once installed, look for the Refact.ai logo in the status bar or the sidebar,
-click 'login', and agree to T\&C. Start typing some code,
-and autocomplete will make suggestions automatically! Press F1 to access the AI toolbox functions.
-Refact has a simple, user-friendly interface that makes it easy to use, even for those new to AI tools.</p>
 
-<h3><b>Self-Hosting</b></h3>
+<h3>Getting Started</h3>
 <p>
-Our own AI model behind Refact.ai is state-of-the-art (for the size and latency).
-The weights are free to download on <a href="https://huggingface.co/smallcloudai">Huggingface</a>.
-</p>
-<p>
-If you have your own NVIDIA GPU, you can try the <a href="https://refact.smallcloud.ai/docker">self-hosted version</a>.
+    Once installed, look for the Refact.ai logo in the status bar or the sidebar,
+    click 'login', and agree to T&C. Start typing some code,
+    and autocomplete will make suggestions automatically! Press F1 to access the AI toolbox functions.
+    Refact has a simple, user-friendly interface that makes it easy to use, even for those new to AI tools.
 </p>
 
-<h3><b>Support \& Feedback</b></h3>
-<p>Join our <a href="https://www.smallcloud.ai/discord">Discord</a> to get to know other community members, send us feedback or suggestions and get support.</p>
+<h3>Self-Hosting</h3>
+<p>
+    Our own AI model behind Refact.ai is state-of-the-art (for the size and latency).
+    The weights are free to download on <a href="https://huggingface.co/smallcloudai">Huggingface</a>.
+</p>
+<p>
+    If you have your own NVIDIA GPU, you can try the <a href="https://refact.smallcloud.ai/docker">self-hosted
+    version</a>.
+</p>
 
-<h5>IntelliSense, intelliCode, autocomplete, AI-assisted code completion, AI-powered code completion,
-AI copilot, AI code snippets, code suggestion, code prediction, chatGPT, code GPT, codeGPT, GPT, GPT4, gpt4, GPT 4, gpt 4</h5>
-  ]]></description>
+<h3>Support & Feedback</h3>
+<p>
+    Join our <a href="https://www.smallcloud.ai/discord">Discord</a> to get to know other community members, send us
+    feedback or suggestions and get support.
+</p>
+
+<h5>
+    IntelliSense, intelliCode, autocomplete, AI-assisted code completion, AI-powered code completion,
+    AI copilot, AI code snippets, code suggestion, code prediction, chatGPT, code GPT, codeGPT, GPT, GPT4, gpt4, GPT 4,
+    gpt 4
+</h5>
+]]></description>
 
 
     <change-notes><![CDATA[
@@ -87,6 +93,7 @@ integrated into a single package that follows your privacy settings.
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lang</depends>
 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->

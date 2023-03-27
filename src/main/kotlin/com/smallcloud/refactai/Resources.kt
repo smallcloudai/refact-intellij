@@ -8,8 +8,7 @@ import com.intellij.util.IconUtil
 import com.intellij.util.ui.StartupUiUtil
 import java.net.URI
 import javax.swing.Icon
-
-fun getThisPlugin() = PluginManager.getPlugins().find { it.name == Resources.titleStr }
+fun getThisPlugin() = PluginManager.getPlugins().find { it.name == "Refact.ai" }
 
 private fun getVersion(): String {
     val thisPlugin = getThisPlugin()

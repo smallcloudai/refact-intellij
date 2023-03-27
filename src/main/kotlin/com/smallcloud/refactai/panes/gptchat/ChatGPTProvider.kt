@@ -75,6 +75,7 @@ class ChatGPTProvider : ActionListener {
         pane.searchTextArea.textArea.text = ""
 
         pane.state.pushQuestion(text)
+        val lastAnswer = pane.state.last()
         if (selectedText != null) {
             pane.state.pushCode(selectedText)
             text += "\n\n```\n$selectedText\n```\n"
@@ -84,13 +85,13 @@ class ChatGPTProvider : ActionListener {
         val message = MessageComponent(listOf(ParsedText("...", "...", false)), false)
         pane.add(message)
         val req = ChatGPTRequest(cloudInferenceUri!!.resolve(defaultChatUrlSuffix),
-            AccountManager.apiKey, pane.state.conversations)
+                AccountManager.apiKey, pane.state.conversations)
         processTask = scheduler.submit {
-            process(pane, req, message)
+            process(pane, req, lastAnswer, message)
         }
     }
 
-    private fun process(pane: ChatGPTPane, req: ChatGPTRequest, message: MessageComponent) {
+    private fun process(pane: ChatGPTPane, req: ChatGPTRequest, lastAnswer: State.QuestionAnswer, message: MessageComponent) {
         pane.aroundRequest(true)
         try {
             val reqStr = MsgBuilder.build(req.conversation)
@@ -101,7 +102,6 @@ class ChatGPTProvider : ActionListener {
                     dataReceived = { response ->
                         fun parse(response: String?): String? {
                             val gson = Gson()
-                            if (response == "[DONE]") return ""
                             val obj = gson.fromJson(response, JsonObject::class.java)
                             if (stop) return ""
                             if (obj.has("finish_reason") && obj.get("finish_reason").asString == "stop") {
@@ -118,10 +118,9 @@ class ChatGPTProvider : ActionListener {
                         }
                         streamScheduler.submit {
                             for (s in line.chunked(1)) {
-                                pane.state.pushAnswer(s)
-                                val lastAnswer = pane.state.lastAnswer()
+                                lastAnswer.pushAnswer(s)
                                 ApplicationManager.getApplication().invokeLater {
-                                    message.setContent(md2html(lastAnswer))
+                                    message.setContent(md2html(lastAnswer.answer))
                                     pane.scrollToBottom()
                                 }
                                 Thread.sleep(2)
@@ -132,7 +131,7 @@ class ChatGPTProvider : ActionListener {
                         pane.aroundRequest(false)
                     },
                     errorDataReceived = {},
-                    scope="chatgpt"
+                    scope = "chatgpt"
             ).also {
                 var requestFuture: Future<*>? = null
                 try {
@@ -172,6 +171,7 @@ class ChatGPTProvider : ActionListener {
             throw RuntimeException(ex)
         }
     }
+
     fun cancelOrClose() {
         try {
             processTask?.cancel(true)
@@ -194,6 +194,7 @@ class ChatGPTProvider : ActionListener {
         requestFuture?.cancel(true)
         LOG.debug("lastReqJob abort")
     }
+
     companion object {
         private val LOG: Logger = Logger.getInstance(ChatGPTProvider::class.java)
     }

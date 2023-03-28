@@ -21,9 +21,11 @@ import com.smallcloud.refactai.modes.completion.prompt.RequestCreator
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.refactai.modes.diff.DiffIntentProvider
 import com.smallcloud.refactai.modes.diff.dialog.DiffDialog
+import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 import com.smallcloud.refactai.struct.SMCPrediction
 import com.smallcloud.refactai.struct.SMCRequest
+import com.smallcloud.refactai.utils.getExtension
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
@@ -158,10 +160,11 @@ class HighlightMode(
         val endSelectionOffset = editor.selectionModel.selectionEnd
         val funcName = if (entry.functionHighlight.isNullOrEmpty()) entry.functionName else
             entry.functionHighlight ?: return
+        val stat = UsageStatistic(scope, entry.functionName, extension = getExtension(fileName))
         val request = RequestCreator.create(
             fileName, editor.document.text,
             startSelectionOffset, endSelectionOffset,
-                "${scope}:${entry.functionName}", entry.intent, funcName, listOf(),
+            stat, entry.intent, funcName, listOf(),
             model = InferenceGlobalContext.longthinkModel ?: entry.model
                 ?: InferenceGlobalContext.model ?: Resources.defaultModel,
             sendToCloudServer = entry.thirdParty

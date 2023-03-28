@@ -18,6 +18,7 @@ import com.smallcloud.refactai.panes.gptchat.structs.ParsedText
 import com.smallcloud.refactai.panes.gptchat.ui.MessageComponent
 import com.smallcloud.refactai.panes.gptchat.utils.MsgBuilder
 import com.smallcloud.refactai.panes.gptchat.utils.md2html
+import com.smallcloud.refactai.statistic.UsageStatistic
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
 import java.io.IOException
@@ -131,7 +132,7 @@ class ChatGPTProvider : ActionListener {
                         pane.aroundRequest(false)
                     },
                     errorDataReceived = {},
-                    scope = "chatgpt"
+                    stat = UsageStatistic("chatgpt")
             ).also {
                 var requestFuture: Future<*>? = null
                 try {

@@ -3,8 +3,8 @@ package com.smallcloud.refactai.io
 
 import com.intellij.openapi.Disposable
 import com.intellij.util.messages.Topic
-import com.smallcloud.refactai.UsageStats.Companion.addStatistic
 import com.smallcloud.refactai.account.inferenceLogin
+import com.smallcloud.refactai.statistic.UsageStatistic
 import org.apache.http.HttpHost
 import org.apache.http.HttpResponse
 import org.apache.http.client.HttpClient
@@ -27,6 +27,7 @@ import java.net.URI
 import java.nio.charset.Charset
 import java.util.concurrent.CompletableFuture
 import javax.net.ssl.SSLContext
+import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 interface ConnectionChangedNotifier {
     fun statusChanged(newStatus: ConnectionStatus) {}
@@ -86,10 +87,10 @@ class Connection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         headers: Map<String, String>? = null,
         requestProperties: Map<String, String>? = null,
         needVerify: Boolean = false,
-        scope: String = ""
+        stat: UsageStatistic = UsageStatistic()
     ): RequestJob {
         val get = HttpGet(uri)
-        return send(get, headers, requestProperties, needVerify = needVerify, scope = scope)
+        return send(get, headers, requestProperties, needVerify = needVerify, stat = stat)
     }
 
     fun post(
@@ -98,11 +99,11 @@ class Connection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         headers: Map<String, String>? = null,
         requestProperties: Map<String, String>? = null,
         needVerify: Boolean = false,
-        scope: String = ""
+        stat: UsageStatistic = UsageStatistic()
     ): RequestJob {
         val post = HttpPost(uri)
         post.entity = StringEntity(body, Charset.forName("UTF-16"))
-        return send(post, headers, requestProperties, needVerify = needVerify, scope = scope)
+        return send(post, headers, requestProperties, needVerify = needVerify, stat = stat)
     }
 
     private fun send(
@@ -110,7 +111,7 @@ class Connection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         headers: Map<String, String>? = null,
         requestProperties: Map<String, String>? = null,
         needVerify: Boolean = false,
-        scope: String = ""
+        stat: UsageStatistic = UsageStatistic()
     ): RequestJob {
         headers?.forEach {
             req.addHeader(it.key, it.value)
@@ -135,7 +136,7 @@ class Connection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
                 // request aborted, it's ok
                 throw e
             } catch (e: Exception) {
-                addStatistic(false, scope, req.uri.toString(), e.toString())
+                UsageStats.addStatistic(false, stat, req.uri.toString(), e.toString())
                 throw e
             } finally {
                 req.releaseConnection()

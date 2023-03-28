@@ -6,8 +6,8 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException
 import com.intellij.openapi.Disposable
 import com.intellij.util.text.findTextRange
-import com.smallcloud.refactai.UsageStats.Companion.addStatistic
 import com.smallcloud.refactai.account.inferenceLogin
+import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.SMCExceptions
 import org.apache.hc.client5.http.async.methods.AbstractBinResponseConsumer
 import org.apache.hc.client5.http.async.methods.SimpleHttpRequest
@@ -33,6 +33,7 @@ import java.nio.charset.Charset
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 
 class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
@@ -79,7 +80,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         headers: Map<String, String>? = null,
         requestProperties: Map<String, String>? = null,
         needVerify: Boolean = false,
-        scope: String = "",
+        stat: UsageStatistic,
         dataReceiveEnded: () -> Unit,
         dataReceived: (String) -> Unit,
         errorDataReceived: (JsonObject) -> Unit,
@@ -98,7 +99,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
 
         return send(
             requestProducer, uri,
-            needVerify = needVerify, scope = scope,
+            needVerify = needVerify, stat = stat,
             dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
             errorDataReceived = errorDataReceived, failedDataReceiveEnded=failedDataReceiveEnded
         )
@@ -108,7 +109,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         requestProducer: AsyncRequestProducer,
         uri: URI,
         needVerify: Boolean = false,
-        scope: String = "",
+        stat: UsageStatistic,
         dataReceiveEnded: () -> Unit,
         dataReceived: (String) -> Unit,
         errorDataReceived: (JsonObject) -> Unit,
@@ -168,7 +169,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
 
                     override fun failed(ex: java.lang.Exception?) {
                         if (ex !is SMCExceptions)
-                            addStatistic(false, scope, uri.toString(), ex.toString())
+                            UsageStats.addStatistic(false, stat, uri.toString(), ex.toString())
                         if (ex is java.net.SocketException ||
                             ex is java.net.UnknownHostException) {
                             InferenceGlobalContext.status = ConnectionStatus.DISCONNECTED

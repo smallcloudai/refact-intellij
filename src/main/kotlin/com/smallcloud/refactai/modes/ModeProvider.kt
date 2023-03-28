@@ -15,7 +15,6 @@ import com.intellij.util.messages.MessageBus
 import com.intellij.util.xmlb.annotations.Transient
 import com.jetbrains.rd.util.getOrCreate
 import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.UsageStats
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
@@ -25,6 +24,8 @@ import com.smallcloud.refactai.modes.completion.CompletionMode
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.refactai.modes.diff.DiffMode
 import com.smallcloud.refactai.modes.highlight.HighlightMode
+import com.smallcloud.refactai.statistic.UsageStatistic
+import com.smallcloud.refactai.statistic.UsageStats
 import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -98,7 +99,7 @@ class ModeProvider(
             InferenceGlobalContext.status = ConnectionStatus.ERROR
             InferenceGlobalContext.lastErrorMsg = e.message
             stats.addStatistic(
-                false, "uncaught exceptions", "none",
+                false, UsageStatistic("uncaught exceptions"), "none",
                 e.toString()
             )
         }

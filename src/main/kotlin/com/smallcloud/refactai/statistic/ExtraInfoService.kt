@@ -7,12 +7,12 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.UsageStats
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.io.sendRequest
 import org.apache.http.client.utils.URIBuilder
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 class ExtraInfoService: Disposable {
     private data class LikeRecord(val before: Boolean, var current: Boolean)
@@ -77,8 +77,8 @@ class ExtraInfoService: Disposable {
                 } catch (e: Exception) {
                     Logger.getInstance(UsageStats::class.java).warn("report to $url failed: $e")
                     addLike(it.key, it.value)
-                    UsageStats.instance.addStatistic(
-                        false, "longthink-like",
+                    UsageStats.addStatistic(
+                        false, UsageStatistic("longthink-like"),
                         url.toString(), e
                     )
                 }

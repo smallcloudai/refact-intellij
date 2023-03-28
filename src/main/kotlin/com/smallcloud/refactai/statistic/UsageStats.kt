@@ -1,4 +1,4 @@
-package com.smallcloud.refactai
+package com.smallcloud.refactai.statistic
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
@@ -6,7 +6,9 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.defaultReportUrl
+import com.smallcloud.refactai.Resources.jbBuildVersion
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.io.sendRequest
 import java.util.concurrent.Future
@@ -35,7 +37,7 @@ class UsageStats: Disposable {
 
     fun addStatistic(
         positive: Boolean,
-        scope: String,
+        stat: UsageStatistic,
         relatedUrl: String,
         errorMessage: Any
     ) {
@@ -46,8 +48,18 @@ class UsageStats: Disposable {
         }
 
         val errorMessageJson = gson.toJson(errorMessageStr)
+        var scope = stat.scope
+        if (stat.subScope.isNotEmpty()) {
+            scope += ":" + stat.subScope
+        }
+
         val scopeJson = gson.toJson(scope)
-        val message = "${positive.compareTo(false)}\t$scopeJson\t$relatedUrl\t$errorMessageJson"
+        val message = "${positive.compareTo(false)}\t" +
+                "$scopeJson\t" +
+                "$relatedUrl\t" +
+                "$errorMessageJson\t" +
+                "${jbBuildVersion}\t" +
+                stat.extension
         synchronized(this) {
             if (messages.containsKey(message)) {
                 messages[message] = messages[message]!! + 1
@@ -101,7 +113,7 @@ class UsageStats: Disposable {
             } catch (e: Exception) {
                 Logger.getInstance(UsageStats::class.java).warn("report to $url failed: $e")
                 instance.mergeMessages(lastMessages)
-                instance.addStatistic(false, "usage stats report", url.toString(), e)
+                instance.addStatistic(false, UsageStatistic(scope="usage stats report"), url.toString(), e)
             }
         }
     }
@@ -119,8 +131,6 @@ class UsageStats: Disposable {
         @JvmStatic
         val instance: UsageStats
             get() = ApplicationManager.getApplication().getService(UsageStats::class.java)
-
-        val addStatistic = instance::addStatistic
     }
 
     override fun dispose() {

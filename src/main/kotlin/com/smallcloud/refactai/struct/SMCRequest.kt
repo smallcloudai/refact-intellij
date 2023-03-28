@@ -1,6 +1,7 @@
 package com.smallcloud.refactai.struct
 
 import com.google.gson.annotations.SerializedName
+import com.smallcloud.refactai.statistic.UsageStatistic
 import java.net.URI
 
 data class POI(
@@ -28,9 +29,9 @@ data class SMCRequestBody(
 )
 
 data class SMCRequest(
-    var uri: URI,
-    var body: SMCRequestBody,
-    var token: String,
-    var scope: String = "",
-    var sendToCloudServer: Boolean = false
+        var uri: URI,
+        var body: SMCRequestBody,
+        var token: String,
+        var stat: UsageStatistic = UsageStatistic(),
+        var sendToCloudServer: Boolean = false
 )

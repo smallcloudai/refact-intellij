@@ -2,6 +2,7 @@ package com.smallcloud.refactai.modes.completion.prompt
 
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.InferenceGlobalContext
+import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.POI
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.struct.SMCRequestBody
@@ -13,7 +14,7 @@ object RequestCreator {
     fun create(
             fileName: String, text: String,
             startOffset: Int, endOffset: Int,
-            scope: String,
+            stat: UsageStatistic,
             intent: String, functionName: String,
             promptInfo: List<PromptInfo>,
             model: String,
@@ -67,7 +68,7 @@ object RequestCreator {
             requestBody,
             sendToCloudServer
         )?.also {
-            it.scope = scope
+            it.stat = stat
             it.uri = it.uri.resolve(Resources.defaultContrastUrlSuffix)
             it.sendToCloudServer = sendToCloudServer
         }

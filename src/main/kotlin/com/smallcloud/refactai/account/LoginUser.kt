@@ -7,10 +7,10 @@ import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources.defaultLoginUrl
 import com.smallcloud.refactai.Resources.defaultRecallUrl
 import com.smallcloud.refactai.Resources.developerModeLoginParameters
-import com.smallcloud.refactai.UsageStats.Companion.addStatistic
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.sendRequest
+import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 import com.smallcloud.refactai.utils.makeGson
 import org.apache.http.client.utils.URIBuilder
@@ -18,6 +18,7 @@ import java.net.URI
 import com.smallcloud.refactai.listeners.QuickLongthinkActionsService.Companion.instance as QuickLongthinkActionsServiceInstance
 import com.smallcloud.refactai.modes.diff.DiffIntentProvider.Companion.instance as DiffIntentProviderInstance
 import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
+import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 private fun generateTicket(): String {
     return (Math.random() * 1e16).toLong().toString(36) + "-" + (Math.random() * 1e16).toLong().toString(36)
@@ -84,20 +85,20 @@ fun checkLogin(force: Boolean = false): String {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
                 infC.status = ConnectionStatus.CONNECTED
-                addStatistic(true,  "recall", recallUrl.toString(), "")
+                UsageStats.addStatistic(true,  UsageStatistic("recall"), recallUrl.toString(), "")
             } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
                 logError("recall", humanReadableMessage, false)
                 return "OK"
             } else {
                 result.body?.let {
-                    addStatistic(false,  "recall (1)", recallUrl.toString(), it)
+                    UsageStats.addStatistic(false,  UsageStatistic("recall (1)"), recallUrl.toString(), it)
                     logError("recall", it)
                 }
                 return ""
             }
 
         } catch (e: Exception) {
-            addStatistic(false,  "recall (2)", recallUrl.toString(), e)
+            UsageStats.addStatistic(false,  UsageStatistic("recall (2)"), recallUrl.toString(), e)
             e.message?.let { logError("recall", it) }
             return ""
         }
@@ -163,28 +164,28 @@ fun checkLogin(force: Boolean = false): String {
                 acc.meteringBalance = body.get("metering_balance").asInt
             }
 
-            addStatistic(true,  "login", url.toString(), "")
+            UsageStats.addStatistic(true,  UsageStatistic("login"), url.toString(), "")
             return inferenceLogin()
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {
             logError("login-failed", humanReadableMessage, false)
-            addStatistic(false,  "login-failed", url.toString(), humanReadableMessage)
+            UsageStats.addStatistic(false,  UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
             return "OK"
         } else if (retcode == "FAILED") {
             acc.user = null
             acc.activePlan = null
             logError("login-failed", humanReadableMessage)
-            addStatistic(false,  "login-failed", url.toString(), humanReadableMessage)
+            UsageStats.addStatistic(false,  UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
             return ""
         } else {
             acc.user = null
             acc.activePlan = null
             logError("login-failed", "unrecognized response")
-            addStatistic(false,  "login (2)", url.toString(), "unrecognized response")
+            UsageStats.addStatistic(false,  UsageStatistic("login (2)"), url.toString(), "unrecognized response")
             return ""
         }
     } catch (e: Exception) {
         e.message?.let { logError("login-fail", it) }
-        addStatistic(false,  "login (3)", url.toString(), e)
+        UsageStats.addStatistic(false,  UsageStatistic("login (3)"), url.toString(), e)
         return ""
     }
 }

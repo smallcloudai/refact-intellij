@@ -14,6 +14,7 @@ import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.settingsStartup
+import com.smallcloud.refactai.statistic.UsageStats
 
 class Initializer : StartupActivity.Background, Disposable {
 
@@ -23,7 +24,6 @@ class Initializer : StartupActivity.Background, Disposable {
 
     private fun initialize(project: Project) {
         ConnectivityManager.instance.startup()
-
         if (!AppSettingsState.instance.startupLoggedIn) {
             AppSettingsState.instance.startupLoggedIn = true
             login()
@@ -38,6 +38,7 @@ class Initializer : StartupActivity.Background, Disposable {
         PluginInstaller.addStateListener(UninstallListener())
         UpdateChecker.instance
         QuickLongthinkActionsService.instance
+
     }
 
     override fun dispose() {

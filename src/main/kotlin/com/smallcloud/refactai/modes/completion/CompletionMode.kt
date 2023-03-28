@@ -27,7 +27,9 @@ import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.statistic.CompletionStatistic
 import com.smallcloud.refactai.statistic.StatisticService
+import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.SMCRequest
+import com.smallcloud.refactai.utils.getExtension
 import java.io.InterruptedIOException
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
@@ -124,10 +126,10 @@ class CompletionMode(
                 }
             }
         }
-
+        val stat = UsageStatistic(scope, extension = getExtension(fileName))
         val request = RequestCreator.create(
             fileName, state.text, state.offset, state.offset,
-            scope, "Infill", "infill", promptInfo,
+            stat, "Infill", "infill", promptInfo,
             stream = true, model = InferenceGlobalContext.model ?: Resources.defaultModel
         ) ?: return
 

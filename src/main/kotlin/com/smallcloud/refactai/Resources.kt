@@ -1,6 +1,7 @@
 package com.smallcloud.refactai
 
 import com.intellij.ide.plugins.PluginManager
+import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
@@ -46,6 +47,7 @@ object Resources {
     val pluginId: PluginId = getPluginId()
     const val stagingFilterPrefix: String = "STAGING"
     const val openChatModel: String = "open-chat"
+    val jbBuildVersion: String = ApplicationInfo.getInstance().build.toString()
 
     object Icons {
         private fun brushForTheme(icon: Icon): Icon {

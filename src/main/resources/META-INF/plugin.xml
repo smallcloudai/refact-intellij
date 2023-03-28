@@ -1,9 +1,9 @@
 <?xml version="1.0" ?>
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
-<idea-plugin require-restart="true" url="https://refact.ai/">
+<idea-plugin require-restart="true">
     <id>com.smallcloud.codify</id>
     <name>Refact.ai</name>
-    <vendor email="info@smallcloud.ai" url="https://refact.ai/">smallcloudai</vendor>
+    <vendor email="info@smallcloud.ai" url="https://refact.ai">smallcloudai</vendor>
 
     <description><![CDATA[
 <h2>Refact.ai: The AI Assistant for Code Writing and Refactoring.</h2>
@@ -38,14 +38,6 @@
     </li>
     <br>
 </ul>
-
-<h3>Getting Started</h3>
-<p>
-    Once installed, look for the Refact.ai logo in the status bar or the sidebar,
-    click 'login', and agree to T&C. Start typing some code,
-    and autocomplete will make suggestions automatically! Press F1 to access the AI toolbox functions.
-    Refact has a simple, user-friendly interface that makes it easy to use, even for those new to AI tools.
-</p>
 
 <h3>Self-Hosting</h3>
 <p>
@@ -132,7 +124,7 @@ integrated into a single package that follows your privacy settings.
         <applicationService serviceImplementation="com.smallcloud.refactai.statistic.ExtraInfoService"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.privacy.PrivacyService"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.account.LoginStateService"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.UsageStats"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.statistic.UsageStats"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.UpdateChecker"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.modes.diff.DiffIntentProvider"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectivityManager"/>

@@ -8,6 +8,8 @@ import com.intellij.openapi.diagnostic.SubmittedReportInfo
 import com.intellij.util.Consumer
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContext
+import com.smallcloud.refactai.statistic.UsageStatistic
+import com.smallcloud.refactai.statistic.UsageStats
 import java.awt.Component
 
 
@@ -25,7 +27,7 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
             InferenceGlobalContext.status = ConnectionStatus.ERROR
             InferenceGlobalContext.lastErrorMsg = events.firstOrNull()?.message
             stats.addStatistic(
-                false, "uncaught exceptions", "none",
+                false, UsageStatistic("uncaught exceptions"), "none",
                 event.throwable.toString()
             )
         }

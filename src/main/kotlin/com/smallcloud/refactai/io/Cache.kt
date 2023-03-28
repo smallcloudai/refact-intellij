@@ -5,7 +5,6 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.diagnostic.Logger
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.UsageStats
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.notifications.emitError
 import com.smallcloud.refactai.struct.SMCExceptions
@@ -13,6 +12,7 @@ import com.smallcloud.refactai.struct.SMCPrediction
 import com.smallcloud.refactai.struct.SMCRequest
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
+import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 private object Cache {
     private val buffer = EvictingQueue.create<Pair<Int, SMCPrediction>>(15)
@@ -65,26 +65,26 @@ private fun lookForCommonErrors(json: JsonObject, request: SMCRequest): String? 
     if (json.has("detail")) {
         val gson = Gson()
         val detail = gson.toJson(json.get("detail"))
-        UsageStats.addStatistic(false, request.scope, request.uri.toString(), detail)
+        UsageStats.addStatistic(false, request.stat, request.uri.toString(), detail)
         return detail
     }
     if (json.has("retcode") && json.get("retcode").asString != "OK") {
         UsageStats.addStatistic(
-            false, request.scope,
+            false, request.stat,
             request.uri.toString(), json.get("human_readable_message").asString
         )
         return json.get("human_readable_message").asString
     }
     if (json.has("status") && json.get("status").asString == "error") {
         UsageStats.addStatistic(
-            false, request.scope,
+            false, request.stat,
             request.uri.toString(), json.get("human_readable_message").asString
         )
         return json.get("human_readable_message").asString
     }
     if (json.has("error")) {
         UsageStats.addStatistic(
-            false, request.scope,
+            false, request.stat,
             request.uri.toString(), json.get("error").asJsonObject.get("message").asString
         )
         return json.get("error").asJsonObject.get("message").asString
@@ -118,7 +118,7 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
         InferenceGlobalContext.connection
     connection ?: return null
 
-    val job = connection.post(uri, body, headers, needVerify = needToVerify, scope=request.scope)
+    val job = connection.post(uri, body, headers, needVerify = needToVerify, stat=request.stat)
 
     job.future = job.future.thenApplyAsync {
         val rawObject = gson.fromJson((it as String), JsonObject::class.java)
@@ -131,7 +131,7 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
         }
         val json = gson.fromJson(it, SMCPrediction::class.java)
         InferenceGlobalContext.lastAutoModel = json.model
-        UsageStats.addStatistic(true, request.scope, request.uri.toString(), "")
+        UsageStats.addStatistic(true, request.stat, request.uri.toString(), "")
         return@thenApplyAsync json
     }
 
@@ -161,12 +161,12 @@ fun streamedInferenceFetch(
 
     val job = InferenceGlobalContext.inferenceConnection?.post(
         uri, body, headers,
-        needVerify = needToVerify, scope = request.scope,
+        needVerify = needToVerify, stat = request.stat,
         dataReceiveEnded = dataReceiveEnded,
         dataReceived = {
             val json = gson.fromJson(it, SMCPrediction::class.java)
             InferenceGlobalContext.lastAutoModel = json.model
-            UsageStats.addStatistic(true, request.scope, request.uri.toString(), "")
+            UsageStats.addStatistic(true, request.stat, request.uri.toString(), "")
             dataReceived(json)
         },
         errorDataReceived = {

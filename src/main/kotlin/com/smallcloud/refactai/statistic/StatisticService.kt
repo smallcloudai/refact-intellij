@@ -7,12 +7,12 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.UsageStats
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.io.sendRequest
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
+import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 class StatisticService: Disposable {
     private val stats: MutableList<String>
@@ -85,8 +85,8 @@ class StatisticService: Disposable {
             } catch (e: Exception) {
                 Logger.getInstance(UsageStats::class.java).warn("report to $url failed: $e")
                 mergeMessages(oldStats)
-                UsageStats.instance.addStatistic(
-                    false, "accept/reject usage stats report",
+                UsageStats.addStatistic(
+                    false, UsageStatistic("accept/reject usage stats report"),
                     url.toString(), e
                 )
             }

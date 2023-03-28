@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.panes.gptchat
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.DumbAwareAction
@@ -22,6 +23,7 @@ import javax.swing.JProgressBar
 import javax.swing.JTextArea
 
 
+
 class ChatGPTPane : JPanel() {
     private val sendAction = object : DumbAwareAction(CollaborationToolsIcons.Send) {
         init {
@@ -35,6 +37,15 @@ class ChatGPTPane : JPanel() {
             isEnabledInModalContext = enabled
         }
     }
+    private val stopAction = object : DumbAwareAction(AllIcons.Ide.Notification.Close) {
+        init {
+            templatePresentation.hoveredIcon = AllIcons.Ide.Notification.CloseHover
+            isEnabledInModalContext = AccountManager.isLoggedIn
+        }
+        override fun actionPerformed(e: AnActionEvent) {
+            listener.cancelOrClose()
+        }
+    }
 
     var searchTextArea: CustomSearchTextArea = CustomSearchTextArea(JBTextArea()).also {
         it.setExtraActions(sendAction)
@@ -45,6 +56,32 @@ class ChatGPTPane : JPanel() {
     private var progressBar: JProgressBar? = null
     private val splitter: OnePixelSplitter = OnePixelSplitter(true,.9f)
 
+    enum class SendingState {
+        READY,
+        PENDING,
+    }
+    private var _sendingState = SendingState.READY
+    var sendingState
+        get() = _sendingState
+        set(value) {
+            _sendingState = value
+            when (value) {
+                SendingState.READY -> {
+                    ApplicationManager.getApplication().invokeLater {
+                        searchTextArea.setExtraActions(sendAction)
+                        searchTextArea.updateUI()
+                        aroundRequest(false)
+                    }
+                }
+                SendingState.PENDING -> {
+                    ApplicationManager.getApplication().invokeLater {
+                        searchTextArea.setExtraActions(stopAction)
+                        searchTextArea.updateUI()
+                        aroundRequest(true)
+                    }
+                }
+            }
+        }
 
     init {
         searchTextArea.isEnabled = AccountManager.isLoggedIn
@@ -91,7 +128,7 @@ class ChatGPTPane : JPanel() {
         return searchTextArea.textArea
     }
 
-    fun aroundRequest(status: Boolean) {
+    private fun aroundRequest(status: Boolean) {
         progressBar!!.isIndeterminate = status
         sendAction.setEnabled(!status)
     }

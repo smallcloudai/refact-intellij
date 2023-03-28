@@ -35,9 +35,11 @@ class ChatGPTProvider : ActionListener {
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
             "SMCChatProviderScheduler", 1
     )
-    private val streamScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
+
+    private var streamScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
             "SMCChatProviderStreamScheduler", 1
     )
+    private var streamSchedulerTasks = mutableListOf<Future<*>>()
 
     private var connection: AsyncConnection? = null
     private var processTask: Future<*>? = null
@@ -93,7 +95,7 @@ class ChatGPTProvider : ActionListener {
     }
 
     private fun process(pane: ChatGPTPane, req: ChatGPTRequest, lastAnswer: State.QuestionAnswer, message: MessageComponent) {
-        pane.aroundRequest(true)
+        pane.sendingState = ChatGPTPane.SendingState.PENDING
         try {
             val reqStr = MsgBuilder.build(req.conversation)
             var stop = false
@@ -117,21 +119,28 @@ class ChatGPTProvider : ActionListener {
                         } else if (line.isEmpty()) {
                             return@post
                         }
-                        streamScheduler.submit {
+                        streamSchedulerTasks.add(streamScheduler.submit {
                             for (s in line.chunked(1)) {
                                 lastAnswer.pushAnswer(s)
-                                ApplicationManager.getApplication().invokeLater {
+                                ApplicationManager.getApplication().invokeLater({
                                     message.setContent(md2html(lastAnswer.answer))
                                     pane.scrollToBottom()
-                                }
+                                }, {
+                                    pane.sendingState == ChatGPTPane.SendingState.READY
+                                })
                                 Thread.sleep(2)
                             }
-                        }
+                        })
                     },
                     dataReceiveEnded = {
-                        pane.aroundRequest(false)
+                        streamSchedulerTasks.add(streamScheduler.submit {
+                            cancelStreamingTasks()
+                            pane.sendingState = ChatGPTPane.SendingState.READY
+                        })
                     },
-                    errorDataReceived = {},
+                    errorDataReceived = {
+                        pane.sendingState = ChatGPTPane.SendingState.READY
+                    },
                     stat = UsageStatistic("chatgpt")
             ).also {
                 var requestFuture: Future<*>? = null
@@ -139,36 +148,30 @@ class ChatGPTProvider : ActionListener {
                     requestFuture = it.get()
                     requestFuture.get()
                 } catch (e: InterruptedException) {
+                    cancelStreamingTasks()
                     handleInterruptedException(requestFuture)
+                    pane.sendingState = ChatGPTPane.SendingState.READY
                 } catch (e: InterruptedIOException) {
+                    cancelStreamingTasks()
                     handleInterruptedException(requestFuture)
+                    pane.sendingState = ChatGPTPane.SendingState.READY
                 } catch (e: ExecutionException) {
                     requestFuture?.cancel(true)
-//                    catchNetExceptions(e.cause)
-//                    lastStatistic?.let {
-//                        lastStatistic = null
-//                    }
+                    cancelStreamingTasks()
+                    pane.sendingState = ChatGPTPane.SendingState.READY
                 } catch (e: Exception) {
+                    pane.sendingState = ChatGPTPane.SendingState.READY
                     InferenceGlobalContext.status = ConnectionStatus.ERROR
                     InferenceGlobalContext.lastErrorMsg = e.message
-//                    cancelOrClose()
-//                    lastStatistic?.let {
-//                        lastStatistic = null
-//                    }
-//                    logger.warn("Exception while completion request processing", e)
                 }
             }
         } catch (e: SocketTimeoutException) {
             e.printStackTrace()
-//                MyNotifier.notifyError(
-//                    DataFactory.getInstance().getProject(),
-//                    ChatGPTBundle.message("notify.timeout.error.title"),
-//                    ChatGPTBundle.message("notify.timeout.error.text")
-//                )
-            pane.aroundRequest(false)
+            pane.sendingState = ChatGPTPane.SendingState.READY
         } catch (ex: Exception) {
             ex.printStackTrace()
-            pane.aroundRequest(false)
+            cancelStreamingTasks()
+            pane.sendingState = ChatGPTPane.SendingState.READY
             throw RuntimeException(ex)
         }
     }
@@ -189,6 +192,12 @@ class ChatGPTProvider : ActionListener {
         }
     }
 
+    private fun cancelStreamingTasks() {
+        streamSchedulerTasks.forEach {
+            it.cancel(true)
+        }
+        streamSchedulerTasks.clear()
+    }
 
     private fun handleInterruptedException(requestFuture: Future<*>?) {
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED

@@ -161,18 +161,19 @@ integrated into a single package that follows your privacy settings.
         </group>
 <!--        For display shortcut on the pane, action must be with mask "Activate${id.filterNot { it.isWhitespace() }}ToolWindow"-->
         <action id="ActivateRefactChatToolWindow"
+                text="Open Refact Chat"
                 class="com.smallcloud.refactai.panes.gptchat.ChatGPTPaneInvokeAction">
             <keyboard-shortcut first-keystroke="control shift C" keymap="$default"/>
             <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X" replace-all="true"/>
             <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X 10.5+" replace-all="true"/>
         </action>
         <group id="RefactAIChatGroup">
-            <action id="RefactAIAskChat" class="com.smallcloud.refactai.listeners.AskChatAction"/>
-            <separator/>
+            <action id="RefactAIAskChat"
+                    text="Ask in Chat"
+                    class="com.smallcloud.refactai.listeners.AskChatAction"/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <separator/>
         </group>
-
     </actions>
     <resource-bundle>bundles.RefactAI</resource-bundle>
     <applicationListeners>

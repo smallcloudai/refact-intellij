@@ -26,17 +26,15 @@ class QuickLongthinkAction(
     }
 }
 
-class AskChatAction: DumbAwareAction() {
+class AskChatAction: DumbAwareAction(Resources.Icons.LOGO_RED_16x16) {
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabled = true
         e.presentation.text = "Ask in Chat..."
-        e.presentation.icon = Resources.Icons.LOGO_RED_16x16
     }
 
     override fun actionPerformed(e: AnActionEvent) {
         ChatGPTPaneInvokeAction().doActionPerformed(true)
     }
-
 }
 
 

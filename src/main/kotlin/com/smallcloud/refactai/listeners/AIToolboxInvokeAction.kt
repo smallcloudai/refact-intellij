@@ -9,6 +9,7 @@ import com.smallcloud.refactai.privacy.ActionUnderPrivacy
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 
 class AIToolboxInvokeAction: ActionUnderPrivacy() {
+
     private fun getEditor(e: AnActionEvent): Editor? {
         return CommonDataKeys.EDITOR.getData(e.dataContext)
                 ?: e.presentation.getClientProperty(Key(CommonDataKeys.EDITOR.name))

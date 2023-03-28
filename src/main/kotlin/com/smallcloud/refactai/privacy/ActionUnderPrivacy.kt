@@ -5,8 +5,9 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.vfs.VirtualFile
+import com.smallcloud.refactai.Resources
 
-abstract class ActionUnderPrivacy : DumbAwareAction() {
+abstract class ActionUnderPrivacy : DumbAwareAction(Resources.Icons.LOGO_RED_16x16) {
     abstract fun setup(e: AnActionEvent)
     final override fun update(e: AnActionEvent) {
         setup(e)

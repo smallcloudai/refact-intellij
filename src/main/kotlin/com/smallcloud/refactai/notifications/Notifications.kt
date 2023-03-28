@@ -122,7 +122,7 @@ fun emitLogin(project: Project) {
 
 private fun getStatusPrivacyString(currentPrivacy: Privacy): String {
     return when (currentPrivacy) {
-        Privacy.DISABLED -> "Refact.ai can't access this file"
+        Privacy.DISABLED -> RefactAIBundle.message("privacy.level0Status")
         Privacy.ENABLED -> RefactAIBundle.message("privacy.level1Name")
         Privacy.THIRDPARTY -> RefactAIBundle.message("privacy.level2Name")
     }
@@ -145,11 +145,11 @@ fun emitRegular(project: Project, editor: Editor) {
         notification.expire()
     })
 
-    val chat = ToolWindowManager.getInstance(project).getToolWindow("Refact.ai Toolbox")
-    val chatShortcut = KeymapUtil.getShortcutText("ActivateRefactAIToolboxToolWindow")
+    val chat = ToolWindowManager.getInstance(project).getToolWindow("Refact Chat")
     if (chat != null) {
+        val chatShortcut = KeymapUtil.getShortcutText("ActivateRefactChatToolWindow")
         notification.addAction(NotificationAction.createSimple("Chat ($chatShortcut)") {
-            chat?.activate{
+            chat.activate{
                 RefactAIToolboxPaneFactory.gptChatPanes?.requestFocus()
             }
             notification.expire()

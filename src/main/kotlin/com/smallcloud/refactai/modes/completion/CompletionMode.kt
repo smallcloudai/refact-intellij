@@ -59,7 +59,10 @@ class CompletionMode(
     override fun onTextChange(event: DocumentEventExtra) {
         lastStatistic?.let {
             if (completionLayout != null) {
-                it.addStatistic("cancel", "document_changed")
+                it.addStatistic("cancel", "document_changed",
+                        fileExtension = getActiveFile(event.editor.document)?.let {filename ->
+                            getExtension(filename)
+                        })
                 StatisticService.instance.addCompletionStatistic(it)
                 lastStatistic = null
             }
@@ -273,9 +276,9 @@ class CompletionMode(
                 requestFuture.get()
                 logger.debug("Completion request finished")
             } catch (e: InterruptedException) {
-                handleInterruptedException(requestFuture)
+                handleInterruptedException(requestFuture, editorState.editor)
             } catch (e: InterruptedIOException) {
-                handleInterruptedException(requestFuture)
+                handleInterruptedException(requestFuture, editorState.editor)
             } catch (e: ExecutionException) {
                 cancelOrClose()
                 requestFuture?.cancel(true)
@@ -295,11 +298,14 @@ class CompletionMode(
         }
     }
 
-    private fun handleInterruptedException(requestFuture: Future<*>?) {
+    private fun handleInterruptedException(requestFuture: Future<*>?, editor: Editor) {
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED
         requestFuture?.cancel(true)
         lastStatistic?.let {
-            lastStatistic?.addStatistic("cancel", "request_abort")
+            lastStatistic?.addStatistic("cancel", "request_abort",
+                    fileExtension = getActiveFile(editor.document)?.let {filename ->
+                        getExtension(filename)
+                    })
             StatisticService.instance.addCompletionStatistic(lastStatistic!!)
             lastStatistic = null
         }
@@ -316,7 +322,10 @@ class CompletionMode(
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
         lastStatistic?.let {
             if (completionLayout != null) {
-                it.addStatistic("accept", "tab")
+                it.addStatistic("accept", "tab",
+                        fileExtension = getActiveFile(editor.document)?.let {filename ->
+                            getExtension(filename)
+                        })
                 StatisticService.instance.addCompletionStatistic(it)
                 lastStatistic = null
             }
@@ -336,7 +345,10 @@ class CompletionMode(
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
         lastStatistic?.let {
             if (completionLayout != null) {
-                it.addStatistic("cancel", "esc")
+                it.addStatistic("cancel", "esc",
+                        fileExtension = getActiveFile(editor.document)?.let {filename ->
+                            getExtension(filename)
+                        })
                 StatisticService.instance.addCompletionStatistic(it)
                 lastStatistic = null
             }
@@ -354,7 +366,10 @@ class CompletionMode(
                         event.newPosition.column == (event.oldPosition.column + 1)
             }
             if (completionLayout != null && !isWriting()) {
-                it.addStatistic("cancel", "caret_changed")
+                it.addStatistic("cancel", "caret_changed",
+                        fileExtension = getActiveFile(event.editor.document)?.let {filename ->
+                    getExtension(filename)
+                })
                 StatisticService.instance.addCompletionStatistic(it)
                 lastStatistic = null
             }
@@ -364,10 +379,13 @@ class CompletionMode(
 
     override fun isInActiveState(): Boolean = completionLayout != null && completionLayout!!.rendered && needToRender
 
-    override fun cleanup() {
+    override fun cleanup(editor: Editor) {
         lastStatistic?.let {
             if (completionLayout != null) {
-                it.addStatistic("cancel", "mode_changed")
+                it.addStatistic("cancel", "mode_changed",
+                        fileExtension = getActiveFile(editor.document)?.let {filename ->
+                            getExtension(filename)
+                        })
                 StatisticService.instance.addCompletionStatistic(it)
                 lastStatistic = null
             }

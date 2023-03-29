@@ -17,5 +17,5 @@ interface Mode {
     fun isInActiveState(): Boolean
     fun show()
     fun hide()
-    fun cleanup()
+    fun cleanup(editor: Editor)
 }

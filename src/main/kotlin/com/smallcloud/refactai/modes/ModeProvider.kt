@@ -40,7 +40,7 @@ enum class ModeType {
 
 
 class ModeProvider(
-    editor: Editor,
+    private val editor: Editor,
     private val modes: Map<ModeType, Mode> = mapOf(
         ModeType.Completion to CompletionMode(),
         ModeType.Diff to DiffMode(),
@@ -119,7 +119,7 @@ class ModeProvider(
 
     fun switchMode(newMode: ModeType = ModeType.Completion) {
         if (activeMode == modes[newMode]) return
-        activeMode?.cleanup()
+        activeMode?.cleanup(editor)
         activeMode = modes[newMode]
     }
 

@@ -100,7 +100,7 @@ class HighlightMode(
             goToDiffTask = scheduler.schedule({
                 // cleanup must be called from render thread; scheduler creates worker thread only
                 app.invokeAndWait {
-                    cleanup()
+                    cleanup(event.editor)
                     ModeProvider.getOrCreateModeProvider(event.editor)
                         .getDiffMode().actionPerformed(
                             event.editor, HighlightContext(entry, offsets[0], offsets[1])
@@ -130,8 +130,8 @@ class HighlightMode(
         TODO("Not yet implemented")
     }
 
-    override fun cleanup() {
-        cancel(null)
+    override fun cleanup(editor: Editor) {
+        cancel(editor)
     }
 
     fun actionPerformed(editor: Editor, fromDiff: Boolean = false, entryFromContext: LongthinkFunctionEntry? = null) {

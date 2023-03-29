@@ -65,6 +65,7 @@ class StatisticService: Disposable {
         val body = gson.toJson(
             mapOf(
                 "client_version" to "${Resources.client}-${Resources.version}",
+                "ide_version" to Resources.jbBuildVersion,
                 "usage" to gson.toJson(
                     mapOf(
                         "completion" to usage

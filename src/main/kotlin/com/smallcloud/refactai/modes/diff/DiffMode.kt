@@ -122,8 +122,8 @@ class DiffMode(
         TODO("Not yet implemented")
     }
 
-    override fun cleanup() {
-        cancel(null)
+    override fun cleanup(editor: Editor) {
+        cancel(editor)
     }
 
     fun actionPerformed(editor: Editor, highlightContext: HighlightContext? = null,

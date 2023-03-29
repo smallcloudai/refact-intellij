@@ -18,14 +18,15 @@ private fun timeRange(time: Long) : Long {
 class CompletionStatistic {
     data class Statistic(val name: String,
                          val timeout: Long,
-                         val reason: String? = null)
+                         val reason: String? = null,
+                         val fileExtension: String? = null)
 
     private val statistics: MutableList<Statistic> = mutableListOf()
     private var now = currentTimeMillis()
 
-    fun addStatistic(name: String, reason: String? = null) {
+    fun addStatistic(name: String, reason: String? = null, fileExtension: String? = null) {
         val newNow = currentTimeMillis()
-        statistics.add(Statistic(name, newNow - now, reason))
+        statistics.add(Statistic(name, newNow - now, reason, fileExtension))
         now = newNow
     }
 
@@ -34,18 +35,21 @@ class CompletionStatistic {
         if (this.toString().contains("cacheRendered"))
             return res
         val lastElem = statistics.last()
-        val reason = if (lastElem.reason == "esc") {
+        var suffix = if (lastElem.reason == "esc") {
             "esc"
         } else if (lastElem.reason == "tab") {
             "tab"
         } else {
             "moveaway"
         }
-        res.add("metric0ms_${reason}")
+        if (lastElem.fileExtension != null) {
+            suffix += ":" + lastElem.fileExtension
+        }
+        res.add("metric0ms_${suffix}")
         if (lastElem.timeout > 600)
-            res.add("metric600ms_${reason}")
+            res.add("metric600ms_${suffix}")
         if (lastElem.timeout > 1200)
-            res.add("metric1200ms_${reason}")
+            res.add("metric1200ms_${suffix}")
         return res
     }
 

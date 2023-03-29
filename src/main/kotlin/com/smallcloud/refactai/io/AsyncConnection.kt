@@ -137,7 +137,6 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
 
                     override fun data(src: ByteBuffer?, endOfStream: Boolean) {
                         src ?: return
-                        if (endOfStream) return
                         bufferStr += Charset.forName("UTF-8").decode(src)
                         try {
                             val data = Gson().fromJson(bufferStr, JsonObject::class.java)

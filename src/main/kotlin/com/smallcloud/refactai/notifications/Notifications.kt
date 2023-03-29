@@ -135,7 +135,7 @@ fun emitRegular(project: Project, editor: Editor) {
     val notification =
         NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
             Resources.titleStr,
-            "Privacy: ${getStatusPrivacyString(currentPrivacy)}",
+            "File privacy: ${getStatusPrivacyString(currentPrivacy)}",
             NotificationType.INFORMATION
         )
     notification.icon = Resources.Icons.LOGO_RED_16x16

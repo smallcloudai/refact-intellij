@@ -43,6 +43,7 @@ class ChatGPTProvider : ActionListener {
 
     private var connection: AsyncConnection? = null
     private var processTask: Future<*>? = null
+    private var canceled: Boolean = false
 
     init {
         cloudInferenceUri?.let {
@@ -79,7 +80,11 @@ class ChatGPTProvider : ActionListener {
 
         pane.state.pushQuestion(text)
         val lastAnswer = pane.state.last()
-        if (selectedText != null) {
+
+        fun isEmptyString(lines: String): Boolean {
+            return lines.any { it.isLetterOrDigit() }
+        }
+        if (selectedText?.let { isEmptyString(it) } == true) {
             pane.state.pushCode(selectedText)
             text += "\n\n```\n$selectedText\n```\n"
         }
@@ -96,6 +101,7 @@ class ChatGPTProvider : ActionListener {
 
     private fun process(pane: ChatGPTPane, req: ChatGPTRequest, lastAnswer: State.QuestionAnswer, message: MessageComponent) {
         pane.sendingState = ChatGPTPane.SendingState.PENDING
+        canceled = false
         try {
             val reqStr = MsgBuilder.build(req.conversation)
             var stop = false
@@ -126,7 +132,7 @@ class ChatGPTProvider : ActionListener {
                                     message.setContent(md2html(lastAnswer.answer))
                                     pane.scrollToBottom()
                                 }, {
-                                    pane.sendingState == ChatGPTPane.SendingState.READY
+                                    pane.sendingState == ChatGPTPane.SendingState.READY && canceled
                                 })
                                 Thread.sleep(2)
                             }
@@ -193,6 +199,7 @@ class ChatGPTProvider : ActionListener {
     }
 
     private fun cancelStreamingTasks() {
+        canceled = true
         streamSchedulerTasks.forEach {
             it.cancel(true)
         }

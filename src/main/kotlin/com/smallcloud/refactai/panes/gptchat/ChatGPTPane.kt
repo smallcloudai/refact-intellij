@@ -31,7 +31,7 @@ class ChatGPTPane : JPanel() {
             isEnabledInModalContext = AccountManager.isLoggedIn
         }
         override fun actionPerformed(e: AnActionEvent) {
-            listener.doActionPerformed(this@ChatGPTPane)
+            doActionPerformed()
         }
         fun setEnabled(enabled: Boolean) {
             isEnabledInModalContext = enabled
@@ -101,12 +101,7 @@ class ChatGPTPane : JPanel() {
                 if (e != null) {
                     if (e.keyCode == KeyEvent.VK_ENTER && !e.isControlDown && !e.isShiftDown) {
                         e.consume()
-                        var selectedText: String? = null
-                        if (searchTextArea.needToInline && LastEditorGetterListener.LAST_EDITOR != null) {
-                            selectedText = LastEditorGetterListener.LAST_EDITOR!!.selectionModel.selectedText
-                        }
-                        listener.doActionPerformed(this@ChatGPTPane, selectedText=selectedText)
-                        searchTextArea.needToInline = false
+                        doActionPerformed()
                     }
                 }
             }
@@ -128,10 +123,20 @@ class ChatGPTPane : JPanel() {
         return searchTextArea.textArea
     }
 
+    private fun doActionPerformed() {
+        var selectedText: String? = null
+        if (searchTextArea.needToInline && LastEditorGetterListener.LAST_EDITOR != null) {
+            selectedText = LastEditorGetterListener.LAST_EDITOR!!.selectionModel.selectedText
+        }
+        listener.doActionPerformed(this@ChatGPTPane, selectedText=selectedText)
+        searchTextArea.needToInline = false
+    }
+
     private fun aroundRequest(status: Boolean) {
         progressBar!!.isIndeterminate = status
         sendAction.setEnabled(!status)
     }
+
     fun send(msg: String, selectedText: String) {
         contentPanel.clearHistory()
         listener.doActionPerformed(this, msg, selectedText)

@@ -17,7 +17,7 @@ dependencies {
 
 
 group = "com.smallcloud"
-version = getVersionString("1.1.36")
+version = getVersionString("1.1.37")
 
 repositories {
     mavenCentral()
@@ -27,25 +27,27 @@ repositories {
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    version.set("2022.1.4")
+    version.set("2023.1")
     type.set("PC") // Target IDE Platform
 
     plugins.set(listOf())
 }
 
+val javaCompilerVersion = "17"
+
 tasks {
     // Set the JVM compatibility versions
     withType<JavaCompile> {
-        sourceCompatibility = "11"
-        targetCompatibility = "11"
+        sourceCompatibility = javaCompilerVersion
+        targetCompatibility = javaCompilerVersion
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = "11"
+        kotlinOptions.jvmTarget = javaCompilerVersion
     }
 
     patchPluginXml {
         sinceBuild.set("221")
-        untilBuild.set("231.*")
+        untilBuild.set("233.*")
     }
 
     signPlugin {

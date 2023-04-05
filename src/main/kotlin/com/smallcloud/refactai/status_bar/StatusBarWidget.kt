@@ -116,7 +116,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             })
     }
 
-    fun selectionChanged(event: FileEditorManagerEvent) {
+    override fun selectionChanged(event: FileEditorManagerEvent) {
         update(null)
     }
 

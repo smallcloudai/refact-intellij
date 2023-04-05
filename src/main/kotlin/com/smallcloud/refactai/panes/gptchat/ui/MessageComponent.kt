@@ -37,7 +37,7 @@ private class CopyClipboardAction(private val pane: JEditorPane) : DumbAwareActi
     }
 }
 
-class MessageComponent(val question: List<ParsedText>,
+class MessageComponent(var question: List<ParsedText>,
                        val me: Boolean) : JBPanel<MessageComponent>() {
 
     private val myList = JPanel(VerticalLayout())
@@ -127,6 +127,7 @@ class MessageComponent(val question: List<ParsedText>,
 
     fun setContent(content: List<ParsedText>) {
         rawTexts = content.map { it.rawText }
+        question = content
         content.forEachIndexed { index, element ->
             if (myList.components.size <= index) {
                 myList.add(createContentComponent(element.htmlText, element.isCode, index))

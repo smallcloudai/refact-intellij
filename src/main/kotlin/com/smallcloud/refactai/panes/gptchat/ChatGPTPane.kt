@@ -12,6 +12,7 @@ import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.listeners.LastEditorGetterListener
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory.Companion.gptChatPanes
+import com.smallcloud.refactai.panes.gptchat.structs.HistoryEntry
 import com.smallcloud.refactai.panes.gptchat.ui.CustomSearchTextArea
 import com.smallcloud.refactai.panes.gptchat.ui.MessageComponent
 import icons.CollaborationToolsIcons
@@ -140,6 +141,10 @@ class ChatGPTPane : JPanel() {
     fun send(msg: String, selectedText: String) {
         contentPanel.clearHistory()
         listener.doActionPerformed(this, msg, selectedText)
+    }
+
+    fun getFullHistory(): MutableList<HistoryEntry> {
+        return contentPanel.getFullHistory()
     }
 
     fun add(messageComponent: MessageComponent) {

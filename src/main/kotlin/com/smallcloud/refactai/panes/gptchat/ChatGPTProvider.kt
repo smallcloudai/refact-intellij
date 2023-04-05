@@ -91,9 +91,9 @@ class ChatGPTProvider : ActionListener {
 
         pane.add(MessageComponent(md2html(text), true))
         val message = MessageComponent(listOf(ParsedText("...", "...", false)), false)
-        pane.add(message)
         val req = ChatGPTRequest(cloudInferenceUri!!.resolve(defaultChatUrlSuffix),
-                AccountManager.apiKey, pane.state.conversations)
+                AccountManager.apiKey, pane.getFullHistory())
+        pane.add(message)
         processTask = scheduler.submit {
             process(pane, req, lastAnswer, message)
         }
@@ -145,6 +145,10 @@ class ChatGPTProvider : ActionListener {
                         })
                     },
                     errorDataReceived = {
+                        ApplicationManager.getApplication().invokeLater {
+                            message.setContent(listOf(ParsedText("error", "error", false, true)))
+                            pane.scrollToBottom()
+                        }
                         pane.sendingState = ChatGPTPane.SendingState.READY
                     },
                     stat = UsageStatistic("chatgpt")

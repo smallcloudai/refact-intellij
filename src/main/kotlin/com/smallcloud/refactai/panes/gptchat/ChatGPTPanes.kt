@@ -3,10 +3,7 @@ package com.smallcloud.refactai.panes.gptchat
 import com.intellij.execution.ui.layout.impl.JBRunnerTabs
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.project.Project
 import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.containers.ContainerUtil
@@ -59,6 +56,9 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
             override fun actionPerformed(e: AnActionEvent) {
                 addTab()
             }
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.EDT
+            }
         }), ActionPlaces.EDITOR_TAB)
         info.setTabLabelActions(DefaultActionGroup(object : AnAction(AllIcons.Actions.Close) {
             override fun actionPerformed(e: AnActionEvent) {
@@ -67,6 +67,9 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
                 if (getVisibleTabs().isEmpty()) {
                     addTab()
                 }
+            }
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.EDT
             }
         }), ActionPlaces.EDITOR_TAB)
         panes.addTab(info)

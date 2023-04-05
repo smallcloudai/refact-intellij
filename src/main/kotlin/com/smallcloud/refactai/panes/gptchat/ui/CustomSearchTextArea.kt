@@ -219,7 +219,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
                 } else {
                     var bottom = if (StringUtil.getLineBreakCount(textArea.text) > 0) 2 else if (StartupUiUtil.isUnderDarcula()) 1 else 0
                     var top = if (textArea.getFontMetrics(textArea.font).height <= 16) 2 else 1
-                    if (JBUIScale.isUsrHiDPI()) {
+                    if (JBUIScale.isUsrHiDPI) {
                         bottom = 0
                         top = 2
                     }

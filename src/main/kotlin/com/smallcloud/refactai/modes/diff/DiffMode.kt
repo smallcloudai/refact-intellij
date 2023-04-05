@@ -67,12 +67,12 @@ class DiffMode(
             ) {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             }
-            app.invokeAndWait {
+            app.invokeLater {
                 finishRenderRainbow()
                 diffLayout?.cancelPreview()
                 diffLayout = null
             }
-            if (editor != null) {
+            if (editor != null && !Thread.currentThread().stackTrace.any { it.methodName == "switchMode" }) {
                 getOrCreateModeProvider(editor).switchMode()
             }
         }

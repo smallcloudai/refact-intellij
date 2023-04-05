@@ -29,7 +29,7 @@ class StatisticService: Disposable {
             task = scheduler.scheduleWithFixedDelay({
                 report()
             }, 1, 1, TimeUnit.HOURS)
-        }, 5, TimeUnit.MINUTES)
+        }, 1, TimeUnit.MINUTES)
     }
 
     fun forceReport() {

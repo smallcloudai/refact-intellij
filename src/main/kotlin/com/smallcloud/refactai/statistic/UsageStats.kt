@@ -8,7 +8,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.defaultReportUrl
-import com.smallcloud.refactai.Resources.jbBuildVersion
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.io.sendRequest
 import java.util.concurrent.Future
@@ -57,9 +56,7 @@ class UsageStats: Disposable {
         val message = "${positive.compareTo(false)}\t" +
                 "$scopeJson\t" +
                 "$relatedUrl\t" +
-                "$errorMessageJson\t" +
-                "${jbBuildVersion}\t" +
-                stat.extension
+                "$errorMessageJson"
         synchronized(this) {
             if (messages.containsKey(message)) {
                 messages[message] = messages[message]!! + 1
@@ -97,6 +94,7 @@ class UsageStats: Disposable {
         val body = gson.toJson(
             mapOf(
                 "client_version" to "${Resources.client}-${Resources.version}",
+                "ide_version" to Resources.jbBuildVersion,
                 "usage" to usage
             )
         )

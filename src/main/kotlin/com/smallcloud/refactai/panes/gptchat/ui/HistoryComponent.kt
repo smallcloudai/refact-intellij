@@ -9,6 +9,7 @@ import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.panes.gptchat.State
+import com.smallcloud.refactai.panes.gptchat.structs.HistoryEntry
 import com.smallcloud.refactai.panes.gptchat.ui.MessageComponent
 import com.smallcloud.refactai.panes.gptchat.utils.md2html
 import org.jdesktop.swingx.VerticalLayout
@@ -108,8 +109,14 @@ class HistoryComponent(private val state: State): JBPanel<HistoryComponent>(), N
         updateUI()
         return removedTip
     }
-    fun lastMessage(): MessageComponent {
-        return (myList.getComponent(myList.componentCount - 1) as ShiftedMessage).message
+
+    fun getFullHistory(): MutableList<HistoryEntry> {
+        val res = mutableListOf<HistoryEntry>()
+        for (c in myList.components) {
+            val message = (c as ShiftedMessage).message
+            res.add(HistoryEntry(message.question, message.me))
+        }
+        return res
     }
 
 

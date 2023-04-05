@@ -116,7 +116,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             })
     }
 
-    override fun selectionChanged(event: FileEditorManagerEvent) {
+    fun selectionChanged(event: FileEditorManagerEvent) {
         update(null)
     }
 
@@ -129,11 +129,11 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         val component = WithIconAndArrows()
         component.icon = getIcon()
         component.text = "Refact.ai"
-        component.toolTipText = tooltipText
+        component.toolTipText = getTooltipText()
         component.addMouseListener(
             object : MouseAdapter() {
                 override fun mousePressed(e: MouseEvent) {
-                    Objects.requireNonNull(clickConsumer)?.consume(e)
+                    Objects.requireNonNull(getClickConsumer())?.consume(e)
                 }
             })
         this.component = component
@@ -165,7 +165,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private fun isPrivacyEnabled(): Boolean {
-        return PrivacyService.instance.getPrivacy(editor?.let { getVirtualFile(it) }) != Privacy.DISABLED
+        return PrivacyService.instance.getPrivacy(getEditor()?.let { getVirtualFile(it) }) != Privacy.DISABLED
     }
 
     // Compatability implementation. DO NOT ADD @Override.
@@ -217,7 +217,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 if (!isLoggedIn)
                     emitLogin(project)
                 else
-                    editor?.let { emitRegular(project, it) }
+                    getEditor()?.let { emitRegular(project, it) }
             }
         }
     }
@@ -226,12 +226,12 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         ApplicationManager.getApplication()
             .invokeLater(
                 {
-                    if (myProject.isDisposed || myStatusBar == null) {
+                    if (project.isDisposed || myStatusBar == null) {
                         return@invokeLater
                     }
                     component!!.icon = getIcon()
-                    component!!.toolTipText = newMsg ?: tooltipText
-                    myStatusBar.updateWidget(ID())
+                    component!!.toolTipText = newMsg ?: getTooltipText()
+                    myStatusBar!!.updateWidget(ID())
                     val statusBar = WindowManager.getInstance().getStatusBar(myProject)
                     statusBar?.component?.updateUI()
                 },

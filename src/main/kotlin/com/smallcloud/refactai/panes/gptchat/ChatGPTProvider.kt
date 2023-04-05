@@ -140,7 +140,6 @@ class ChatGPTProvider : ActionListener {
                     },
                     dataReceiveEnded = {
                         streamSchedulerTasks.add(streamScheduler.submit {
-                            cancelStreamingTasks()
                             pane.sendingState = ChatGPTPane.SendingState.READY
                         })
                     },

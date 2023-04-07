@@ -7,7 +7,7 @@ import com.intellij.openapi.util.Disposer
 
 class AsyncInlayer(
     val editor: Editor,
-    private val offset: Int
+    val offset: Int
 ) : Disposable {
     private var lineRenderer: AsyncLineRenderer? = null
     private var lineInlay: Inlay<*>? = null

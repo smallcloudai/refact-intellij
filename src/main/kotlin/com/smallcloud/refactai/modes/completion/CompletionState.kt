@@ -55,7 +55,7 @@ class CompletionState(
         finishReason: String
     ): Completion {
         val requestedText = editorState.document.text
-        var textCurrentLine = editorState.currentLine
+        val textCurrentLine = editorState.currentLine
 
         val lines = completion.split('\n')
         var firstLine = lines.first()
@@ -73,7 +73,7 @@ class CompletionState(
         val currentMultiline = multiline && lines.size > 1
         val startIndex: Int = minOf(requestedText.length, headIndexUpdated)
         logger.info("Finish reason: $finishReason, firstLine: $firstLine")
-        var endIndex = if (finishReason == "ins-stoptoken") {
+        val endIndex = if (finishReason == "ins-stoptoken") {
             startIndex
         } else {
             val firstEosIndex = requestedText.substring(startIndex).indexOfFirst { it == '\n' }

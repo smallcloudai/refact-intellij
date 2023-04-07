@@ -1,5 +1,8 @@
 package com.smallcloud.refactai.modes.completion.structs
 
+import dev.gitlive.difflib.DiffUtils
+import dev.gitlive.difflib.patch.Patch
+
 
 data class Completion(
     val originalText: String,
@@ -14,6 +17,8 @@ data class Completion(
     val leftSymbolsToSkip: Int = 0,
     val isFromCache: Boolean = false
 ) {
+
+    val firstLineEndOfLineIndex = startIndex + originalText.substring(startIndex).indexOfFirst { it == '\n' }
     fun isMakeSense(): Boolean {
         return completion.isNotEmpty()
     }
@@ -25,6 +30,44 @@ data class Completion(
         val idx = reversedText.indexOfFirst { it == '\n' } + 1
         if (idx == -1) return ""
         return reversedText.substring(0, idx)
+    }
+
+    fun getPatch(): Patch<Char> {
+        return try {
+            val originalPiece = originalText.subSequence(startIndex, maxOf(endIndex, firstLineEndOfLineIndex))
+
+            DiffUtils.diff(
+                    originalPiece.toList(),
+                    completion.toList(),
+            )
+        } catch (ex: Exception) {
+            Patch()
+        }
+
+    }
+    fun getForFirstLineEOSPatch(): Patch<Char> {
+        return try {
+            val originalPiece = originalText.subSequence(startIndex, firstLineEndOfLineIndex)
+
+            DiffUtils.diff(
+                    originalPiece.toList(),
+                    completion.split('\n').first().toList(),
+            )
+        } catch (ex: Exception) {
+            Patch()
+        }
+    }
+    fun getForFirstLinePatch(): Patch<Char> {
+        return try {
+            val originalPiece = originalText.subSequence(startIndex, endIndex)
+
+            DiffUtils.diff(
+                    originalPiece.toList(),
+                    completion.split('\n').first().toList(),
+            )
+        } catch (ex: Exception) {
+            Patch()
+        }
     }
 }
 

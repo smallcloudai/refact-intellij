@@ -7,7 +7,7 @@ import com.intellij.openapi.util.Disposer
 
 class AsyncInlayer(
     val editor: Editor,
-    val offset: Int
+    private val offset: Int
 ) : Disposable {
     private var lineRenderer: AsyncLineRenderer? = null
     private var lineInlay: Inlay<*>? = null
@@ -16,6 +16,7 @@ class AsyncInlayer(
     private var collectedText: String = ""
     private var disposed: Boolean = false
     private var hidden: Boolean = false
+    private var realText: String = ""
 
     override fun dispose() {
         synchronized(this) {
@@ -72,6 +73,18 @@ class AsyncInlayer(
             ?.also { Disposer.register(this, it) }
     }
 
+    fun getText(): String {
+        synchronized(this) {
+            return realText
+        }
+    }
+
+    fun setText(text: String) {
+        synchronized(this) {
+            realText = text
+        }
+    }
+
     fun addText(text: String) {
         if (disposed) { dispose() }
         synchronized(this) {
@@ -87,11 +100,14 @@ class AsyncInlayer(
 
             if (lines.size > 1) {
                 val subList = lines.subList(1, lines.size)
-                if (blockInlay == null && !disposed) {
-                    createBlock(subList)
-                } else {
-                    blockRenderer?.blockText = subList
-                    blockInlay?.update()
+                val notEmpty = subList.any { it.isNotEmpty() }
+                if (notEmpty) {
+                    if (blockInlay == null && !disposed) {
+                        createBlock(subList)
+                    } else {
+                        blockRenderer?.blockText = subList
+                        blockInlay?.update()
+                    }
                 }
             }
         }

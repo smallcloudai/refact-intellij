@@ -3,7 +3,6 @@ package com.smallcloud.refactai.modes.completion
 import com.intellij.openapi.diagnostic.Logger
 import com.smallcloud.refactai.modes.EditorTextState
 import com.smallcloud.refactai.modes.completion.structs.Completion
-import com.smallcloud.refactai.modes.completion.structs.getChar
 import java.util.regex.Pattern
 import kotlin.math.abs
 
@@ -76,29 +75,9 @@ class CompletionState(
         val endIndex = if (finishReason == "ins-stoptoken") {
             startIndex
         } else {
-            val firstEosIndex = requestedText.substring(startIndex).indexOfFirst { it == '\n' }
-            minOf(requestedText.length, startIndex + (if (firstEosIndex == -1) 0 else firstEosIndex))
+            requestedText.length - tailIndex
         }
 
-        var offset = 0
-        if (currentMultiline) {
-            val editorCurrentLineWithOffset = if (editorState.offsetByCurrentLine - 1 > 1)
-                editorState.currentLine.substring(editorState.offsetByCurrentLine - 1)
-            else editorState.currentLine
-            for (i in -1 downTo -firstLine.length) {
-                if (editorCurrentLineWithOffset.length <= -i) {
-                    break
-                }
-                val curCh = editorCurrentLineWithOffset.getChar(i)
-                val compCh = firstLine.getChar(i)
-                if (curCh != compCh) {
-                    break
-                }
-                offset += 1
-            }
-        }
-        val firstLineEndIndex = endIndex - offset
-        firstLine = firstLine.substring(0, firstLine.length - offset)
         val editedCompletion = if (currentMultiline) {
             firstLine + lines.subList(1, lines.size).joinToString("\n", prefix = "\n")
         } else {
@@ -110,7 +89,7 @@ class CompletionState(
             currentLinesAreEqual = false,
             multiline = currentMultiline,
             startIndex = startIndex,
-            firstLineEndIndex = firstLineEndIndex,
+            firstLineEndIndex = endIndex,
             endIndex = maxOf(endIndex, startIndex),
             createdTs = System.currentTimeMillis(),
             leftSymbolsToRemove = leftSymbolsToRemove,

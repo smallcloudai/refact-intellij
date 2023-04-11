@@ -13,7 +13,8 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.text.findTextRange
 import com.smallcloud.refactai.modes.completion.structs.Completion
-import dev.gitlive.difflib.patch.Patch
+import dev.gitlive.difflib.patch.AbstractDelta
+import dev.gitlive.difflib.patch.DeltaType
 import java.awt.Color
 import java.util.concurrent.Future
 
@@ -57,6 +58,21 @@ class AsyncCompletionLayout(
         }
     }
 
+    private fun getDeltasForFirstLine(completionData: Completion): List<AbstractDelta<Char>> {
+        val patch = completionData.getPatch()
+        val deltas = patch.getDeltas().sortedBy { it.source.position }
+            var endLine = false
+            return deltas.filter {
+                if (endLine) return@filter false
+                if (it.target.lines?.contains('\n') == true) {
+                    endLine = true
+                    return@filter true
+                }
+                return@filter true
+            }
+
+    }
+
     fun update(
         completionData: Completion,
         needToRender: Boolean,
@@ -72,18 +88,26 @@ class AsyncCompletionLayout(
             try {
                 blockEvents = true
                 editor.document.startGuardedBlockChecking()
-                val patch = completionData.getPatch()
-                for (del in patch.getDeltas()) {
+                val deltasFirstLine = getDeltasForFirstLine(completionData)
+                for (del in deltasFirstLine) {
                     if (inlayers[del.source.position] == null) {
                         inlayers[del.source.position] = AsyncInlayer(editor,
                                 completionData.startIndex + del.source.position)
                     }
                 }
-//                inlayer.alsoIfNull {
-//                    inlayer = AsyncInlayer(editor, completionData.startIndex)
-//                }
+                synchronized(this) {
+                    inlayers = inlayers.filter {
+                        val tmp = deltasFirstLine.find { del -> del.source.position == it.key }
+                        if (tmp == null) {
+                            ApplicationManager.getApplication().invokeAndWait { it.value.dispose() }
+                            return@filter false
+                        }
+                        return@filter true
+                    } as MutableMap<Int, AsyncInlayer>
+                }
+
                 highlight(completionData)
-                renderAndUpdateState(needToRender, animation, patch)
+                renderAndUpdateState(needToRender, animation, deltasFirstLine)
             } catch (ex: Exception) {
                 Disposer.dispose(this)
                 throw ex
@@ -98,27 +122,48 @@ class AsyncCompletionLayout(
     private fun renderAndUpdateState(
             needToRender: Boolean,
             animation: Boolean,
-            patch: Patch<Char>
+            deltasFirstLine: List<AbstractDelta<Char>>
     ) {
-        for (del in patch.getDeltas().sortedBy { it.source.position }) {
-            val inlayer = inlayers[del.source.position]
-            val text = del.target.lines?.joinToString("") ?: continue
+        val blockText = try {
+            val lines = lastCompletionData?.completion?.split('\n') ?: return
+            lines.subList(1, lines.size).joinToString("\n", prefix = "\n")
+        } catch (e: Exception) {
+            ""
+        }
+        for ((idx, del) in deltasFirstLine.sortedBy { it.source.position }.withIndex()) {
+            if (del.type == DeltaType.DELETE) continue
+            val isLast = idx == deltasFirstLine.size - 1
+
+            val inlayer = inlayers[del.source.position] ?: continue
+            var text = del.target.lines?.joinToString("") ?: continue
+            text = text.split("\n").first()
+            if (isLast) {
+                text += blockText
+            }
+            val currentText = inlayer.getText()
+            if (currentText == text) continue
+            inlayer.setText(text)
+            text = text.drop(currentText.length)
+            if (!isLast) {
+                text = text.split('\n').first()
+            }
+
             if (needToRender) {
                 if (animation) {
                     for (ch in text.chunked(renderChunkSize)) {
                         ApplicationManager.getApplication().invokeLater({
-                            inlayer?.addText(ch)
+                            inlayer.addText(ch)
                         }, { !this.needToRender })
                         Thread.sleep(renderChunkTimeoutMs)
                     }
                 } else {
                     ApplicationManager.getApplication().invokeLater({
-                        inlayer?.addText(text)
+                        inlayer.addText(text)
                     }, { !this.needToRender })
                 }
                 rendered = true
             } else {
-                inlayer?.addTextWithoutRendering(text)
+                inlayer.addTextWithoutRendering(text)
             }
         }
     }
@@ -126,35 +171,65 @@ class AsyncCompletionLayout(
     private fun highlight(completionData: Completion) {
         if (highlighted) return
 
-        if (completionData.firstLineEndIndex > completionData.startIndex ||
-            completionData.leftSymbolsToRemove > 0) {
+        var deltasFirstLine = getDeltasForFirstLine(completionData)
+        val lastDelta = deltasFirstLine.last()
+        deltasFirstLine = deltasFirstLine.dropLast(1)
+        val startIndex = completionData.startIndex
+
+        if (completionData.leftSymbolsToRemove > 0) {
             ApplicationManager.getApplication().invokeAndWait {
-                if (completionData.firstLineEndIndex > completionData.startIndex) {
-                    rangeHighlighters.add(
+                rangeHighlighters.add(
                         editor.markupModel.addRangeHighlighter(
-                            completionData.startIndex,
-                            completionData.firstLineEndIndex,
-                            99999,
-                            TextAttributes().apply {
-                                backgroundColor = Color(200, 0, 0, 80)
-                            },
-                            HighlighterTargetArea.EXACT_RANGE
+                                completionData.startIndex - completionData.leftSymbolsToRemove - completionData.leftSymbolsToSkip,
+                                completionData.startIndex - completionData.leftSymbolsToSkip,
+                                99999,
+                                TextAttributes().apply {
+                                    backgroundColor = Color(200, 0, 0, 80)
+                                },
+                                HighlighterTargetArea.EXACT_RANGE
                         )
+                )
+            }
+            highlighted = true
+        }
+
+        for (del in deltasFirstLine) {
+            if (del.type != DeltaType.DELETE) continue
+
+            val hlStart = startIndex + del.source.position
+            val hlFinish = hlStart + (del.source.lines?.size ?: 0)
+            if (hlFinish > hlStart) {
+                ApplicationManager.getApplication().invokeAndWait {
+                    rangeHighlighters.add(
+                            editor.markupModel.addRangeHighlighter(
+                                    hlStart, hlFinish,
+                                    99999,
+                                    TextAttributes().apply {
+                                        backgroundColor = Color(200, 0, 0, 80)
+                                    },
+                                    HighlighterTargetArea.EXACT_RANGE
+                            )
                     )
                 }
-                if (completionData.leftSymbolsToRemove > 0) {
-                    rangeHighlighters.add(
+                highlighted = true
+            }
+        }
+
+        val newLineIdx = lastDelta.target.lines?.indexOf('\n') ?: return
+        if (newLineIdx != -1) {
+            val startOffset = startIndex + lastDelta.source.position
+            ApplicationManager.getApplication().invokeAndWait {
+                rangeHighlighters.add(
                         editor.markupModel.addRangeHighlighter(
-                            completionData.startIndex - completionData.leftSymbolsToRemove - completionData.leftSymbolsToSkip,
-                            completionData.startIndex - completionData.leftSymbolsToSkip,
-                            99999,
-                            TextAttributes().apply {
-                                backgroundColor = Color(200, 0, 0, 80)
-                            },
-                            HighlighterTargetArea.EXACT_RANGE
+                                startOffset,
+                                completionData.firstLineEndOfLineIndex,
+                                99999,
+                                TextAttributes().apply {
+                                    backgroundColor = Color(200, 0, 0, 80)
+                                },
+                                HighlighterTargetArea.EXACT_RANGE
                         )
-                    )
-                }
+                )
             }
             highlighted = true
         }
@@ -200,20 +275,22 @@ class AsyncCompletionLayout(
             val endOffsetForReplace = if (patch.getDeltas().size > 1)
                 completion.firstLineEndOfLineIndex else completion.endIndex
 
-            if (patch.getDeltas().size <= 1) {
+            var needFullFirstLinePatch = completion.completion.contains('\n')
+
+            if (patch.getDeltas().size <= 1 && !needFullFirstLinePatch) {
                 patch = completion.getForFirstLinePatch()
             }
 
             val newline = patch.applyTo(completion.originalText.subSequence(
                     completion.startIndex, endOffsetForReplace).toList()).joinToString("")
             editor.document.replaceString(startIndex, endOffsetForReplace, newline)
-            var firstEosIndex = editor.document.text.substring(firstLineEndIndex).indexOfFirst { s -> s == '\n' }
-            if (firstEosIndex == -1) {
-                firstEosIndex = editor.document.text.substring(firstLineEndIndex).length
-            }
-            editor.caretModel.moveToOffset(startIndex + maxOffset)
+
+            var newEOSInLine = editor.document.text.substring(startIndex).indexOf('\n')
+            newEOSInLine = if (needFullFirstLinePatch)
+                if (newEOSInLine == -1) editor.document.text.length - startIndex else newEOSInLine else maxOffset
+            editor.caretModel.moveToOffset(startIndex + newEOSInLine)
             if (completion.multiline) {
-                startIndex += firstEosIndex
+                startIndex += newEOSInLine
                 val residual = lines.subList(1, lines.size).joinToString("\n", prefix = "\n")
                 editor.document.replaceString(startIndex, startIndex, residual)
                 editor.caretModel.moveToOffset(startIndex + residual.length)

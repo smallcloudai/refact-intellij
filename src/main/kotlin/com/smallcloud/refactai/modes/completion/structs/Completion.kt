@@ -18,7 +18,14 @@ data class Completion(
     val isFromCache: Boolean = false
 ) {
 
-    val firstLineEndOfLineIndex = startIndex + originalText.substring(startIndex).indexOfFirst { it == '\n' }
+    val firstLineEndOfLineIndex: Int
+    init {
+        val firstNewLine = originalText.substring(startIndex).indexOfFirst { it == '\n' }
+        val endOfFile = originalText.length
+        firstLineEndOfLineIndex = if (firstNewLine == -1)
+            if (endOfFile > startIndex) endOfFile else startIndex
+        else startIndex + firstNewLine
+    }
     fun isMakeSense(): Boolean {
         return completion.isNotEmpty()
     }

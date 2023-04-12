@@ -17,6 +17,7 @@ import dev.gitlive.difflib.patch.AbstractDelta
 import dev.gitlive.difflib.patch.DeltaType
 import java.awt.Color
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 class AsyncCompletionLayout(
     private val editor: Editor
@@ -53,7 +54,7 @@ class AsyncCompletionLayout(
     private fun stopUpdate() {
         isUpdating = false
         updateTask?.let {
-            it.get()
+            it.get(1, TimeUnit.SECONDS)
             updateTask = null
         }
     }
@@ -218,20 +219,22 @@ class AsyncCompletionLayout(
         val newLineIdx = lastDelta.target.lines?.indexOf('\n') ?: return
         if (newLineIdx != -1) {
             val startOffset = startIndex + lastDelta.source.position
-            ApplicationManager.getApplication().invokeAndWait {
-                rangeHighlighters.add(
-                        editor.markupModel.addRangeHighlighter(
-                                startOffset,
-                                completionData.firstLineEndOfLineIndex,
-                                99999,
-                                TextAttributes().apply {
-                                    backgroundColor = Color(200, 0, 0, 80)
-                                },
-                                HighlighterTargetArea.EXACT_RANGE
-                        )
-                )
+            if (startOffset < completionData.firstLineEndOfLineIndex) {
+                ApplicationManager.getApplication().invokeAndWait {
+                    rangeHighlighters.add(
+                            editor.markupModel.addRangeHighlighter(
+                                    startOffset,
+                                    completionData.firstLineEndOfLineIndex,
+                                    99999,
+                                    TextAttributes().apply {
+                                        backgroundColor = Color(200, 0, 0, 80)
+                                    },
+                                    HighlighterTargetArea.EXACT_RANGE
+                            )
+                    )
+                }
+                highlighted = true
             }
-            highlighted = true
         }
     }
 
@@ -273,7 +276,7 @@ class AsyncCompletionLayout(
             val maxPos = patch.getDeltas().maxBy { it.target.position }
             val maxOffset = maxPos.target.position + (maxPos.target.lines?.size ?: 0)
             val endOffsetForReplace = if (patch.getDeltas().size > 1)
-                completion.firstLineEndOfLineIndex else completion.endIndex
+                completion.firstLineEndOfLineIndex - completion.leftSymbolsToRemove else firstLineEndIndex
 
             var needFullFirstLinePatch = completion.completion.contains('\n')
 
@@ -282,7 +285,7 @@ class AsyncCompletionLayout(
             }
 
             val newline = patch.applyTo(completion.originalText.subSequence(
-                    completion.startIndex, endOffsetForReplace).toList()).joinToString("")
+                    startIndex, endOffsetForReplace).toList()).joinToString("")
             editor.document.replaceString(startIndex, endOffsetForReplace, newline)
 
             var newEOSInLine = editor.document.text.substring(startIndex).indexOf('\n')

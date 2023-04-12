@@ -39,19 +39,6 @@ data class Completion(
         return reversedText.substring(0, idx)
     }
 
-    fun getPatch(): Patch<Char> {
-        return try {
-            val originalPiece = originalText.subSequence(startIndex, maxOf(endIndex, firstLineEndOfLineIndex))
-
-            DiffUtils.diff(
-                    originalPiece.toList(),
-                    completion.toList(),
-            )
-        } catch (ex: Exception) {
-            Patch()
-        }
-
-    }
     fun getForFirstLineEOSPatch(): Patch<Char> {
         return try {
             val originalPiece = originalText.subSequence(startIndex, firstLineEndOfLineIndex)

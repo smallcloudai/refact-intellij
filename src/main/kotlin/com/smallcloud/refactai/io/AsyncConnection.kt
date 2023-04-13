@@ -5,7 +5,6 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.text.findTextRange
 import com.smallcloud.refactai.account.inferenceLogin
 import com.smallcloud.refactai.statistic.UsageStatistic
@@ -50,7 +49,8 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         .setIOReactorConfig(
             IOReactorConfig.custom()
                 .setIoThreadCount(8)
-                .setSoTimeout(30, TimeUnit.SECONDS)
+                .setSoTimeout(5, TimeUnit.MINUTES)
+
                 .setSelectInterval(TimeValue.ofMilliseconds(5))
                 .setTcpNoDelay(true)
                 .build()
@@ -72,7 +72,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
 
     init {
         client.start()
-        client.execute(SimpleHttpRequest.create(Method.GET, uri), null).get()
+        client.execute(SimpleHttpRequest.create(Method.GET, uri), null).get(5, TimeUnit.SECONDS)
     }
 
     fun post(

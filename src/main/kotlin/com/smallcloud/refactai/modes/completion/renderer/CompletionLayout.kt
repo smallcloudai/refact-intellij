@@ -185,11 +185,6 @@ class AsyncCompletionLayout(
     private fun highlight(completionData: Completion) {
         if (highlighted) return
 
-        var deltasFirstLine = completionData.getForFirstLineEOSPatch().getDeltas()
-        val lastDelta = deltasFirstLine.last()
-        deltasFirstLine = deltasFirstLine.dropLast(1).toMutableList()
-        val startIndex = completionData.startIndex
-
         if (completionData.leftSymbolsToRemove > 0) {
             ApplicationManager.getApplication().invokeAndWait {
                 rangeHighlighters.add(
@@ -206,6 +201,12 @@ class AsyncCompletionLayout(
             }
             highlighted = true
         }
+
+        var deltasFirstLine = completionData.getForFirstLineEOSPatch().getDeltas()
+        if (deltasFirstLine.isEmpty()) return
+        val lastDelta = deltasFirstLine.last()
+        deltasFirstLine = deltasFirstLine.dropLast(1).toMutableList()
+        val startIndex = completionData.startIndex
 
         for (del in deltasFirstLine) {
             if (del.type != DeltaType.DELETE) continue
@@ -301,9 +302,7 @@ class AsyncCompletionLayout(
                     startIndex, endOffsetForReplace).toList()).joinToString("")
             editor.document.replaceString(startIndex, endOffsetForReplace, newline)
 
-            var newEOSInLine = editor.document.text.substring(startIndex).indexOf('\n')
-            newEOSInLine = if (needFullFirstLinePatch)
-                if (newEOSInLine == -1) editor.document.text.length - startIndex else newEOSInLine else maxOffset
+            val newEOSInLine = editor.document.text.substring(startIndex).indexOf('\n')
             editor.caretModel.moveToOffset(startIndex + newEOSInLine)
             if (completion.multiline) {
                 startIndex += newEOSInLine

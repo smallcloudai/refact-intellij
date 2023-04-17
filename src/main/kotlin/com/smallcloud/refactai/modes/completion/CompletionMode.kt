@@ -418,7 +418,7 @@ class CompletionMode(
         lastStatistic = null
         try {
             processTask?.cancel(true)
-            processTask?.get(1, TimeUnit.SECONDS)
+            processTask?.get()
         } catch (_: CancellationException) {
         } finally {
             if (InferenceGlobalContext.status != ConnectionStatus.DISCONNECTED) {

@@ -67,7 +67,7 @@ class HighlightMode(
             finishAnimation()
             layout?.dispose()
             layout = null
-            if (editor != null) {
+            if (editor != null && !Thread.currentThread().stackTrace.any { it.methodName == "switchMode" }) {
                 ModeProvider.getOrCreateModeProvider(editor).switchMode()
             }
         }

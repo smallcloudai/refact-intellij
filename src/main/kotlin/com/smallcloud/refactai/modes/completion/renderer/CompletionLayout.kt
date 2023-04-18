@@ -302,7 +302,10 @@ class AsyncCompletionLayout(
                     startIndex, endOffsetForReplace).toList()).joinToString("")
             editor.document.replaceString(startIndex, endOffsetForReplace, newline)
 
-            val newEOSInLine = editor.document.text.substring(startIndex).indexOf('\n')
+            var newEOSInLine = editor.document.text.substring(startIndex).indexOf('\n')
+            if (newEOSInLine == -1) {
+                newEOSInLine = editor.document.text.substring(startIndex).length
+            }
             editor.caretModel.moveToOffset(startIndex + newEOSInLine)
             if (completion.multiline) {
                 startIndex += newEOSInLine

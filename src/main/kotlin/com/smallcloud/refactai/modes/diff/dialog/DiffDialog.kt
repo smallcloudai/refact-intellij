@@ -17,6 +17,7 @@ import com.intellij.util.ui.JBUI
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.AccountManager
+import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.modes.diff.DiffIntentProvider
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
 import com.smallcloud.refactai.privacy.Privacy
@@ -109,13 +110,22 @@ class DiffDialog(
 
     private fun getReasonForEntry(entry: LongthinkFunctionEntry): String? {
         val vFile = FileDocumentManager.getInstance().getFile(editor.document)
-        if (entry.thirdParty && PrivacyService.getPrivacy(vFile) < Privacy.THIRDPARTY) {
-            return RefactAIBundle.message("aiToolbox.reasons.thirdParty")
+        val isSelfHosted = InferenceGlobalContext.hasUserInferenceUri()
+
+        if (isSelfHosted) {
+            if (entry.thirdParty) {
+                return RefactAIBundle.message("aiToolbox.reasons.thirdPartyInSelfHosted")
+            }
+        } else {
+            if (entry.thirdParty && PrivacyService.getPrivacy(vFile) < Privacy.THIRDPARTY) {
+                return RefactAIBundle.message("aiToolbox.reasons.thirdParty")
+            }
+            if (getFilteredIntent(entry.intent).endsWith("?")) return null
+            if (vFile != null && !entry.supportsLanguages.match(vFile.name)) {
+                return RefactAIBundle.message("aiToolbox.reasons.supportLang")
+            }
         }
-        if (getFilteredIntent(entry.intent).endsWith("?")) return null
-        if (vFile != null && !entry.supportsLanguages.match(vFile.name)) {
-            return RefactAIBundle.message("aiToolbox.reasons.supportLang")
-        }
+
         if (fromHL) {
             if (!entry.supportHighlight) {
                 return RefactAIBundle.message("aiToolbox.reasons.selectCodeFirst",
@@ -139,7 +149,6 @@ class DiffDialog(
                 return RefactAIBundle.message("aiToolbox.reasons.writeSomething")
             }
         }
-
         return null
     }
 

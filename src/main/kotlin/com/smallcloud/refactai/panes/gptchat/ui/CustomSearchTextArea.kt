@@ -341,6 +341,18 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         }
     }
 
+    override fun setEnabled(newVal: Boolean) {
+        textArea.isEnabled = newVal
+        myExtraActionsPanel.isEnabled = newVal
+        myClearButton.isEnabled = newVal
+        myNewLineButton.isEnabled = newVal
+        myAddSelectedLinesCB.isEnabled = newVal
+        for (button in UIUtil.findComponentsOfType(myExtraActionsPanel, ActionButton::class.java)) {
+            button.isEnabled = newVal
+        }
+        super.setEnabled(newVal)
+    }
+
     companion object {
         private val BACKGROUND_COLOR = JBColor.namedColor("Editor.SearchField.background", UIUtil.getTextFieldBackground())
         const val JUST_CLEARED_KEY = "JUST_CLEARED"

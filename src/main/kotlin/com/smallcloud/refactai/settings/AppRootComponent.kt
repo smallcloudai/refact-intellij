@@ -19,6 +19,8 @@ import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.*
 import com.smallcloud.refactai.account.AccountManager.isLoggedIn
 import com.smallcloud.refactai.account.AccountManager.logout
+import com.smallcloud.refactai.io.InferenceGlobalContext
+import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
 import com.smallcloud.refactai.privacy.PrivacyService
@@ -27,6 +29,7 @@ import com.smallcloud.refactai.settings.renderer.privacyToString
 import com.smallcloud.refactai.utils.makeLinksPanel
 import java.awt.event.ItemEvent
 import java.awt.event.ItemListener
+import java.net.URI
 import java.util.concurrent.TimeUnit
 import javax.swing.*
 
@@ -50,6 +53,8 @@ class AppRootComponent(private val project: Project) {
 
     private val privacyTitledSeparator = TitledSeparator(RefactAIBundle.message("rootSettings.yourPrivacyRules"))
     private val privacySettingDescription = JBLabel("${RefactAIBundle.message("rootSettings.globalDefaults")}:")
+    private val privacySettingSelfHostedWarning =
+            JBLabel("<html>${RefactAIBundle.message("privacy.selfhostedModeWarning")}</html>")
 
     private val privacyDefaultsRBGroup = ButtonGroup()
     private val privacyDefaultsRBDisabled = JBRadioButton(
@@ -186,6 +191,15 @@ class AppRootComponent(private val project: Project) {
                 }
             })
         ApplicationManager.getApplication()
+                .messageBus
+                .connect(PluginState.instance)
+                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
+                    override fun userInferenceUriChanged(newUrl: URI?) {
+                        revalidate()
+                    }
+                })
+
+        ApplicationManager.getApplication()
             .messageBus
             .connect(PluginState.instance)
             .subscribe(LoginCounterChangedNotifier.TOPIC, object : LoginCounterChangedNotifier {
@@ -235,15 +249,27 @@ class AppRootComponent(private val project: Project) {
 
         privacyTitledSeparator.isVisible = currentState == SettingsState.SIGNED
         privacySettingDescription.isVisible = currentState == SettingsState.SIGNED
+        privacySettingDescription.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
         privacyDefaultsRBDisabled.isVisible = currentState == SettingsState.SIGNED
+        privacyDefaultsRBDisabled.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
         privacyDefaultsRBRefactAI.isVisible = currentState == SettingsState.SIGNED
+        privacyDefaultsRBRefactAI.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
         privacyDefaultsRBRefactAIPlus.isVisible = currentState == SettingsState.SIGNED
+        privacyDefaultsRBRefactAIPlus.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
         privacyDefaultsRBDisabledDescription.isVisible = currentState == SettingsState.SIGNED
+        privacyDefaultsRBDisabledDescription.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
         privacyDefaultsRBRefactAIDescription.isVisible = currentState == SettingsState.SIGNED
+        privacyDefaultsRBRefactAIDescription.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
         privacyDefaultsRBRefactAIPlusDescription.isVisible = currentState == SettingsState.SIGNED
+        privacyDefaultsRBRefactAIPlusDescription.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
         privacyOverridesLabel.isVisible = currentState == SettingsState.SIGNED
+        privacyOverridesLabel.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
         privacyOverridesScrollPane.isVisible = currentState == SettingsState.SIGNED
+        privacyOverridesScrollPane.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
         privacyOverridesTable.isVisible = currentState == SettingsState.SIGNED
+        privacyOverridesTable.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+
+        privacySettingSelfHostedWarning.isVisible = currentState == SettingsState.SIGNED && InferenceGlobalContext.hasUserInferenceUri()
     }
 
     val preferredFocusedComponent: JComponent
@@ -261,6 +287,10 @@ class AppRootComponent(private val project: Project) {
             addComponent(loginButton)
 
             addComponent(privacyTitledSeparator, UIUtil.LARGE_VGAP)
+            addComponent(JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                add(privacySettingSelfHostedWarning)
+            }, UIUtil.LARGE_VGAP)
             addComponent(privacySettingDescription, UIUtil.LARGE_VGAP)
             addComponent(privacyDefaultsRBDisabled, (UIUtil.DEFAULT_VGAP * 1.5).toInt())
             addComponent(privacyDefaultsRBDisabledDescription, 0)

@@ -69,7 +69,7 @@ class CompletionMode(
         }
         val fileName = getActiveFile(event.editor.document) ?: return
         if (PrivacyService.instance.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
-            == Privacy.DISABLED) return
+            == Privacy.DISABLED && !InferenceGlobalContext.hasUserInferenceUri()) return
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         var maybeState: EditorTextState? = null
         val debounceMs: Long

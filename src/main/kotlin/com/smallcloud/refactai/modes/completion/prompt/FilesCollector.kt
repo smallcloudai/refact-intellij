@@ -15,6 +15,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.ProjectScope
 import com.intellij.util.ObjectUtils
+import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyService
 import java.nio.file.Path
@@ -98,7 +99,8 @@ class FilesCollector(
 
     fun collect(): List<FileInformationEntry> {
         return filesInformation.filter {
-            it.file.isValid && it.file.exists() && PrivacyService.instance.getPrivacy(it.file) != Privacy.DISABLED
+            it.file.isValid && it.file.exists() && (PrivacyService.instance.getPrivacy(it.file) != Privacy.DISABLED
+                    || InferenceGlobalContext.hasUserInferenceUri())
         }
     }
 

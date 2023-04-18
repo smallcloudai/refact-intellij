@@ -74,6 +74,10 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     update(null)
                 }
 
+                override fun userInferenceUriChanged(unused: URI?) {
+                    update(null)
+                }
+
                 override fun modelChanged(newModel: String?) {
                     update(null)
                 }
@@ -159,7 +163,8 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         return when (InferenceGlobalContext.status) {
             ConnectionStatus.DISCONNECTED -> AllIcons.Debugger.ThreadStates.Socket
             ConnectionStatus.ERROR -> AllIcons.Debugger.Db_exception_breakpoint
-            ConnectionStatus.CONNECTED -> if (isPrivacyEnabled()) LOGO_RED_12x12 else HAND_12x12
+            ConnectionStatus.CONNECTED -> if (isPrivacyEnabled() || InferenceGlobalContext.hasUserInferenceUri())
+                LOGO_RED_12x12 else HAND_12x12
             ConnectionStatus.PENDING -> AnimatedIcon.Default()
         }
     }
@@ -186,7 +191,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 return InferenceGlobalContext.lastErrorMsg
             }
             ConnectionStatus.CONNECTED -> {
-                if (isPrivacyEnabled()) {
+                if (isPrivacyEnabled() || InferenceGlobalContext.hasUserInferenceUri()) {
                     var tooltipStr = "<html>"
                     if (InferenceGlobalContext.inferenceUri != null) {
                         tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUri!!.resolve(defaultContrastUrlSuffix)}"

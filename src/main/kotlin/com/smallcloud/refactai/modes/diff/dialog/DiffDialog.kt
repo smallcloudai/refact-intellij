@@ -113,7 +113,7 @@ class DiffDialog(
         val isSelfHosted = InferenceGlobalContext.hasUserInferenceUri()
 
         if (isSelfHosted) {
-            if (entry.thirdParty) {
+            if (getFilteredIntent(entry.intent).endsWith("?") || entry.thirdParty) {
                 return RefactAIBundle.message("aiToolbox.reasons.thirdPartyInSelfHosted")
             }
         } else {

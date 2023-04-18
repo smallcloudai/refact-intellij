@@ -12,10 +12,8 @@ import java.net.URI
 
 object InferenceGlobalContext {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
-    private var cloudConnection_: Connection? = null
-    private var userConnection_: Connection? = null
-    private var cloudInferenceConnection_: AsyncConnection? = null
-    private var userInferenceConnection_: AsyncConnection? = null
+    var connection: Connection? = null
+    var inferenceConnection: AsyncConnection? = null
 
     init {
         reconnect()
@@ -48,10 +46,8 @@ object InferenceGlobalContext {
     }
 
     fun reconnect() {
-        cloudConnection_ = cloudInferenceUri?.let { makeConnection(it) }
-        userConnection_ = userInferenceUri?.let { makeConnection(it, true) }
-        cloudInferenceConnection_ = cloudInferenceUri?.let { makeAsyncConnection(it) }
-        userInferenceConnection_ = userInferenceUri?.let { makeAsyncConnection(it, true) }
+        connection = inferenceUri?.let { makeConnection(it, hasUserInferenceUri()) }
+        inferenceConnection = inferenceUri?.let { makeAsyncConnection(it, hasUserInferenceUri()) }
     }
 
     var status: ConnectionStatus = ConnectionStatus.DISCONNECTED
@@ -101,27 +97,6 @@ object InferenceGlobalContext {
             return AppSettingsState.instance.inferenceUri?.let { URI(it) }
         }
 
-    private val userInferenceUri: URI?
-        get() {
-            return AppSettingsState.instance.userInferenceUri?.let { URI(it) }
-        }
-
-    val inferenceConnection: AsyncConnection?
-        get() {
-            return if (userInferenceConnection_ == null) cloudInferenceConnection_ else userInferenceConnection_
-        }
-    val cloudConnection: Connection?
-        get() {
-            return cloudConnection_
-        }
-    val userConnection: Connection?
-        get() {
-            return userConnection_
-        }
-    val connection: Connection?
-        get() {
-            return if (userConnection_ == null) cloudConnection_ else userConnection_
-        }
 
     fun hasUserInferenceUri(): Boolean {
         return AppSettingsState.instance.userInferenceUri != null
@@ -187,19 +162,12 @@ object InferenceGlobalContext {
                 .useMultipleFilesCompletionChanged(newValue)
         }
 
-    fun makeRequest(
-            requestData: SMCRequestBody,
-            sendToCloudServer: Boolean
-    ): SMCRequest? {
+    fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
         val apiKey = AccountManager.apiKey
         if (apiKey.isNullOrEmpty()) return null
 
         requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
         requestData.client = "${Resources.client}-${Resources.version}"
-        return if (sendToCloudServer) {
-            cloudInferenceUri?.let { SMCRequest(it, requestData, apiKey, sendToCloudServer=sendToCloudServer) }
-        } else {
-            inferenceUri?.let { SMCRequest(it, requestData, apiKey, sendToCloudServer=sendToCloudServer) }
-        }
+        return inferenceUri?.let { SMCRequest(it, requestData, apiKey) }
     }
 }

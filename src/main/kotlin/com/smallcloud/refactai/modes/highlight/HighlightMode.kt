@@ -167,7 +167,6 @@ class HighlightMode(
             stat, entry.intent, funcName, listOf(),
             model = InferenceGlobalContext.longthinkModel ?: entry.model
                 ?: InferenceGlobalContext.model ?: Resources.defaultModel,
-            sendToCloudServer = entry.thirdParty
         ) ?: return
         ModeProvider.getOrCreateModeProvider(editor).switchMode(ModeType.Highlight)
 

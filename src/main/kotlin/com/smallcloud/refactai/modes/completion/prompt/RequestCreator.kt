@@ -19,7 +19,6 @@ object RequestCreator {
             promptInfo: List<PromptInfo>,
             model: String,
             stream: Boolean = false,
-            sendToCloudServer: Boolean = false
     ): SMCRequest? {
         var currentBudget = symbolsBudget
         val sources = mutableMapOf(fileName to text)
@@ -66,11 +65,9 @@ object RequestCreator {
 
         return InferenceGlobalContext.makeRequest(
             requestBody,
-            sendToCloudServer
         )?.also {
             it.stat = stat
             it.uri = it.uri.resolve(Resources.defaultContrastUrlSuffix)
-            it.sendToCloudServer = sendToCloudServer
         }
     }
 }

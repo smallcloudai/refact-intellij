@@ -114,11 +114,8 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
     val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCoolDown * 1000
     if (needToVerify) lastInferenceVerifyTs = now
 
-    val connection = if (request.sendToCloudServer) InferenceGlobalContext.cloudConnection else
-        InferenceGlobalContext.connection
-    connection ?: return null
-
-    val job = connection.post(uri, body, headers, needVerify = needToVerify, stat=request.stat)
+    val job = InferenceGlobalContext.connection?.post(uri, body, headers, needVerify = needToVerify, stat=request.stat)
+            ?: return null
 
     job.future = job.future.thenApplyAsync {
         val rawObject = gson.fromJson((it as String), JsonObject::class.java)

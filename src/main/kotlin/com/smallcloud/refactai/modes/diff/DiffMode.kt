@@ -168,7 +168,6 @@ class DiffMode(
                 startSelectionOffset, endSelectionOffset,
                 stat, entry.intent, funcName, listOf(),
                 model = InferenceGlobalContext.longthinkModel ?: entry.model ?: InferenceGlobalContext.model ?: Resources.defaultModel,
-                sendToCloudServer = entry.thirdParty
             ) ?: return
             startPosition = editor.offsetToLogicalPosition(startSelectionOffset)
             finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1)

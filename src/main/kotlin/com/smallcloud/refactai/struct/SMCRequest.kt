@@ -33,5 +33,4 @@ data class SMCRequest(
         var body: SMCRequestBody,
         var token: String,
         var stat: UsageStatistic = UsageStatistic(),
-        var sendToCloudServer: Boolean = false
 )

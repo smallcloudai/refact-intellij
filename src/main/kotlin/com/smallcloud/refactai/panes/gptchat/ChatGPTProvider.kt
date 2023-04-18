@@ -11,7 +11,7 @@ import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.io.AsyncConnection
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContext
-import com.smallcloud.refactai.io.InferenceGlobalContext.cloudInferenceUri
+import com.smallcloud.refactai.io.InferenceGlobalContext.inferenceUri
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.panes.gptchat.structs.ChatGPTRequest
 import com.smallcloud.refactai.panes.gptchat.structs.ParsedText
@@ -45,17 +45,25 @@ class ChatGPTProvider : ActionListener {
     private var processTask: Future<*>? = null
     private var canceled: Boolean = false
 
-    init {
-        cloudInferenceUri?.let {
-            connection = ConnectionManager.getAsyncConnection(it.resolve(defaultChatUrlSuffix))
+    private fun reconnect() {
+        try {
+            inferenceUri?.let {
+                connection = ConnectionManager.getAsyncConnection(it.resolve(defaultChatUrlSuffix))
+            }
+        } catch (_: Exception) {
+            connection = null
         }
+    }
+
+    init {
+        reconnect()
         ApplicationManager.getApplication().messageBus
                 .connect(PluginState.instance)
                 .subscribe(
                         InferenceGlobalContextChangedNotifier.TOPIC,
                         object : InferenceGlobalContextChangedNotifier {
-                            override fun inferenceUriChanged(newUrl: URI?) {
-                                connection = newUrl?.let { ConnectionManager.getAsyncConnection(it.resolve(defaultChatUrlSuffix)) }
+                            override fun userInferenceUriChanged(newUrl: URI?) {
+                                reconnect()
                             }
                         }
                 )
@@ -91,7 +99,7 @@ class ChatGPTProvider : ActionListener {
 
         pane.add(MessageComponent(md2html(text), true))
         val message = MessageComponent(listOf(ParsedText("...", "...", false)), false)
-        val req = ChatGPTRequest(cloudInferenceUri!!.resolve(defaultChatUrlSuffix),
+        val req = ChatGPTRequest(inferenceUri!!.resolve(defaultChatUrlSuffix),
                 AccountManager.apiKey, pane.getFullHistory())
         pane.add(message)
         processTask = scheduler.submit {

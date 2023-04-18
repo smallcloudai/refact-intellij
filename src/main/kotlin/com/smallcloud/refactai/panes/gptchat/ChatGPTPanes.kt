@@ -4,15 +4,56 @@ import com.intellij.execution.ui.layout.impl.JBRunnerTabs
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.containers.ContainerUtil
+import com.smallcloud.refactai.PluginState
+import com.smallcloud.refactai.RefactAIBundle
+import com.smallcloud.refactai.io.InferenceGlobalContext
+import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
+import java.awt.BorderLayout
+import java.net.URI
 import javax.swing.JComponent
+import javax.swing.JPanel
 
 
 class ChatGPTPanes(project: Project, parent: Disposable) {
     private val paneBaseName = "Chat"
     private val panes = JBRunnerTabs(project, parent)
+    private val holder = JPanel().also {
+        it.layout = BorderLayout()
+    }
+    private val placeholder = JPanel().also { it ->
+        it.layout = BorderLayout()
+        it.add(JBLabel(RefactAIBundle.message("aiToolbox.panes.chat.placeholderSelfhosted")).also { label ->
+            label.verticalAlignment = JBLabel.CENTER
+            label.horizontalAlignment = JBLabel.CENTER
+            label.isEnabled = false
+        }, BorderLayout.CENTER)
+    }
+
+    private fun setupPanes(isAvailable: Boolean) {
+        holder.removeAll()
+        if (isAvailable) {
+            holder.add(panes)
+        } else {
+            holder.add(placeholder)
+        }
+    }
+
+    init {
+        setupPanes(!InferenceGlobalContext.hasUserInferenceUri())
+        ApplicationManager.getApplication()
+                .messageBus
+                .connect(PluginState.instance)
+                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
+                    override fun userInferenceUriChanged(newUrl: URI?) {
+                        setupPanes(!InferenceGlobalContext.hasUserInferenceUri())
+                    }
+                })
+    }
 
     private fun getTabNextText(intent: String): String {
         if (intent.isNotEmpty()) {
@@ -40,7 +81,7 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
     }
 
     fun getComponent(): JComponent {
-        return panes
+        return holder
     }
 
     fun addTab(intent: String = "", selectedText: String = "", needInsertCode: Boolean = false) {
@@ -56,6 +97,7 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
             override fun actionPerformed(e: AnActionEvent) {
                 addTab()
             }
+
             override fun getActionUpdateThread(): ActionUpdateThread {
                 return ActionUpdateThread.EDT
             }
@@ -68,6 +110,7 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
                     addTab()
                 }
             }
+
             override fun getActionUpdateThread(): ActionUpdateThread {
                 return ActionUpdateThread.EDT
             }

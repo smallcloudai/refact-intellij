@@ -1,1 +1,1 @@
-# codify-plugin-intellij
+# refact-plugin-intellij

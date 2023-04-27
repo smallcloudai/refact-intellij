@@ -7,11 +7,8 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources.defaultChatUrlSuffix
-import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.io.AsyncConnection
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.InferenceGlobalContext
-import com.smallcloud.refactai.io.InferenceGlobalContext.inferenceUri
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.panes.gptchat.structs.ChatGPTRequest
 import com.smallcloud.refactai.panes.gptchat.structs.ParsedText
@@ -19,17 +16,19 @@ import com.smallcloud.refactai.panes.gptchat.ui.MessageComponent
 import com.smallcloud.refactai.panes.gptchat.utils.MsgBuilder
 import com.smallcloud.refactai.panes.gptchat.utils.md2html
 import com.smallcloud.refactai.statistic.UsageStatistic
+import com.smallcloud.refactai.struct.DeploymentMode
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
-import java.net.URI
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.ConnectionManager.Companion.instance as ConnectionManager
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class ChatGPTProvider : ActionListener {
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
@@ -47,7 +46,7 @@ class ChatGPTProvider : ActionListener {
 
     private fun reconnect() {
         try {
-            inferenceUri?.let {
+            InferenceGlobalContext.inferenceUri?.let {
                 connection = ConnectionManager.getAsyncConnection(it.resolve(defaultChatUrlSuffix))
             }
         } catch (_: Exception) {
@@ -62,7 +61,7 @@ class ChatGPTProvider : ActionListener {
                 .subscribe(
                         InferenceGlobalContextChangedNotifier.TOPIC,
                         object : InferenceGlobalContextChangedNotifier {
-                            override fun userInferenceUriChanged(newUrl: URI?) {
+                            override fun deploymentModeChanged(newValue: DeploymentMode) {
                                 reconnect()
                             }
                         }
@@ -99,7 +98,7 @@ class ChatGPTProvider : ActionListener {
 
         pane.add(MessageComponent(md2html(text), true))
         val message = MessageComponent(listOf(ParsedText("...", "...", false)), false)
-        val req = ChatGPTRequest(inferenceUri!!.resolve(defaultChatUrlSuffix),
+        val req = ChatGPTRequest(InferenceGlobalContext.inferenceUri!!.resolve(defaultChatUrlSuffix),
                 AccountManager.apiKey, pane.getFullHistory())
         pane.add(message)
         processTask = scheduler.submit {

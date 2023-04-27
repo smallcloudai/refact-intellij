@@ -7,7 +7,6 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.RefactAIBundle
-import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.panes.gptchat.State
 import com.smallcloud.refactai.panes.gptchat.structs.HistoryEntry
 import com.smallcloud.refactai.panes.gptchat.ui.MessageComponent
@@ -21,6 +20,7 @@ import javax.swing.Box
 import javax.swing.JPanel
 import javax.swing.JScrollBar
 import javax.swing.ScrollPaneConstants
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 
 
 class MyScrollPane(view: Component?, vsbPolicy: Int, hsbPolicy: Int) : JBScrollPane(view, vsbPolicy, hsbPolicy) {

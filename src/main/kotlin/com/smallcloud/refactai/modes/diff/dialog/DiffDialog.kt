@@ -16,8 +16,6 @@ import com.intellij.util.ui.HTMLEditorKitBuilder
 import com.intellij.util.ui.JBUI
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.account.AccountManager
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.modes.diff.DiffIntentProvider
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
 import com.smallcloud.refactai.privacy.Privacy
@@ -31,6 +29,8 @@ import javax.swing.border.CompoundBorder
 import javax.swing.border.EmptyBorder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyService
 import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
 import com.smallcloud.refactai.statistic.ExtraInfoService.Companion.instance as ExtraInfoService
@@ -110,7 +110,7 @@ class DiffDialog(
 
     private fun getReasonForEntry(entry: LongthinkFunctionEntry): String? {
         val vFile = FileDocumentManager.getInstance().getFile(editor.document)
-        val isSelfHosted = InferenceGlobalContext.hasUserInferenceUri()
+        val isSelfHosted = InferenceGlobalContext.isSelfHosted
 
         if (isSelfHosted) {
             if (getFilteredIntent(entry.intent).endsWith("?") || entry.thirdParty) {

@@ -3,12 +3,12 @@ package com.smallcloud.refactai.settings
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
 import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import org.jetbrains.annotations.Nls
 import java.net.URI
 import javax.swing.JComponent
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 /**
  * Provides controller functionality for application settings.
@@ -53,10 +53,10 @@ class AppSettingsConfigurable : Configurable {
         modified = modified or (mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model != null)
 
         modified =
-            modified or (mySettingsComponent!!.contrastUrlText.isNotEmpty() && (!InferenceGlobalContext.hasUserInferenceUri() ||
+            modified or (mySettingsComponent!!.contrastUrlText.isNotEmpty() && (InferenceGlobalContext.isCloud ||
                     makeUrlGreat(mySettingsComponent!!.contrastUrlText) != InferenceGlobalContext.inferenceUri))
         modified =
-            modified or (mySettingsComponent!!.contrastUrlText.isEmpty() && InferenceGlobalContext.hasUserInferenceUri())
+            modified or (mySettingsComponent!!.contrastUrlText.isEmpty() && !InferenceGlobalContext.isCloud)
 
         modified = modified || mySettingsComponent!!.useForceCompletion != InferenceGlobalContext.useForceCompletion
         modified = modified || mySettingsComponent!!.useMultipleFilesCompletion != InferenceGlobalContext.useMultipleFilesCompletion
@@ -98,7 +98,7 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.tokenText = AccountManager.apiKey ?: ""
         mySettingsComponent!!.modelText = InferenceGlobalContext.model ?: ""
         mySettingsComponent!!.contrastUrlText =
-            if (InferenceGlobalContext.hasUserInferenceUri()) InferenceGlobalContext.inferenceUri.toString() else ""
+            if (InferenceGlobalContext.isSelfHosted) InferenceGlobalContext.inferenceUri.toString() else ""
         mySettingsComponent!!.useForceCompletion = InferenceGlobalContext.useForceCompletion
         mySettingsComponent!!.useMultipleFilesCompletion = InferenceGlobalContext.useMultipleFilesCompletion
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled

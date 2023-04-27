@@ -17,7 +17,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
     }
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val contentFactory = ContentFactory.SERVICE.getInstance()
+        val contentFactory = ContentFactory.getInstance()
 
         val content: Content = contentFactory.createContent(
                 gptChatPanes?.getComponent(),

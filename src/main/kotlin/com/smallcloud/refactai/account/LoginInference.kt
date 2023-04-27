@@ -4,8 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import java.net.URI
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 fun getInferenceUrl(): URI? {
     val inferUrl = InferenceGlobalContext.inferenceUri ?: return null
@@ -14,9 +14,7 @@ fun getInferenceUrl(): URI? {
 
 fun inferenceLogin(): String {
     val conn = InferenceGlobalContext.connection ?: return ""
-
-    val acc = AccountManager
-    val token = acc.apiKey
+    val token = AccountManager.instance.apiKey
 
     val inferUrl = getInferenceUrl() ?: return ""
     val headers = mutableMapOf(

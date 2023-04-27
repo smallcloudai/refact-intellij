@@ -10,10 +10,10 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 import com.intellij.util.xmlb.annotations.Transient
 import com.smallcloud.refactai.ExtraInfoChangedNotifier
 import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import java.net.URI
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 
 
 /**

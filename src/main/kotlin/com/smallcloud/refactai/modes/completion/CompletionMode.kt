@@ -12,7 +12,6 @@ import com.intellij.util.alsoIfNull
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.streamedInferenceFetch
 import com.smallcloud.refactai.modes.EditorTextState
 import com.smallcloud.refactai.modes.Mode
@@ -35,6 +34,7 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class CompletionMode(
     override var needToRender: Boolean = true
@@ -69,7 +69,7 @@ class CompletionMode(
         }
         val fileName = getActiveFile(event.editor.document) ?: return
         if (PrivacyService.instance.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
-            == Privacy.DISABLED && !InferenceGlobalContext.hasUserInferenceUri()) return
+            == Privacy.DISABLED && !InferenceGlobalContext.isSelfHosted) return
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         var maybeState: EditorTextState? = null
         val debounceMs: Long

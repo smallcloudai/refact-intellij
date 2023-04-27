@@ -8,6 +8,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.settings.AppRootConfigurable
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 private class ProjectViewPrivacySetterAction(
@@ -64,6 +65,7 @@ class RefactAIPrivacyGroupAction : ActionGroup() {
     override fun update(event: AnActionEvent) {
         val files: Array<VirtualFile> = event.getData<Array<VirtualFile>>(CommonDataKeys.VIRTUAL_FILE_ARRAY) ?: return
         event.presentation.text = RefactAIBundle.message("privacy.contextMenu")
+        event.presentation.isEnabled = InferenceGlobalContext.isCloud
         if (PrivacyService.instance.getPrivacy(files.first()) != Privacy.DISABLED) {
             event.presentation.icon = Resources.Icons.LOGO_RED_16x16
         } else {

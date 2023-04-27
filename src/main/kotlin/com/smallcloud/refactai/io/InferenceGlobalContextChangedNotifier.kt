@@ -1,6 +1,7 @@
 package com.smallcloud.refactai.io
 
 import com.intellij.util.messages.Topic
+import com.smallcloud.refactai.struct.DeploymentMode
 import java.net.URI
 
 interface InferenceGlobalContextChangedNotifier {
@@ -12,6 +13,7 @@ interface InferenceGlobalContextChangedNotifier {
     fun useForceCompletionModeChanged(newValue: Boolean) {}
     fun useMultipleFilesCompletionChanged(newValue: Boolean) {}
     fun developerModeEnabledChanged(newValue: Boolean) {}
+    fun deploymentModeChanged(newValue: DeploymentMode) {}
 
     companion object {
         val TOPIC = Topic.create(

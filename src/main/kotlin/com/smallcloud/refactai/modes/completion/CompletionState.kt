@@ -69,13 +69,16 @@ class CompletionState(
             headIndexUpdated = headIndex + textCurrentLine.length
         }
 
+        // remove it ASAP after fix in scratchpad
+        val addedNewLine = requestedText.last() != '\n'
+
         val currentMultiline = multiline && lines.size > 1
         val startIndex: Int = minOf(requestedText.length, headIndexUpdated)
         logger.info("Finish reason: $finishReason, firstLine: $firstLine")
-        val endIndex = if (finishReason == "ins-stoptoken") {
+        val endIndex = if (finishReason == "ins-stoptoken" && completion.isEmpty() && tailIndex == 0) {
             startIndex
         } else {
-            requestedText.length - tailIndex
+            requestedText.length - tailIndex + if (addedNewLine) 1 else 0
         }
 
         val editedCompletion = if (currentMultiline) {

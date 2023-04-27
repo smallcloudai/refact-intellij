@@ -34,7 +34,7 @@ fun runCounterTask() {
             ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(fromCounter = true)
         }
 
-        if (AccountManager.isLoggedIn || i == Resources.loginCoolDown * 10) {
+        if (AccountManager.instance.isLoggedIn || i == Resources.loginCoolDown * 10) {
             loginTask?.cancel(false)
         }
         i++

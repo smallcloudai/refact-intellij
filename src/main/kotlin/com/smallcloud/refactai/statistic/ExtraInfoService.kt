@@ -7,11 +7,11 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.io.sendRequest
 import org.apache.http.client.utils.URIBuilder
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 class ExtraInfoService: Disposable {
@@ -46,8 +46,7 @@ class ExtraInfoService: Disposable {
     }
 
     private fun report() {
-        val acc = AccountManager
-        val token: String = acc.apiKey ?: return
+        val token: String = AccountManager.apiKey ?: return
 
         val headers = mutableMapOf(
             "Authorization" to "Bearer $token"

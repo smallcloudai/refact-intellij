@@ -8,8 +8,8 @@ import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.EditorAction
 import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.modes.ModeProvider
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 object ForceCompletionAction :
     EditorAction(InlineCompletionHandler()),

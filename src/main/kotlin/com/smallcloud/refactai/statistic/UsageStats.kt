@@ -8,10 +8,14 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.defaultReportUrl
-import com.smallcloud.refactai.account.AccountManager
+import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.io.sendRequest
+import com.smallcloud.refactai.statistic.decorators.disableIfSelfHosted
+import com.smallcloud.refactai.struct.DeploymentMode
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
 
 
@@ -23,10 +27,10 @@ class UsageStats: Disposable {
         get() {
             return ExtraState.usageStatsMessagesCache
         }
-    private var task: Future<*>
+    private var task: Future<*>? = null
 
-    init {
-        task = AppExecutorUtil.getAppScheduledExecutorService().schedule({
+    private fun createTask() : Future<*> {
+        return AppExecutorUtil.getAppScheduledExecutorService().schedule({
             report()
             task = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay({
                 report()
@@ -34,12 +38,36 @@ class UsageStats: Disposable {
         }, 5, TimeUnit.MINUTES)
     }
 
+    init {
+        if (InferenceGlobalContext.isCloud) {
+            task = createTask()
+        }
+        ApplicationManager.getApplication().messageBus
+                .connect(this).subscribe(
+                        InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
+                    override fun deploymentModeChanged(newValue: DeploymentMode) {
+                        if (task != null) {
+                            if (newValue != DeploymentMode.CLOUD) {
+                                task?.cancel(true)
+                                task?.get()
+                                task = null
+                            }
+                        } else {
+                            if (newValue == DeploymentMode.CLOUD) {
+                                task = createTask()
+                            }
+                        }
+                    }
+                }
+        )
+    }
+
     fun addStatistic(
         positive: Boolean,
         stat: UsageStatistic,
         relatedUrl: String,
         errorMessage: Any
-    ) {
+    ) = disableIfSelfHosted {
         var errorMessageStr = errorMessage.toString()
         val gson = Gson()
         if (errorMessageStr.length > 200) {
@@ -66,13 +94,12 @@ class UsageStats: Disposable {
         }
     }
 
-    fun forceReport() {
+    fun forceReport() = disableIfSelfHosted {
         report()?.get()
     }
 
     private fun report(): Future<*>? {
-        val acc = AccountManager
-        val token: String = acc.apiKey ?: return null
+        val token: String = AccountManager.apiKey ?: return null
 
         val headers = mutableMapOf(
             "Content-Type" to "application/json",
@@ -132,7 +159,7 @@ class UsageStats: Disposable {
     }
 
     override fun dispose() {
-        task.cancel(true)
+        task?.cancel(true)
         forceReport()
     }
 }

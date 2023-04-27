@@ -7,6 +7,7 @@ import com.smallcloud.refactai.Resources.defaultCloudUrl
 import java.net.URLConnection
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class ConnectivityManager : Disposable {
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(

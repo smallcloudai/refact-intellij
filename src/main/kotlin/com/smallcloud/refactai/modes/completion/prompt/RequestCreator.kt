@@ -1,11 +1,11 @@
 package com.smallcloud.refactai.modes.completion.prompt
 
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.POI
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.struct.SMCRequestBody
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 object RequestCreator {
     private const val symbolsBudget: Long = 5_000

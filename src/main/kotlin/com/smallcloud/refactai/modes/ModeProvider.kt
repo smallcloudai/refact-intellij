@@ -16,7 +16,6 @@ import com.intellij.util.xmlb.annotations.Transient
 import com.jetbrains.rd.util.getOrCreate
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.listeners.GlobalCaretListener
 import com.smallcloud.refactai.listeners.GlobalFocusListener
@@ -30,6 +29,7 @@ import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 enum class ModeType {

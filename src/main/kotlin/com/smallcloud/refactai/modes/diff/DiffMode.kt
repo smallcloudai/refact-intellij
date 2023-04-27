@@ -13,7 +13,6 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.RequestJob
 import com.smallcloud.refactai.io.inferenceFetch
 import com.smallcloud.refactai.modes.Mode
@@ -32,6 +31,7 @@ import dev.gitlive.difflib.DiffUtils
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class DiffMode(
     override var needToRender: Boolean = true

@@ -8,8 +8,8 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.BulkAwareDocumentListener
 import com.intellij.openapi.editor.event.DocumentEvent
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.modes.ModeProvider
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 class DocumentListener : BulkAwareDocumentListener, Disposable {

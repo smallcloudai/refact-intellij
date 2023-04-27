@@ -11,7 +11,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.RequestJob
 import com.smallcloud.refactai.io.inferenceFetch
 import com.smallcloud.refactai.modes.Mode
@@ -30,6 +29,7 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class HighlightMode(
     override var needToRender: Boolean = true

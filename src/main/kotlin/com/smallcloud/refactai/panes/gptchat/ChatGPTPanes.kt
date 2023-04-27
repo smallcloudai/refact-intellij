@@ -11,12 +11,12 @@ import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.containers.ContainerUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
+import com.smallcloud.refactai.struct.DeploymentMode
 import java.awt.BorderLayout
-import java.net.URI
 import javax.swing.JComponent
 import javax.swing.JPanel
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 class ChatGPTPanes(project: Project, parent: Disposable) {
@@ -44,13 +44,13 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
     }
 
     init {
-        setupPanes(!InferenceGlobalContext.hasUserInferenceUri())
+        setupPanes(!InferenceGlobalContext.isSelfHosted)
         ApplicationManager.getApplication()
                 .messageBus
                 .connect(PluginState.instance)
                 .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun userInferenceUriChanged(newUrl: URI?) {
-                        setupPanes(!InferenceGlobalContext.hasUserInferenceUri())
+                    override fun deploymentModeChanged(newValue: DeploymentMode) {
+                        setupPanes(newValue == DeploymentMode.CLOUD)
                     }
                 })
     }

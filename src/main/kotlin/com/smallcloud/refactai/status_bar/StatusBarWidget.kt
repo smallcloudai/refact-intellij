@@ -23,12 +23,10 @@ import com.smallcloud.refactai.Resources.Icons.LOGO_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_RED_12x12
 import com.smallcloud.refactai.Resources.defaultContrastUrlSuffix
 import com.smallcloud.refactai.Resources.defaultTemperature
-import com.smallcloud.refactai.account.AccountManager.isLoggedIn
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.ConnectionChangedNotifier
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitLogin
 import com.smallcloud.refactai.notifications.emitRegular
@@ -41,6 +39,8 @@ import java.net.URI
 import java.util.*
 import javax.swing.Icon
 import javax.swing.JComponent
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomStatusBarWidget, WidgetPresentation {
     private var component: WithIconAndArrows? = null
@@ -157,13 +157,13 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         val isOkStat = getLastStatus()
         if (!PluginState.instance.isEnabled)
             return AllIcons.Diff.GutterCheckBoxIndeterminate
-        if (!isLoggedIn) {
+        if (!AccountManager.isLoggedIn) {
             return LOGO_12x12
         }
         return when (InferenceGlobalContext.status) {
             ConnectionStatus.DISCONNECTED -> AllIcons.Debugger.ThreadStates.Socket
             ConnectionStatus.ERROR -> AllIcons.Debugger.Db_exception_breakpoint
-            ConnectionStatus.CONNECTED -> if (isPrivacyEnabled() || InferenceGlobalContext.hasUserInferenceUri())
+            ConnectionStatus.CONNECTED -> if (isPrivacyEnabled() || !InferenceGlobalContext.isCloud)
                 LOGO_RED_12x12 else HAND_12x12
             ConnectionStatus.PENDING -> AnimatedIcon.Default()
         }
@@ -179,7 +179,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     override fun getTooltipText(): String? {
-        if (!isLoggedIn) {
+        if (!AccountManager.isLoggedIn) {
             return RefactAIBundle.message("statusBar.clickToLogin")
         }
 
@@ -191,7 +191,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 return InferenceGlobalContext.lastErrorMsg
             }
             ConnectionStatus.CONNECTED -> {
-                if (isPrivacyEnabled() || InferenceGlobalContext.hasUserInferenceUri()) {
+                if (isPrivacyEnabled() || InferenceGlobalContext.isSelfHosted) {
                     var tooltipStr = "<html>"
                     if (InferenceGlobalContext.inferenceUri != null) {
                         tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUri!!.resolve(defaultContrastUrlSuffix)}"
@@ -219,10 +219,10 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     override fun getClickConsumer(): Consumer<MouseEvent> {
         return Consumer { e: MouseEvent ->
             if (!e.isPopupTrigger && MouseEvent.BUTTON1 == e.button) {
-                if (!isLoggedIn)
+                if (!AccountManager.isLoggedIn)
                     emitLogin(project)
                 else
-                    getEditor()?.let { emitRegular(project, it) }
+                    editor?.let { emitRegular(project, it) }
             }
         }
     }

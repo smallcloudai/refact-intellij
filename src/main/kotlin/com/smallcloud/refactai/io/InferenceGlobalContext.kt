@@ -1,16 +1,25 @@
 package com.smallcloud.refactai.io
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.inferenceLogin
 import com.smallcloud.refactai.settings.AppSettingsState
+import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.struct.SMCRequestBody
 import java.net.URI
+import java.util.concurrent.Future
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 
-object InferenceGlobalContext {
+class InferenceGlobalContext : Disposable {
+    private val reconnectScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
+            "SMCInferenceGlobalContextScheduler", 1
+    )
+    private var lastTask: Future<*>? = null
+
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
     var connection: Connection? = null
     var inferenceConnection: AsyncConnection? = null
@@ -55,18 +64,18 @@ object InferenceGlobalContext {
             if (field == newStatus) return
             field = newStatus
             ApplicationManager.getApplication()
-                .messageBus
-                .syncPublisher(ConnectionChangedNotifier.TOPIC)
-                .statusChanged(field)
+                    .messageBus
+                    .syncPublisher(ConnectionChangedNotifier.TOPIC)
+                    .statusChanged(field)
         }
     var lastErrorMsg: String? = null
         set(newMsg) {
             if (field == newMsg) return
             field = newMsg
             ApplicationManager.getApplication()
-                .messageBus
-                .syncPublisher(ConnectionChangedNotifier.TOPIC)
-                .lastErrorMsgChanged(field)
+                    .messageBus
+                    .syncPublisher(ConnectionChangedNotifier.TOPIC)
+                    .lastErrorMsgChanged(field)
         }
 
     var inferenceUri: URI?
@@ -78,10 +87,17 @@ object InferenceGlobalContext {
         set(newInferenceUrl) {
             if (newInferenceUrl == inferenceUri) return
             messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .userInferenceUriChanged(newInferenceUrl)
-            reconnect()
-            inferenceLogin()
+                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                    .userInferenceUriChanged(newInferenceUrl)
+
+            lastTask?.cancel(true)
+            lastTask = reconnectScheduler.submit {
+                reconnect()
+                inferenceLogin()
+                messageBus
+                        .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                        .deploymentModeChanged(deploymentMode)
+            }
         }
 
     // cloudInferenceUri is uri from SMC server; must be change only in login method
@@ -89,8 +105,8 @@ object InferenceGlobalContext {
         set(newInferenceUrl) {
             if (newInferenceUrl == AppSettingsState.instance.inferenceUri?.let { URI(it) }) return
             messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .inferenceUriChanged(newInferenceUrl)
+                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                    .inferenceUriChanged(newInferenceUrl)
             reconnect()
         }
         get() {
@@ -98,7 +114,7 @@ object InferenceGlobalContext {
         }
 
 
-    fun hasUserInferenceUri(): Boolean {
+    private fun hasUserInferenceUri(): Boolean {
         return AppSettingsState.instance.userInferenceUri != null
     }
 
@@ -107,8 +123,8 @@ object InferenceGlobalContext {
         set(newTemp) {
             if (newTemp == temperature) return
             messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .temperatureChanged(newTemp)
+                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                    .temperatureChanged(newTemp)
         }
 
     var developerModeEnabled: Boolean
@@ -116,8 +132,8 @@ object InferenceGlobalContext {
         set(newValue) {
             if (newValue == developerModeEnabled) return
             messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .developerModeEnabledChanged(newValue)
+                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                    .developerModeEnabledChanged(newValue)
         }
 
     var lastAutoModel: String? = null
@@ -125,8 +141,8 @@ object InferenceGlobalContext {
             if (newModel == field) return
             field = newModel
             messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .lastAutoModelChanged(newModel)
+                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                    .lastAutoModelChanged(newModel)
         }
 
     var model: String?
@@ -134,8 +150,8 @@ object InferenceGlobalContext {
         set(newModel) {
             if (newModel == model) return
             messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .modelChanged(newModel)
+                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                    .modelChanged(newModel)
         }
     var longthinkModel: String?
         get() = AppSettingsState.instance.longthinkModel
@@ -149,8 +165,8 @@ object InferenceGlobalContext {
         set(newValue) {
             if (newValue == useForceCompletion) return
             messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .useForceCompletionModeChanged(newValue)
+                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                    .useForceCompletionModeChanged(newValue)
         }
 
     var useMultipleFilesCompletion: Boolean
@@ -158,8 +174,25 @@ object InferenceGlobalContext {
         set(newValue) {
             if (newValue == useMultipleFilesCompletion) return
             messageBus
-                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                .useMultipleFilesCompletionChanged(newValue)
+                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                    .useMultipleFilesCompletionChanged(newValue)
+        }
+
+    val deploymentMode: DeploymentMode
+        get() {
+            if (hasUserInferenceUri()) {
+                return DeploymentMode.SELF_HOSTED
+            }
+            return DeploymentMode.CLOUD
+        }
+
+    val isCloud: Boolean
+        get() {
+            return deploymentMode == DeploymentMode.CLOUD
+        }
+    val isSelfHosted: Boolean
+        get() {
+            return deploymentMode == DeploymentMode.SELF_HOSTED
         }
 
     fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
@@ -169,5 +202,16 @@ object InferenceGlobalContext {
         requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
         requestData.client = "${Resources.client}-${Resources.version}"
         return inferenceUri?.let { SMCRequest(it, requestData, apiKey) }
+    }
+
+    override fun dispose() {
+        lastTask?.cancel(true)
+        reconnectScheduler.shutdown()
+    }
+
+    companion object {
+        @JvmStatic
+        val instance: InferenceGlobalContext
+            get() = ApplicationManager.getApplication().getService(InferenceGlobalContext::class.java)
     }
 }

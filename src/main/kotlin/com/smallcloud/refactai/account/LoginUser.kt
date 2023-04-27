@@ -8,13 +8,14 @@ import com.smallcloud.refactai.Resources.defaultLoginUrl
 import com.smallcloud.refactai.Resources.defaultRecallUrl
 import com.smallcloud.refactai.Resources.developerModeLoginParameters
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.sendRequest
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 import com.smallcloud.refactai.utils.makeGson
 import org.apache.http.client.utils.URIBuilder
 import java.net.URI
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.listeners.QuickLongthinkActionsService.Companion.instance as QuickLongthinkActionsServiceInstance
 import com.smallcloud.refactai.modes.diff.DiffIntentProvider.Companion.instance as DiffIntentProviderInstance
 import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
@@ -61,8 +62,8 @@ fun checkLogin(force: Boolean = false): String {
     val streamlinedLoginTicket = acc.ticket
     var token = acc.apiKey
     val headers = mutableMapOf(
-        "Content-Type" to "application/json",
-        "Authorization" to ""
+            "Content-Type" to "application/json",
+            "Authorization" to ""
     )
 
     if (!streamlinedLoginTicket.isNullOrEmpty() && (token.isNullOrEmpty() || force)) {
@@ -70,35 +71,35 @@ fun checkLogin(force: Boolean = false): String {
         headers["Authorization"] = "codify-${streamlinedLoginTicket}"
         try {
             val result = sendRequest(
-                recallUrl, "GET", headers, requestProperties = mapOf(
+                    recallUrl, "GET", headers, requestProperties = mapOf(
                     "redirect" to "follow",
                     "cache" to "no-cache",
                     "referrer" to "no-referrer"
-                )
+            )
             )
             val gson = makeGson()
             val body = gson.fromJson(result.body, JsonObject::class.java)
             val retcode = body.get("retcode").asString
             val humanReadableMessage =
-                if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
+                    if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
             if (retcode == "OK") {
                 acc.apiKey = body.get("secret_key").asString
                 acc.ticket = null
                 infC.status = ConnectionStatus.CONNECTED
-                UsageStats.addStatistic(true,  UsageStatistic("recall"), recallUrl.toString(), "")
+                UsageStats.addStatistic(true, UsageStatistic("recall"), recallUrl.toString(), "")
             } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
                 logError("recall", humanReadableMessage, false)
                 return "OK"
             } else {
                 result.body?.let {
-                    UsageStats.addStatistic(false,  UsageStatistic("recall (1)"), recallUrl.toString(), it)
+                    UsageStats.addStatistic(false, UsageStatistic("recall (1)"), recallUrl.toString(), it)
                     logError("recall", it)
                 }
                 return ""
             }
 
         } catch (e: Exception) {
-            UsageStats.addStatistic(false,  UsageStatistic("recall (2)"), recallUrl.toString(), e)
+            UsageStats.addStatistic(false, UsageStatistic("recall (2)"), recallUrl.toString(), e)
             e.message?.let { logError("recall", it) }
             return ""
         }
@@ -120,18 +121,18 @@ fun checkLogin(force: Boolean = false): String {
     headers["Authorization"] = "Bearer $token"
     try {
         val result = sendRequest(
-            url, "GET", headers, requestProperties = mapOf(
+                url, "GET", headers, requestProperties = mapOf(
                 "redirect" to "follow",
                 "cache" to "no-cache",
                 "referrer" to "no-referrer"
-            )
+        )
         )
 
         val gson = makeGson()
         val body = gson.fromJson(result.body, JsonObject::class.java)
         val retcode = body.get("retcode").asString
         val humanReadableMessage =
-            if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
+                if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
         if (retcode == "OK") {
             acc.user = body.get("account").asString
             acc.ticket = null
@@ -164,28 +165,28 @@ fun checkLogin(force: Boolean = false): String {
                 acc.meteringBalance = body.get("metering_balance").asInt
             }
 
-            UsageStats.addStatistic(true,  UsageStatistic("login"), url.toString(), "")
+            UsageStats.addStatistic(true, UsageStatistic("login"), url.toString(), "")
             return inferenceLogin()
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {
             logError("login-failed", humanReadableMessage, false)
-            UsageStats.addStatistic(false,  UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
+            UsageStats.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
             return "OK"
         } else if (retcode == "FAILED") {
             acc.user = null
             acc.activePlan = null
             logError("login-failed", humanReadableMessage)
-            UsageStats.addStatistic(false,  UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
+            UsageStats.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
             return ""
         } else {
             acc.user = null
             acc.activePlan = null
             logError("login-failed", "unrecognized response")
-            UsageStats.addStatistic(false,  UsageStatistic("login (2)"), url.toString(), "unrecognized response")
+            UsageStats.addStatistic(false, UsageStatistic("login (2)"), url.toString(), "unrecognized response")
             return ""
         }
     } catch (e: Exception) {
         e.message?.let { logError("login-fail", it) }
-        UsageStats.addStatistic(false,  UsageStatistic("login (3)"), url.toString(), e)
+        UsageStats.addStatistic(false, UsageStatistic("login (3)"), url.toString(), e)
         return ""
     }
 }

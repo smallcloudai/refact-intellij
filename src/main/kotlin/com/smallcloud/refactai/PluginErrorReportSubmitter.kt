@@ -7,10 +7,10 @@ import com.intellij.openapi.diagnostic.IdeaLoggingEvent
 import com.intellij.openapi.diagnostic.SubmittedReportInfo
 import com.intellij.util.Consumer
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.statistic.UsageStats
 import java.awt.Component
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {

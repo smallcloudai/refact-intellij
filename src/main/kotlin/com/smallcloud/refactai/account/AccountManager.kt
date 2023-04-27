@@ -1,9 +1,10 @@
 package com.smallcloud.refactai.account
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.smallcloud.refactai.settings.AppSettingsState
 
-object AccountManager {
+class AccountManager: Disposable {
     private var previousLoggedInState: Boolean = false
 
     var ticket: String?
@@ -11,9 +12,9 @@ object AccountManager {
         set(newTicket) {
             if (newTicket == ticket) return
             ApplicationManager.getApplication()
-                .messageBus
-                .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                .ticketChanged(newTicket)
+                    .messageBus
+                    .syncPublisher(AccountManagerChangedNotifier.TOPIC)
+                    .ticketChanged(newTicket)
             AppSettingsState.instance.streamlinedLoginTicketWasCreatedTs = if (newTicket == null) null else
                 System.currentTimeMillis()
             checkLoggedInAndNotifyIfNeed()
@@ -27,9 +28,9 @@ object AccountManager {
         set(newUser) {
             if (newUser == user) return
             ApplicationManager.getApplication()
-                .messageBus
-                .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                .userChanged(newUser)
+                    .messageBus
+                    .syncPublisher(AccountManagerChangedNotifier.TOPIC)
+                    .userChanged(newUser)
             checkLoggedInAndNotifyIfNeed()
         }
     var apiKey: String?
@@ -37,9 +38,9 @@ object AccountManager {
         set(newApiKey) {
             if (newApiKey == apiKey) return
             ApplicationManager.getApplication()
-                .messageBus
-                .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                .apiKeyChanged(newApiKey)
+                    .messageBus
+                    .syncPublisher(AccountManagerChangedNotifier.TOPIC)
+                    .apiKeyChanged(newApiKey)
             checkLoggedInAndNotifyIfNeed()
         }
     var activePlan: String? = null
@@ -47,9 +48,9 @@ object AccountManager {
             if (newPlan == field) return
             field = newPlan
             ApplicationManager.getApplication()
-                .messageBus
-                .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                .planStatusChanged(newPlan)
+                    .messageBus
+                    .syncPublisher(AccountManagerChangedNotifier.TOPIC)
+                    .planStatusChanged(newPlan)
         }
 
     val isLoggedIn: Boolean
@@ -75,13 +76,21 @@ object AccountManager {
 
     private fun loginChangedNotify(isLoggedIn: Boolean) {
         ApplicationManager.getApplication()
-            .messageBus
-            .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-            .isLoggedInChanged(isLoggedIn)
+                .messageBus
+                .syncPublisher(AccountManagerChangedNotifier.TOPIC)
+                .isLoggedInChanged(isLoggedIn)
     }
 
     fun logout() {
         apiKey = null
         user = null
+    }
+
+    override fun dispose() {}
+
+    companion object {
+        @JvmStatic
+        val instance: AccountManager
+            get() = ApplicationManager.getApplication().getService(AccountManager::class.java)
     }
 }

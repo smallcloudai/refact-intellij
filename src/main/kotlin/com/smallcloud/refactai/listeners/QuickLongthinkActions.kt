@@ -9,6 +9,7 @@ import com.smallcloud.refactai.modes.diff.dialog.filter
 import com.smallcloud.refactai.panes.gptchat.ChatGPTPaneInvokeAction
 import com.smallcloud.refactai.privacy.ActionUnderPrivacy
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class QuickLongthinkAction(
         var function: LongthinkFunctionEntry = LongthinkFunctionEntry(),
@@ -28,7 +29,7 @@ class QuickLongthinkAction(
 
 class AskChatAction: DumbAwareAction(Resources.Icons.LOGO_RED_16x16) {
     override fun update(e: AnActionEvent) {
-        e.presentation.isEnabled = true
+        e.presentation.isEnabledAndVisible = InferenceGlobalContext.isCloud
         e.presentation.text = "Ask in Chat..."
     }
 
@@ -46,13 +47,17 @@ class QuickLongthinkActionsService {
             var group = ActionManager.getInstance().getAction(groupName) ?: continue
             group = group as DefaultActionGroup
             groups.add(group)
-            actions.forEach {
-                group.addAction(it, Constraints(Anchor.FIRST, "RefactAIAskChat"))
-            }
         }
     }
 
     fun recreateActions() {
+        groups.forEach { group ->
+            actions.forEach { action ->
+                if (group.containsAction(action)) {
+                    group.remove(action)
+                }
+            }
+        }
         var filteredLTFunctions = filter(DiffIntentProvider.instance.defaultThirdPartyFunctions, "", true)
         filteredLTFunctions = filteredLTFunctions.filter { !it.catchAny() }.subList(0, TOP_N)
 
@@ -62,6 +67,13 @@ class QuickLongthinkActionsService {
         filteredLTFunctions.zip(filteredHLFunctions).zip(actions).forEach { (functions, action) ->
             action.function = functions.first.copy(intent = functions.first.label)
             action.hlFunction = functions.second.copy(intent = functions.first.label)
+        }
+        groups.forEach { group ->
+            actions.reversed().forEach { action ->
+                if (action.function.label.isNotEmpty()) {
+                    group.addAction(action, Constraints(Anchor.FIRST, "RefactAIAskChat"))
+                }
+            }
         }
     }
 

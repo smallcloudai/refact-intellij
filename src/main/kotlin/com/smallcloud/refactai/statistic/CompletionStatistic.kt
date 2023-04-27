@@ -35,12 +35,10 @@ class CompletionStatistic {
         if (this.toString().contains("cacheRendered"))
             return res
         val lastElem = statistics.last()
-        var suffix = if (lastElem.reason == "esc") {
-            "esc"
-        } else if (lastElem.reason == "tab") {
-            "tab"
-        } else {
-            "moveaway"
+        var suffix = when (lastElem.reason) {
+            "esc" -> "esc"
+            "tab" -> "tab"
+            else -> "moveaway"
         }
         if (lastElem.fileExtension != null) {
             suffix += ":" + lastElem.fileExtension
@@ -64,5 +62,4 @@ class CompletionStatistic {
         }
         return strings.joinToString("/")
     }
-
 }

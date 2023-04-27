@@ -2,6 +2,7 @@ package com.smallcloud.refactai.modes.completion.renderer
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
@@ -16,17 +17,16 @@ import com.intellij.util.text.findTextRange
 import com.smallcloud.refactai.modes.completion.structs.Completion
 import dev.gitlive.difflib.patch.AbstractDelta
 import dev.gitlive.difflib.patch.DeltaType
+import dev.gitlive.difflib.patch.Patch
 import java.awt.Color
 import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 
 class AsyncCompletionLayout(
-    private val editor: Editor
+        private val editor: Editor
 ) : Disposable {
     private val renderChunkSize: Int = 1
     private val renderChunkTimeoutMs: Long = 2
-    private var inlayers: MutableMap<Int, AsyncInlayer> = mutableMapOf()
-    private var blockInlayer: AsyncInlayer? = null
+    private var inlayer: AsyncInlayer? = null
     private var blockEvents: Boolean = false
     private var textCache: String = ""
     private var isUpdating: Boolean = true
@@ -47,25 +47,22 @@ class AsyncCompletionLayout(
             blockEvents = false
             rangeHighlighters.forEach { editor.markupModel.removeHighlighter(it) }
             rangeHighlighters.clear()
-            inlayers.forEach { it.value.dispose() }
-            inlayers.clear()
-            blockInlayer?.dispose()
-//            inlayer?.dispose()
+            inlayer?.dispose()
         }
     }
 
     private fun stopUpdate() {
         isUpdating = false
         updateTask?.let {
-            it.get(1, TimeUnit.SECONDS)
+            it.get()
             updateTask = null
         }
     }
 
     fun update(
-        completionData: Completion,
-        needToRender: Boolean,
-        animation: Boolean
+            completionData: Completion,
+            needToRender: Boolean,
+            animation: Boolean
     ): Future<*>? {
         if (!isUpdating) return null
         updateTask = scheduler.submit {
@@ -77,29 +74,23 @@ class AsyncCompletionLayout(
             try {
                 blockEvents = true
                 editor.document.startGuardedBlockChecking()
-                val deltasFirstLine = completionData.getForFirstLineEOSPatch().getDeltas()
-                for (del in deltasFirstLine) {
-                    if (inlayers[del.source.position] == null) {
-                        inlayers[del.source.position] = AsyncInlayer(editor,
-                                completionData.startIndex + del.source.position)
-                    }
-                }
-                blockInlayer.alsoIfNull {
-                    blockInlayer = AsyncInlayer(editor, completionData.firstLineEndOfLineIndex)
-                }
-                synchronized(this) {
-                    inlayers = inlayers.filter {
-                        val tmp = deltasFirstLine.find { del -> del.source.position == it.key }
-                        if (tmp == null) {
-                            ApplicationManager.getApplication().invokeAndWait { it.value.dispose() }
-                            return@filter false
-                        }
-                        return@filter true
-                    } as MutableMap<Int, AsyncInlayer>
+
+                inlayer.alsoIfNull {
+                    inlayer = AsyncInlayer(editor)
                 }
 
                 highlight(completionData)
-                renderAndUpdateState(needToRender, animation, deltasFirstLine)
+                if (completionData.startIndex == completionData.firstLineEndOfLineIndex) {
+                    renderAndUpdateState(needToRender, animation)
+                } else {
+                    var deltasFirstLine = completionData.getForFirstLineEOSPatch().getDeltas()
+                    if (deltasFirstLine.size == 1 &&
+                            deltasFirstLine.first().type == DeltaType.INSERT &&
+                            completionData.endIndex <= completionData.firstLineEndOfLineIndex) {
+                        deltasFirstLine = completionData.getForFirstLinePatch().getDeltas()
+                    }
+                    renderAndUpdatePartialState(needToRender, animation, deltasFirstLine)
+                }
             } catch (ex: Exception) {
                 Disposer.dispose(this)
                 throw ex
@@ -113,6 +104,42 @@ class AsyncCompletionLayout(
 
     private fun renderAndUpdateState(
             needToRender: Boolean,
+            animation: Boolean) {
+        inlayer?.let { inlayer ->
+            val offset = lastCompletionData!!.startIndex
+            var blockText = lastCompletionData!!.completion
+            val currentText = inlayer.getText(offset) ?: ""
+            if (blockText.startsWith(currentText)) {
+                blockText = blockText.substring(currentText.length)
+            }
+            val realBlockText = currentText + blockText
+            if (currentText == blockText) return@let
+            inlayer.setText(offset, realBlockText)
+            val text = blockText
+
+            if (needToRender) {
+                if (animation) {
+                    for (ch in text.chunked(renderChunkSize)) {
+                        ApplicationManager.getApplication().invokeLater({
+                            inlayer.addText(offset, ch)
+                        }, { !this.needToRender })
+                        Thread.sleep(renderChunkTimeoutMs)
+                    }
+                } else {
+                    ApplicationManager.getApplication().invokeLater({
+                        inlayer.addText(offset, text)
+                    }, { !this.needToRender })
+                }
+                rendered = true
+            } else {
+                inlayer.addTextWithoutRendering(offset, text)
+            }
+        }
+    }
+
+
+    private fun renderAndUpdatePartialState(
+            needToRender: Boolean,
             animation: Boolean,
             deltasFirstLine: List<AbstractDelta<Char>>
     ) {
@@ -121,29 +148,29 @@ class AsyncCompletionLayout(
                 continue
             }
 
-            val inlayer = inlayers[del.source.position] ?: continue
+            val offset = lastCompletionData!!.startIndex + del.source.position
             var text = del.target.lines?.joinToString("") ?: continue
-            val currentText = inlayer.getText()
+            val currentText = inlayer?.getText(offset) ?: ""
             if (currentText == text) continue
-            inlayer.setText(text)
+            inlayer?.setText(offset, text)
             text = text.drop(currentText.length)
 
             if (needToRender) {
                 if (animation) {
                     for (ch in text.chunked(renderChunkSize)) {
                         ApplicationManager.getApplication().invokeLater({
-                            inlayer.addText(ch)
+                            inlayer?.addText(offset, ch)
                         }, { !this.needToRender })
                         Thread.sleep(renderChunkTimeoutMs)
                     }
                 } else {
                     ApplicationManager.getApplication().invokeLater({
-                        inlayer.addText(text)
+                        inlayer?.addText(offset, text)
                     }, { !this.needToRender })
                 }
                 rendered = true
             } else {
-                inlayer.addTextWithoutRendering(text)
+                inlayer?.addTextWithoutRendering(offset, text)
             }
         }
 
@@ -154,39 +181,39 @@ class AsyncCompletionLayout(
             ""
         }
         if (blockText.substring(1).isNotEmpty()) {
-            blockInlayer?.let { inlayer ->
-                val currentText = inlayer.getText()
+            inlayer?.let { inlayer ->
+                val currentText = inlayer.getLastText() ?: ""
+                val realBlockText = currentText + blockText
                 if (currentText == blockText) return@let
-                inlayer.setText(blockText)
-                val text = blockText.drop(currentText.length)
+                inlayer.setLastText(realBlockText)
+                val text = realBlockText.drop(currentText.length)
 
                 if (needToRender) {
                     if (animation) {
                         for (ch in text.chunked(renderChunkSize)) {
                             ApplicationManager.getApplication().invokeLater({
-                                inlayer.addText(ch)
+                                inlayer.addTextToLast(ch)
                             }, { !this.needToRender })
                             Thread.sleep(renderChunkTimeoutMs)
                         }
                     } else {
                         ApplicationManager.getApplication().invokeLater({
-                            inlayer.addText(text)
+                            inlayer.addTextToLast(text)
                         }, { !this.needToRender })
                     }
                     rendered = true
                 } else {
-                    inlayer.addTextWithoutRendering(text)
+                    inlayer.addTextWithoutRenderingToLast(text)
                 }
             }
         }
-
     }
 
     private fun highlight(completionData: Completion) {
         if (highlighted) return
 
         if (completionData.leftSymbolsToRemove > 0) {
-            ApplicationManager.getApplication().invokeAndWait {
+            ApplicationManager.getApplication().invokeLater {
                 rangeHighlighters.add(
                         editor.markupModel.addRangeHighlighter(
                                 completionData.startIndex - completionData.leftSymbolsToRemove - completionData.leftSymbolsToSkip,
@@ -214,7 +241,7 @@ class AsyncCompletionLayout(
             val hlStart = startIndex + del.source.position
             val hlFinish = hlStart + (del.source.lines?.size ?: 0)
             if (hlFinish > hlStart) {
-                ApplicationManager.getApplication().invokeAndWait {
+                ApplicationManager.getApplication().invokeLater {
                     rangeHighlighters.add(
                             editor.markupModel.addRangeHighlighter(
                                     hlStart, hlFinish,
@@ -234,7 +261,7 @@ class AsyncCompletionLayout(
         if (newLineIdx != -1) {
             val startOffset = startIndex + lastDelta.source.position
             if (startOffset < completionData.firstLineEndOfLineIndex) {
-                ApplicationManager.getApplication().invokeAndWait {
+                ApplicationManager.getApplication().invokeLater {
                     rangeHighlighters.add(
                             editor.markupModel.addRangeHighlighter(
                                     startOffset,
@@ -258,8 +285,8 @@ class AsyncCompletionLayout(
         try {
             hide()
             stopUpdate()
-            ApplicationManager.getApplication().invokeAndWait{
-                PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return@invokeAndWait
+            runWriteAction {
+                PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return@runWriteAction
                 applyPreviewInternal()
             }
         } catch (e: Throwable) {
@@ -275,9 +302,9 @@ class AsyncCompletionLayout(
             var firstLineEndIndex = completion.firstLineEndIndex
             if (completion.leftSymbolsToRemove > 0) {
                 editor.document.replaceString(
-                    startIndex - completion.leftSymbolsToRemove - completion.leftSymbolsToSkip,
-                    startIndex - completion.leftSymbolsToSkip,
-                    ""
+                        startIndex - completion.leftSymbolsToRemove - completion.leftSymbolsToSkip,
+                        startIndex - completion.leftSymbolsToSkip,
+                        ""
                 )
                 startIndex -= completion.leftSymbolsToRemove
                 firstLineEndIndex -= completion.leftSymbolsToRemove
@@ -285,17 +312,14 @@ class AsyncCompletionLayout(
             }
 
             val lines = completion.completion.split('\n')
-            var patch = completion.getForFirstLineEOSPatch()
-
-            val maxPos = patch.getDeltas().maxBy { it.target.position }
-            val maxOffset = maxPos.target.position + (maxPos.target.lines?.size ?: 0)
-            val needFullFirstLinePatch = completion.completion.contains('\n')
-            val endOffsetForReplace = if (patch.getDeltas().size > 1 || needFullFirstLinePatch)
-                completion.firstLineEndOfLineIndex - completion.leftSymbolsToRemove else firstLineEndIndex
-
-
-            if (patch.getDeltas().size <= 1 && !needFullFirstLinePatch) {
+            var patch: Patch<Char>
+            val endOffsetForReplace: Int
+            if (completion.endIndex <= completion.firstLineEndOfLineIndex) {
                 patch = completion.getForFirstLinePatch()
+                endOffsetForReplace = completion.endIndex - completion.leftSymbolsToRemove
+            } else {
+                patch = completion.getForFirstLineEOSPatch()
+                endOffsetForReplace = completion.firstLineEndOfLineIndex - completion.leftSymbolsToRemove
             }
 
             val newline = patch.applyTo(completion.originalText.subSequence(
@@ -317,15 +341,15 @@ class AsyncCompletionLayout(
     }
 
     fun hide() {
-        ApplicationManager.getApplication().invokeLater{
+        ApplicationManager.getApplication().invokeLater {
             if (!rendered) return@invokeLater
             rendered = false
             blockEvents = false
             rangeHighlighters.forEach { editor.markupModel.removeHighlighter(it) }
             rangeHighlighters.clear()
             highlighted = false
-            inlayers.forEach { it.value.hide() }
-            blockInlayer?.hide()
+//            inlayers.forEach { it.value.hide() }
+            inlayer?.hide()
 //            inlayers.lastOrNull()?.hide()
         }
     }
@@ -334,8 +358,8 @@ class AsyncCompletionLayout(
         ApplicationManager.getApplication().invokeLater {
             if (rendered) return@invokeLater
             lastCompletionData?.let { highlight(it) }
-            inlayers.forEach { it.value.show() }
-            blockInlayer?.show()
+//            inlayers.forEach { it.value.show  () }
+            inlayer?.show()
 //            inlayers.lastOrNull()?.show()
             rendered = true
         }

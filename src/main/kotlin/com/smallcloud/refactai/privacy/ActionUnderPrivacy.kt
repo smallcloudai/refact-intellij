@@ -6,7 +6,7 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.vfs.VirtualFile
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.io.InferenceGlobalContext
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 abstract class ActionUnderPrivacy : DumbAwareAction(Resources.Icons.LOGO_RED_16x16) {
     abstract fun setup(e: AnActionEvent)
@@ -14,7 +14,7 @@ abstract class ActionUnderPrivacy : DumbAwareAction(Resources.Icons.LOGO_RED_16x
         setup(e)
         val file = getFile(e.dataContext)
         val isEnabled = file != null && (PrivacyService.instance.getPrivacy(file) != Privacy.DISABLED
-                || InferenceGlobalContext.hasUserInferenceUri())
+                || InferenceGlobalContext.isSelfHosted)
         isEnabledInModalContext = isEnabled
         e.presentation.isEnabledAndVisible = isEnabled
     }

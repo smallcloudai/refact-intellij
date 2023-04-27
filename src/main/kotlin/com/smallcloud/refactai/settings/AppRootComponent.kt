@@ -17,9 +17,6 @@ import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.*
-import com.smallcloud.refactai.account.AccountManager.isLoggedIn
-import com.smallcloud.refactai.account.AccountManager.logout
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
@@ -32,6 +29,8 @@ import java.awt.event.ItemListener
 import java.net.URI
 import java.util.concurrent.TimeUnit
 import javax.swing.*
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 private enum class SettingsState {
@@ -165,7 +164,7 @@ class AppRootComponent(private val project: Project) {
         )
 
         loginCounter = loginCoolDownCounter
-        currentState = if (isLoggedIn) {
+        currentState = if (AccountManager.isLoggedIn) {
             SettingsState.SIGNED
         } else if (AccountManager.ticket != null) {
             SettingsState.WAITING
@@ -213,7 +212,7 @@ class AppRootComponent(private val project: Project) {
             login()
         }
         logoutButton.addActionListener {
-            logout()
+            AccountManager.logout()
         }
         forceLoginButton.addActionListener {
             ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
@@ -249,31 +248,31 @@ class AppRootComponent(private val project: Project) {
 
         privacyTitledSeparator.isVisible = currentState == SettingsState.SIGNED
         privacySettingDescription.isVisible = currentState == SettingsState.SIGNED
-        privacySettingDescription.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacySettingDescription.isEnabled = InferenceGlobalContext.isCloud
         privacyDefaultsRBDisabled.isVisible = currentState == SettingsState.SIGNED
-        privacyDefaultsRBDisabled.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacyDefaultsRBDisabled.isEnabled = InferenceGlobalContext.isCloud
         privacyDefaultsRBRefactAI.isVisible = currentState == SettingsState.SIGNED
-        privacyDefaultsRBRefactAI.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacyDefaultsRBRefactAI.isEnabled = InferenceGlobalContext.isCloud
         privacyDefaultsRBRefactAIPlus.isVisible = currentState == SettingsState.SIGNED
-        privacyDefaultsRBRefactAIPlus.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacyDefaultsRBRefactAIPlus.isEnabled = InferenceGlobalContext.isCloud
         privacyDefaultsRBDisabledDescription.isVisible = currentState == SettingsState.SIGNED
-        privacyDefaultsRBDisabledDescription.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacyDefaultsRBDisabledDescription.isEnabled = InferenceGlobalContext.isCloud
         privacyDefaultsRBRefactAIDescription.isVisible = currentState == SettingsState.SIGNED
-        privacyDefaultsRBRefactAIDescription.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacyDefaultsRBRefactAIDescription.isEnabled = InferenceGlobalContext.isCloud
         privacyDefaultsRBRefactAIPlusDescription.isVisible = currentState == SettingsState.SIGNED
-        privacyDefaultsRBRefactAIPlusDescription.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacyDefaultsRBRefactAIPlusDescription.isEnabled = InferenceGlobalContext.isCloud
         privacyOverridesLabel.isVisible = currentState == SettingsState.SIGNED
-        privacyOverridesLabel.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacyOverridesLabel.isEnabled = InferenceGlobalContext.isCloud
         privacyOverridesScrollPane.isVisible = currentState == SettingsState.SIGNED
-        privacyOverridesScrollPane.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacyOverridesScrollPane.isEnabled = InferenceGlobalContext.isCloud
         privacyOverridesTable.isVisible = currentState == SettingsState.SIGNED
-        privacyOverridesTable.isEnabled = !InferenceGlobalContext.hasUserInferenceUri()
+        privacyOverridesTable.isEnabled = InferenceGlobalContext.isCloud
 
-        privacySettingSelfHostedWarning.isVisible = currentState == SettingsState.SIGNED && InferenceGlobalContext.hasUserInferenceUri()
+        privacySettingSelfHostedWarning.isVisible = currentState == SettingsState.SIGNED && !InferenceGlobalContext.isCloud
     }
 
     val preferredFocusedComponent: JComponent
-        get() = if (isLoggedIn) forceLoginButton else loginButton
+        get() = if (AccountManager.isLoggedIn) forceLoginButton else loginButton
 
     private fun recreatePanel(): JPanel {
 //        val description = JBLabel(pluginDescriptionStr)

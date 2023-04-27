@@ -9,24 +9,23 @@ import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.UIUtil
 import com.obiscr.chatgpt.ui.HistoryComponent
 import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.listeners.LastEditorGetterListener
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory.Companion.gptChatPanes
 import com.smallcloud.refactai.panes.gptchat.structs.HistoryEntry
 import com.smallcloud.refactai.panes.gptchat.ui.CustomSearchTextArea
 import com.smallcloud.refactai.panes.gptchat.ui.MessageComponent
+import com.smallcloud.refactai.struct.DeploymentMode
 import icons.CollaborationToolsIcons
 import java.awt.BorderLayout
 import java.awt.event.KeyEvent
 import java.awt.event.KeyListener
-import java.net.URI
 import javax.swing.JPanel
 import javax.swing.JProgressBar
 import javax.swing.JTextArea
-
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 class ChatGPTPane : JPanel() {
@@ -90,12 +89,13 @@ class ChatGPTPane : JPanel() {
         }
 
     init {
-        searchTextArea.isEnabled = AccountManager.isLoggedIn && !InferenceGlobalContext.hasUserInferenceUri()
+        searchTextArea.isEnabled = AccountManager.isLoggedIn &&
+                InferenceGlobalContext.deploymentMode == DeploymentMode.CLOUD
         ApplicationManager.getApplication().messageBus.connect()
                 .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                     override fun isLoggedInChanged(isLoggedIn: Boolean) {
-                        searchTextArea.isEnabled = isLoggedIn && !InferenceGlobalContext.hasUserInferenceUri()
-                        sendAction.setEnabled(isLoggedIn && !InferenceGlobalContext.hasUserInferenceUri())
+                        searchTextArea.isEnabled = isLoggedIn && InferenceGlobalContext.isCloud
+                        sendAction.setEnabled(isLoggedIn && InferenceGlobalContext.isCloud)
                     }
                 })
 
@@ -103,9 +103,9 @@ class ChatGPTPane : JPanel() {
                 .messageBus
                 .connect(PluginState.instance)
                 .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun userInferenceUriChanged(newUrl: URI?) {
-                        searchTextArea.isEnabled = !InferenceGlobalContext.hasUserInferenceUri() && AccountManager.isLoggedIn
-                        sendAction.setEnabled(!InferenceGlobalContext.hasUserInferenceUri() && AccountManager.isLoggedIn)
+                    override fun deploymentModeChanged(newMode: DeploymentMode) {
+                        searchTextArea.isEnabled = newMode == DeploymentMode.CLOUD && AccountManager.isLoggedIn
+                        sendAction.setEnabled(newMode == DeploymentMode.CLOUD && AccountManager.isLoggedIn)
                     }
                 })
 

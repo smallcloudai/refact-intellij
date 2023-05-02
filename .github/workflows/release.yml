@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - v1.*
+  workflow_dispatch:
+
 jobs:
 
   # Run Gradle Wrapper Validation Action to verify the wrapper's checksum

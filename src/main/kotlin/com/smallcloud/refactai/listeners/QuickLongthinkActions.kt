@@ -4,26 +4,34 @@ import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.modes.diff.DiffIntentProvider
-import com.smallcloud.refactai.modes.diff.dialog.filter
+import com.smallcloud.refactai.aitoolbox.filter
 import com.smallcloud.refactai.panes.gptchat.ChatGPTPaneInvokeAction
 import com.smallcloud.refactai.privacy.ActionUnderPrivacy
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
+import com.smallcloud.refactai.struct.LongthinkFunctionVariation
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class QuickLongthinkAction(
-        var function: LongthinkFunctionEntry = LongthinkFunctionEntry(),
-        var hlFunction: LongthinkFunctionEntry = LongthinkFunctionEntry(),
+        var function: LongthinkFunctionVariation = QuickLongthinkActionsService.DUMMY_LONGTHINK,
+        var hlFunction: LongthinkFunctionVariation = QuickLongthinkActionsService.DUMMY_LONGTHINK,
         ): ActionUnderPrivacy() {
     override fun setup(e: AnActionEvent) {
-        e.presentation.text = function.label
+        val editor = CommonDataKeys.EDITOR.getData(e.dataContext) ?: return
+        val hl = editor.selectionModel.selectedText == null
+
+        val variation = (if (hl) hlFunction else function)
+        val entry = variation.getFunctionByFilter()
+        e.presentation.text = entry.label
         e.presentation.icon = Resources.Icons.LOGO_RED_16x16
+        e.presentation.isEnabledAndVisible = variation != QuickLongthinkActionsService.DUMMY_LONGTHINK
     }
 
     override fun actionPerformed(e: AnActionEvent) {
         val editor = CommonDataKeys.EDITOR.getData(e.dataContext) ?: return
         val hl = editor.selectionModel.selectedText == null
-        AIToolboxInvokeAction().doActionPerformed(editor, if (hl) hlFunction else function)
+        AIToolboxInvokeAction().doActionPerformed(editor,
+                if (hl) hlFunction.getFunctionByFilter() else function.getFunctionByFilter())
     }
 }
 
@@ -58,15 +66,33 @@ class QuickLongthinkActionsService {
                 }
             }
         }
-        var filteredLTFunctions = filter(DiffIntentProvider.instance.defaultThirdPartyFunctions, "", true)
-        filteredLTFunctions = filteredLTFunctions.filter { !it.catchAny() }.subList(0, TOP_N)
+        var filteredLTFunctions = filter(LongthinkFunctionProvider.functionVariations, "", true)
+        filteredLTFunctions = filteredLTFunctions.filter { !it.catchAny() && it.supportSelection }
+        var realL = minOf(TOP_N, filteredLTFunctions.size)
+        filteredLTFunctions = filteredLTFunctions.subList(0, minOf(TOP_N, filteredLTFunctions.size))
+        if (TOP_N > realL) {
+            filteredLTFunctions = filteredLTFunctions.toMutableList().apply {
+                repeat(TOP_N - realL) {
+                    this.add(DUMMY_LONGTHINK)
+                }
+            }.toList()
+        }
 
-        var filteredHLFunctions = filter(DiffIntentProvider.instance.defaultThirdPartyFunctions, "", false)
-        filteredHLFunctions = filteredHLFunctions.filter { !it.catchAny() }.subList(0, TOP_N)
+        var filteredHLFunctions = filter(LongthinkFunctionProvider.functionVariations, "", false)
+        filteredHLFunctions = filteredHLFunctions.filter { !it.catchAny() && it.supportHighlight }
+        realL = minOf(TOP_N, filteredHLFunctions.size)
+        filteredHLFunctions = filteredHLFunctions.subList(0, realL)
+        if (TOP_N > realL) {
+            filteredHLFunctions = filteredHLFunctions.toMutableList().apply {
+                repeat(TOP_N - realL) {
+                    this.add(DUMMY_LONGTHINK)
+                }
+            }.toList()
+        }
 
         filteredLTFunctions.zip(filteredHLFunctions).zip(actions).forEach { (functions, action) ->
-            action.function = functions.first.copy(intent = functions.first.label)
-            action.hlFunction = functions.second.copy(intent = functions.first.label)
+            action.function = functions.first
+            action.hlFunction = functions.second
         }
         groups.forEach { group ->
             actions.reversed().forEach { action ->
@@ -79,6 +105,7 @@ class QuickLongthinkActionsService {
 
     companion object {
         const val TOP_N = 3
+        val DUMMY_LONGTHINK = LongthinkFunctionVariation(listOf(LongthinkFunctionEntry()), listOf(""))
         @JvmStatic
         val instance: QuickLongthinkActionsService
             get() = ApplicationManager.getApplication().getService(QuickLongthinkActionsService::class.java)

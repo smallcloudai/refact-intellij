@@ -5,6 +5,7 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.diagnostic.Logger
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources.defaultLoginUrl
+import com.smallcloud.refactai.Resources.defaultLoginUrlSuffix
 import com.smallcloud.refactai.Resources.defaultRecallUrl
 import com.smallcloud.refactai.Resources.developerModeLoginParameters
 import com.smallcloud.refactai.io.ConnectionStatus
@@ -15,9 +16,9 @@ import com.smallcloud.refactai.utils.makeGson
 import org.apache.http.client.utils.URIBuilder
 import java.net.URI
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as DiffIntentProviderInstance
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.listeners.QuickLongthinkActionsService.Companion.instance as QuickLongthinkActionsServiceInstance
-import com.smallcloud.refactai.modes.diff.DiffIntentProvider.Companion.instance as DiffIntentProviderInstance
 import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
@@ -106,12 +107,14 @@ fun checkLogin(force: Boolean = false): String {
     }
 
     token = acc.apiKey
-    if (token.isNullOrEmpty()) {
+    if (token.isNullOrEmpty() && InferenceGlobalContext.isCloud) {
         return ""
     }
 
-    val urlBuilder = URIBuilder(defaultLoginUrl)
-    if (InferenceGlobalContext.developerModeEnabled) {
+    val urlBuilder = if (infC.isSelfHosted && infC.inferenceUri != null)
+        URIBuilder(infC.inferenceUri?.resolve(defaultLoginUrlSuffix)) else URIBuilder(defaultLoginUrl)
+
+    if (infC.developerModeEnabled) {
         developerModeLoginParameters.forEach {
             urlBuilder.addParameter(it.key, it.value)
         }
@@ -125,7 +128,7 @@ fun checkLogin(force: Boolean = false): String {
                 "redirect" to "follow",
                 "cache" to "no-cache",
                 "referrer" to "no-referrer"
-        )
+            )
         )
 
         val gson = makeGson()
@@ -134,15 +137,18 @@ fun checkLogin(force: Boolean = false): String {
         val humanReadableMessage =
                 if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
         if (retcode == "OK") {
-            acc.user = body.get("account").asString
+            if (body.has("account")) {
+                acc.user = body.get("account").asString
+            }
             acc.ticket = null
             if (body.get("inference_url") != null) {
                 if (body.get("inference_url").asString != "DISABLED") {
                     infC.cloudInferenceUri = URI(body.get("inference_url").asString)
                 }
             }
-
-            acc.activePlan = body.get("inference").asString
+            if (body.has("inference")) {
+                acc.activePlan = body.get("inference").asString
+            }
 
             if (body.has("tooltip_message") && body.get("tooltip_message").asString.isNotEmpty()) {
                 PluginState.instance.tooltipMessage = body.get("tooltip_message").asString
@@ -161,12 +167,17 @@ fun checkLogin(force: Boolean = false): String {
                 QuickLongthinkActionsServiceInstance.recreateActions()
             }
 
+            if (body.has("longthink-filters")) {
+                val filters = body.get("longthink-filters").asJsonArray.map { it.asString }
+                DiffIntentProviderInstance.intentFilters = filters//.ifEmpty { listOf("") }
+            }
+
             if (body.has("metering_balance")) {
                 acc.meteringBalance = body.get("metering_balance").asInt
             }
 
             UsageStats.addStatistic(true, UsageStatistic("login"), url.toString(), "")
-            return inferenceLogin()
+            return if (infC.isCloud) inferenceLogin() else "OK"
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {
             logError("login-failed", humanReadableMessage, false)
             UsageStats.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)

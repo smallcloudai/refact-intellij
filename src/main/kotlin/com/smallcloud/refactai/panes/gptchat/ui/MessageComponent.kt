@@ -6,6 +6,8 @@ import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.ColorUtil
+import com.intellij.ui.ColorUtil.brighter
+import com.intellij.ui.ColorUtil.darker
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBPanel
 import com.intellij.util.ui.HTMLEditorKitBuilder
@@ -15,6 +17,7 @@ import com.smallcloud.refactai.panes.gptchat.structs.ParsedText
 import org.jdesktop.swingx.VerticalLayout
 import java.awt.*
 import java.awt.datatransfer.StringSelection
+import java.util.function.Supplier
 import javax.accessibility.AccessibleContext
 import javax.swing.JEditorPane
 import javax.swing.JPanel
@@ -37,6 +40,9 @@ private class CopyClipboardAction(private val pane: JEditorPane) : DumbAwareActi
     }
 }
 
+private val myColor = JBColor(0xEAEEF7, 0x45494A)
+private val robotColor = JBColor(0xE0EEF7, 0x2d2f30)
+
 class MessageComponent(var question: List<ParsedText>,
                        val me: Boolean) : JBPanel<MessageComponent>() {
 
@@ -46,7 +52,7 @@ class MessageComponent(var question: List<ParsedText>,
     init {
         isDoubleBuffered = true
         isOpaque = true
-        background = if (me) JBColor(0xEAEEF7, 0x45494A) else JBColor(0xE0EEF7, 0x2d2f30)
+        background = if (me) myColor else robotColor
         border = JBUI.Borders.empty(10, 10, 10, 0)
 
         layout = BorderLayout(JBUI.scale(7), 0)
@@ -83,9 +89,10 @@ class MessageComponent(var question: List<ParsedText>,
             it.border = JBUI.Borders.empty(5)
             it.isOpaque = isCode
             if (isCode) {
-                val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().globalScheme.defaultBackground)
-                it.background = if (isDark) ColorUtil.brighter(background, 2) else
-                    ColorUtil.darker(background, 2)
+                it.background = JBColor.lazy(Supplier {
+                    val isDark = ColorUtil.isDark(EditorColorsManager.getInstance().globalScheme.defaultBackground)
+                    return@Supplier if (isDark) brighter(background, 2) else darker(this.background, 2)
+                })
             }
         }
 

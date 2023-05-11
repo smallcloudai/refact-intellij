@@ -118,8 +118,7 @@ fun inferenceFetch(request: SMCRequest): RequestJob? {
     val job = InferenceGlobalContext.connection?.post(uri, body, headers, needVerify = needToVerify, stat = request.stat)
             ?: return null
 
-    job.future = job.future.thenApplyAsync {
-        val rawObject = gson.fromJson((it as String), JsonObject::class.java)
+    job.future = job.future.thenApplyAsync {val rawObject = gson.fromJson((it as String), JsonObject::class.java)
         val errorMsg = lookForCommonErrors(rawObject, request)
         if (errorMsg != null) {
             throw Exception(errorMsg)

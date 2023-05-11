@@ -5,7 +5,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.CustomStatusBarWidget
@@ -120,9 +119,9 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             })
     }
 
-    override fun selectionChanged(event: FileEditorManagerEvent) {
-        update(null)
-    }
+//    override fun selectionChanged(event: FileEditorManagerEvent) {
+//        update(null)
+//    }
 
     override fun ID(): String {
         return javaClass.name
@@ -157,7 +156,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         val isOkStat = getLastStatus()
         if (!PluginState.instance.isEnabled)
             return AllIcons.Diff.GutterCheckBoxIndeterminate
-        if (!AccountManager.isLoggedIn) {
+        if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud) {
             return LOGO_12x12
         }
         return when (InferenceGlobalContext.status) {
@@ -179,7 +178,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     override fun getTooltipText(): String? {
-        if (!AccountManager.isLoggedIn) {
+        if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud) {
             return RefactAIBundle.message("statusBar.clickToLogin")
         }
 
@@ -222,7 +221,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 if (!AccountManager.isLoggedIn)
                     emitLogin(project)
                 else
-                    editor?.let { emitRegular(project, it) }
+                    getEditor()?.let { emitRegular(project, it) }
             }
         }
     }

@@ -8,6 +8,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.util.text.findTextRange
 import com.smallcloud.refactai.account.inferenceLogin
 import com.smallcloud.refactai.statistic.UsageStatistic
+import com.smallcloud.refactai.statistic.decorators.disableIfSelfHosted
 import com.smallcloud.refactai.struct.SMCExceptions
 import org.apache.hc.client5.http.async.methods.AbstractBinResponseConsumer
 import org.apache.hc.client5.http.async.methods.SimpleHttpRequest
@@ -118,7 +119,9 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
             failedDataReceiveEnded: (Throwable?) -> Unit = {},
     ): CompletableFuture<Future<*>> {
         return CompletableFuture.supplyAsync {
-            if (needVerify) inferenceLogin()
+            if (needVerify) disableIfSelfHosted {
+                inferenceLogin()
+            }
         }.thenApply {
             return@thenApply client.execute(
                     requestProducer,

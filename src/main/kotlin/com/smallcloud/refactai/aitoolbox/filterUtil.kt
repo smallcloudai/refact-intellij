@@ -1,10 +1,12 @@
-package com.smallcloud.refactai.modes.diff.dialog
+package com.smallcloud.refactai.aitoolbox
 
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.struct.LongthinkFunctionEntry
+import com.smallcloud.refactai.struct.LongthinkFunctionVariation
 
-private fun filterByString(source: List<LongthinkFunctionEntry>, filter: String): List<LongthinkFunctionEntry> {
-    var realFilter = filter.lowercase()
+private fun filterByString(source: List<LongthinkFunctionVariation>,
+                           filterString: String,
+                           filterBy: ((LongthinkFunctionVariation) -> Boolean)? = null): List<LongthinkFunctionVariation> {
+    var realFilter = filterString.lowercase()
     while (realFilter.startsWith(" ")) {
         realFilter = realFilter.substring(1)
     }
@@ -13,14 +15,15 @@ private fun filterByString(source: List<LongthinkFunctionEntry>, filter: String)
         it.label.lowercase().startsWith(realFilter) ||
                 it.label.lowercase().startsWith(realStagingFilter) ||
                 it.catchAny()
-    }
+    }.filter { if (filterBy != null) filterBy(it) else true}
 }
 
 
-fun filter(source: List<LongthinkFunctionEntry>, filterStr: String, fromHL: Boolean): List<LongthinkFunctionEntry> {
-    val localFiltered = filterByString(source, filterStr).toMutableList()
+fun filter(source: List<LongthinkFunctionVariation>, filterStr: String, fromHL: Boolean,
+           filterBy: ((LongthinkFunctionVariation) -> Boolean)? = null): List<LongthinkFunctionVariation> {
+    val localFiltered = filterByString(source, filterStr, filterBy).toMutableList()
     return if (fromHL) {
-        localFiltered.sortedWith(compareByDescending<LongthinkFunctionEntry> { it.isBookmarked }
+        localFiltered.sortedWith(compareByDescending<LongthinkFunctionVariation> { it.isBookmarked }
                 .thenByDescending { it.catchAllHighlight }
                 .thenByDescending { it.catchAllSelection }
                 .thenByDescending { it.catchQuestionMark }
@@ -28,7 +31,7 @@ fun filter(source: List<LongthinkFunctionEntry>, filterStr: String, fromHL: Bool
                 .thenByDescending { it.supportHighlight }
         )
     } else {
-        localFiltered.sortedWith(compareByDescending<LongthinkFunctionEntry> { it.isBookmarked }
+        localFiltered.sortedWith(compareByDescending<LongthinkFunctionVariation> { it.isBookmarked }
                 .thenByDescending { it.catchAllSelection }
                 .thenByDescending { it.catchAllHighlight }
                 .thenByDescending { it.catchQuestionMark }

@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.modes.diff
 
+//import com.smallcloud.refactai.aitoolbox.DiffDialog
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
@@ -9,7 +10,6 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.util.TextRange
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
@@ -20,7 +20,6 @@ import com.smallcloud.refactai.modes.ModeProvider.Companion.getOrCreateModeProvi
 import com.smallcloud.refactai.modes.ModeType
 import com.smallcloud.refactai.modes.completion.prompt.RequestCreator
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
-import com.smallcloud.refactai.modes.diff.dialog.DiffDialog
 import com.smallcloud.refactai.modes.highlight.HighlightContext
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
@@ -137,26 +136,7 @@ class DiffMode(
         val request: SMCRequest
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         if (diffLayout == null || highlightContext != null) {
-            val entry: LongthinkFunctionEntry
-            if (entryFromContext != null) {
-                entry = entryFromContext
-            } else {
-                if (highlightContext == null) {
-                    val dialog = DiffDialog(editor, startPosition = editor.offsetToLogicalPosition(startSelectionOffset),
-                            finishPosition = editor.offsetToLogicalPosition(endSelectionOffset),
-                            selectedText = editor.document.getText(TextRange(startSelectionOffset,endSelectionOffset)))
-                    if (!dialog.showAndGet()) return
-                    entry = dialog.entry
-                    DiffIntentProvider.instance.pushFrontHistoryIntent(entry)
-                    lastFromHL = false
-                } else {
-                    entry = highlightContext.entry
-                    startSelectionOffset = highlightContext.startOffset
-                    endSelectionOffset = highlightContext.endOffset
-                    lastFromHL = true
-                }
-            }
-
+            val entry: LongthinkFunctionEntry = entryFromContext ?: return
             var funcName = (if (lastFromHL) entry.functionHlClick else entry.functionSelection)
             if (funcName.isNullOrEmpty()) {
                 funcName = entry.functionName
@@ -172,6 +152,7 @@ class DiffMode(
             startPosition = editor.offsetToLogicalPosition(startSelectionOffset)
             finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1)
             selectionModel.removeSelection()
+            editor.contentComponent.requestFocus()
             getOrCreateModeProvider(editor).switchMode(ModeType.Diff)
         } else {
             val lastDiffLayout = diffLayout ?: return

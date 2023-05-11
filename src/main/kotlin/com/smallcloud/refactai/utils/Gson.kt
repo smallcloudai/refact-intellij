@@ -8,7 +8,13 @@ class BooleanSerializer : JsonDeserializer<Boolean?> {
 
     @Throws(JsonParseException::class)
     override fun deserialize(arg0: JsonElement, arg1: Type?, arg2: JsonDeserializationContext?): Boolean {
-        return arg0.asInt > 0
+        val arg0P = (arg0 as JsonPrimitive)
+        return if (arg0P.isBoolean) {
+            arg0P.asBoolean
+        } else {
+            arg0P.asInt > 0
+        }
+
     }
 }
 

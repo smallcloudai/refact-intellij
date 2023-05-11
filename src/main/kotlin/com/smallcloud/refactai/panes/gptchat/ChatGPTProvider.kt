@@ -4,9 +4,11 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.editor.Editor
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources.defaultChatUrlSuffix
+import com.smallcloud.refactai.Resources.selfHostedChatUrlSuffix
 import com.smallcloud.refactai.io.AsyncConnection
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
@@ -14,8 +16,10 @@ import com.smallcloud.refactai.panes.gptchat.structs.ChatGPTRequest
 import com.smallcloud.refactai.panes.gptchat.structs.ParsedText
 import com.smallcloud.refactai.panes.gptchat.ui.MessageComponent
 import com.smallcloud.refactai.panes.gptchat.utils.MsgBuilder
+import com.smallcloud.refactai.panes.gptchat.utils.makeAttachedFile
 import com.smallcloud.refactai.panes.gptchat.utils.md2html
 import com.smallcloud.refactai.statistic.UsageStatistic
+import com.smallcloud.refactai.statistic.UsageStats
 import com.smallcloud.refactai.struct.DeploymentMode
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
@@ -43,6 +47,7 @@ class ChatGPTProvider : ActionListener {
     private var connection: AsyncConnection? = null
     private var processTask: Future<*>? = null
     private var canceled: Boolean = false
+    private var cachedFile: String? = null
 
     private fun reconnect() {
         try {
@@ -76,8 +81,12 @@ class ChatGPTProvider : ActionListener {
         }
     }
 
-    fun doActionPerformed(pane: ChatGPTPane, msg: String? = null, selectedText: String? = null) {
+    fun doActionPerformed(pane: ChatGPTPane, msg: String? = null,
+                          selectedText: String? = null, editor: Editor? = null) {
         if (connection == null) return
+        if (cachedFile == null && pane.searchTextArea.needToAttachFile && editor != null) {
+            cachedFile = makeAttachedFile(editor)
+        }
         var text: String = msg ?: pane.searchTextArea.textArea.text
         LOG.info("ChatGPT Search: $text")
         if (text.isEmpty()) {
@@ -98,7 +107,8 @@ class ChatGPTProvider : ActionListener {
 
         pane.add(MessageComponent(md2html(text), true))
         val message = MessageComponent(listOf(ParsedText("...", "...", false)), false)
-        val req = ChatGPTRequest(InferenceGlobalContext.inferenceUri!!.resolve(defaultChatUrlSuffix),
+        val req = ChatGPTRequest(InferenceGlobalContext.inferenceUri!!.resolve(
+                if (InferenceGlobalContext.isCloud) defaultChatUrlSuffix else selfHostedChatUrlSuffix),
                 AccountManager.apiKey, pane.getFullHistory())
         pane.add(message)
         processTask = scheduler.submit {
@@ -110,8 +120,9 @@ class ChatGPTProvider : ActionListener {
         pane.sendingState = ChatGPTPane.SendingState.PENDING
         canceled = false
         try {
-            val reqStr = MsgBuilder.build(req.conversation)
+            val reqStr = MsgBuilder.build(req, pane.searchTextArea.selectedModel, cachedFile)
             var stop = false
+            val stat = UsageStatistic("chat-tab", pane.searchTextArea.selectedModel)
             connection!!.post(req.uri,
                     reqStr,
                     mapOf("Authorization" to "Bearer ${req.token}"),
@@ -120,10 +131,12 @@ class ChatGPTProvider : ActionListener {
                             val gson = Gson()
                             val obj = gson.fromJson(response, JsonObject::class.java)
                             if (stop) return ""
-                            if (obj.has("finish_reason") && obj.get("finish_reason").asString == "stop") {
+                            val choice0 = obj.get("choices").asJsonArray[0].asJsonObject
+                            if (choice0.has("finish_reason")
+                                    && choice0.get("finish_reason").asString == "stop") {
                                 stop = true
                             }
-                            return obj.get("delta").asString
+                            return choice0.get("delta").asString
                         }
 
                         var line = parse(response)
@@ -149,6 +162,7 @@ class ChatGPTProvider : ActionListener {
                         streamSchedulerTasks.add(streamScheduler.submit {
                             pane.sendingState = ChatGPTPane.SendingState.READY
                         })
+                        UsageStats.instance.addStatistic(true, stat, req.uri.toString(), "")
                     },
                     errorDataReceived = {
                         ApplicationManager.getApplication().invokeLater {
@@ -157,7 +171,7 @@ class ChatGPTProvider : ActionListener {
                         }
                         pane.sendingState = ChatGPTPane.SendingState.READY
                     },
-                    stat = UsageStatistic("chatgpt")
+                    stat = stat
             ).also {
                 var requestFuture: Future<*>? = null
                 try {

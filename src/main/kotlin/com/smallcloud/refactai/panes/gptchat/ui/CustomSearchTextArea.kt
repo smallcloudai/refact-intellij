@@ -5,16 +5,21 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.TooltipDescriptionProvider
 import com.intellij.openapi.actionSystem.impl.ActionButton
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorCopyPasteHelper
 import com.intellij.openapi.editor.ex.util.EditorUtil
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.LightEditActionFactory
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.JBColor
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.ui.scale.JBUIScale
@@ -23,6 +28,14 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.StartupUiUtil
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.RefactAIBundle
+import com.smallcloud.refactai.Resources
+import com.smallcloud.refactai.account.AccountManagerChangedNotifier
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProviderChangedNotifier
+import com.smallcloud.refactai.aitoolbox.table.renderers.colorize
+import com.smallcloud.refactai.listeners.LastEditorGetterListener
+import com.smallcloud.refactai.listeners.SelectionChangedNotifier
+import com.smallcloud.refactai.struct.LongthinkFunctionEntry
+import org.jdesktop.swingx.renderer.DefaultListRenderer
 import java.awt.*
 import java.awt.event.*
 import java.beans.PropertyChangeEvent
@@ -34,6 +47,8 @@ import javax.swing.text.AttributeSet
 import javax.swing.text.BadLocationException
 import javax.swing.text.DefaultEditorKit.InsertBreakAction
 import javax.swing.text.PlainDocument
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
 
 
 class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeListener {
@@ -41,9 +56,30 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
     private val myNewLineButton: ActionButton
     private val myClearButton: ActionButton
     private val myAddSelectedLinesCB: JCheckBox
+    private val myAddFileForContextCB: JCheckBox
+    private val modelComboBox: ComboBox<LongthinkFunctionEntry>
     private val myExtraActionsPanel = NonOpaquePanel()
     private val myScrollPane: JBScrollPane
     private var myMultilineEnabled = true
+    private val meteringBalanceLabel: JBLabel = JBLabel().apply {
+        fun setup(balance: Int?) {
+            if (balance != null) {
+                text = (balance / 100).toString()
+            }
+            isVisible = balance != null
+        }
+        setup(AccountManager.meteringBalance)
+        border = JBUI.Borders.empty(0, 5)
+        toolTipText = RefactAIBundle.message("aiToolbox.meteringBalance")
+        icon = colorize(Resources.Icons.COIN_16x16, foreground)
+        ApplicationManager.getApplication()
+                .messageBus.connect()
+                .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+                    override fun meteringBalanceChanged(newBalance: Int?) {
+                        setup(newBalance)
+                    }
+                })
+    }
 
     override fun updateUI() {
         super.updateUI()
@@ -77,6 +113,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             val gc = GridBagConstraints()
             gc.gridx = 0
             gc.gridy = 0
+            gc.gridwidth = 1
             gc.anchor = GridBagConstraints.NORTHWEST
             gc.fill = GridBagConstraints.BOTH
             gc.weightx = 2.0
@@ -87,12 +124,36 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             gc.gridy = 1
             gc.anchor = GridBagConstraints.SOUTHWEST
             gc.fill = GridBagConstraints.NONE
+            gc.gridwidth = 1
             gc.insets = JBInsets(0, 5, 5, 0)
+            gc.weighty = 0.0
+            gc.weightx = 0.0
             add(myAddSelectedLinesCB, gc)
+
+            gc.gridx = 0
+            gc.gridy = 2
+            gc.anchor = GridBagConstraints.SOUTHWEST
+            gc.fill = GridBagConstraints.NONE
+            gc.insets = JBInsets(0, 5, 5, 0)
+            gc.weighty = 0.0
+            add(myAddFileForContextCB, gc)
+
+            gc.gridx = 0
+            gc.gridy = 3
+            gc.anchor = GridBagConstraints.SOUTHWEST
+            gc.fill = GridBagConstraints.NONE
+            gc.insets = JBInsets(0, 2, 0, 0)
+            gc.weighty = 0.0
+            add(JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.X_AXIS)
+                isOpaque = false
+                add(modelComboBox)
+                add(meteringBalanceLabel)
+            }, gc)
 
             gc.gridx = 1
             gc.gridy = 0
-            gc.gridheight = 2
+            gc.gridheight = 4
             gc.anchor = GridBagConstraints.EAST
             gc.weightx = 0.0
             gc.weighty = 2.0
@@ -103,6 +164,29 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         updateIconsLayout()
     }
 
+    private fun lineWrappedCount(): List<String> {
+        try {
+            val fullText = textArea.text
+            val width = textArea.size.width
+            val lines: MutableList<String> = mutableListOf()
+            val fontMetrics = textArea.graphics.getFontMetrics(textArea.font)
+
+            var sb = StringBuilder()
+            for (c in fullText) {
+                sb.append(c)
+                if (fontMetrics.stringWidth(sb.toString()) > width) {
+                    sb.setLength(sb.length - 1)
+                    lines.add(sb.toString())
+                    sb = StringBuilder(c.toString())
+                }
+            }
+            lines.add(sb.toString())
+            return lines
+        } catch (_: Exception) {
+            return emptyList()
+        }
+    }
+
     private fun updateIconsLayout() {
         if (myIconsPanel.parent == null) {
             return
@@ -110,7 +194,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         val showClearIcon = !StringUtil.isEmpty(textArea.text)
         val showNewLine = myMultilineEnabled
         val wrongVisibility = myClearButton.parent == null == showClearIcon || myNewLineButton.parent == null == showNewLine
-        val multiline = StringUtil.getLineBreakCount(textArea.text) > 0
+        val multiline = StringUtil.getLineBreakCount(textArea.text) > 0 || lineWrappedCount().size > 1
         if (wrongVisibility) {
             myIconsPanel.removeAll()
             myIconsPanel.layout = BorderLayout()
@@ -192,11 +276,13 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
                     textArea.putClientProperty(JUST_CLEARED_KEY, null)
                 }
                 val rows = Math.min(Registry.get("ide.find.max.rows").asInteger(), textArea.lineCount)
-                textArea.rows = Math.max(1, Math.min(25, rows))
+                textArea.rows = Math.max(3, Math.min(25, rows))
                 updateIconsLayout()
             }
         })
         textArea.isOpaque = false
+        textArea.lineWrap = true
+        textArea.wrapStyleWord = true
         myScrollPane = object : JBScrollPane(textArea, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED) {
             override fun setupCorners() {
                 super.setupCorners()
@@ -219,7 +305,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
                 } else {
                     var bottom = if (StringUtil.getLineBreakCount(textArea.text) > 0) 2 else if (StartupUiUtil.isUnderDarcula()) 1 else 0
                     var top = if (textArea.getFontMetrics(textArea.font).height <= 16) 2 else 1
-                    if (JBUIScale.isUsrHiDPI()) {
+                    if (JBUIScale.isHiDPI(JBUIScale.scale(1f).toDouble())) {
                         bottom = 0
                         top = 2
                     }
@@ -257,6 +343,61 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
 
             })
         }
+
+        fun getFilenameFromEditor(editor: Editor?): String {
+            if (editor == null) return ""
+            val document = editor.document
+            val file = FileDocumentManager.getInstance().getFile(document)
+            return file?.name ?: ""
+        }
+
+        myAddFileForContextCB = JCheckBox(
+                RefactAIBundle.message("aiToolbox.panes.chat.addFileForContext",
+                        getFilenameFromEditor(LastEditorGetterListener.LAST_EDITOR))).apply {
+            ApplicationManager.getApplication().messageBus
+                    .connect()
+                    .subscribe(SelectionChangedNotifier.TOPIC, object : SelectionChangedNotifier {
+                        override fun isEditorChanged(editor: Editor?) {
+                            this@apply.text = RefactAIBundle.message("aiToolbox.panes.chat.addFileForContext",
+                                    getFilenameFromEditor(editor))
+                        }
+                    })
+            isOpaque = false
+            addKeyListener(object : KeyListener {
+                override fun keyTyped(e: KeyEvent?) {
+                    textArea.requestFocus()
+                    textArea.dispatchEvent(e)
+                }
+
+                override fun keyPressed(e: KeyEvent?) {
+                    textArea.requestFocus()
+                    textArea.dispatchEvent(e)
+                }
+
+                override fun keyReleased(e: KeyEvent?) {
+                    textArea.requestFocus()
+                    textArea.dispatchEvent(e)
+                }
+            })
+        }
+
+        modelComboBox = ComboBox(LongthinkFunctionProvider.allChats.toTypedArray()).apply {
+            background = BACKGROUND_COLOR
+            isOpaque = false
+            renderer = DefaultListRenderer { if (it != null) (it as LongthinkFunctionEntry).model else "" }
+            ApplicationManager.getApplication().messageBus
+                    .connect()
+                    .subscribe(LongthinkFunctionProviderChangedNotifier.TOPIC, object : LongthinkFunctionProviderChangedNotifier {
+                        override fun longthinkFunctionsChanged(functions: List<LongthinkFunctionEntry>) {
+                            val model = model as DefaultComboBoxModel
+                            if (isEnabled) {
+                                model.removeAllElements()
+                                model.addAll(LongthinkFunctionProvider.allChats)
+                                selectedIndex = 0
+                            }
+                        }
+                    })
+        }
         updateLayout()
     }
 
@@ -290,6 +431,25 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
                 updateIconsLayout()
             }
         }
+    var needToAttachFile: Boolean
+        get() : Boolean {
+            return myAddFileForContextCB.isSelected
+        }
+        set(value) {
+            if (value != myAddFileForContextCB.isSelected) {
+                myAddFileForContextCB.isSelected = value
+                updateIconsLayout()
+            }
+        }
+
+    val selectedModel: String
+        get() = (modelComboBox.selectedItem as LongthinkFunctionEntry).model!!
+
+    fun disableAttachFileCBAndModelSelector() {
+        myAddFileForContextCB.isEnabled = false
+        modelComboBox.isEnabled = false
+        updateIconsLayout()
+    }
 
     override fun propertyChange(evt: PropertyChangeEvent) {
         if ("background" == evt.propertyName) {
@@ -347,6 +507,8 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         myClearButton.isEnabled = newVal
         myNewLineButton.isEnabled = newVal
         myAddSelectedLinesCB.isEnabled = newVal
+        myAddFileForContextCB.isEnabled = newVal
+        modelComboBox.isEnabled = newVal
         for (button in UIUtil.findComponentsOfType(myExtraActionsPanel, ActionButton::class.java)) {
             button.isEnabled = newVal
         }

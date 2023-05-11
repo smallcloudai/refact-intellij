@@ -5,6 +5,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.util.messages.Topic
 import com.smallcloud.refactai.account.inferenceLogin
 import com.smallcloud.refactai.statistic.UsageStatistic
+import com.smallcloud.refactai.statistic.decorators.disableIfSelfHosted
 import org.apache.http.HttpHost
 import org.apache.http.HttpResponse
 import org.apache.http.client.HttpClient
@@ -122,7 +123,7 @@ class Connection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         }
 
         val future = CompletableFuture.supplyAsync {
-            if (needVerify) inferenceLogin()
+            if (needVerify) disableIfSelfHosted { inferenceLogin() }
         }.thenApplyAsync {
             try {
                 val response: HttpResponse = client.execute(req)

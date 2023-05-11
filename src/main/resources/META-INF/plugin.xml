@@ -3,7 +3,9 @@
 <idea-plugin require-restart="true">
     <id>com.smallcloud.codify</id>
     <name>Refact.ai</name>
-    <vendor email="info@smallcloud.ai" url="https://refact.ai">smallcloudai</vendor>
+    <vendor email="info@smallcloud.ai"
+            url="https://refact.ai/?utm_source=jb&amp;utm_medium=marketplace&amp;utm_campaign=plugin">smallcloudai
+    </vendor>
 
     <description><![CDATA[
 <h2>Refact.ai: The AI Assistant for Code Writing and Refactoring.</h2>
@@ -112,7 +114,7 @@ integrated into a single package that follows your privacy settings.
         <actionPromoter implementation="com.smallcloud.refactai.listeners.DiffActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.CancelActionsPromoter"/>
 
-        <toolWindow id="Refact Chat" anchor="right"
+        <toolWindow id="Refact" anchor="right"
                     canCloseContents="true"
                     factoryClass="com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory"/>
 
@@ -128,7 +130,7 @@ integrated into a single package that follows your privacy settings.
         <applicationService serviceImplementation="com.smallcloud.refactai.account.LoginStateService"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.statistic.UsageStats"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.UpdateChecker"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.modes.diff.DiffIntentProvider"/>
+        <applicationService serviceImplementation="com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectivityManager"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectionManager"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.listeners.QuickLongthinkActionsService"/>
@@ -149,13 +151,6 @@ integrated into a single package that follows your privacy settings.
                 text="Make A Force Completion">
             <keyboard-shortcut first-keystroke="alt SLASH" keymap="$default"/>
         </action>
-        <action id="RefactAIToolboxAction"
-                class="com.smallcloud.refactai.listeners.AIToolboxInvokeAction"
-                text="Refact AI Toolbox"
-                description="Refact AI Toolbox action">
-            <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
-        </action>
         <group id="RefactAIPrivacy" popup="true" class="com.smallcloud.refactai.privacy.RefactAIPrivacyGroupAction">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
@@ -163,12 +158,19 @@ integrated into a single package that follows your privacy settings.
         </group>
 <!--        For display shortcut on the pane, action must be with mask "Activate${id.filterNot { it.isWhitespace() }}ToolWindow"-->
         <action id="ActivateRefactChatToolWindow"
-                text="Open Refact Chat"
+                text="Open Refact Toolbox"
                 class="com.smallcloud.refactai.panes.gptchat.ChatGPTPaneInvokeAction">
             <keyboard-shortcut first-keystroke="control shift C" keymap="$default"/>
             <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X" replace-all="true"/>
             <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X 10.5+" replace-all="true"/>
         </action>
+        <action id="ActivateRefactToolWindow"
+                class="com.smallcloud.refactai.aitoolbox.ToolboxPaneInvokeAction"
+                text="Refact AI Toolbox"
+                description="Refact AI Toolbox action">
+            <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
+        </action>
+
         <group id="RefactAIChatGroup">
             <action id="RefactAIAskChat"
                     text="Ask in Chat"

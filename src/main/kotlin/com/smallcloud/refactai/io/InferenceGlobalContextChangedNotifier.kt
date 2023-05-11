@@ -13,7 +13,7 @@ interface InferenceGlobalContextChangedNotifier {
     fun useForceCompletionModeChanged(newValue: Boolean) {}
     fun useMultipleFilesCompletionChanged(newValue: Boolean) {}
     fun developerModeEnabledChanged(newValue: Boolean) {}
-    fun deploymentModeChanged(newValue: DeploymentMode) {}
+    fun deploymentModeChanged(newMode: DeploymentMode) {}
 
     companion object {
         val TOPIC = Topic.create(

@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.modes.highlight
 
+//import com.smallcloud.refactai.aitoolbox.DiffDialog
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
@@ -18,8 +19,6 @@ import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.modes.ModeType
 import com.smallcloud.refactai.modes.completion.prompt.RequestCreator
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
-import com.smallcloud.refactai.modes.diff.DiffIntentProvider
-import com.smallcloud.refactai.modes.diff.dialog.DiffDialog
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 import com.smallcloud.refactai.struct.SMCPrediction
@@ -142,18 +141,18 @@ class HighlightMode(
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
 
         val entry: LongthinkFunctionEntry
-        if (entryFromContext != null) {
-            entry = entryFromContext
-        } else {
-            if (fromDiff && DiffIntentProvider.instance.lastHistoryEntry() != null) {
-                entry = DiffIntentProvider.instance.lastHistoryEntry()!!
-            } else {
-                val dialog = DiffDialog(editor, true)
-                if (!dialog.showAndGet()) return
-                entry = dialog.entry
-                DiffIntentProvider.instance.pushFrontHistoryIntent(entry)
-            }
-        }
+//        if (entryFromContext != null) {
+            entry = entryFromContext ?: return
+//        } else {
+//            if (fromDiff && LongthinkFunctionProvider.instance.lastHistoryEntry() != null) {
+//                entry = LongthinkFunctionProvider.instance.lastHistoryEntry()!!
+//            } else {
+//                val dialog = DiffDialog(editor, true)
+//                if (!dialog.showAndGet()) return
+//                entry = dialog.entry
+//                LongthinkFunctionProvider.instance.pushFrontHistoryIntent(entry)
+//            }
+//        }
 
         val fileName = getActiveFile(editor.document) ?: return
         val startSelectionOffset = editor.selectionModel.selectionStart

@@ -8,15 +8,11 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.UIUtil
 import com.obiscr.chatgpt.ui.HistoryComponent
-import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.account.AccountManagerChangedNotifier
-import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.listeners.LastEditorGetterListener
-import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory.Companion.gptChatPanes
+import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory.Companion.chat
 import com.smallcloud.refactai.panes.gptchat.structs.HistoryEntry
 import com.smallcloud.refactai.panes.gptchat.ui.CustomSearchTextArea
 import com.smallcloud.refactai.panes.gptchat.ui.MessageComponent
-import com.smallcloud.refactai.struct.DeploymentMode
 import icons.CollaborationToolsIcons
 import java.awt.BorderLayout
 import java.awt.event.KeyEvent
@@ -25,7 +21,6 @@ import javax.swing.JPanel
 import javax.swing.JProgressBar
 import javax.swing.JTextArea
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 class ChatGPTPane : JPanel() {
@@ -51,9 +46,12 @@ class ChatGPTPane : JPanel() {
         }
     }
 
-    var searchTextArea: CustomSearchTextArea = CustomSearchTextArea(JBTextArea()).also {
+    var searchTextArea: CustomSearchTextArea = CustomSearchTextArea(JBTextArea().apply {
+        rows = 3
+    }).also {
         it.setExtraActions(sendAction)
     }
+
 
     private val listener = ChatGPTProvider()
     val state = State()
@@ -89,25 +87,24 @@ class ChatGPTPane : JPanel() {
         }
 
     init {
-        searchTextArea.isEnabled = AccountManager.isLoggedIn &&
-                InferenceGlobalContext.deploymentMode == DeploymentMode.CLOUD
-        ApplicationManager.getApplication().messageBus.connect()
-                .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                    override fun isLoggedInChanged(isLoggedIn: Boolean) {
-                        searchTextArea.isEnabled = isLoggedIn && InferenceGlobalContext.isCloud
-                        sendAction.setEnabled(isLoggedIn && InferenceGlobalContext.isCloud)
-                    }
-                })
-
-        ApplicationManager.getApplication()
-                .messageBus
-                .connect(PluginState.instance)
-                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun deploymentModeChanged(newMode: DeploymentMode) {
-                        searchTextArea.isEnabled = newMode == DeploymentMode.CLOUD && AccountManager.isLoggedIn
-                        sendAction.setEnabled(newMode == DeploymentMode.CLOUD && AccountManager.isLoggedIn)
-                    }
-                })
+        searchTextArea.isEnabled = true
+//        ApplicationManager.getApplication().messageBus.connect()
+//                .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+//                    override fun isLoggedInChanged(isLoggedIn: Boolean) {
+//                        searchTextArea.isEnabled = isLoggedIn && InferenceGlobalContext.isCloud
+//                        sendAction.setEnabled(isLoggedIn && InferenceGlobalContext.isCloud)
+//                    }
+//                })
+//
+//        ApplicationManager.getApplication()
+//                .messageBus
+//                .connect(PluginState.instance)
+//                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
+//                    override fun deploymentModeChanged(newMode: DeploymentMode) {
+//                        searchTextArea.isEnabled = newMode == DeploymentMode.CLOUD && AccountManager.isLoggedIn
+//                        sendAction.setEnabled(newMode == DeploymentMode.CLOUD && AccountManager.isLoggedIn)
+//                    }
+//                })
 
         splitter.dividerWidth = 2;
         searchTextArea.textArea.addKeyListener(object: KeyListener {
@@ -144,8 +141,10 @@ class ChatGPTPane : JPanel() {
         if (searchTextArea.needToInline && LastEditorGetterListener.LAST_EDITOR != null) {
             selectedText = LastEditorGetterListener.LAST_EDITOR!!.selectionModel.selectedText
         }
-        listener.doActionPerformed(this@ChatGPTPane, selectedText=selectedText)
+        listener.doActionPerformed(this@ChatGPTPane, selectedText=selectedText,
+                editor=LastEditorGetterListener.LAST_EDITOR)
         searchTextArea.needToInline = false
+        searchTextArea.disableAttachFileCBAndModelSelector()
     }
 
     private fun aroundRequest(status: Boolean) {
@@ -165,7 +164,7 @@ class ChatGPTPane : JPanel() {
     fun add(messageComponent: MessageComponent) {
         val removedTip = contentPanel.add(messageComponent)
         if (removedTip) {
-            gptChatPanes?.renameTab(this, messageComponent.question[0].rawText)
+            chat?.renameTab(this, messageComponent.question[0].rawText)
         }
     }
     fun scrollToBottom() {

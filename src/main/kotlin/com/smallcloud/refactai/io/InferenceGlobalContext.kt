@@ -5,6 +5,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
 import com.smallcloud.refactai.Resources
+import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.account.inferenceLogin
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.struct.DeploymentMode
@@ -93,7 +94,15 @@ class InferenceGlobalContext : Disposable {
             lastTask?.cancel(true)
             lastTask = reconnectScheduler.submit {
                 reconnect()
-                inferenceLogin()
+                when(deploymentMode) {
+                    DeploymentMode.CLOUD -> {
+                        inferenceLogin()
+                    }
+                    DeploymentMode.SELF_HOSTED -> {
+                        ApplicationManager.getApplication().getService(LoginStateService::class.java)
+                                .tryToWebsiteLogin(force = true)
+                    }
+                }
                 messageBus
                         .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                         .deploymentModeChanged(deploymentMode)
@@ -197,11 +206,11 @@ class InferenceGlobalContext : Disposable {
 
     fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
         val apiKey = AccountManager.apiKey
-        if (apiKey.isNullOrEmpty()) return null
+        if (apiKey.isNullOrEmpty() && isCloud) return null
 
         requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
         requestData.client = "${Resources.client}-${Resources.version}"
-        return inferenceUri?.let { SMCRequest(it, requestData, apiKey) }
+        return inferenceUri?.let { SMCRequest(it, requestData, apiKey ?: "self_hosted") }
     }
 
     override fun dispose() {

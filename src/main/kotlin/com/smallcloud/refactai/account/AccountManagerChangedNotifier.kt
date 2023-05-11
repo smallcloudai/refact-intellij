@@ -4,11 +4,12 @@ import com.intellij.util.messages.Topic
 
 interface AccountManagerChangedNotifier {
 
-    fun isLoggedInChanged(limited: Boolean) {}
+    fun isLoggedInChanged(isLoggedIn: Boolean) {}
     fun planStatusChanged(newPlan: String?) {}
     fun ticketChanged(newTicket: String?) {}
     fun userChanged(newUser: String?) {}
     fun apiKeyChanged(newApiKey: String?) {}
+    fun meteringBalanceChanged(newBalance: Int?) {}
 
 
     companion object {

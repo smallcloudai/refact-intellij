@@ -63,13 +63,18 @@ class RefactAIPrivacyGroupAction : ActionGroup() {
     }
 
     override fun update(event: AnActionEvent) {
-        val files: Array<VirtualFile> = event.getData<Array<VirtualFile>>(CommonDataKeys.VIRTUAL_FILE_ARRAY) ?: return
-        event.presentation.text = RefactAIBundle.message("privacy.contextMenu")
-        event.presentation.isEnabled = InferenceGlobalContext.isCloud
-        if (PrivacyService.instance.getPrivacy(files.first()) != Privacy.DISABLED) {
-            event.presentation.icon = Resources.Icons.LOGO_RED_16x16
-        } else {
-            event.presentation.icon = Resources.Icons.HAND_12x12
+        event.presentation.isVisible = false
+
+        val files: Array<VirtualFile>? = event.getData<Array<VirtualFile>>(CommonDataKeys.VIRTUAL_FILE_ARRAY)
+        if (!files.isNullOrEmpty()) {
+            event.presentation.text = RefactAIBundle.message("privacy.contextMenu")
+            event.presentation.isEnabled = InferenceGlobalContext.isCloud
+            event.presentation.isVisible = true
+            if (PrivacyService.instance.getPrivacy(files.first()) != Privacy.DISABLED) {
+                event.presentation.icon = Resources.Icons.LOGO_RED_16x16
+            } else {
+                event.presentation.icon = Resources.Icons.HAND_12x12
+            }
         }
     }
 }

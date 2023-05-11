@@ -11,12 +11,12 @@ import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.containers.ContainerUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
-import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
-import com.smallcloud.refactai.struct.DeploymentMode
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProviderChangedNotifier
+import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
-import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
 
 
 class ChatGPTPanes(project: Project, parent: Disposable) {
@@ -44,13 +44,14 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
     }
 
     init {
-        setupPanes(!InferenceGlobalContext.isSelfHosted)
+        setupPanes(LongthinkFunctionProvider.allChats.isNotEmpty())
         ApplicationManager.getApplication()
                 .messageBus
                 .connect(PluginState.instance)
-                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun deploymentModeChanged(newValue: DeploymentMode) {
-                        setupPanes(newValue == DeploymentMode.CLOUD)
+                .subscribe(LongthinkFunctionProviderChangedNotifier.TOPIC,
+                        object : LongthinkFunctionProviderChangedNotifier {
+                    override fun longthinkFunctionsChanged(functions: List<LongthinkFunctionEntry>) {
+                        setupPanes(LongthinkFunctionProvider.allChats.isNotEmpty())
                     }
                 })
     }
@@ -84,12 +85,16 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
         return holder
     }
 
-    fun addTab(intent: String = "", selectedText: String = "", needInsertCode: Boolean = false) {
+    fun addTab(intent: String = "", selectedText: String = "",
+               needInsertCode: Boolean = false, needSend: Boolean = false) {
         val newPane = ChatGPTPane()
-        if (intent.isNotEmpty()) {
+        if (intent.isNotEmpty() && needSend) {
             newPane.send(intent, selectedText)
         }
         newPane.searchTextArea.needToInline = needInsertCode
+        newPane.searchTextArea.textArea.text = intent
+        newPane.searchTextArea.needToAttachFile = true
+
         val info = TabInfo(newPane)
         info.text = getTabNextText(intent)
         info.preferredFocusableComponent = newPane.getComponentForFocus()
@@ -134,5 +139,9 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
 
     fun send(intent: String, selectedText: String) {
         addTab(intent, selectedText)
+    }
+
+    fun preview(intent: String, selectedText: String) {
+        addTab(intent, selectedText, needSend = false)
     }
 }

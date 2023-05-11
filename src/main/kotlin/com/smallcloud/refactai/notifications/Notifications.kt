@@ -145,12 +145,12 @@ fun emitRegular(project: Project, editor: Editor) {
         notification.expire()
     })
 
-    val chat = ToolWindowManager.getInstance(project).getToolWindow("Refact Chat")
+    val chat = ToolWindowManager.getInstance(project).getToolWindow("Refact")
     if (chat != null) {
         val chatShortcut = KeymapUtil.getShortcutText("ActivateRefactChatToolWindow")
         notification.addAction(NotificationAction.createSimple("Chat ($chatShortcut)") {
             chat.activate{
-                RefactAIToolboxPaneFactory.gptChatPanes?.requestFocus()
+                RefactAIToolboxPaneFactory.chat?.requestFocus()
             }
             notification.expire()
         })

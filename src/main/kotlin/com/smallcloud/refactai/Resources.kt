@@ -2,9 +2,11 @@ package com.smallcloud.refactai
 
 import com.intellij.ide.plugins.PluginManager
 import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
+//import com.intellij.ui.NewUI
 import com.intellij.util.IconUtil
 import com.intellij.util.ui.StartupUiUtil
 import java.net.URI
@@ -28,11 +30,15 @@ private fun getPluginId(): PluginId {
 }
 
 object Resources {
+//    val isNewUI: Boolean by lazy { NewUI.isEnabled() }
     val defaultCloudUrl: URI = URI("https://www.smallcloud.ai")
     val defaultContrastUrlSuffix = URI("v1/contrast")
     val defaultChatUrlSuffix = URI("chat-v1/completions")
+    val selfHostedChatUrlSuffix = URI("v1/chat")
+    val defaultSelfHostedLongthinkFunctionsSuffix = URI("v1/longthink-functions")
     val defaultRecallUrl: URI = defaultCloudUrl.resolve("/v1/streamlined-login-recall-ticket")
-    val defaultLoginUrl: URI = defaultCloudUrl.resolve("/v1/login")
+    val defaultLoginUrlSuffix: URI = URI("/v1/login")
+    val defaultLoginUrl: URI = defaultCloudUrl.resolve(defaultLoginUrlSuffix)
     val defaultReportUrl: URI = defaultCloudUrl.resolve("/v1/usage-stats")
     val defaultAcceptRejectReportUrl: URI = defaultCloudUrl.resolve("/v1/accept-reject-stats")
     val defaultLikeReportUrl: URI = defaultCloudUrl.resolve("/v1/longthink-like")
@@ -46,7 +52,6 @@ object Resources {
     const val titleStr: String = "RefactAI"
     val pluginId: PluginId = getPluginId()
     const val stagingFilterPrefix: String = "STAGING"
-    const val openChatModel: String = "open-chat"
     val jbBuildVersion: String = ApplicationInfo.getInstance().build.toString()
 
     object Icons {
@@ -87,6 +92,7 @@ object Resources {
         val LIKE_UNCHECKED_24x24: Icon = makeIcon24("/icons/like_unchecked.svg")
 
         val BOOKMARK_CHECKED_16x16: Icon = makeIcon16("/icons/bookmark_checked.svg")
+        val DESCRIPTION_16x16: Icon = makeIcon16("/icons/description.svg")
         val BOOKMARK_CHECKED_24x24: Icon = makeIcon24("/icons/bookmark_checked.svg")
         val BOOKMARK_UNCHECKED_24x24: Icon = makeIcon24("/icons/bookmark_unchecked.svg")
 
@@ -96,5 +102,6 @@ object Resources {
 
     object ExtraUserDataKeys {
         val addedFromHL = Key.create<Boolean>("refact.added_from_hl")
+        val lastEditor = Key.create<Editor>("refact.last_editor")
     }
 }

@@ -3,6 +3,7 @@ package com.smallcloud.refactai.account
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.smallcloud.refactai.settings.AppSettingsState
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
 
 class AccountManager: Disposable {
     private var previousLoggedInState: Boolean = false
@@ -58,7 +59,15 @@ class AccountManager: Disposable {
             return !apiKey.isNullOrEmpty() && !user.isNullOrEmpty()
         }
 
-    var meteringBalance: Int = 0
+    var meteringBalance: Int? = null
+        set(newValue) {
+            if (newValue == field) return
+            field = newValue
+            ApplicationManager.getApplication()
+                    .messageBus
+                    .syncPublisher(AccountManagerChangedNotifier.TOPIC)
+                    .meteringBalanceChanged(newValue)
+        }
 
     private fun loadFromSettings() {
         previousLoggedInState = isLoggedIn
@@ -84,6 +93,8 @@ class AccountManager: Disposable {
     fun logout() {
         apiKey = null
         user = null
+        meteringBalance = null
+        LongthinkFunctionProvider.cleanUp()
     }
 
     override fun dispose() {}

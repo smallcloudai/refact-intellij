@@ -7,28 +7,15 @@ import java.net.URI
 class ConnectionManager: Disposable {
     private val connections = mutableMapOf<URI, Disposable>()
 
-    private fun addConnection(uri: URI, isAsync: Boolean = false, isCustomURI: Boolean = false) {
+    private fun addConnection(uri: URI, isCustomURI: Boolean = false) {
         if (connections[uri] != null) return
-        if (isAsync) {
-            connections[uri] = AsyncConnection(uri, isCustomURI)
-        } else {
-            connections[uri] = Connection(uri, isCustomURI)
-        }
-    }
-    fun getConnection(uri: URI,
-                      isCustomURI: Boolean = false,
-                      createIfNeed: Boolean = true): Connection? {
-        if (createIfNeed) {
-            addConnection(uri, false, isCustomURI)
-        }
-        return connections[uri] as Connection?
+        connections[uri] = AsyncConnection(uri, isCustomURI)
     }
 
     fun getAsyncConnection(uri: URI,
-                           isCustomURI: Boolean = false,
                            createIfNeed: Boolean = true): AsyncConnection? {
         if (createIfNeed) {
-            addConnection(uri, true, isCustomURI)
+            addConnection(uri, true)
         }
         return connections[uri] as AsyncConnection?
     }

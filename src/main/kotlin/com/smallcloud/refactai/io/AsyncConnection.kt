@@ -15,6 +15,7 @@ import org.apache.hc.client5.http.async.methods.SimpleHttpRequest
 import org.apache.hc.client5.http.config.RequestConfig
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients
+import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder
 import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder
 import org.apache.hc.client5.http.ssl.TrustSelfSignedStrategy
 import org.apache.hc.core5.concurrent.FutureCallback
@@ -38,16 +39,18 @@ import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as I
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 
+private val STREAMING_PREFIX = "data: "
+
 class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
-    private val client: CloseableHttpAsyncClient = HttpAsyncClients.customHttp2()
-            .setTlsStrategy(
-                    ClientTlsStrategyBuilder.create()
+    private val client: CloseableHttpAsyncClient = HttpAsyncClients.custom()
+            .setConnectionManager(PoolingAsyncClientConnectionManagerBuilder.create()
+                    .setTlsStrategy(ClientTlsStrategyBuilder.create()
                             .setSslContext(if (isCustomUrl)
                                 SSLContexts.custom().loadTrustMaterial(TrustSelfSignedStrategy()).build() else
                                 SSLContexts.createSystemDefault())
                             .setTlsVersions(TLS.V_1_3, TLS.V_1_2)
-                            .build()
-            )
+                            .build())
+                    .build())
             .setIOReactorConfig(
                     IOReactorConfig.custom()
                             .setIoThreadCount(8)
@@ -77,6 +80,37 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         client.execute(SimpleHttpRequest.create(Method.GET, uri), null).get(5, TimeUnit.SECONDS)
     }
 
+    fun get(
+            uri: URI,
+            body: String? = null,
+            headers: Map<String, String>? = null,
+            requestProperties: Map<String, String>? = null,
+            needVerify: Boolean = false,
+            stat: UsageStatistic,
+            dataReceiveEnded: (String) -> Unit,
+            dataReceived: (String) -> Unit,
+            errorDataReceived: (JsonObject) -> Unit,
+            failedDataReceiveEnded: (Throwable?) -> Unit = {},
+    ): CompletableFuture<Future<*>> {
+        val requestProducer: AsyncRequestProducer = BasicRequestProducer(
+                BasicRequestBuilder
+                        .get(uri)
+                        .also { builder ->
+                            headers?.forEach { builder.addHeader(it.key, it.value) }
+                            requestProperties?.forEach { builder.addHeader(it.key, it.value) }
+                        }
+                        .build(),
+                body?.let { AsyncEntityProducers.create(body, ContentType.APPLICATION_JSON) }
+        )
+
+        return send(
+                requestProducer, uri,
+                needVerify = needVerify, stat = stat,
+                dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
+                errorDataReceived = errorDataReceived, failedDataReceiveEnded = failedDataReceiveEnded
+        )
+    }
+
     fun post(
             uri: URI,
             body: String? = null,
@@ -84,9 +118,9 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
             requestProperties: Map<String, String>? = null,
             needVerify: Boolean = false,
             stat: UsageStatistic,
-            dataReceiveEnded: () -> Unit,
-            dataReceived: (String) -> Unit,
-            errorDataReceived: (JsonObject) -> Unit,
+            dataReceiveEnded: (String) -> Unit = {},
+            dataReceived: (String) -> Unit = {},
+            errorDataReceived: (JsonObject) -> Unit = {},
             failedDataReceiveEnded: (Throwable?) -> Unit = {},
     ): CompletableFuture<Future<*>> {
         val requestProducer: AsyncRequestProducer = BasicRequestProducer(
@@ -99,7 +133,6 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
                         .build(),
                 AsyncEntityProducers.create(body, ContentType.APPLICATION_JSON)
         )
-
         return send(
                 requestProducer, uri,
                 needVerify = needVerify, stat = stat,
@@ -113,7 +146,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
             uri: URI,
             needVerify: Boolean = false,
             stat: UsageStatistic,
-            dataReceiveEnded: () -> Unit,
+            dataReceiveEnded: (String) -> Unit,
             dataReceived: (String) -> Unit,
             errorDataReceived: (JsonObject) -> Unit,
             failedDataReceiveEnded: (Throwable?) -> Unit = {},
@@ -125,8 +158,8 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
         }.thenApply {
             return@thenApply client.execute(
                     requestProducer,
-                    object : AbstractBinResponseConsumer<Void?>() {
-                        var bufferStr = ""
+                    object : AbstractBinResponseConsumer<String>() {
+                        private var bufferStr = ""
 
                         override fun releaseResources() {
                         }
@@ -143,34 +176,37 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
 
                         override fun data(src: ByteBuffer?, endOfStream: Boolean) {
                             src ?: return
-                            bufferStr += Charset.forName("UTF-8").decode(src)
-                            try {
-                                val data = Gson().fromJson(bufferStr, JsonObject::class.java)
-                                errorDataReceived(data)
-                                return
-                            } catch (_: JsonSyntaxException) {
-                            }
-                            val (dataPieces, maybeLeftOverBuffer) = lookForCompletedDataInStreamingBuf(bufferStr)
-                            dataPieces.forEach { dataReceived(it) }
-                            if (maybeLeftOverBuffer == null) {
-                                return
-                            } else {
-                                bufferStr = maybeLeftOverBuffer
+                            val part = Charset.forName("UTF-8").decode(src)
+                            bufferStr += part
+                            if (part.startsWith(STREAMING_PREFIX)) {
+                                try {
+                                    val data = Gson().fromJson(bufferStr, JsonObject::class.java)
+                                    errorDataReceived(data)
+                                    return
+                                } catch (_: JsonSyntaxException) {
+                                }
+                                val (dataPieces, maybeLeftOverBuffer) = lookForCompletedDataInStreamingBuf(bufferStr)
+                                dataPieces.forEach { dataReceived(it) }
+                                if (maybeLeftOverBuffer == null) {
+                                    return
+                                } else {
+                                    bufferStr = maybeLeftOverBuffer
+                                }
                             }
                         }
 
                         override fun start(response: HttpResponse?, contentType: ContentType?) {
                         }
 
-                        override fun buildResult(): Void? {
-                            return null
+                        override fun buildResult(): String {
+                            return bufferStr
                         }
 
                         override fun failed(cause: Exception?) {}
                     },
-                    object : FutureCallback<Void?> {
-                        override fun completed(result: Void?) {
-                            dataReceiveEnded()
+                    object : FutureCallback<String> {
+                        override fun completed(result: String) {
+                            dataReceiveEnded(result)
                         }
 
                         override fun failed(ex: java.lang.Exception?) {
@@ -184,7 +220,6 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
                         }
 
                         override fun cancelled() {}
-
                     }
             )
         }
@@ -198,7 +233,7 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
             val offset = outputStreamingBuffer.findTextRange("\n\n")?.startOffset ?: break
             var currentBuffer = outputStreamingBuffer.substring(0, offset)
             outputStreamingBuffer = outputStreamingBuffer.substring(offset + 2)
-            assert(currentBuffer.substring(0, 6) == "data: ")
+            assert(currentBuffer.startsWith(STREAMING_PREFIX))
             currentBuffer = currentBuffer.substring(6)
             if (currentBuffer == "[ERROR]") {
                 throw Exception("[ERROR]")

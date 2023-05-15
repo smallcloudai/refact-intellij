@@ -1,6 +1,5 @@
 package com.smallcloud.refactai.modes.highlight
 
-//import com.smallcloud.refactai.aitoolbox.DiffDialog
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
@@ -12,7 +11,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.RequestJob
 import com.smallcloud.refactai.io.inferenceFetch
 import com.smallcloud.refactai.modes.Mode
 import com.smallcloud.refactai.modes.ModeProvider
@@ -21,7 +19,6 @@ import com.smallcloud.refactai.modes.completion.prompt.RequestCreator
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
-import com.smallcloud.refactai.struct.SMCPrediction
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.utils.getExtension
 import java.util.concurrent.CancellationException
@@ -184,20 +181,15 @@ class HighlightMode(
         entry: LongthinkFunctionEntry,
         editor: Editor
     ) {
-        var maybeLastReqJob: RequestJob? = null
-        try {
-            request.body.stopTokens = listOf()
-            request.body.maxTokens = 0
+        request.body.stopTokens = listOf()
+        request.body.maxTokens = 0
 
-            InferenceGlobalContext.status = ConnectionStatus.PENDING
-            maybeLastReqJob = inferenceFetch(request)
-            val lastReqJob = maybeLastReqJob ?: return
-
-            val prediction = lastReqJob.future.get() as SMCPrediction
+        InferenceGlobalContext.status = ConnectionStatus.PENDING
+        inferenceFetch(request) { prediction ->
             if (prediction.status == null) {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR
                 InferenceGlobalContext.lastErrorMsg = "Parameters are not correct"
-                return
+                return@inferenceFetch
             }
 
             val predictedText = prediction.choices.firstOrNull()?.files?.get(request.body.cursorFile)
@@ -205,7 +197,7 @@ class HighlightMode(
             if (predictedText == null || finishReason == null) {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = "Request was succeeded but there is no predicted data"
-                return
+                return@inferenceFetch
             } else {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = null
@@ -220,21 +212,25 @@ class HighlightMode(
             if (layout!!.isEmpty()) {
                 ModeProvider.getOrCreateModeProvider(editor).switchMode()
             }
-        } catch (_: InterruptedException) {
-            maybeLastReqJob?.let {
-                maybeLastReqJob.request?.abort()
-                logger.debug("lastReqJob abort")
+        }?.also {
+            var requestFuture: Future<*>? = null
+            try {
+                requestFuture = it.get()
+                requestFuture.get()
+                logger.debug("Diff request finished")
+            } catch (_: InterruptedException) {
+                requestFuture?.cancel(true)
+                cancel(editor)
+                ModeProvider.getOrCreateModeProvider(editor).switchMode()
+            } catch (e: ExecutionException) {
+                catchNetExceptions(e.cause)
+                ModeProvider.getOrCreateModeProvider(editor).switchMode()
+            } catch (e: Exception) {
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                InferenceGlobalContext.lastErrorMsg = e.message
+                logger.warn("Exception while highlight request processing", e)
+                ModeProvider.getOrCreateModeProvider(editor).switchMode()
             }
-            cancel(editor)
-            ModeProvider.getOrCreateModeProvider(editor).switchMode()
-        } catch (e: ExecutionException) {
-            catchNetExceptions(e.cause)
-            ModeProvider.getOrCreateModeProvider(editor).switchMode()
-        } catch (e: Exception) {
-            InferenceGlobalContext.status = ConnectionStatus.ERROR
-            InferenceGlobalContext.lastErrorMsg = e.message
-            logger.warn("Exception while highlight request processing", e)
-            ModeProvider.getOrCreateModeProvider(editor).switchMode()
         }
     }
 

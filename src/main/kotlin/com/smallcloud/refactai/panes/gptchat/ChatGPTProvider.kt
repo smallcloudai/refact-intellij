@@ -131,12 +131,16 @@ class ChatGPTProvider : ActionListener {
                             val gson = Gson()
                             val obj = gson.fromJson(response, JsonObject::class.java)
                             if (stop) return ""
-                            val choice0 = obj.get("choices").asJsonArray[0].asJsonObject
-                            if (choice0.has("finish_reason")
-                                    && choice0.get("finish_reason").asString == "stop") {
-                                stop = true
+                            return if (obj.has("choices")) {
+                                val choice0 = obj.get("choices").asJsonArray[0].asJsonObject
+                                if (choice0.has("finish_reason")
+                                        && choice0.get("finish_reason").asString == "stop") {
+                                    stop = true
+                                }
+                                choice0.get("delta").asString
+                            } else {
+                                obj.get("delta").asString
                             }
-                            return choice0.get("delta").asString
                         }
 
                         var line = parse(response)

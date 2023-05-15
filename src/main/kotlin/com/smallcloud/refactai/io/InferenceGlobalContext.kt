@@ -22,29 +22,15 @@ class InferenceGlobalContext : Disposable {
     private var lastTask: Future<*>? = null
 
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
-    var connection: Connection? = null
     var inferenceConnection: AsyncConnection? = null
 
     init {
         reconnect()
     }
 
-    private fun makeConnection(uri: URI, isCustomUrl: Boolean = false): Connection? {
-        return try {
-            val conn = Connection(uri, isCustomUrl)
-            status = ConnectionStatus.CONNECTED
-            lastErrorMsg = null
-            conn
-        } catch (e: Exception) {
-            status = ConnectionStatus.DISCONNECTED
-            lastErrorMsg = e.message
-            null
-        }
-    }
-
     private fun makeAsyncConnection(uri: URI, isCustomUrl: Boolean = false): AsyncConnection? {
         return try {
-            val conn = AsyncConnection(uri, isCustomUrl)
+            val conn = ConnectionManager.instance.getAsyncConnection(uri, isCustomUrl)
             status = ConnectionStatus.CONNECTED
             lastErrorMsg = null
             conn
@@ -56,7 +42,6 @@ class InferenceGlobalContext : Disposable {
     }
 
     fun reconnect() {
-        connection = inferenceUri?.let { makeConnection(it, hasUserInferenceUri()) }
         inferenceConnection = inferenceUri?.let { makeAsyncConnection(it, hasUserInferenceUri()) }
     }
 

@@ -22,7 +22,7 @@ private fun filterByString(source: List<LongthinkFunctionVariation>,
 fun filter(source: List<LongthinkFunctionVariation>, filterStr: String, fromHL: Boolean,
            filterBy: ((LongthinkFunctionVariation) -> Boolean)? = null): List<LongthinkFunctionVariation> {
     val localFiltered = filterByString(source, filterStr, filterBy).toMutableList()
-    return if (fromHL) {
+    val filtered = if (fromHL) {
         localFiltered.sortedWith(compareByDescending<LongthinkFunctionVariation> { it.isBookmarked }
                 .thenByDescending { it.catchAllHighlight }
                 .thenByDescending { it.catchAllSelection }
@@ -39,4 +39,5 @@ fun filter(source: List<LongthinkFunctionVariation>, filterStr: String, fromHL: 
                 .thenByDescending { it.supportHighlight }
         )
     }
+    return filtered.ifEmpty { source }
 }

@@ -53,10 +53,9 @@ class AsyncCompletionLayout(
 
     private fun stopUpdate() {
         isUpdating = false
-        updateTask?.let {
-            it.get()
-            updateTask = null
-        }
+        if (updateTask == null) return
+        updateTask!!.get()
+        updateTask = null
     }
 
     fun update(
@@ -106,7 +105,7 @@ class AsyncCompletionLayout(
             needToRender: Boolean,
             animation: Boolean) {
         inlayer?.let { inlayer ->
-            val offset = lastCompletionData!!.startIndex
+            val offset = lastCompletionData!!.startIndex - lastCompletionData!!.leftSymbolsToRemove
             var blockText = lastCompletionData!!.completion
             val currentText = inlayer.getText(offset) ?: ""
             if (blockText.startsWith(currentText)) {

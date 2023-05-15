@@ -392,8 +392,10 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
                             val model = model as DefaultComboBoxModel
                             if (isEnabled) {
                                 model.removeAllElements()
-                                model.addAll(LongthinkFunctionProvider.allChats)
-                                selectedIndex = 0
+                                if (LongthinkFunctionProvider.allChats.isNotEmpty()) {
+                                    model.addAll(LongthinkFunctionProvider.allChats)
+                                    selectedIndex = 0
+                                }
                             }
                         }
                     })

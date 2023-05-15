@@ -1,6 +1,5 @@
 package com.smallcloud.refactai.modes.diff
 
-//import com.smallcloud.refactai.aitoolbox.DiffDialog
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
@@ -13,7 +12,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.RequestJob
 import com.smallcloud.refactai.io.inferenceFetch
 import com.smallcloud.refactai.modes.Mode
 import com.smallcloud.refactai.modes.ModeProvider.Companion.getOrCreateModeProvider
@@ -23,7 +21,6 @@ import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.refactai.modes.highlight.HighlightContext
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
-import com.smallcloud.refactai.struct.SMCPrediction
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.utils.getExtension
 import dev.gitlive.difflib.DiffUtils
@@ -136,7 +133,7 @@ class DiffMode(
         val request: SMCRequest
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         if (diffLayout == null || highlightContext != null) {
-            val entry: LongthinkFunctionEntry = entryFromContext ?: return
+            val entry: LongthinkFunctionEntry = highlightContext?.entry ?: entryFromContext ?: return
             var funcName = (if (lastFromHL) entry.functionHlClick else entry.functionSelection)
             if (funcName.isNullOrEmpty()) {
                 funcName = entry.functionName
@@ -180,21 +177,16 @@ class DiffMode(
         request: SMCRequest,
         editor: Editor
     ) {
-        var maybeLastReqJob: RequestJob? = null
-        try {
-            request.body.stopTokens = listOf()
-            request.body.maxTokens = 550
-            request.body.maxEdits = if (request.body.functionName == "diff-atcursor") 1 else 10
+        request.body.stopTokens = listOf()
+        request.body.maxTokens = 550
+        request.body.maxEdits = if (request.body.functionName == "diff-atcursor") 1 else 10
 
-            InferenceGlobalContext.status = ConnectionStatus.PENDING
-            maybeLastReqJob = inferenceFetch(request)
-            val lastReqJob = maybeLastReqJob ?: return
-
-            val prediction = lastReqJob.future.get() as SMCPrediction
+        InferenceGlobalContext.status = ConnectionStatus.PENDING
+        inferenceFetch(request) { prediction ->
             if (prediction.status == null || prediction.status == "error") {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR
                 InferenceGlobalContext.lastErrorMsg = "Parameters are not correct"
-                return
+                return@inferenceFetch
             }
 
             val predictedText = prediction.choices.firstOrNull()?.files?.get(request.body.cursorFile)
@@ -202,7 +194,7 @@ class DiffMode(
             if (predictedText == null || finishReason == null) {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = "Request was succeeded but there is no predicted data"
-                return
+                return@inferenceFetch
             } else {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = null
@@ -211,33 +203,37 @@ class DiffMode(
             val patch = request.body.sources[request.body.cursorFile]?.let {
                 prediction.choices[0].files[request.body.cursorFile]?.let { it1 ->
                     DiffUtils.diff(
-                        it.split('\n'),
-                        it1.split('\n'),
+                            it.split('\n'),
+                            it1.split('\n'),
                     )
                 }
             }
             finishRenderRainbow()
-            if (patch == null) return
+            if (patch == null) return@inferenceFetch
 
             diffLayout = DiffLayout(editor, request, patch)
             app.invokeAndWait {
                 diffLayout?.render()
             }
-        } catch (_: InterruptedException) {
-            finishRenderRainbow()
-            maybeLastReqJob?.let {
-                maybeLastReqJob.request?.abort()
-                logger.debug("lastReqJob abort")
+        }?.also {
+            var requestFuture: Future<*>? = null
+            try {
+                requestFuture = it.get()
+                requestFuture.get()
+                logger.debug("Diff request finished")
+            } catch (_: InterruptedException) {
+                requestFuture?.cancel(true)
+                finishRenderRainbow()
+                getOrCreateModeProvider(editor).switchMode()
+            } catch (e: ExecutionException) {
+                catchNetExceptions(e.cause)
+                getOrCreateModeProvider(editor).switchMode()
+            } catch (e: Exception) {
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                InferenceGlobalContext.lastErrorMsg = e.message
+                logger.warn("Exception while diff request processing", e)
+                getOrCreateModeProvider(editor).switchMode()
             }
-            getOrCreateModeProvider(editor).switchMode()
-        } catch (e: ExecutionException) {
-            catchNetExceptions(e.cause)
-            getOrCreateModeProvider(editor).switchMode()
-        } catch (e: Exception) {
-            InferenceGlobalContext.status = ConnectionStatus.ERROR
-            InferenceGlobalContext.lastErrorMsg = e.message
-            logger.warn("Exception while diff request processing", e)
-            getOrCreateModeProvider(editor).switchMode()
         }
     }
 

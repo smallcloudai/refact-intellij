@@ -24,7 +24,6 @@ class ConnectivityManager : Disposable {
                         val url = defaultCloudUrl.toURL()
                         val connection: URLConnection = url.openConnection()
                         connection.connect()
-                        InferenceGlobalContext.reconnect()
                     }
                 } catch (e: Exception) {
                     // Do nothing

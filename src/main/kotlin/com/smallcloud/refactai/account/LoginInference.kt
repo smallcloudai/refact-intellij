@@ -14,7 +14,7 @@ fun getInferenceUrl(): URI? {
 }
 
 fun inferenceLogin(): String {
-    val conn = InferenceGlobalContext.inferenceConnection ?: return ""
+    val conn = InferenceGlobalContext.connection ?: return ""
     val token = AccountManager.instance.apiKey
 
     val inferUrl = getInferenceUrl() ?: return ""

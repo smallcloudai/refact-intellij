@@ -6,7 +6,6 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.LoginStateService
-import com.smallcloud.refactai.account.inferenceLogin
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.struct.SMCRequest
@@ -22,27 +21,17 @@ class InferenceGlobalContext : Disposable {
     private var lastTask: Future<*>? = null
 
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
-    var inferenceConnection: AsyncConnection? = null
+    var connection: AsyncConnection = AsyncConnection()
 
-    init {
-        reconnect()
-    }
-
-    private fun makeAsyncConnection(uri: URI, isCustomUrl: Boolean = false): AsyncConnection? {
-        return try {
-            val conn = ConnectionManager.instance.getAsyncConnection(uri, isCustomUrl)
+    fun checkConnection(uri: URI) {
+        try {
+            connection.ping(uri)
             status = ConnectionStatus.CONNECTED
             lastErrorMsg = null
-            conn
         } catch (e: Exception) {
             status = ConnectionStatus.DISCONNECTED
             lastErrorMsg = e.message
-            null
         }
-    }
-
-    fun reconnect() {
-        inferenceConnection = inferenceUri?.let { makeAsyncConnection(it, hasUserInferenceUri()) }
     }
 
     var status: ConnectionStatus = ConnectionStatus.DISCONNECTED
@@ -78,16 +67,8 @@ class InferenceGlobalContext : Disposable {
 
             lastTask?.cancel(true)
             lastTask = reconnectScheduler.submit {
-                reconnect()
-                when(deploymentMode) {
-                    DeploymentMode.CLOUD -> {
-                        inferenceLogin()
-                    }
-                    DeploymentMode.SELF_HOSTED -> {
-                        ApplicationManager.getApplication().getService(LoginStateService::class.java)
-                                .tryToWebsiteLogin(force = true)
-                    }
-                }
+                ApplicationManager.getApplication().getService(LoginStateService::class.java)
+                        .tryToWebsiteLogin(force = true)
                 messageBus
                         .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                         .deploymentModeChanged(deploymentMode)
@@ -101,7 +82,6 @@ class InferenceGlobalContext : Disposable {
             messageBus
                     .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                     .inferenceUriChanged(newInferenceUrl)
-            reconnect()
         }
         get() {
             return AppSettingsState.instance.inferenceUri?.let { URI(it) }

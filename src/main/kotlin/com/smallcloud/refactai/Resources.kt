@@ -42,7 +42,6 @@ object Resources {
     val defaultReportUrl: URI = defaultCloudUrl.resolve("/v1/usage-stats")
     val defaultAcceptRejectReportUrl: URI = defaultCloudUrl.resolve("/v1/accept-reject-stats")
     val defaultLikeReportUrl: URI = defaultCloudUrl.resolve("/v1/longthink-like")
-    val developerModeLoginParameters = mapOf("want_staging_version" to "1")
     const val defaultTemperature: Float = 0.2f
     const val defaultModel: String = "CONTRASTcode"
     val version: String = getVersion()

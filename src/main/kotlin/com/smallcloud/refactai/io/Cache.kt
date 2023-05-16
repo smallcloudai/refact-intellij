@@ -61,11 +61,7 @@ fun streamedInferenceFetch(
     val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCoolDown * 1000
     if (needToVerify) lastInferenceVerifyTs = now
 
-    if (InferenceGlobalContext.inferenceConnection == null) {
-        InferenceGlobalContext.reconnect()
-    }
-
-    val job = InferenceGlobalContext.inferenceConnection?.post(
+    val job = InferenceGlobalContext.connection.post(
             uri, body, headers,
             needVerify = needToVerify, stat = request.stat,
             dataReceiveEnded = dataReceiveEnded,
@@ -101,11 +97,7 @@ fun inferenceFetch(
     val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCoolDown * 1000
     if (needToVerify) lastInferenceVerifyTs = now
 
-    if (InferenceGlobalContext.inferenceConnection == null) {
-        InferenceGlobalContext.reconnect()
-    }
-
-    val job = InferenceGlobalContext.inferenceConnection?.post(
+    val job = InferenceGlobalContext.connection.post(
             uri, body, headers,
             needVerify = needToVerify, stat = request.stat,
             dataReceiveEnded = {

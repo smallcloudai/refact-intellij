@@ -46,7 +46,7 @@ class StatisticService: Disposable {
                     override fun deploymentModeChanged(newValue: DeploymentMode) {
                         if (task != null) {
                             if (newValue != DeploymentMode.CLOUD) {
-                                task?.cancel(true)
+                                task?.cancel(false)
                                 task?.get()
                                 task = null
                             }

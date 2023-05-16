@@ -4,10 +4,10 @@ import com.google.gson.JsonObject
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.diagnostic.Logger
 import com.smallcloud.refactai.PluginState
+import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.defaultLoginUrl
 import com.smallcloud.refactai.Resources.defaultLoginUrlSuffix
 import com.smallcloud.refactai.Resources.defaultRecallUrl
-import com.smallcloud.refactai.Resources.developerModeLoginParameters
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.sendRequest
 import com.smallcloud.refactai.statistic.UsageStatistic
@@ -115,10 +115,9 @@ fun checkLogin(force: Boolean = false): String {
         URIBuilder(infC.inferenceUri?.resolve(defaultLoginUrlSuffix)) else URIBuilder(defaultLoginUrl)
 
     if (infC.developerModeEnabled) {
-        developerModeLoginParameters.forEach {
-            urlBuilder.addParameter(it.key, it.value)
-        }
+        urlBuilder.addParameter("want_staging_version", "1")
     }
+    urlBuilder.addParameter("plugin_version", "${Resources.client}-${Resources.version}")
     val url = urlBuilder.build()
 
     headers["Authorization"] = "Bearer $token"

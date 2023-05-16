@@ -39,15 +39,13 @@ import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as I
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 
-private val STREAMING_PREFIX = "data: "
+private const val STREAMING_PREFIX = "data: "
 
-class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
+class AsyncConnection : Disposable {
     private val client: CloseableHttpAsyncClient = HttpAsyncClients.custom()
             .setConnectionManager(PoolingAsyncClientConnectionManagerBuilder.create()
                     .setTlsStrategy(ClientTlsStrategyBuilder.create()
-                            .setSslContext(if (isCustomUrl)
-                                SSLContexts.custom().loadTrustMaterial(TrustSelfSignedStrategy()).build() else
-                                SSLContexts.createSystemDefault())
+                            .setSslContext(SSLContexts.custom().loadTrustMaterial(TrustSelfSignedStrategy()).build())
                             .setTlsVersions(TLS.V_1_3, TLS.V_1_2)
                             .build())
                     .build())
@@ -77,6 +75,9 @@ class AsyncConnection(uri: URI, isCustomUrl: Boolean = false) : Disposable {
 
     init {
         client.start()
+    }
+
+    fun ping(uri: URI) {
         client.execute(SimpleHttpRequest.create(Method.GET, uri), null).get(5, TimeUnit.SECONDS)
     }
 

@@ -9,7 +9,6 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources.defaultChatUrlSuffix
 import com.smallcloud.refactai.Resources.selfHostedChatUrlSuffix
-import com.smallcloud.refactai.io.AsyncConnection
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.panes.gptchat.structs.ChatGPTRequest
@@ -31,7 +30,6 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.io.ConnectionManager.Companion.instance as ConnectionManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class ChatGPTProvider : ActionListener {
@@ -44,18 +42,14 @@ class ChatGPTProvider : ActionListener {
     )
     private var streamSchedulerTasks = mutableListOf<Future<*>>()
 
-    private var connection: AsyncConnection? = null
     private var processTask: Future<*>? = null
     private var canceled: Boolean = false
     private var cachedFile: String? = null
 
     private fun reconnect() {
-        try {
-            InferenceGlobalContext.inferenceUri?.let {
-                connection = ConnectionManager.getAsyncConnection(it.resolve(defaultChatUrlSuffix))
-            }
-        } catch (_: Exception) {
-            connection = null
+        InferenceGlobalContext.inferenceUri?.let {
+            InferenceGlobalContext.checkConnection(it.resolve(if (InferenceGlobalContext.isCloud)
+                defaultChatUrlSuffix else selfHostedChatUrlSuffix))
         }
     }
 
@@ -83,7 +77,6 @@ class ChatGPTProvider : ActionListener {
 
     fun doActionPerformed(pane: ChatGPTPane, msg: String? = null,
                           selectedText: String? = null, editor: Editor? = null) {
-        if (connection == null) return
         if (cachedFile == null && pane.searchTextArea.needToAttachFile && editor != null) {
             cachedFile = makeAttachedFile(editor)
         }
@@ -123,7 +116,7 @@ class ChatGPTProvider : ActionListener {
             val reqStr = MsgBuilder.build(req, pane.searchTextArea.selectedModel, cachedFile)
             var stop = false
             val stat = UsageStatistic("chat-tab", pane.searchTextArea.selectedModel)
-            connection!!.post(req.uri,
+            InferenceGlobalContext.connection.post(req.uri,
                     reqStr,
                     mapOf("Authorization" to "Bearer ${req.token}"),
                     dataReceived = { response ->

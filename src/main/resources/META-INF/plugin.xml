@@ -113,6 +113,7 @@ integrated into a single package that follows your privacy settings.
         <actionPromoter implementation="com.smallcloud.refactai.listeners.InlineActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.DiffActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.CancelActionsPromoter"/>
+        <actionPromoter implementation="com.smallcloud.refactai.listeners.ForceCompletionActionPromoter"/>
 
         <toolWindow id="Refact" anchor="right"
                     canCloseContents="true"
@@ -132,23 +133,25 @@ integrated into a single package that follows your privacy settings.
         <applicationService serviceImplementation="com.smallcloud.refactai.UpdateChecker"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectivityManager"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectionManager"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.listeners.QuickLongthinkActionsService"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.refactai.listeners.TabPressedAction"
                 id="TabPressedAction"
-                text="Accept Inline Completion">
+                text="Accept Inline Completion"
+                description="Refact AI Accept Inline Completion">
             <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>
         </action>
         <action class="com.smallcloud.refactai.listeners.CancelPressedAction"
                 id="CancelPressedAction"
-                text="Cancel Inline Completion">
+                text="Cancel Inline Completion"
+                description="Refact AI Cancel Inline Completion">
             <keyboard-shortcut first-keystroke="ESCAPE" keymap="$default"/>
         </action>
         <action class="com.smallcloud.refactai.listeners.ForceCompletionAction"
                 id="ForceCompletionAction"
-                text="Make A Force Completion">
+                text="Make A Force Completion"
+                description="Refact AI Make A Force Completion">
             <keyboard-shortcut first-keystroke="alt SLASH" keymap="$default"/>
         </action>
         <group id="RefactAIPrivacy" popup="true" class="com.smallcloud.refactai.privacy.RefactAIPrivacyGroupAction">

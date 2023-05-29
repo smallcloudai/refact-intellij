@@ -28,8 +28,12 @@ class ToolboxPaneInvokeAction: AnAction(Resources.Icons.LOGO_RED_16x16) {
         }
 
         val tw = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact")
-        tw?.activate{
-            RefactAIToolboxPaneFactory.focusToolbox()
+        if (RefactAIToolboxPaneFactory.isToolboxFocused()) {
+            tw?.hide()
+        } else {
+            tw?.activate({
+                RefactAIToolboxPaneFactory.focusToolbox()
+            }, false)
         }
     }
 }

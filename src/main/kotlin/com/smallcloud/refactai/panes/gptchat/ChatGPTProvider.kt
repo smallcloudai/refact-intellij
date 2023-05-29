@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class ChatGPTProvider : ActionListener {
@@ -47,9 +48,11 @@ class ChatGPTProvider : ActionListener {
     private var cachedFile: String? = null
 
     private fun reconnect() {
-        InferenceGlobalContext.inferenceUri?.let {
-            InferenceGlobalContext.checkConnection(it.resolve(if (InferenceGlobalContext.isCloud)
-                defaultChatUrlSuffix else selfHostedChatUrlSuffix))
+        if (LongthinkFunctionProvider.allChats.isNotEmpty() && InferenceGlobalContext.canRequest()) {
+            InferenceGlobalContext.inferenceUri?.let {
+                InferenceGlobalContext.checkConnection(it.resolve(if (InferenceGlobalContext.isCloud)
+                    defaultChatUrlSuffix else selfHostedChatUrlSuffix))
+            }
         }
     }
 

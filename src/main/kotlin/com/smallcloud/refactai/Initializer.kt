@@ -27,19 +27,25 @@ class Initializer : StartupActivity.Background, Disposable {
     private fun initialize(project: Project) {
         ConnectivityManager.instance.startup()
 
-        when(InferenceGlobalContext.instance.deploymentMode) {
-            DeploymentMode.CLOUD -> {
-                if (!AppSettingsState.instance.startupLoggedIn) {
-                    AppSettingsState.instance.startupLoggedIn = true
-                    login()
-                } else {
+        InferenceGlobalContext.instance.inferenceUri?.let {
+            InferenceGlobalContext.instance.checkConnection(it)
+        }
+        if (InferenceGlobalContext.instance.canRequest()) {
+            when (InferenceGlobalContext.instance.deploymentMode) {
+                DeploymentMode.CLOUD -> {
+                    if (!AppSettingsState.instance.startupLoggedIn) {
+                        AppSettingsState.instance.startupLoggedIn = true
+                        login()
+                    } else {
+                        ApplicationManager.getApplication().getService(LoginStateService::class.java)
+                                .tryToWebsiteLogin(true)
+                    }
+                }
+
+                DeploymentMode.SELF_HOSTED -> {
                     ApplicationManager.getApplication().getService(LoginStateService::class.java)
                             .tryToWebsiteLogin(true)
                 }
-            }
-            DeploymentMode.SELF_HOSTED -> {
-                ApplicationManager.getApplication().getService(LoginStateService::class.java)
-                        .tryToWebsiteLogin(true)
             }
         }
         settingsStartup()

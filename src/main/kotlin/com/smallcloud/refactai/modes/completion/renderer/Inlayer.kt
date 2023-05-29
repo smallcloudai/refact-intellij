@@ -144,8 +144,12 @@ class AsyncInlayer(
 
     fun getLastText(): String? {
         synchronized(this) {
-            val entry = realTexts.maxBy { it.key }
-            return getText(entry.key)
+//            try {
+                val entry = realTexts.maxBy { it.key }
+                return getText(entry.key)
+//            } catch (e: Exception) {
+//                throw e
+//            }
         }
     }
 

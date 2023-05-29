@@ -1,14 +1,18 @@
 package com.smallcloud.refactai.settings
 
+import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.TitledSeparator
-import com.intellij.ui.components.*
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.RefactAIBundle
 import java.awt.event.KeyEvent
 import java.awt.event.KeyListener
-import javax.swing.*
+import javax.swing.JCheckBox
+import javax.swing.JComponent
+import javax.swing.JPanel
 
 
 class AppSettingsComponent {
@@ -64,9 +68,11 @@ class AppSettingsComponent {
                 ), 0
             )
             addComponent(myUseForceCompletionMode, (UIUtil.DEFAULT_VGAP * 1.5).toInt())
+            val f1Shortcut = KeymapUtil.getShortcutText("ForceCompletionAction")
+
             addComponent(
                 JBLabel(
-                    RefactAIBundle.message("advancedSettings.useForceCompletionModeDescription","alt + /"),
+                    RefactAIBundle.message("advancedSettings.useForceCompletionModeDescription", f1Shortcut),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )

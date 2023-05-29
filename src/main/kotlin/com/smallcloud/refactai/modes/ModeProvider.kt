@@ -95,8 +95,7 @@ class ModeProvider(
         try {
             beforeEvent?.let { activeMode?.beforeDocumentChangeNonBulk(it) }
             afterEvent?.let { activeMode?.onTextChange(it) }
-        } catch (e: Exception) {
-            InferenceGlobalContext.status = ConnectionStatus.ERROR
+        } catch (e: Exception) { InferenceGlobalContext.status = ConnectionStatus.ERROR
             InferenceGlobalContext.lastErrorMsg = e.message
             stats.addStatistic(
                 false, UsageStatistic("uncaught exceptions"), "none",

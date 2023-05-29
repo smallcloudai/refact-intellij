@@ -88,6 +88,8 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.inferenceUri =
             if (mySettingsComponent!!.contrastUrlText.isEmpty()) null else
                 makeUrlGreat(mySettingsComponent!!.contrastUrlText)
+        mySettingsComponent!!.contrastUrlText = if (InferenceGlobalContext.isSelfHosted)
+            InferenceGlobalContext.inferenceUri.toString() else ""
         InferenceGlobalContext.useForceCompletion = mySettingsComponent!!.useForceCompletion
         InferenceGlobalContext.useMultipleFilesCompletion = mySettingsComponent!!.useMultipleFilesCompletion
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode

@@ -58,6 +58,11 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
             val toolbox = content.getUserData(toolboxKey)
             toolbox?.requestFocus()
         }
+        fun isToolboxFocused(): Boolean {
+            val tw = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact")
+            val toolbox =  tw?.contentManager?.findContent("Toolbox")?.getUserData(toolboxKey)
+            return toolbox?.isFocused() ?: false
+        }
 
         fun focusChat() {
             val tw = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact")

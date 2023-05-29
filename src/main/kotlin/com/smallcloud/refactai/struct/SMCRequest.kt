@@ -25,7 +25,7 @@ data class SMCRequestBody(
     var client: String = "",
     var model: String = "",
     var poi: List<POI>,
-    var stream: Boolean = false
+    var stream: Boolean = true
 )
 
 data class SMCRequest(

@@ -13,8 +13,9 @@ abstract class ActionUnderPrivacy : DumbAwareAction(Resources.Icons.LOGO_RED_16x
     final override fun update(e: AnActionEvent) {
         setup(e)
         val file = getFile(e.dataContext)
+        val isEnableAfterSetup = e.presentation.isEnabledAndVisible
         val isEnabled = file != null && (PrivacyService.instance.getPrivacy(file) != Privacy.DISABLED
-                || InferenceGlobalContext.isSelfHosted)
+                || InferenceGlobalContext.isSelfHosted) && isEnableAfterSetup && e.presentation.text.isNotEmpty()
         isEnabledInModalContext = isEnabled
         e.presentation.isEnabledAndVisible = isEnabled
     }

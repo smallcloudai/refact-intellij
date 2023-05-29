@@ -12,28 +12,29 @@ import dev.gitlive.difflib.patch.Patch
 class DiffLayout(
     private val editor: Editor,
     val request: SMCRequest,
-    private val patch: Patch<String>
 ) : Disposable {
-    private var inlayer: Inlayer? = null
+    private var inlayer: Inlayer = Inlayer(editor, request.body.intent)
     private var blockEvents: Boolean = false
+    private var lastPatch = Patch<String>()
     var rendered: Boolean = false
 
     override fun dispose() {
         rendered = false
         blockEvents = false
-        inlayer?.dispose()
+        inlayer.dispose()
     }
 
     private fun getOffsetFromStringNumber(stringNumber: Int, column: Int = 0): Int {
         return getOffsetFromStringNumber(editor, stringNumber, column)
     }
 
-    fun render(): DiffLayout {
+    fun update(patch: Patch<String>): DiffLayout {
         assert(!rendered) { "Already rendered" }
         try {
             blockEvents = true
             editor.document.startGuardedBlockChecking()
-            inlayer = Inlayer(editor).render(request.body.intent, patch)
+            lastPatch = patch
+            inlayer.update(patch)
             rendered = true
         } catch (ex: Exception) {
             Disposer.dispose(this)
@@ -61,7 +62,7 @@ class DiffLayout(
 
     private fun applyPreviewInternal() {
         val document = editor.document
-        for (det in patch.getDeltas().sortedByDescending { it.source.position }) {
+        for (det in lastPatch.getDeltas().sortedByDescending { it.source.position }) {
             if (det.target.lines == null) continue
             when (det.type) {
                 DeltaType.INSERT -> {

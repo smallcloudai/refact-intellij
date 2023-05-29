@@ -155,7 +155,7 @@ fun emitRegular(project: Project, editor: Editor) {
             notification.expire()
         })
     }
-    val f1Shortcut = KeymapUtil.getShortcutText("RefactAIToolboxAction")
+    val f1Shortcut = KeymapUtil.getShortcutText("ActivateRefactToolWindow")
     notification.addAction(DumbAwareAction.create("AI Toolbox ($f1Shortcut)") {
         it.presentation.putClientProperty(Key(CommonDataKeys.EDITOR.name), editor)
         AIToolboxInvokeAction().actionPerformed(it)

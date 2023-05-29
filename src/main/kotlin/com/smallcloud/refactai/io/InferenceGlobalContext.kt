@@ -34,6 +34,10 @@ class InferenceGlobalContext : Disposable {
         }
     }
 
+    fun canRequest(): Boolean {
+        return status == ConnectionStatus.CONNECTED
+    }
+
     var status: ConnectionStatus = ConnectionStatus.DISCONNECTED
         set(newStatus) {
             if (field == newStatus) return
@@ -67,6 +71,9 @@ class InferenceGlobalContext : Disposable {
 
             lastTask?.cancel(true)
             lastTask = reconnectScheduler.submit {
+                checkConnection(inferenceUri!!)
+                if (!canRequest()) return@submit
+
                 ApplicationManager.getApplication().getService(LoginStateService::class.java)
                         .tryToWebsiteLogin(force = true)
                 messageBus

@@ -39,7 +39,11 @@ class AsyncCompletionLayout(
     private var rangeHighlighters: MutableList<RangeHighlighter> = mutableListOf()
 
     override fun dispose() {
-        stopUpdate()
+        dispose(true)
+    }
+
+    fun dispose(needGet: Boolean = true) {
+        stopUpdate(needGet)
         ApplicationManager.getApplication().invokeLater {
             rendered = false
             needToRender = false
@@ -51,11 +55,15 @@ class AsyncCompletionLayout(
         }
     }
 
-    private fun stopUpdate() {
-        isUpdating = false
-        if (updateTask == null) return
-        updateTask!!.get()
-        updateTask = null
+    private fun stopUpdate(needGet: Boolean = true) {
+        synchronized(this) {
+            isUpdating = false
+            if (updateTask == null) return
+            if (needGet) {
+                updateTask!!.get()
+            }
+            updateTask = null
+        }
     }
 
     fun update(
@@ -91,7 +99,7 @@ class AsyncCompletionLayout(
                     renderAndUpdatePartialState(needToRender, animation, deltasFirstLine)
                 }
             } catch (ex: Exception) {
-                Disposer.dispose(this)
+                dispose(false)
                 throw ex
             } finally {
                 editor.document.stopGuardedBlockChecking()
@@ -143,15 +151,17 @@ class AsyncCompletionLayout(
             deltasFirstLine: List<AbstractDelta<Char>>
     ) {
         for (del in deltasFirstLine.sortedBy { it.source.position }) {
+            val offset = lastCompletionData!!.startIndex + del.source.position
             if (del.type == DeltaType.DELETE) {
+                inlayer?.setText(offset, "")
                 continue
             }
 
-            val offset = lastCompletionData!!.startIndex + del.source.position
             var text = del.target.lines?.joinToString("") ?: continue
             val currentText = inlayer?.getText(offset) ?: ""
             if (currentText == text) continue
             inlayer?.setText(offset, text)
+
             text = text.drop(currentText.length)
 
             if (needToRender) {

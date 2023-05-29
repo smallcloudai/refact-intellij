@@ -12,7 +12,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.inferenceFetch
+import com.smallcloud.refactai.io.streamedInferenceFetch
 import com.smallcloud.refactai.modes.Mode
 import com.smallcloud.refactai.modes.ModeProvider.Companion.getOrCreateModeProvider
 import com.smallcloud.refactai.modes.ModeType
@@ -24,6 +24,7 @@ import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.utils.getExtension
 import dev.gitlive.difflib.DiffUtils
+import dev.gitlive.difflib.patch.Patch
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
@@ -124,6 +125,7 @@ class DiffMode(
 
     fun actionPerformed(editor: Editor, highlightContext: HighlightContext? = null,
                         entryFromContext: LongthinkFunctionEntry? = null) {
+        lastFromHL = highlightContext != null
         val fileName = getActiveFile(editor.document) ?: return
         val selectionModel = editor.selectionModel
         var startSelectionOffset: Int = selectionModel.selectionStart
@@ -182,38 +184,40 @@ class DiffMode(
         request.body.maxEdits = if (request.body.functionName == "diff-atcursor") 1 else 10
 
         InferenceGlobalContext.status = ConnectionStatus.PENDING
-        inferenceFetch(request) { prediction ->
+
+        var lastPatch: Patch<String>? = null
+        streamedInferenceFetch(request, dataReceiveEnded = {
+            finishRenderRainbow()
+            if (lastPatch == null) return@streamedInferenceFetch
+            diffLayout = DiffLayout(editor, request)
+            app.invokeLater {
+                diffLayout?.update(lastPatch!!)
+            }
+
+            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.lastErrorMsg = null
+        }) { prediction ->
             if (prediction.status == null || prediction.status == "error") {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR
                 InferenceGlobalContext.lastErrorMsg = "Parameters are not correct"
-                return@inferenceFetch
+                return@streamedInferenceFetch
             }
 
-            val predictedText = prediction.choices.firstOrNull()?.files?.get(request.body.cursorFile)
+            val predictedText = prediction.choices.firstOrNull()?.filesHeadMidTail?.get(request.body.cursorFile)?.mid
             val finishReason = prediction.choices.firstOrNull()?.finishReason
             if (predictedText == null || finishReason == null) {
-                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-                InferenceGlobalContext.lastErrorMsg = "Request was succeeded but there is no predicted data"
-                return@inferenceFetch
-            } else {
-                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-                InferenceGlobalContext.lastErrorMsg = null
+                return@streamedInferenceFetch
             }
 
-            val patch = request.body.sources[request.body.cursorFile]?.let {
-                prediction.choices[0].files[request.body.cursorFile]?.let { it1 ->
+            lastPatch = request.body.sources[request.body.cursorFile]?.let { originText ->
+                prediction.choices.firstOrNull()?.filesHeadMidTail?.get(request.body.cursorFile)?.let { headMidTail ->
+                    val newText = originText.replaceRange(headMidTail.head,
+                            originText.length - headMidTail.tail, headMidTail.mid)
                     DiffUtils.diff(
-                            it.split('\n'),
-                            it1.split('\n'),
+                            originText.split('\n'),
+                            newText.split('\n'),
                     )
                 }
-            }
-            finishRenderRainbow()
-            if (patch == null) return@inferenceFetch
-
-            diffLayout = DiffLayout(editor, request, patch)
-            app.invokeAndWait {
-                diffLayout?.render()
             }
         }?.also {
             var requestFuture: Future<*>? = null

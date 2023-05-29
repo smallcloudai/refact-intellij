@@ -18,7 +18,7 @@ object RequestCreator {
             intent: String, functionName: String,
             promptInfo: List<PromptInfo>,
             model: String,
-            stream: Boolean = false,
+            stream: Boolean = true,
     ): SMCRequest? {
         var currentBudget = symbolsBudget
         val sources = mutableMapOf(fileName to text)

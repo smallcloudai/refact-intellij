@@ -22,7 +22,7 @@ import dev.gitlive.difflib.patch.DeltaType
 import dev.gitlive.difflib.patch.Patch
 
 
-class Inlayer(val editor: Editor) : Disposable {
+class Inlayer(val editor: Editor, private val intent: String) : Disposable {
     private var inlays: MutableList<Inlay<*>> = mutableListOf()
     private var renderers: MutableList<PanelRenderer> = mutableListOf()
     private var rangeHighlighters: MutableList<RangeHighlighter> = mutableListOf()
@@ -74,8 +74,8 @@ class Inlayer(val editor: Editor) : Disposable {
             editor.offsetToXY(editor.document.getLineStartOffset(logicalPosition.line) + alignment.length)
         val context = DataManager.getInstance().getDataContext(editor.contentComponent)
         val renderer = PanelRenderer(firstSymbolPos, editor, listOf(
-            "${getAcceptSymbol()} Approve (Tab)" to { TabPressedAction.actionPerformed(editor, context) },
-            "${getRejectSymbol()} Reject (ESC)" to { CancelPressedAction.actionPerformed(editor, context) },
+            "${getAcceptSymbol()} Approve (Tab)" to { TabPressedAction().actionPerformed(editor, context) },
+            "${getRejectSymbol()} Reject (ESC)" to { CancelPressedAction().actionPerformed(editor, context) },
             "${getRerunSymbol()} Rerun \"${msg}\" (F1)" to {
                 val action = AIToolboxInvokeAction()
                 val event = AnActionEvent.createFromAnAction(action, null, ActionPlaces.UNKNOWN, context)
@@ -92,7 +92,7 @@ class Inlayer(val editor: Editor) : Disposable {
             }
     }
 
-    fun render(msg: String, patch: Patch<String>): Inlayer {
+    fun update(patch: Patch<String>): Inlayer {
         val sortedDeltas = patch.getDeltas().sortedBy { it.source.position }
         val offset: Int = if (sortedDeltas.isNotEmpty()) {
             if (sortedDeltas.first().type == DeltaType.INSERT) {
@@ -176,7 +176,7 @@ class Inlayer(val editor: Editor) : Disposable {
                 else -> {}
             }
         }
-        renderPanel(msg, offset)
+        renderPanel(intent, offset)
         return this
     }
 

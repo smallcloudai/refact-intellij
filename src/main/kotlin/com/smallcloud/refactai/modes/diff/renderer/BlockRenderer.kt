@@ -80,11 +80,3 @@ class InsertBlockElementRenderer(
     private val smallPatches: List<Patch<Char>>,
     private val deprecated: Boolean
 ) : BlockElementRenderer(greenColor, veryGreenColor, editor, blockText, smallPatches, deprecated)
-
-class DeleteBlockElementRenderer(
-    private val editor: Editor,
-    private val blockText: List<String>,
-    private val smallPatches: List<Patch<Char>>,
-    private val deprecated: Boolean
-) : BlockElementRenderer(redColor, veryRedColor, editor, blockText, smallPatches, deprecated)
-

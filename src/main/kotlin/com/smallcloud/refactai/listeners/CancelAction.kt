@@ -8,12 +8,17 @@ import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.EditorAction
 import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
+import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.modes.ModeProvider
 
-object CancelPressedAction :
+class CancelPressedAction :
     EditorAction(InlineCompletionHandler()),
     ActionToIgnore {
-    const val ACTION_ID = "CancelPressedAction"
+    val ACTION_ID = "CancelPressedAction"
+
+    init {
+        this.templatePresentation.icon = Resources.Icons.LOGO_RED_16x16
+    }
 
     class InlineCompletionHandler : EditorWriteActionHandler() {
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {

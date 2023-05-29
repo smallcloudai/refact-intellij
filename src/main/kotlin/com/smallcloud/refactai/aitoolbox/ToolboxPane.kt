@@ -37,6 +37,7 @@ import com.smallcloud.refactai.struct.LongthinkFunctionVariation
 import com.smallcloud.refactai.utils.makeLinksPanel
 import org.jdesktop.swingx.HorizontalLayout
 import java.awt.BorderLayout
+import java.awt.Component
 import java.awt.Dimension
 import java.awt.Font
 import java.awt.event.*
@@ -57,6 +58,7 @@ class ToolboxPane(parent: Disposable) {
     private var longthinkList: LongthinkTable
     private val longthinkScrollPane: JBScrollPane
     private var previousIntent: String = ""
+    private var lastFocusedComponent: Component
     private val longthinkDescriptionPane: JEditorPane = JEditorPane().apply {
         editorKit = HTMLEditorKitBuilder().withWordWrapViewFactory().build()
         isFocusable = true
@@ -142,7 +144,6 @@ class ToolboxPane(parent: Disposable) {
                 maximumSize = newSize
                 minimumSize = newSize
                 preferredSize = newSize
-
                 addKeyListener(object : KeyListener {
                     override fun keyTyped(e: KeyEvent?) {}
                     override fun keyReleased(e: KeyEvent?) {
@@ -210,6 +211,13 @@ class ToolboxPane(parent: Disposable) {
                     }
                 })
             }
+        }.also {
+            it.addFocusListener(object : FocusListener {
+                override fun focusGained(e: FocusEvent?) {
+                    lastFocusedComponent = it
+                }
+                override fun focusLost(e: FocusEvent?) {}
+            })
         }
         longthinkList.also {
             it.setupDescriptionColumn({ openDescriptionForEntry() },
@@ -278,6 +286,7 @@ class ToolboxPane(parent: Disposable) {
                 override fun focusGained(e: FocusEvent?) {
                     State.historyIndex = -2
                     filterTextField.text = previousIntent
+                    lastFocusedComponent = longthinkList
                 }
 
                 override fun focusLost(e: FocusEvent?) {}
@@ -297,6 +306,8 @@ class ToolboxPane(parent: Disposable) {
         ).also {
             it.border = JBUI.Borders.empty()
         }
+
+        lastFocusedComponent = filterTextField
         class LongthinkFilterPanel(val text: String) : JPanel() {
             var isActive = State.activeFilters.contains(text)
             private var mouseInside: Boolean = false
@@ -600,6 +611,9 @@ class ToolboxPane(parent: Disposable) {
         }
 
     fun requestFocus() {
-        filterTextField.requestFocus()
+        lastFocusedComponent.requestFocus()
+    }
+    fun isFocused(): Boolean {
+        return filterTextField.isFocusOwner || longthinkList.isFocusOwner
     }
 }

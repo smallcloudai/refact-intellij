@@ -117,7 +117,9 @@ fun checkLogin(force: Boolean = false): String {
     if (infC.developerModeEnabled) {
         urlBuilder.addParameter("want_staging_version", "1")
     }
-    urlBuilder.addParameter("plugin_version", "${Resources.client}-${Resources.version}")
+    if (infC.isCloud) {
+        urlBuilder.addParameter("plugin_version", "${Resources.client}-${Resources.version}")
+    }
     val url = urlBuilder.build()
 
     headers["Authorization"] = "Bearer $token"

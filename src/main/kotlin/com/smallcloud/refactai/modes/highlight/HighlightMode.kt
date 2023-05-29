@@ -137,20 +137,7 @@ class HighlightMode(
         }
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
 
-        val entry: LongthinkFunctionEntry
-//        if (entryFromContext != null) {
-            entry = entryFromContext ?: return
-//        } else {
-//            if (fromDiff && LongthinkFunctionProvider.instance.lastHistoryEntry() != null) {
-//                entry = LongthinkFunctionProvider.instance.lastHistoryEntry()!!
-//            } else {
-//                val dialog = DiffDialog(editor, true)
-//                if (!dialog.showAndGet()) return
-//                entry = dialog.entry
-//                LongthinkFunctionProvider.instance.pushFrontHistoryIntent(entry)
-//            }
-//        }
-
+        val entry: LongthinkFunctionEntry = entryFromContext ?: return
         val fileName = getActiveFile(editor.document) ?: return
         val startSelectionOffset = editor.selectionModel.selectionStart
         val endSelectionOffset = editor.selectionModel.selectionEnd
@@ -163,6 +150,7 @@ class HighlightMode(
             stat, entry.intent, funcName, listOf(),
             model = InferenceGlobalContext.longthinkModel ?: entry.model
                 ?: InferenceGlobalContext.model ?: Resources.defaultModel,
+            stream = false
         ) ?: return
         ModeProvider.getOrCreateModeProvider(editor).switchMode(ModeType.Highlight)
 

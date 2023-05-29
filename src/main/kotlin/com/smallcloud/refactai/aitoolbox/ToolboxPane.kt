@@ -127,11 +127,16 @@ class ToolboxPane(parent: Disposable) {
         longthinkList.selectionModel.setSelectionInterval(0, 0)
     }
 
+    private val historyIntents: List<LongthinkFunctionEntry>
+        get() {
+            return LongthinkFunctionProvider.historyIntents
+        }
+
+    private var lastSelectedIndex = 0
+
     init {
-        val historyIntents = LongthinkFunctionProvider.historyIntents
         val longthinkVariations = LongthinkFunctionProvider.functionVariations
         longthinkList = LongthinkTable(longthinkVariations, State.haveSelection)
-        var lastSelectedIndex = 0
         filterTextField = object : JBTextField() {
             private var hint: String = "↓ commands; ↑ history"
 
@@ -474,7 +479,7 @@ class ToolboxPane(parent: Disposable) {
     private fun doOKAction() {
         val filteredIntent = getFilteredIntent(filterTextField.text)
         if (getReasonForEntryFromState(entry) == null || filteredIntent.endsWith("?")) {
-            entry = entry.copy().apply {
+            val entry = entry.copy().apply {
                 intent = entry.modelFixedIntent.ifEmpty {
                     if (catchAny()) {
                         filterTextField.text
@@ -493,6 +498,9 @@ class ToolboxPane(parent: Disposable) {
             }
             isDescriptionVisible = false
             filterTextField.text = ""
+            lastSelectedIndex = 0
+            State.historyIndex = -1
+            LongthinkFunctionProvider.pushFrontHistoryIntent(entry)
         }
     }
 

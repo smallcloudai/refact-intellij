@@ -23,6 +23,7 @@ import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
 import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.settings.renderer.PrivacyOverridesTable
 import com.smallcloud.refactai.settings.renderer.privacyToString
+import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.utils.makeLinksPanel
 import java.awt.event.ItemEvent
 import java.awt.event.ItemListener
@@ -164,7 +165,7 @@ class AppRootComponent(private val project: Project) {
         )
 
         loginCounter = loginCoolDownCounter
-        currentState = if (AccountManager.isLoggedIn) {
+        currentState = if (AccountManager.isLoggedIn || InferenceGlobalContext.isSelfHosted) {
             SettingsState.SIGNED
         } else if (AccountManager.ticket != null) {
             SettingsState.WAITING
@@ -176,7 +177,12 @@ class AppRootComponent(private val project: Project) {
             .connect(PluginState.instance)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun isLoggedInChanged(limited: Boolean) {
-                    currentState = if (limited) SettingsState.SIGNED else SettingsState.UNSIGNED
+                    currentState = if (limited || InferenceGlobalContext.isSelfHosted)
+                        SettingsState.SIGNED else SettingsState.UNSIGNED
+                    revalidate()
+                }
+
+                override fun userChanged(newUser: String?) {
                     revalidate()
                 }
 
@@ -194,6 +200,12 @@ class AppRootComponent(private val project: Project) {
                 .connect(PluginState.instance)
                 .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                     override fun userInferenceUriChanged(newUrl: URI?) {
+                        revalidate()
+                    }
+
+                    override fun deploymentModeChanged(newMode: DeploymentMode) {
+                        currentState = if (newMode == DeploymentMode.SELF_HOSTED || AccountManager.isLoggedIn)
+                            SettingsState.SIGNED else SettingsState.UNSIGNED
                         revalidate()
                     }
                 })
@@ -237,8 +249,9 @@ class AppRootComponent(private val project: Project) {
 
     private fun setupProperties() {
         activePlanLabel.text = "${RefactAIBundle.message("rootSettings.activePlan")}: ${AccountManager.activePlan}"
-        activePlanLabel.isVisible = currentState == SettingsState.SIGNED && AccountManager.activePlan != null
-        logoutButton.isVisible = currentState == SettingsState.SIGNED
+        activePlanLabel.isVisible = currentState == SettingsState.SIGNED &&
+                AccountManager.activePlan != null && InferenceGlobalContext.isCloud
+        logoutButton.isVisible = AccountManager.isLoggedIn && AccountManager.user != "self-hosted"
         loginButton.isVisible = currentState != SettingsState.SIGNED
         forceLoginButton.isVisible = currentState != SettingsState.UNSIGNED
         waitLoginLabel.text = if (currentState == SettingsState.WAITING)

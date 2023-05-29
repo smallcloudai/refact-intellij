@@ -22,7 +22,7 @@ import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.login
-import com.smallcloud.refactai.listeners.AIToolboxInvokeAction
+import com.smallcloud.refactai.aitoolbox.ToolboxPaneInvokeAction
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
@@ -30,6 +30,8 @@ import com.smallcloud.refactai.settings.AppRootConfigurable
 import com.smallcloud.refactai.utils.getLastUsedProject
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyServiceInstance
 
 private var lastNotification: Notification? = null
@@ -135,7 +137,9 @@ fun emitRegular(project: Project, editor: Editor) {
     val notification =
         NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
             Resources.titleStr,
-            "File privacy: ${getStatusPrivacyString(currentPrivacy)}",
+            if (InferenceGlobalContext.isCloud) RefactAIBundle.message("notifications.filePrivacy",
+                    getStatusPrivacyString(currentPrivacy))
+            else RefactAIBundle.message("notifications.selfHostedIsEnabled"),
             NotificationType.INFORMATION
         )
     notification.icon = Resources.Icons.LOGO_RED_16x16
@@ -146,7 +150,7 @@ fun emitRegular(project: Project, editor: Editor) {
     })
 
     val chat = ToolWindowManager.getInstance(project).getToolWindow("Refact")
-    if (chat != null) {
+    if (chat != null && LongthinkFunctionProvider.allChats.isNotEmpty()) {
         val chatShortcut = KeymapUtil.getShortcutText("ActivateRefactChatToolWindow")
         notification.addAction(NotificationAction.createSimple("Chat ($chatShortcut)") {
             chat.activate{
@@ -158,12 +162,11 @@ fun emitRegular(project: Project, editor: Editor) {
     val f1Shortcut = KeymapUtil.getShortcutText("ActivateRefactToolWindow")
     notification.addAction(DumbAwareAction.create("AI Toolbox ($f1Shortcut)") {
         it.presentation.putClientProperty(Key(CommonDataKeys.EDITOR.name), editor)
-        AIToolboxInvokeAction().actionPerformed(it)
+        ToolboxPaneInvokeAction().actionPerformed(it)
         notification.expire()
     })
 
 
-//    if (file != null) addDisableEnablePrivacy(notification, file, currentPrivacy)
     notification.notify(project)
     lastRegularNotification = notification
 }

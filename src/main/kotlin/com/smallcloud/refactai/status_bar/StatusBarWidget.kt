@@ -218,7 +218,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     override fun getClickConsumer(): Consumer<MouseEvent> {
         return Consumer { e: MouseEvent ->
             if (!e.isPopupTrigger && MouseEvent.BUTTON1 == e.button) {
-                if (!AccountManager.isLoggedIn)
+                if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud)
                     emitLogin(project)
                 else
                     getEditor()?.let { emitRegular(project, it) }

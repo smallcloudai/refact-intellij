@@ -5,6 +5,7 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.smallcloud.refactai.panes.gptchat.structs.ChatGPTRequest
+import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 
 fun makeAttachedFile(editor: Editor): String {
     val file = editor.document.text
@@ -38,7 +39,7 @@ fun makeAttachedFile(editor: Editor): String {
 }
 
 object MsgBuilder {
-    fun build(req: ChatGPTRequest, model: String, attachedFile: String? = null): String {
+    fun build(req: ChatGPTRequest, longthink: LongthinkFunctionEntry, attachedFile: String? = null): String {
         val conversation = req.conversation
         val messages: MutableList<Map<String, Any>> = mutableListOf()
         if (attachedFile != null) {
@@ -75,7 +76,8 @@ object MsgBuilder {
         }
 
         val msgDict = mutableMapOf(
-                "model" to model,
+                "model" to longthink.model,
+                "function" to longthink.functionName,
                 "stream" to true,
                 "messages" to messages
         )

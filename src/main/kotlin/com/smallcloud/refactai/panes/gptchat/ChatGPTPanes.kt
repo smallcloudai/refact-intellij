@@ -5,6 +5,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.tabs.TabInfo
@@ -35,11 +36,13 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
     }
 
     private fun setupPanes(isAvailable: Boolean) {
-        holder.removeAll()
-        if (isAvailable) {
-            holder.add(panes)
-        } else {
-            holder.add(placeholder)
+        invokeLater {
+            holder.removeAll()
+            if (isAvailable) {
+                holder.add(panes)
+            } else {
+                holder.add(placeholder)
+            }
         }
     }
 

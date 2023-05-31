@@ -33,8 +33,7 @@ object Resources {
 //    val isNewUI: Boolean by lazy { NewUI.isEnabled() }
     val defaultCloudUrl: URI = URI("https://www.smallcloud.ai")
     val defaultContrastUrlSuffix = URI("v1/contrast")
-    val defaultChatUrlSuffix = URI("chat-v1/completions")
-    val selfHostedChatUrlSuffix = URI("v1/chat")
+    val defaultChatUrlSuffix = URI("v1/chat")
     val defaultSelfHostedLongthinkFunctionsSuffix = URI("v1/longthink-functions")
     val defaultRecallUrl: URI = defaultCloudUrl.resolve("/v1/streamlined-login-recall-ticket")
     val defaultLoginUrlSuffix: URI = URI("/v1/login")

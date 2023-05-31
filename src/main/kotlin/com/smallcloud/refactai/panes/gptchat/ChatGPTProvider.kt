@@ -8,7 +8,6 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources.defaultChatUrlSuffix
-import com.smallcloud.refactai.Resources.selfHostedChatUrlSuffix
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.panes.gptchat.structs.ChatGPTRequest
@@ -50,8 +49,7 @@ class ChatGPTProvider : ActionListener {
     private fun reconnect() {
         if (LongthinkFunctionProvider.allChats.isNotEmpty() && InferenceGlobalContext.canRequest()) {
             InferenceGlobalContext.inferenceUri?.let {
-                InferenceGlobalContext.checkConnection(it.resolve(if (InferenceGlobalContext.isCloud)
-                    defaultChatUrlSuffix else selfHostedChatUrlSuffix))
+                InferenceGlobalContext.checkConnection(it.resolve(defaultChatUrlSuffix))
             }
         }
     }
@@ -103,8 +101,7 @@ class ChatGPTProvider : ActionListener {
 
         pane.add(MessageComponent(md2html(text), true))
         val message = MessageComponent(listOf(ParsedText("...", "...", false)), false)
-        val req = ChatGPTRequest(InferenceGlobalContext.inferenceUri!!.resolve(
-                if (InferenceGlobalContext.isCloud) defaultChatUrlSuffix else selfHostedChatUrlSuffix),
+        val req = ChatGPTRequest(InferenceGlobalContext.inferenceUri!!.resolve(defaultChatUrlSuffix),
                 AccountManager.apiKey, pane.getFullHistory())
         pane.add(message)
         processTask = scheduler.submit {
@@ -118,7 +115,8 @@ class ChatGPTProvider : ActionListener {
         try {
             val reqStr = MsgBuilder.build(req, pane.searchTextArea.selectedModel, cachedFile)
             var stop = false
-            val stat = UsageStatistic("chat-tab", pane.searchTextArea.selectedModel)
+            val stat = UsageStatistic("chat-tab", pane.searchTextArea.selectedModel.model ?: "")
+
             InferenceGlobalContext.connection.post(req.uri,
                     reqStr,
                     mapOf("Authorization" to "Bearer ${req.token}"),

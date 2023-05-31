@@ -444,8 +444,8 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             }
         }
 
-    val selectedModel: String
-        get() = (modelComboBox.selectedItem as LongthinkFunctionEntry).model!!
+    val selectedModel: LongthinkFunctionEntry
+        get() = (modelComboBox.selectedItem as LongthinkFunctionEntry)
 
     fun disableAttachFileCBAndModelSelector() {
         myAddFileForContextCB.isEnabled = false

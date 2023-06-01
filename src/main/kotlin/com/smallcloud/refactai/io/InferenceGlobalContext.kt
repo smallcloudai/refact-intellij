@@ -99,6 +99,8 @@ class InferenceGlobalContext : Disposable {
         return AppSettingsState.instance.userInferenceUri != null
     }
 
+    var isNewChatStyle: Boolean = false
+
     var temperature: Float?
         get() = AppSettingsState.instance.temperature
         set(newTemp) {

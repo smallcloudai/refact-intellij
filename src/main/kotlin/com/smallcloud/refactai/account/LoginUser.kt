@@ -177,6 +177,10 @@ fun checkLogin(force: Boolean = false): String {
                 acc.meteringBalance = body.get("metering_balance").asInt
             }
 
+            if (body.has("chat-v1-style")) {
+                infC.isNewChatStyle = (body.get("chat-v1-style").asInt > 0)
+            }
+
             UsageStats.addStatistic(true, UsageStatistic("login"), url.toString(), "")
             return if (infC.isCloud) inferenceLogin() else "OK"
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {

@@ -76,7 +76,7 @@ object MsgBuilder {
         }
 
         val msgDict = mutableMapOf(
-                "model" to longthink.model,
+                "model" to if (longthink.model == "open-chat") "gpt3.5" else longthink.model,
                 "function" to longthink.functionName,
                 "stream" to true,
                 "messages" to messages

@@ -88,24 +88,6 @@ class ChatGPTPane : JPanel() {
 
     init {
         searchTextArea.isEnabled = true
-//        ApplicationManager.getApplication().messageBus.connect()
-//                .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-//                    override fun isLoggedInChanged(isLoggedIn: Boolean) {
-//                        searchTextArea.isEnabled = isLoggedIn && InferenceGlobalContext.isCloud
-//                        sendAction.setEnabled(isLoggedIn && InferenceGlobalContext.isCloud)
-//                    }
-//                })
-//
-//        ApplicationManager.getApplication()
-//                .messageBus
-//                .connect(PluginState.instance)
-//                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-//                    override fun deploymentModeChanged(newMode: DeploymentMode) {
-//                        searchTextArea.isEnabled = newMode == DeploymentMode.CLOUD && AccountManager.isLoggedIn
-//                        sendAction.setEnabled(newMode == DeploymentMode.CLOUD && AccountManager.isLoggedIn)
-//                    }
-//                })
-
         splitter.dividerWidth = 2;
         searchTextArea.textArea.addKeyListener(object: KeyListener {
             override fun keyTyped(e: KeyEvent?) {}
@@ -143,7 +125,6 @@ class ChatGPTPane : JPanel() {
         }
         listener.doActionPerformed(this@ChatGPTPane, selectedText=selectedText,
                 editor=LastEditorGetterListener.LAST_EDITOR)
-        searchTextArea.needToInline = false
         searchTextArea.disableAttachFileCBAndModelSelector()
     }
 

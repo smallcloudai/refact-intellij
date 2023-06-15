@@ -1,8 +1,10 @@
 package com.smallcloud.refactai.aitoolbox
 
 import com.intellij.icons.AllIcons
+import com.intellij.ide.actions.ShowSettingsUtilImpl
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.ui.ComboBox
@@ -20,20 +22,23 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil.getLabelForeground
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.aitoolbox.table.LongthinkTable
 import com.smallcloud.refactai.aitoolbox.table.LongthinkTableModel
 import com.smallcloud.refactai.aitoolbox.table.renderers.colorize
 import com.smallcloud.refactai.aitoolbox.utils.getFilteredIntent
 import com.smallcloud.refactai.aitoolbox.utils.getReasonForEntryFromState
+import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.listeners.SelectionChangedNotifier
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
+import com.smallcloud.refactai.settings.AppRootConfigurable
 import com.smallcloud.refactai.settings.ExtraState
 import com.smallcloud.refactai.statistic.ExtraInfoService
+import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.struct.LocalLongthinkInfo
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 import com.smallcloud.refactai.struct.LongthinkFunctionVariation
+import com.smallcloud.refactai.utils.getLastUsedProject
 import com.smallcloud.refactai.utils.makeLinksPanel
 import org.jdesktop.swingx.HorizontalLayout
 import java.awt.BorderLayout
@@ -46,7 +51,9 @@ import javax.swing.border.CompoundBorder
 import javax.swing.border.EmptyBorder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 private const val GLOBAL_MARGIN = 15
@@ -101,7 +108,7 @@ class ToolboxPane(parent: Disposable) {
             }
             isVisible = balance != null
         }
-        setup(AccountManager.instance.meteringBalance)
+        setup(AccountManager.meteringBalance)
         toolTipText = RefactAIBundle.message("aiToolbox.meteringBalance")
         icon = colorize(Resources.Icons.COIN_16x16, foreground)
         ApplicationManager.getApplication()
@@ -405,6 +412,97 @@ class ToolboxPane(parent: Disposable) {
                 })
     }
 
+    private val holder = JPanel().also {
+        it.layout = BorderLayout()
+    }
+    private val placeholder = JPanel().also { it ->
+        it.layout = BorderLayout()
+        it.add(JPanel().apply {
+            layout = VerticalFlowLayout(VerticalFlowLayout.MIDDLE)
+
+            add(JBLabel(RefactAIBundle.message("aiToolbox.panes.toolbox.placeholder")).also { label ->
+                label.verticalAlignment = JBLabel.CENTER
+                label.horizontalAlignment = JBLabel.CENTER
+                label.isEnabled = false
+            })
+            add(LinkLabel<String>("Settings", null).also { label ->
+                label.verticalAlignment = JBLabel.CENTER
+                label.horizontalAlignment = JBLabel.CENTER
+                label.addMouseListener(object : MouseListener {
+                    override fun mouseClicked(e: MouseEvent?) {}
+                    override fun mousePressed(e: MouseEvent?) {}
+                    override fun mouseEntered(e: MouseEvent?) {}
+                    override fun mouseExited(e: MouseEvent?) {}
+                    override fun mouseReleased(e: MouseEvent?) {
+                        ShowSettingsUtilImpl.getInstance().showSettingsDialog(getLastUsedProject(),
+                                AppRootConfigurable::class.java)
+                    }
+                })
+            })
+        }, BorderLayout.CENTER)
+
+//        it.add(JBLabel(RefactAIBundle.message("aiToolbox.panes.toolbox.placeholder")).also { label ->
+//            label.verticalAlignment = JBLabel.CENTER
+//            label.horizontalAlignment = JBLabel.CENTER
+//            label.isEnabled = false
+//        }, BorderLayout.CENTER)
+//        it.add(LinkLabel<String>("Settings", null).also { label ->
+//            label.verticalAlignment = JBLabel.CENTER
+//            label.horizontalAlignment = JBLabel.CENTER
+//            label.addMouseListener(object : MouseListener {
+//                override fun mouseClicked(e: MouseEvent?) {}
+//                override fun mousePressed(e: MouseEvent?) {}
+//                override fun mouseEntered(e: MouseEvent?) {}
+//                override fun mouseExited(e: MouseEvent?) {}
+//                override fun mouseReleased(e: MouseEvent?) {
+//                    ShowSettingsUtilImpl.getInstance().showSettingsDialog(getLastUsedProject(),
+//                            AppRootConfigurable::class.java)
+//                }
+//            })
+//        }, BorderLayout.CENTER)
+    }
+
+    private fun setupPanes(isAvailable: Boolean) {
+        invokeLater {
+            holder.removeAll()
+            if (isAvailable) {
+                holder.add(toolpaneComponent)
+            } else {
+                holder.add(placeholder)
+            }
+        }
+    }
+    init {
+        setupPanes(InferenceGlobalContext.isSelfHosted ||
+                (InferenceGlobalContext.isCloud && AccountManager.isLoggedIn))
+        ApplicationManager.getApplication()
+                .messageBus
+                .connect(parent)
+                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC,
+                        object : InferenceGlobalContextChangedNotifier {
+                            override fun deploymentModeChanged(newMode: DeploymentMode) {
+                                setupPanes(when (newMode) {
+                                    DeploymentMode.SELF_HOSTED -> {
+                                        true
+                                    }
+                                    DeploymentMode.CLOUD -> {
+                                        AccountManager.isLoggedIn
+                                    }
+                                })
+                            }
+                        })
+        ApplicationManager.getApplication()
+                .messageBus
+                .connect(parent)
+                .subscribe(AccountManagerChangedNotifier.TOPIC,
+                        object : AccountManagerChangedNotifier {
+                            override fun isLoggedInChanged(isLoggedIn: Boolean) {
+                                setupPanes(InferenceGlobalContext.isSelfHosted ||
+                                        (InferenceGlobalContext.isCloud && isLoggedIn))
+                            }
+                        })
+    }
+
     private var modelChooserCB = ComboBox<String>().apply {
         addItemListener {
             val filter = it.item as String
@@ -572,7 +670,7 @@ class ToolboxPane(parent: Disposable) {
         }
 
     fun getComponent(): JComponent {
-        return toolpaneComponent
+        return holder
     }
 
     private var lastCopyEntry: LongthinkFunctionEntry = LongthinkFunctionEntry()

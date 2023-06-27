@@ -16,7 +16,9 @@ import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.account.*
+import com.smallcloud.refactai.account.AccountManagerChangedNotifier
+import com.smallcloud.refactai.account.LoginStateService
+import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
@@ -42,7 +44,6 @@ private enum class SettingsState {
 
 
 class AppRootComponent(private val project: Project) {
-    private var loginCounter: Int
     private var currentState: SettingsState = SettingsState.UNSIGNED
     private val loginButton = JButton(RefactAIBundle.message("rootSettings.loginOrRegister"))
     private val logoutButton = JButton(RefactAIBundle.message("rootSettings.logout"))
@@ -164,7 +165,6 @@ class AppRootComponent(private val project: Project) {
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         )
 
-        loginCounter = loginCoolDownCounter
         currentState = if (AccountManager.isLoggedIn || InferenceGlobalContext.isSelfHosted) {
             SettingsState.SIGNED
         } else if (AccountManager.ticket != null) {
@@ -210,16 +210,6 @@ class AppRootComponent(private val project: Project) {
                     }
                 })
 
-        ApplicationManager.getApplication()
-            .messageBus
-            .connect(PluginState.instance)
-            .subscribe(LoginCounterChangedNotifier.TOPIC, object : LoginCounterChangedNotifier {
-                override fun counterChanged(newValue: Int) {
-                    loginCounter = newValue
-                    revalidate()
-                }
-            })
-
         loginButton.addActionListener {
             login()
         }
@@ -255,7 +245,7 @@ class AppRootComponent(private val project: Project) {
         loginButton.isVisible = currentState != SettingsState.SIGNED
         forceLoginButton.isVisible = currentState != SettingsState.UNSIGNED
         waitLoginLabel.text = if (currentState == SettingsState.WAITING)
-            "${RefactAIBundle.message("rootSettings.waitWebsiteLoginStr")} $loginCounter" else
+            RefactAIBundle.message("rootSettings.waitWebsiteLoginStr") else
             "${RefactAIBundle.message("rootSettings.loggedAs")} ${AccountManager.user}"
         waitLoginLabel.isVisible = currentState != SettingsState.UNSIGNED
 

@@ -46,7 +46,7 @@ object Resources {
     const val defaultModel: String = "CONTRASTcode"
     val version: String = getVersion()
     const val client: String = "jetbrains"
-    const val loginCoolDown: Int = 30 // sec
+    const val loginCoolDown: Int = 300 // sec
     const val inferenceLoginCoolDown: Int = 300 // sec
     const val titleStr: String = "RefactAI"
     val pluginId: PluginId = getPluginId()

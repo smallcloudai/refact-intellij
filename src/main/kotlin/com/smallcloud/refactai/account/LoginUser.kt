@@ -183,7 +183,7 @@ fun checkLogin(force: Boolean = false): String {
 
             UsageStats.addStatistic(true, UsageStatistic("login"), url.toString(), "")
             return if (infC.isCloud) inferenceLogin() else "OK"
-        } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limitrate limit")) {
+        } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
             logError("login-failed", humanReadableMessage, false)
             UsageStats.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
             return "OK"

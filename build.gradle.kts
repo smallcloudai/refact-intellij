@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij") version "1.13.2"
+    id("org.jetbrains.intellij") version "1.14.2"
     id("org.jetbrains.kotlin.jvm") version "1.8.10"
     id("org.jetbrains.changelog") version "2.0.0"
     id("org.jetbrains.qodana") version "0.1.13"
@@ -13,6 +13,7 @@ dependencies {
         exclude("org.slf4j")
     }
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
+    implementation("com.vladsch.flexmark:flexmark-all:0.64.8")
 }
 
 

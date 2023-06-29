@@ -53,7 +53,7 @@ class AsyncConnection : Disposable {
                     IOReactorConfig.custom()
                             .setIoThreadCount(8)
                             .setSoTimeout(5, TimeUnit.MINUTES)
-                            .setSelectInterval(TimeValue.ofMilliseconds(5))
+                            .setSelectInterval(TimeValue.ofMilliseconds(5000))
                             .setTcpNoDelay(true)
                             .build()
             )

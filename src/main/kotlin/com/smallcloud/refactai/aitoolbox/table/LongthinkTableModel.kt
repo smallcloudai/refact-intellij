@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.aitoolbox.table
 
+import com.intellij.ui.jcef.JBCefApp
 import com.smallcloud.refactai.aitoolbox.State
 import com.smallcloud.refactai.struct.LongthinkFunctionVariation
 import javax.swing.table.AbstractTableModel
@@ -41,7 +42,7 @@ class LongthinkTableModel(private var source: List<LongthinkFunctionVariation>,
     }
 
     override fun getColumnCount(): Int {
-        return 4
+        return if (JBCefApp.isSupported()) 4 else 3
     }
 
     fun isLikedChanged(entry: LongthinkFunctionVariation) {

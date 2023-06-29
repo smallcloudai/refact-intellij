@@ -26,7 +26,7 @@ private fun generateTicket(): String {
     return (Math.random() * 1e16).toLong().toString(36) + "-" + (Math.random() * 1e16).toLong().toString(36)
 }
 
-private const val TICKET_PERIOD = 45 * 60 * 1000
+private const val TICKET_PERIOD = 5 * 60 * 1000
 
 fun login() {
     val isLoggedIn = AccountManager.isLoggedIn

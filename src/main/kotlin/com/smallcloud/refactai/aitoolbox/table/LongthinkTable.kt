@@ -1,6 +1,7 @@
 package com.smallcloud.refactai.aitoolbox.table
 
 import com.intellij.icons.AllIcons
+import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import com.smallcloud.refactai.Resources.Icons.BOOKMARK_CHECKED_16x16
@@ -38,21 +39,25 @@ class LongthinkTable(
                     action.doActionPerformed(longthink.getFunctionByFilter())
                 }
             })
-            popup.add(JMenuItem("Describe", DESCRIPTION_16x16).also {
-                it.addActionListener {
-                    descriptionFunc()
-                }
-            })
+            if (JBCefApp.isSupported()) {
+                popup.add(JMenuItem("Describe", DESCRIPTION_16x16).also {
+                    it.addActionListener {
+                        descriptionFunc()
+                    }
+                })
+            }
         }
         return popup
     }
 
     fun setupDescriptionColumn(f: () -> Unit, toolTipText: String) {
-        descriptionFunc = f
-        columnModel.getColumn(3).also {
-            val renderer = (it.cellEditor as com.smallcloud.refactai.aitoolbox.table.renderers.IconRenderer)
-            renderer.mousePressedFunction = descriptionFunc
-            renderer.toolTipText = toolTipText
+        if (JBCefApp.isSupported()) {
+            descriptionFunc = f
+            columnModel.getColumn(3).also {
+                val renderer = (it.cellEditor as com.smallcloud.refactai.aitoolbox.table.renderers.IconRenderer)
+                renderer.mousePressedFunction = descriptionFunc
+                renderer.toolTipText = toolTipText
+            }
         }
     }
 
@@ -87,14 +92,15 @@ class LongthinkTable(
             it.minWidth = renderer.originalIcon.iconWidth + 4
             it.maxWidth = renderer.originalIcon.iconWidth + 4
         }
-
-        columnModel.getColumn(3).also {
-            val renderer = IconRenderer(DESCRIPTION_16x16)
-            it.cellRenderer = renderer
-            it.cellEditor = renderer
-            it.preferredWidth = renderer.originalIcon.iconWidth + 4
-            it.minWidth = renderer.originalIcon.iconWidth + 4
-            it.maxWidth = renderer.originalIcon.iconWidth + 4
+        if (JBCefApp.isSupported()) {
+            columnModel.getColumn(3).also {
+                val renderer = IconRenderer(DESCRIPTION_16x16)
+                it.cellRenderer = renderer
+                it.cellEditor = renderer
+                it.preferredWidth = renderer.originalIcon.iconWidth + 4
+                it.minWidth = renderer.originalIcon.iconWidth + 4
+                it.maxWidth = renderer.originalIcon.iconWidth + 4
+            }
         }
     }
 

@@ -15,6 +15,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.labels.LinkLabel
+import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.HTMLEditorKitBuilder
@@ -87,13 +88,13 @@ class ToolboxPane(parent: Disposable) {
 
         })
     }
-    private val longthinkDescriptionScrollPane: JBScrollPane
-    private val browser = JBCefBrowser.createBuilder()
+    private var longthinkDescriptionScrollPane: JBScrollPane = JBScrollPane()
+    private val browser = if (JBCefApp.isSupported()) JBCefBrowser.createBuilder()
             .setOffScreenRendering(false)
             .setEnableOpenDevToolsMenuItem(true)
             .build().also {
                 it.component.border = JBUI.Borders.empty()
-            }
+            } else null
 
     private val runButton = JButton("Run", AllIcons.Debugger.ThreadRunning).apply {
         addActionListener {
@@ -311,12 +312,14 @@ class ToolboxPane(parent: Disposable) {
         ).also {
             it.preferredSize = it.maximumSize
         }
-        longthinkDescriptionScrollPane = JBScrollPane(
-                browser.component,
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        ).also {
-            it.border = JBUI.Borders.empty()
+        if (browser != null) {
+            longthinkDescriptionScrollPane = JBScrollPane(
+                    browser.component,
+                    ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                    ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            ).also {
+                it.border = JBUI.Borders.empty()
+            }
         }
 
         lastFocusedComponent = filterTextField
@@ -440,26 +443,6 @@ class ToolboxPane(parent: Disposable) {
                 })
             })
         }, BorderLayout.CENTER)
-
-//        it.add(JBLabel(RefactAIBundle.message("aiToolbox.panes.toolbox.placeholder")).also { label ->
-//            label.verticalAlignment = JBLabel.CENTER
-//            label.horizontalAlignment = JBLabel.CENTER
-//            label.isEnabled = false
-//        }, BorderLayout.CENTER)
-//        it.add(LinkLabel<String>("Settings", null).also { label ->
-//            label.verticalAlignment = JBLabel.CENTER
-//            label.horizontalAlignment = JBLabel.CENTER
-//            label.addMouseListener(object : MouseListener {
-//                override fun mouseClicked(e: MouseEvent?) {}
-//                override fun mousePressed(e: MouseEvent?) {}
-//                override fun mouseEntered(e: MouseEvent?) {}
-//                override fun mouseExited(e: MouseEvent?) {}
-//                override fun mouseReleased(e: MouseEvent?) {
-//                    ShowSettingsUtilImpl.getInstance().showSettingsDialog(getLastUsedProject(),
-//                            AppRootConfigurable::class.java)
-//                }
-//            })
-//        }, BorderLayout.CENTER)
     }
 
     private fun setupPanes(isAvailable: Boolean) {
@@ -711,7 +694,7 @@ class ToolboxPane(parent: Disposable) {
             bookmarkButton.icon = if (State.entry.isBookmarked) Resources.Icons.BOOKMARK_CHECKED_24x24 else
                 Resources.Icons.BOOKMARK_UNCHECKED_24x24
             longthinkDescriptionPane.text = entry.miniHtml
-            browser.loadHTML(entry.miniHtml + htmlStyle)
+            browser?.loadHTML(entry.miniHtml + htmlStyle)
             longthinkLabel.text = entry.label
             lastCopyEntry = State.entry.copy()
         }

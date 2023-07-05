@@ -52,7 +52,7 @@ class AsyncConnection : Disposable {
             .setIOReactorConfig(
                     IOReactorConfig.custom()
                             .setIoThreadCount(8)
-                            .setSoTimeout(5, TimeUnit.MINUTES)
+                            .setSoTimeout(30, TimeUnit.SECONDS)
                             .setSelectInterval(TimeValue.ofMilliseconds(5000))
                             .setTcpNoDelay(true)
                             .build()
@@ -61,6 +61,8 @@ class AsyncConnection : Disposable {
                     RequestConfig.custom()
                             .setConnectionKeepAlive(TimeValue.ofSeconds(1))
                             .setHardCancellationEnabled(true)
+                            .setConnectionRequestTimeout(30, TimeUnit.SECONDS)
+                            .setResponseTimeout(30, TimeUnit.SECONDS)
                             .build()
             )
             .setDefaultHeaders(

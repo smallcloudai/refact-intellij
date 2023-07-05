@@ -18,7 +18,7 @@ dependencies {
 
 
 group = "com.smallcloud"
-version = getVersionString("1.1.51")
+version = getVersionString("1.1.52")
 
 repositories {
     mavenCentral()
@@ -28,7 +28,7 @@ repositories {
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    version.set("2022.2.5")
+    version.set("2023.1.3")
     type.set("PC") // Target IDE Platform
 
     plugins.set(listOf())

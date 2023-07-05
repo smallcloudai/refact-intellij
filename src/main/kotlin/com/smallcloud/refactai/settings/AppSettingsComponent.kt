@@ -28,6 +28,8 @@ class AppSettingsComponent {
                     developerModeCheckBox.isVisible = true
                     myLongthinkModelText.isVisible = true
                     myLongthinkModelLabel.isVisible = true
+                    myStagingVersionText.isVisible = true
+                    myStagingVersionLabel.isVisible = true
                 }
             }
 
@@ -46,6 +48,13 @@ class AppSettingsComponent {
     private val myLongthinkModelLabel = JBLabel("Longthink model:").apply {
         isVisible = false
     }
+    private val myStagingVersionText = JBTextField().apply {
+        isVisible = false
+    }
+    private val myStagingVersionLabel = JBLabel("Staging version:").apply {
+        isVisible = false
+    }
+
 
     init {
         mainPanel = FormBuilder.createFormBuilder().run {
@@ -90,6 +99,7 @@ class AppSettingsComponent {
             )
             addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
             addLabeledComponent(myLongthinkModelLabel, myLongthinkModelText, UIUtil.LARGE_VGAP)
+            addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
             addComponentFillVertically(JPanel(), 0)
         }.panel
 
@@ -145,5 +155,9 @@ class AppSettingsComponent {
         set(newVal) {
             myLongthinkModelText.text = newVal
         }
-
+    var stagingVersion: String
+        get() = myStagingVersionText.text
+        set(newVal) {
+            myStagingVersionText.text = newVal
+        }
 }

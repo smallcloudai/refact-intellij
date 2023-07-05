@@ -119,6 +119,13 @@ class InferenceGlobalContext : Disposable {
                     .developerModeEnabledChanged(newValue)
         }
 
+    var stagingVersion: String
+        get() = AppSettingsState.instance.stagingVersion
+        set(newStr) {
+            if (newStr == AppSettingsState.instance.stagingVersion) return
+            AppSettingsState.instance.stagingVersion = newStr
+        }
+
     var lastAutoModel: String? = null
         set(newModel) {
             if (newModel == field) return

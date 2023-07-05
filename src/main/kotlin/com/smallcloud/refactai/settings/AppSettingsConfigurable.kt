@@ -45,28 +45,30 @@ class AppSettingsConfigurable : Configurable {
         var modified =
             (mySettingsComponent!!.tokenText.isNotEmpty() && (AccountManager.apiKey == null ||
                     mySettingsComponent!!.tokenText != AccountManager.apiKey))
-        modified = modified or (mySettingsComponent!!.tokenText.isEmpty() && AccountManager.apiKey != null)
+        modified = modified || (mySettingsComponent!!.tokenText.isEmpty() && AccountManager.apiKey != null)
 
-        modified = modified or (mySettingsComponent!!.modelText.isNotEmpty()
+        modified = modified || (mySettingsComponent!!.modelText.isNotEmpty()
                 && (InferenceGlobalContext.model == null ||
                 InferenceGlobalContext.model != mySettingsComponent!!.modelText))
-        modified = modified or (mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model != null)
+        modified = modified || (mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model != null)
 
         modified =
-            modified or (mySettingsComponent!!.contrastUrlText.isNotEmpty() && (InferenceGlobalContext.isCloud ||
+            modified || (mySettingsComponent!!.contrastUrlText.isNotEmpty() && (InferenceGlobalContext.isCloud ||
                     makeUrlGreat(mySettingsComponent!!.contrastUrlText) != InferenceGlobalContext.inferenceUri))
         modified =
-            modified or (mySettingsComponent!!.contrastUrlText.isEmpty() && !InferenceGlobalContext.isCloud)
+            modified || (mySettingsComponent!!.contrastUrlText.isEmpty() && !InferenceGlobalContext.isCloud)
 
         modified = modified || mySettingsComponent!!.useForceCompletion != InferenceGlobalContext.useForceCompletion
         modified = modified || mySettingsComponent!!.useMultipleFilesCompletion != InferenceGlobalContext.useMultipleFilesCompletion
 
         modified = modified || mySettingsComponent!!.useDeveloperMode != InferenceGlobalContext.developerModeEnabled
-        modified = modified or (mySettingsComponent!!.longthinkModel.isNotEmpty()
+        modified = modified || (mySettingsComponent!!.longthinkModel.isNotEmpty()
                 && (InferenceGlobalContext.longthinkModel == null ||
                 InferenceGlobalContext.longthinkModel != mySettingsComponent!!.longthinkModel))
-        modified = modified or (mySettingsComponent!!.longthinkModel.isEmpty()
+        modified = modified || (mySettingsComponent!!.longthinkModel.isEmpty()
                 && InferenceGlobalContext.longthinkModel != null)
+
+        modified = modified || mySettingsComponent!!.stagingVersion != InferenceGlobalContext.stagingVersion
 
         return modified
     }
@@ -94,6 +96,7 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.useMultipleFilesCompletion = mySettingsComponent!!.useMultipleFilesCompletion
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
         InferenceGlobalContext.longthinkModel = mySettingsComponent!!.longthinkModel.ifEmpty { null }
+        InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
     }
 
     override fun reset() {
@@ -105,6 +108,7 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.useMultipleFilesCompletion = InferenceGlobalContext.useMultipleFilesCompletion
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled
         mySettingsComponent!!.longthinkModel = InferenceGlobalContext.longthinkModel ?: ""
+        mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
     }
 
     override fun disposeUIResources() {

@@ -114,8 +114,8 @@ fun checkLogin(force: Boolean = false): String {
     val urlBuilder = if (infC.isSelfHosted && infC.inferenceUri != null)
         URIBuilder(infC.inferenceUri?.resolve(defaultLoginUrlSuffix)) else URIBuilder(defaultLoginUrl)
 
-    if (infC.developerModeEnabled) {
-        urlBuilder.addParameter("want_staging_version", "1")
+    if (infC.developerModeEnabled && infC.stagingVersion.isNotEmpty()) {
+        urlBuilder.addParameter("want_staging_version", infC.stagingVersion)
     }
     if (infC.isCloud) {
         urlBuilder.addParameter("plugin_version", "${Resources.client}-${Resources.version}")
@@ -170,7 +170,7 @@ fun checkLogin(force: Boolean = false): String {
 
             if (body.has("longthink-filters")) {
                 val filters = body.get("longthink-filters").asJsonArray.map { it.asString }
-                DiffIntentProviderInstance.intentFilters = filters//.ifEmpty { listOf("") }
+                DiffIntentProviderInstance.intentFilters = filters
             }
 
             if (body.has("metering_balance")) {

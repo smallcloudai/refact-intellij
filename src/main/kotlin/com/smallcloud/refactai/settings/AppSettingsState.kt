@@ -44,6 +44,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
     var startupLoggedIn: Boolean = false
     var developerModeEnabled: Boolean = false
     var longthinkModel: String? = null
+    var stagingVersion: String = ""
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus

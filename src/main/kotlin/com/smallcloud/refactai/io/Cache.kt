@@ -3,6 +3,7 @@ package com.smallcloud.refactai.io
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.smallcloud.refactai.Resources
+import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.struct.SMCExceptions
 import com.smallcloud.refactai.struct.SMCPrediction
 import com.smallcloud.refactai.struct.SMCRequest
@@ -47,7 +48,7 @@ private var lastInferenceVerifyTs: Long = -1
 fun streamedInferenceFetch(
         request: SMCRequest,
         dataReceiveEnded: (String) -> Unit,
-        dataReceived: (data: SMCPrediction) -> Unit,
+        dataReceived: (data: SMCPrediction) -> Unit = {},
 ): CompletableFuture<Future<*>>? {
     val gson = Gson()
     val uri = request.uri
@@ -66,6 +67,11 @@ fun streamedInferenceFetch(
             needVerify = needToVerify, stat = request.stat,
             dataReceiveEnded = dataReceiveEnded,
             dataReceived = {
+                val rawJson = gson.fromJson(it, JsonObject::class.java)
+                if (rawJson.has("metering_balance")) {
+                    AccountManager.instance.meteringBalance = rawJson.get("metering_balance").asInt
+                }
+
                 val json = gson.fromJson(it, SMCPrediction::class.java)
                 InferenceGlobalContext.lastAutoModel = json.model
                 UsageStats.addStatistic(true, request.stat, request.uri.toString(), "")
@@ -101,6 +107,11 @@ fun inferenceFetch(
             uri, body, headers,
             needVerify = needToVerify, stat = request.stat,
             dataReceiveEnded = {
+                val rawJson = gson.fromJson(it, JsonObject::class.java)
+                if (rawJson.has("metering_balance")) {
+                    AccountManager.instance.meteringBalance = rawJson.get("metering_balance").asInt
+                }
+
                 val json = gson.fromJson(it, SMCPrediction::class.java)
                 InferenceGlobalContext.lastAutoModel = json.model
                 UsageStats.addStatistic(true, request.stat, request.uri.toString(), "")
@@ -115,3 +126,4 @@ fun inferenceFetch(
 
     return job
 }
+

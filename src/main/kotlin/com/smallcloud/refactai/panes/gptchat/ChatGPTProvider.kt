@@ -129,6 +129,9 @@ class ChatGPTProvider : ActionListener {
                         fun parse(response: String?): String? {
                             val gson = Gson()
                             val obj = gson.fromJson(response, JsonObject::class.java)
+                            if (obj.has("metering_balance")) {
+                                AccountManager.meteringBalance = obj.get("metering_balance").asInt
+                            }
                             if (stop) return ""
                             return if (obj.has("choices")) {
                                 val choice0 = obj.get("choices").asJsonArray[0].asJsonObject

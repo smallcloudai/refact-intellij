@@ -41,6 +41,7 @@ object Resources {
     val defaultLoginUrl: URI = defaultCloudUrl.resolve(defaultLoginUrlSuffix)
     val defaultReportUrl: URI = defaultCloudUrl.resolve("/v1/usage-stats")
     val defaultAcceptRejectReportUrl: URI = defaultCloudUrl.resolve("/v1/accept-reject-stats")
+    val defaultTabReportUrl: URI = defaultCloudUrl.resolve("/v1/tab-stats")
     val defaultLikeReportUrl: URI = defaultCloudUrl.resolve("/v1/longthink-like")
     const val defaultTemperature: Float = 0.2f
     const val defaultModel: String = "CONTRASTcode"

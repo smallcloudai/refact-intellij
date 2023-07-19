@@ -14,11 +14,12 @@ dependencies {
     }
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
     implementation("com.vladsch.flexmark:flexmark-all:0.64.8")
+    implementation("io.github.kezhenxu94:cache-lite:0.2.0")
 }
 
 
 group = "com.smallcloud"
-version = getVersionString("1.1.52")
+version = getVersionString("1.1.53")
 
 repositories {
     mavenCentral()
@@ -31,7 +32,7 @@ intellij {
     version.set("2022.2.5")
     type.set("PC") // Target IDE Platform
 
-    plugins.set(listOf())
+    plugins.set(listOf("Git4Idea"))
 }
 
 val javaCompilerVersion = "17"

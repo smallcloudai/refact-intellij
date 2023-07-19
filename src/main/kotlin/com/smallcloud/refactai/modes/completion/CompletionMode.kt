@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+import com.smallcloud.refactai.statistic.HumanRobotStatistic.Companion.instance as HumanRobotStatistic
 
 class CompletionMode(
     override var needToRender: Boolean = true
@@ -336,6 +337,7 @@ class CompletionMode(
             lastCompletionData?.let {
                 val nextLine = it.endIndex >= it.originalText.length || it.originalText[it.endIndex] == '\n'
                 hasOneLineCompletionBefore = !it.multiline && nextLine
+                HumanRobotStatistic.pushStat(editor, it.originalText, it.startIndex, it.endIndex, it.completion)
             }
             dispose()
         }

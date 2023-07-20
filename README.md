@@ -2,7 +2,7 @@
 
 *Refact for JetBrains is a free, open-source AI code assistant* 
 - **Code suggestions and completions:** Refact suggests potential code completions based on the context of your code, looking up and down. It can suggest whole functions, classes, commonly used programming patterns, libraries, and APIs usage.
-- **AI Toolbox:** Apply a set of functions for bug detection and fixing, code refactoring, documentation assistance, code review, and more. 
+- **AI Toolbox:** Apply functions for bug detection and fixing, code refactoring, documentation assistance, code review, and more. 
 - **Integrated AI Chat:** Use natural language to ask code questions and get answers seamlessly. 
 
 ## Getting Started

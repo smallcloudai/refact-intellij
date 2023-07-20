@@ -1,5 +1,5 @@
 # refact-intellij
-<img alt="Discord" src="https://img.shields.io/discord/1037660742440194089?logo=discord&label=Discord&link=https://smallcloud.ai/discord">
+[![Discord](https://img.shields.io/discord/1037660742440194089?logo=discord&label=Discord&link=https%3A%2F%2Fsmallcloud.ai%2Fdiscord)](https://smallcloud.ai/discord)
 
 *Refact for JetBrains is a free, open-source AI code assistant* 
 - **Code suggestions and completions:** Refact suggests potential code completions based on the context of your code, looking up and down. It can suggest whole functions, classes, commonly used programming patterns, libraries, and APIs usage.

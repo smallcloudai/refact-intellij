@@ -11,7 +11,8 @@ jobs:
   # Run verifyPlugin, IntelliJ Plugin Verifier, and test Gradle tasks
   # Build plugin and provide the artifact for the next workflow jobs
   build:
-    name: Build
+    name: Release
+    
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.properties.outputs.version }}

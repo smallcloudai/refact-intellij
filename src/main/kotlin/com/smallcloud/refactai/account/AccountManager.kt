@@ -4,6 +4,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class AccountManager: Disposable {
     private var previousLoggedInState: Boolean = false
@@ -56,7 +57,8 @@ class AccountManager: Disposable {
 
     val isLoggedIn: Boolean
         get() {
-            return !apiKey.isNullOrEmpty() && !user.isNullOrEmpty()
+             return (InferenceGlobalContext.isCloud && !apiKey.isNullOrEmpty() && !user.isNullOrEmpty()) ||
+                     (!InferenceGlobalContext.isCloud && (!ticket.isNullOrEmpty() || !user.isNullOrEmpty()))
         }
 
     var meteringBalance: Int? = null

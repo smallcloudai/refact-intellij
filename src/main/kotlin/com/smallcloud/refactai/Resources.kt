@@ -31,6 +31,7 @@ private fun getPluginId(): PluginId {
 
 object Resources {
 //    val isNewUI: Boolean by lazy { NewUI.isEnabled() }
+    const val defaultCloudAuthLink: String = "https://refact.smallcloud.ai/authentication?token=%s&utm_source=plugin&utm_medium=jetbrains&utm_campaign=login"
     val defaultCloudUrl: URI = URI("https://www.smallcloud.ai")
     val defaultContrastUrlSuffix = URI("v1/contrast")
     val defaultOldStyleChatUrlSuffix = URI("chat-v1/completions")

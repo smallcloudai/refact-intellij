@@ -5,6 +5,7 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.diagnostic.Logger
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources
+import com.smallcloud.refactai.Resources.defaultCloudAuthLink
 import com.smallcloud.refactai.Resources.defaultLoginUrl
 import com.smallcloud.refactai.Resources.defaultLoginUrlSuffix
 import com.smallcloud.refactai.Resources.defaultRecallUrl
@@ -38,8 +39,7 @@ fun login() {
     if ((AccountManager.ticketCreatedTs == null || (now - AccountManager.ticketCreatedTs!!) > TICKET_PERIOD)) {
         AccountManager.ticket = generateTicket()
     }
-    BrowserUtil.browse("https://codify.smallcloud.ai/authentication?token=${AccountManager.ticket}&utm_source=plugin&utm_medium=jetbrains&utm_campaign=login")
-
+    BrowserUtil.browse(defaultCloudAuthLink.format(AccountManager.ticket))
     runCounterTask()
 }
 

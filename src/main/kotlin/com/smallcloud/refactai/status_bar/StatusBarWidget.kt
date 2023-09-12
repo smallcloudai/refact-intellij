@@ -5,6 +5,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.CustomStatusBarWidget
@@ -119,9 +120,9 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             })
     }
 
-//    override fun selectionChanged(event: FileEditorManagerEvent) {
-//        update(null)
-//    }
+    override fun selectionChanged(event: FileEditorManagerEvent) {
+        update(null)
+    }
 
     override fun ID(): String {
         return javaClass.name
@@ -153,7 +154,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private fun getIcon(): Icon {
-        val isOkStat = getLastStatus()
         if (!PluginState.instance.isEnabled)
             return AllIcons.Diff.GutterCheckBoxIndeterminate
         if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud) {
@@ -169,7 +169,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private fun isPrivacyEnabled(): Boolean {
-        return PrivacyService.instance.getPrivacy(getEditor()?.let { getVirtualFile(it) }) != Privacy.DISABLED
+        return PrivacyService.instance.getPrivacy(editor?.let { getVirtualFile(it) }) != Privacy.DISABLED
     }
 
     // Compatability implementation. DO NOT ADD @Override.
@@ -221,7 +221,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud)
                     emitLogin(project)
                 else
-                    getEditor()?.let { emitRegular(project, it) }
+                    editor?.let { emitRegular(project, it) }
             }
         }
     }

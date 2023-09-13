@@ -1,9 +1,11 @@
 package com.smallcloud.refactai.panes.gptchat
 
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.UIUtil
@@ -23,7 +25,7 @@ import javax.swing.JTextArea
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 
 
-class ChatGPTPane : JPanel() {
+class ChatGPTPane : JPanel(), Disposable {
     private val sendAction = object : DumbAwareAction(CollaborationToolsIcons.Send) {
         init {
             templatePresentation.hoveredIcon = CollaborationToolsIcons.SendHovered
@@ -153,5 +155,9 @@ class ChatGPTPane : JPanel() {
     }
     fun cancelRequest() {
         return listener.cancelOrClose()
+    }
+
+    override fun dispose() {
+        Disposer.dispose(searchTextArea)
     }
 }

@@ -2,6 +2,7 @@ package com.smallcloud.refactai.panes.gptchat.ui
 
 import com.intellij.find.FindBundle
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.TooltipDescriptionProvider
 import com.intellij.openapi.actionSystem.impl.ActionButton
@@ -50,13 +51,22 @@ import javax.swing.text.PlainDocument
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
 
+private fun getFilenameFromEditor(editor: Editor?): String {
+    if (editor == null) return ""
+    val document = editor.document
+    val file = FileDocumentManager.getInstance().getFile(document)
+    return file?.name ?: ""
+}
 
-class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeListener {
+class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeListener, Disposable {
+    private var initEditor: Editor? = LastEditorGetterListener.LAST_EDITOR
     private val myIconsPanel: JPanel = NonOpaquePanel()
     private val myNewLineButton: ActionButton
     private val myClearButton: ActionButton
-    private val myAddSelectedLinesCB: JCheckBox
-    private val myAddFileForContextCB: JCheckBox
+    private val myAddSelectedLinesCB: JCheckBox = JCheckBox(RefactAIBundle.message("aiToolbox.panes.chat.alsoSend"))
+    private val myAddFileForContextCB: JCheckBox = JCheckBox(
+            RefactAIBundle.message("aiToolbox.panes.chat.addFileForContext",
+                    getFilenameFromEditor(initEditor)))
     private val modelComboBox: ComboBox<LongthinkFunctionEntry>
     private val myExtraActionsPanel = NonOpaquePanel()
     private val myScrollPane: JBScrollPane
@@ -73,7 +83,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         toolTipText = RefactAIBundle.message("aiToolbox.meteringBalance")
         icon = colorize(Resources.Icons.COIN_16x16, foreground)
         ApplicationManager.getApplication()
-                .messageBus.connect()
+                .messageBus.connect(this@CustomSearchTextArea)
                 .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                     override fun meteringBalanceChanged(newBalance: Int?) {
                         setup(newBalance)
@@ -323,7 +333,15 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         myScrollPane.setOpaque(false)
         myClearButton = MyActionButton(ClearAction(), false, false)
         myNewLineButton = MyActionButton(NewLineAction(), false, true)
-        myAddSelectedLinesCB = JCheckBox(RefactAIBundle.message("aiToolbox.panes.chat.alsoSend")).apply {
+        myAddSelectedLinesCB.apply {
+            ApplicationManager.getApplication().messageBus
+                    .connect(this@CustomSearchTextArea)
+                    .subscribe(SelectionChangedNotifier.TOPIC, object : SelectionChangedNotifier {
+                        override fun isEditorChanged(editor: Editor?) {
+                            this@apply.isVisible = editor != null
+                        }
+                    })
+            isVisible = initEditor != null
             isOpaque = false
             addKeyListener(object : KeyListener {
                 override fun keyTyped(e: KeyEvent?) {
@@ -344,24 +362,22 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             })
         }
 
-        fun getFilenameFromEditor(editor: Editor?): String {
-            if (editor == null) return ""
-            val document = editor.document
-            val file = FileDocumentManager.getInstance().getFile(document)
-            return file?.name ?: ""
-        }
-
-        myAddFileForContextCB = JCheckBox(
-                RefactAIBundle.message("aiToolbox.panes.chat.addFileForContext",
-                        getFilenameFromEditor(LastEditorGetterListener.LAST_EDITOR))).apply {
+        myAddFileForContextCB.apply {
             ApplicationManager.getApplication().messageBus
-                    .connect()
+                    .connect(this@CustomSearchTextArea)
                     .subscribe(SelectionChangedNotifier.TOPIC, object : SelectionChangedNotifier {
                         override fun isEditorChanged(editor: Editor?) {
-                            this@apply.text = RefactAIBundle.message("aiToolbox.panes.chat.addFileForContext",
-                                    getFilenameFromEditor(editor))
+                            if (this@apply.isEnabled) {
+                                initEditor = editor
+                                this@apply.isVisible = initEditor != null
+                                this@apply.text = RefactAIBundle.message("aiToolbox.panes.chat.addFileForContext",
+                                        getFilenameFromEditor(initEditor))
+                                this@apply.isSelected = initEditor != null
+                            }
                         }
                     })
+            isSelected = initEditor != null
+            isVisible = initEditor != null
             isOpaque = false
             addKeyListener(object : KeyListener {
                 override fun keyTyped(e: KeyEvent?) {
@@ -386,7 +402,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             isOpaque = false
             renderer = DefaultListRenderer { if (it != null) (it as LongthinkFunctionEntry).model else "" }
             ApplicationManager.getApplication().messageBus
-                    .connect()
+                    .connect(this@CustomSearchTextArea)
                     .subscribe(LongthinkFunctionProviderChangedNotifier.TOPIC, object : LongthinkFunctionProviderChangedNotifier {
                         override fun longthinkFunctionsChanged(functions: List<LongthinkFunctionEntry>) {
                             val model = model as DefaultComboBoxModel
@@ -521,4 +537,6 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         private val CLOSE_HOVERED_ICON = AllIcons.Actions.CloseHovered
         private val EMPTY_SCROLL_BORDER: Border = JBUI.Borders.empty(2, 6, 2, 2)
     }
+
+    override fun dispose() {}
 }

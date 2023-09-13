@@ -217,7 +217,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         myExtraActionsPanel.removeAll()
         myExtraActionsPanel.border = JBUI.Borders.empty()
         val addedButtons = ArrayList<Component>()
-        if (actions != null && actions.size > 0) {
+        if (actions.isNotEmpty()) {
             val buttonsGrid: JPanel = NonOpaquePanel(GridLayout(1, actions.size, JBUI.scale(4), 0))
             for (action in actions) {
                 if (action is TooltipDescriptionProvider) {
@@ -252,19 +252,19 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         updateFont()
         textArea.addPropertyChangeListener("background", this)
         textArea.addPropertyChangeListener("font", this)
-        LightEditActionFactory.create { event: AnActionEvent? -> textArea.transferFocus() }
+        LightEditActionFactory.create { textArea.transferFocus() }
                 .registerCustomShortcutSet(CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0)), textArea)
-        LightEditActionFactory.create { event: AnActionEvent? -> textArea.transferFocusBackward() }
+        LightEditActionFactory.create { textArea.transferFocusBackward() }
                 .registerCustomShortcutSet(CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, InputEvent.SHIFT_DOWN_MASK)), textArea)
         KeymapUtil.reassignAction(textArea, KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), NEW_LINE_KEYSTROKE, WHEN_FOCUSED)
         textArea.document = object : PlainDocument() {
             @Throws(BadLocationException::class)
             override fun insertString(offs: Int, str: String, a: AttributeSet?) {
-                var str = str
-                if (getProperty("filterNewlines") === java.lang.Boolean.TRUE && str.indexOf('\n') >= 0) {
-                    str = StringUtil.replace(str, "\n", " ")
+                var localStr = str
+                if (getProperty("filterNewlines") === java.lang.Boolean.TRUE && localStr.indexOf('\n') >= 0) {
+                    localStr = StringUtil.replace(localStr, "\n", " ")
                 }
-                if (!StringUtil.isEmpty(str)) super.insertString(offs, str, a)
+                if (!StringUtil.isEmpty(localStr)) super.insertString(offs, localStr, a)
             }
         }
         if (Registry.`is`("ide.find.field.trims.pasted.text", false)) {
@@ -460,10 +460,6 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         if ("font" == evt.propertyName) {
             updateLayout()
         }
-    }
-
-    @Deprecated("use this wrapper component with JBTextArea and its getEmptyText() instead")
-    fun setInfoText(@Suppress("unused") info: String?) {
     }
 
     private inner class ClearAction internal constructor() : DumbAwareAction(CLOSE_ICON) {

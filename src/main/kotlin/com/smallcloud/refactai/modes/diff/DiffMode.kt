@@ -87,7 +87,7 @@ class DiffMode(
         diffLayout = null
         editor.putUserData(Resources.ExtraUserDataKeys.addedFromHL, lastFromHL)
         if (lastFromHL) {
-            getOrCreateModeProvider(editor).getHighlightMode().actionPerformed(editor, true)
+            getOrCreateModeProvider(editor).getHighlightMode().actionPerformed(editor)
         } else {
             getOrCreateModeProvider(editor).switchMode()
         }

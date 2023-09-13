@@ -10,12 +10,12 @@ fun makeLinksPanel(): JPanel {
     return JPanel(HorizontalLayout()).apply {
         add(LinkLabel<String>("Bug report", AllIcons.Ide.External_link_arrow).apply {
 
-            setListener({ aSource, aLinkData ->
+            setListener({ _, _ ->
                 BrowserUtil.browse("https://github.com/smallcloudai/refact-intellij/issues")
             }, null)
         })
         add(LinkLabel<String>("Discord", AllIcons.Ide.External_link_arrow).apply {
-            setListener({ aSource, aLinkData ->
+            setListener({ _, _ ->
                 BrowserUtil.browse("https://www.smallcloud.ai/discord")
             }, null)
         })

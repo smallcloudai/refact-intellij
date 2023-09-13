@@ -11,7 +11,5 @@ class PluginListener: DynamicPluginListener, Disposable {
         Disposer.dispose(PluginState.instance)
     }
 
-    override fun dispose() {
-        val i = 0
-    }
+    override fun dispose() {}
 }

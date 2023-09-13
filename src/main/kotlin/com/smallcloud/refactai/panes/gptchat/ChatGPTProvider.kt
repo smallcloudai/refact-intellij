@@ -64,7 +64,7 @@ class ChatGPTProvider : ActionListener {
                 .subscribe(
                         InferenceGlobalContextChangedNotifier.TOPIC,
                         object : InferenceGlobalContextChangedNotifier {
-                            override fun deploymentModeChanged(newValue: DeploymentMode) {
+                            override fun deploymentModeChanged(newMode: DeploymentMode) {
                                 reconnect()
                             }
                         }

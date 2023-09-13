@@ -84,7 +84,7 @@ class MessageComponent(var question: List<ParsedText>,
         editorPane.editorKit = kit
     }
 
-    private fun createContentComponent(content: String, isCode: Boolean, index: Int): Component {
+    private fun createContentComponent(content: String, isCode: Boolean): Component {
         val wrapper = JPanel(BorderLayout()).also {
             it.border = JBUI.Borders.empty(5)
             it.isOpaque = isCode
@@ -137,13 +137,13 @@ class MessageComponent(var question: List<ParsedText>,
         question = content
         content.forEachIndexed { index, element ->
             if (myList.components.size <= index) {
-                myList.add(createContentComponent(element.htmlText, element.isCode, index))
+                myList.add(createContentComponent(element.htmlText, element.isCode))
                 return@forEachIndexed
             }
             val editor = (myList.components[index] as JPanel).components.last() as JEditorPane
             if (element.isCode && !(editor.getClientProperty("isCode") as Boolean)) {
                 myList.remove(index)
-                myList.add(createContentComponent(element.htmlText, element.isCode, index), index)
+                myList.add(createContentComponent(element.htmlText, element.isCode), index)
                 return@forEachIndexed
             }
             if (editor.text == element.htmlText) {

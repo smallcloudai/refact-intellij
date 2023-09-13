@@ -130,7 +130,7 @@ class HighlightMode(
         cancel(editor)
     }
 
-    fun actionPerformed(editor: Editor, fromDiff: Boolean = false, entryFromContext: LongthinkFunctionEntry? = null) {
+    fun actionPerformed(editor: Editor, entryFromContext: LongthinkFunctionEntry? = null) {
         if (layout != null) {
             layout?.dispose()
             layout = null

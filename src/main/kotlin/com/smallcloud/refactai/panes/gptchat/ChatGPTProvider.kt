@@ -52,7 +52,7 @@ class ChatGPTProvider : ActionListener {
             InferenceGlobalContext.inferenceUri?.let {
                 InferenceGlobalContext.checkConnection(it.resolve(
                         if (InferenceGlobalContext.isNewChatStyle || InferenceGlobalContext.isSelfHosted)
-                    defaultChatUrlSuffix else defaultOldStyleChatUrlSuffix))
+                    defaultChatUrlSuffix else defaultOldStyleChatUrlSuffix), false)
             }
         }
     }

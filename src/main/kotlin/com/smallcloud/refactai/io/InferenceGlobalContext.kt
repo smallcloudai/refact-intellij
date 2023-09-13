@@ -23,13 +23,20 @@ class InferenceGlobalContext : Disposable {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
     var connection: AsyncConnection = AsyncConnection()
 
-    fun checkConnection(uri: URI) {
+    fun checkConnection(uri: URI, needChangeStatus: Boolean = true) {
         try {
+            if (needChangeStatus) {
+                status = ConnectionStatus.PENDING
+            }
             connection.ping(uri)
-            status = ConnectionStatus.CONNECTED
+            if (needChangeStatus) {
+                status = ConnectionStatus.CONNECTED
+            }
             lastErrorMsg = null
         } catch (e: Exception) {
-            status = ConnectionStatus.DISCONNECTED
+            if (needChangeStatus) {
+                status = ConnectionStatus.DISCONNECTED
+            }
             lastErrorMsg = e.message
         }
     }

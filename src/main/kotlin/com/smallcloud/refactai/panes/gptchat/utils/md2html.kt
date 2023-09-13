@@ -7,7 +7,6 @@ import com.vladsch.flexmark.parser.Parser
 import com.vladsch.flexmark.profile.pegdown.Extensions
 import com.vladsch.flexmark.profile.pegdown.PegdownOptionsAdapter
 import com.vladsch.flexmark.util.ast.Node
-import java.util.regex.Pattern
 
 
 fun md2html(text: String): List<ParsedText> {
@@ -29,7 +28,7 @@ fun md2html(text: String): List<ParsedText> {
                 res.last().htmlText += html
             }
         } else {
-            val rawText = it.lastChild?.chars.toString()
+            val rawText = it.chars.toString()
             val html = renderer.render(parser.parse(it.chars))
             if (res.isEmpty() || res.last().isCode) {
                 res.add(ParsedText(rawText, html, false))

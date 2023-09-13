@@ -43,15 +43,15 @@ class StatisticService: Disposable {
         ApplicationManager.getApplication().messageBus
                 .connect(this).subscribe(
                         InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun deploymentModeChanged(newValue: DeploymentMode) {
+                    override fun deploymentModeChanged(newMode: DeploymentMode) {
                         if (task != null) {
-                            if (newValue != DeploymentMode.CLOUD) {
+                            if (newMode != DeploymentMode.CLOUD) {
                                 task?.cancel(false)
                                 task?.get()
                                 task = null
                             }
                         } else {
-                            if (newValue == DeploymentMode.CLOUD) {
+                            if (newMode == DeploymentMode.CLOUD) {
                                 task = createTask()
                             }
                         }
@@ -74,7 +74,7 @@ class StatisticService: Disposable {
         )
         val url = Resources.defaultAcceptRejectReportUrl
         val usage = mutableMapOf<String, Int>()
-        var oldStats = mutableListOf<String>()
+        var oldStats: MutableList<String>
         synchronized(this) {
             oldStats = stats.toMutableList()
             stats.clear()

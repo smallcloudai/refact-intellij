@@ -130,11 +130,11 @@ class PrivacyService : VetoableProjectManagerListener, Disposable {
     }
 
     private fun getPrivacyFromParents(node: PrivacyMember): Privacy {
-        var node: PrivacyMember? = node
-        while (node != null) {
-            if (node.privacy != null)
-                return node.privacy!!
-            node = node.parent
+        var tmpNode: PrivacyMember? = node
+        while (tmpNode != null) {
+            if (tmpNode.privacy != null)
+                return tmpNode.privacy!!
+            tmpNode = tmpNode.parent
         }
         return PrivacyState.instance.defaultPrivacy
     }

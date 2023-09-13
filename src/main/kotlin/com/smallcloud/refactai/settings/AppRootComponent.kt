@@ -135,7 +135,6 @@ class AppRootComponent(private val project: Project) {
                                 Privacy.DISABLED -> privacyDefaultsRBDisabled.isSelected = true
                                 Privacy.ENABLED -> privacyDefaultsRBRefactAI.isSelected = true
                                 Privacy.THIRDPARTY -> privacyDefaultsRBRefactAIPlus.isSelected = true
-                                else -> privacyDefaultsRBRefactAIPlus.isSelected = true
                             }
                             return@ItemListener
                         }
@@ -156,7 +155,6 @@ class AppRootComponent(private val project: Project) {
             Privacy.DISABLED -> privacyDefaultsRBDisabled.isSelected = true
             Privacy.ENABLED -> privacyDefaultsRBRefactAI.isSelected = true
             Privacy.THIRDPARTY -> privacyDefaultsRBRefactAIPlus.isSelected = true
-            else -> privacyDefaultsRBRefactAIPlus.isSelected = true
         }
 
         privacyOverridesScrollPane = JBScrollPane(
@@ -176,8 +174,8 @@ class AppRootComponent(private val project: Project) {
             .messageBus
             .connect(PluginState.instance)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun isLoggedInChanged(limited: Boolean) {
-                    currentState = if (limited || InferenceGlobalContext.isSelfHosted)
+                override fun isLoggedInChanged(isLoggedIn: Boolean) {
+                    currentState = if (isLoggedIn || InferenceGlobalContext.isSelfHosted)
                         SettingsState.SIGNED else SettingsState.UNSIGNED
                     revalidate()
                 }

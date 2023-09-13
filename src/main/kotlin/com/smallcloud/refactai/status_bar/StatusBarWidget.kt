@@ -62,7 +62,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             .messageBus
             .connect(this)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun isLoggedInChanged(limited: Boolean) {
+                override fun isLoggedInChanged(isLoggedIn: Boolean) {
                     update(null)
                 }
             })
@@ -70,11 +70,11 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             .messageBus
             .connect(this)
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                override fun inferenceUriChanged(unused: URI?) {
+                override fun inferenceUriChanged(newUrl: URI?) {
                     update(null)
                 }
 
-                override fun userInferenceUriChanged(unused: URI?) {
+                override fun userInferenceUriChanged(newUrl: URI?) {
                     update(null)
                 }
 

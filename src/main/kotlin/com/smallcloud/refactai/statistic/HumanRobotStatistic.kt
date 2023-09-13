@@ -81,15 +81,15 @@ class HumanRobotStatistic: Disposable {
         ApplicationManager.getApplication().messageBus
                 .connect(this).subscribe(
                         InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun deploymentModeChanged(newValue: DeploymentMode) {
+                    override fun deploymentModeChanged(newMode: DeploymentMode) {
                         if (task != null) {
-                            if (newValue != DeploymentMode.CLOUD) {
+                            if (newMode != DeploymentMode.CLOUD) {
                                 task?.cancel(false)
                                 task?.get()
                                 task = null
                             }
                         } else {
-                            if (newValue == DeploymentMode.CLOUD) {
+                            if (newMode == DeploymentMode.CLOUD) {
                                 task = createTask()
                             }
                         }
@@ -107,7 +107,7 @@ class HumanRobotStatistic: Disposable {
                 "Authorization" to "Bearer $token"
         )
         val url = Resources.defaultTabReportUrl
-        var oldHistory = listOf<Event>()
+        var oldHistory: List<Event>
         synchronized(this) {
             oldHistory = history.toList()
             history.clear()

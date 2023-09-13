@@ -47,8 +47,8 @@ class HighlightLayout(
     }
 
     private fun needToSkipToken(startOffset: Int, endOffset: Int): Boolean {
-        val choice = prediction.choices?.first()
-        val text = choice?.files?.get(request.body.cursorFile)
+        val choice = prediction.choices.first()
+        val text = choice.files[request.body.cursorFile]
         if (text != null) {
             return text.subSequence(startOffset, endOffset) == "\n"
         }

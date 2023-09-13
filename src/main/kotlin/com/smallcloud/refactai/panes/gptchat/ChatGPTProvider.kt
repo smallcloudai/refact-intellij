@@ -158,7 +158,7 @@ class ChatGPTProvider : ActionListener {
                                     message.setContent(md2html(lastAnswer.answer))
                                     pane.scrollToBottom()
                                 }, {
-                                    pane.sendingState == ChatGPTPane.SendingState.READY || canceled
+                                    canceled
                                 })
                                 Thread.sleep(2)
                             }

@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.containers.ContainerUtil
@@ -96,7 +97,6 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
         }
         newPane.searchTextArea.needToInline = needInsertCode
         newPane.searchTextArea.textArea.text = intent
-        newPane.searchTextArea.needToAttachFile = true
 
         val info = TabInfo(newPane)
         info.text = getTabNextText(intent)
@@ -114,6 +114,7 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
             override fun actionPerformed(e: AnActionEvent) {
                 (info.component as ChatGPTPane).cancelRequest()
                 panes.removeTab(info)
+                Disposer.dispose(info.component as ChatGPTPane)
                 if (getVisibleTabs().isEmpty()) {
                     addTab()
                 }

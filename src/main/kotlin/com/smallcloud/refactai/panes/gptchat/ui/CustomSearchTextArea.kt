@@ -26,7 +26,6 @@ import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.StartupUiUtil
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
@@ -313,7 +312,8 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
                 return if (SystemInfo.isMac) {
                     JBInsets(3, 0, 2, 0)
                 } else {
-                    var bottom = if (StringUtil.getLineBreakCount(textArea.text) > 0) 2 else if (StartupUiUtil.isUnderDarcula()) 1 else 0
+                    var bottom = if (StringUtil.getLineBreakCount(textArea.text) > 0) 2 else
+                        if (UIManager.getLookAndFeel().name.contains("Darcula")) 1 else 0
                     var top = if (textArea.getFontMetrics(textArea.font).height <= 16) 2 else 1
                     if (JBUIScale.isHiDPI(JBUIScale.scale(1f).toDouble())) {
                         bottom = 0

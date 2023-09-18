@@ -6,11 +6,11 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
-//import com.intellij.ui.NewUI
 import com.intellij.util.IconUtil
-import com.intellij.util.ui.StartupUiUtil
 import java.net.URI
 import javax.swing.Icon
+import javax.swing.UIManager
+
 fun getThisPlugin() = PluginManager.getPlugins().find { it.name == "Refact.ai" }
 
 private fun getVersion(): String {
@@ -30,7 +30,7 @@ private fun getPluginId(): PluginId {
 }
 
 object Resources {
-//    val isNewUI: Boolean by lazy { NewUI.isEnabled() }
+    //    val isNewUI: Boolean by lazy { NewUI.isEnabled() }
     const val defaultCloudAuthLink: String = "https://refact.smallcloud.ai/authentication?token=%s&utm_source=plugin&utm_medium=jetbrains&utm_campaign=login"
     val defaultCloudUrl: URI = URI("https://www.smallcloud.ai")
     val defaultContrastUrlSuffix = URI("v1/contrast")
@@ -54,24 +54,29 @@ object Resources {
     val pluginId: PluginId = getPluginId()
     const val stagingFilterPrefix: String = "STAGING"
     val jbBuildVersion: String = ApplicationInfo.getInstance().build.toString()
+    const val refactAIRootSettingsID = "refactai_root"
 
     object Icons {
         private fun brushForTheme(icon: Icon): Icon {
-            return if (StartupUiUtil.isUnderDarcula()) {
+            return if (UIManager.getLookAndFeel().name.contains("Darcula")) {
                 IconUtil.brighter(icon, 3)
             } else {
                 IconUtil.darker(icon, 3)
             }
         }
+
         fun resizeSquaredIcon(icon: Icon, width: Int): Icon {
             return IconUtil.resizeSquared(icon, width)
         }
+
         private fun makeIcon12(path: String): Icon {
             return brushForTheme(resizeSquaredIcon(IconLoader.getIcon(path, Resources::class.java), 12))
         }
+
         private fun makeIcon16(path: String): Icon {
             return brushForTheme(resizeSquaredIcon(IconLoader.getIcon(path, Resources::class.java), 16))
         }
+
         private fun makeIcon24(path: String): Icon {
             return brushForTheme(resizeSquaredIcon(IconLoader.getIcon(path, Resources::class.java), 24))
         }

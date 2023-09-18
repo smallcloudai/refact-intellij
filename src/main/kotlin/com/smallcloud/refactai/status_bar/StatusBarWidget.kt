@@ -5,7 +5,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.CustomStatusBarWidget
@@ -28,6 +27,7 @@ import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.ConnectionChangedNotifier
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
+import com.smallcloud.refactai.listeners.SelectionChangedNotifier
 import com.smallcloud.refactai.notifications.emitLogin
 import com.smallcloud.refactai.notifications.emitRegular
 import com.smallcloud.refactai.privacy.Privacy
@@ -118,11 +118,20 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     update(newMsg)
                 }
             })
+        ApplicationManager.getApplication()
+                .messageBus
+                .connect(this)
+                .subscribe(SelectionChangedNotifier.TOPIC, object : SelectionChangedNotifier {
+                    override fun isEditorChanged(editor: Editor?) {
+                        update(null)
+                    }
+
+                })
     }
 
-    override fun selectionChanged(event: FileEditorManagerEvent) {
-        update(null)
-    }
+//    override fun selectionChanged(event: FileEditorManagerEvent) {
+//        update(null)
+//    }
 
     override fun ID(): String {
         return javaClass.name
@@ -169,7 +178,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private fun isPrivacyEnabled(): Boolean {
-        return PrivacyService.instance.getPrivacy(editor?.let { getVirtualFile(it) }) != Privacy.DISABLED
+        return PrivacyService.instance.getPrivacy(getEditor()?.let { getVirtualFile(it) }) != Privacy.DISABLED
     }
 
     // Compatability implementation. DO NOT ADD @Override.
@@ -221,7 +230,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud)
                     emitLogin(project)
                 else
-                    editor?.let { emitRegular(project, it) }
+                    getEditor()?.let { emitRegular(project, it) }
             }
         }
     }

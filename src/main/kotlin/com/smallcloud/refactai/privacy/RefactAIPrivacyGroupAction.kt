@@ -7,7 +7,7 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.settings.AppRootConfigurable
+import com.smallcloud.refactai.Resources.refactAIRootSettingsID
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
@@ -53,7 +53,7 @@ class RefactAIPrivacyGroupAction : ActionGroup() {
             Separator(),
             object : DumbAwareAction() {
                 override fun actionPerformed(e: AnActionEvent) {
-                    ShowSettingsUtilImpl.getInstance().showSettingsDialog(e.project, AppRootConfigurable::class.java)
+                    ShowSettingsUtilImpl.showSettingsDialog(e.project, refactAIRootSettingsID, null)
                 }
                 override fun update(e: AnActionEvent) {
                     e.presentation.text = RefactAIBundle.message("privacy.privacyRules")

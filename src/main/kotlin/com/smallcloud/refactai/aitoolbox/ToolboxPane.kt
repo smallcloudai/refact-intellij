@@ -23,6 +23,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil.getLabelForeground
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
+import com.smallcloud.refactai.Resources.refactAIRootSettingsID
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.aitoolbox.table.LongthinkTable
 import com.smallcloud.refactai.aitoolbox.table.LongthinkTableModel
@@ -437,8 +438,8 @@ class ToolboxPane(parent: Disposable) {
                     override fun mouseEntered(e: MouseEvent?) {}
                     override fun mouseExited(e: MouseEvent?) {}
                     override fun mouseReleased(e: MouseEvent?) {
-                        ShowSettingsUtilImpl.getInstance().showSettingsDialog(getLastUsedProject(),
-                                AppRootConfigurable::class.java)
+                        ShowSettingsUtilImpl.showSettingsDialog(getLastUsedProject(),
+                                refactAIRootSettingsID, null)
                     }
                 })
             })

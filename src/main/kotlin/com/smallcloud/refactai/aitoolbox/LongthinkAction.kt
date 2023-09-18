@@ -14,7 +14,7 @@ val LongthinkKey = Key.create<LongthinkFunctionVariation>("refact.longthink")
 
 class LongthinkAction: DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        val longthink = (e.inputEvent.component as JComponent).getUserData(LongthinkKey)
+        val longthink = (e.inputEvent?.component as JComponent).getUserData(LongthinkKey)
         if (longthink?.entryName?.isNotEmpty() == true) {
             doActionPerformed(longthink.functions.first())
         }

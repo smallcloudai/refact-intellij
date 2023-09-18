@@ -21,12 +21,12 @@ import com.intellij.openapi.wm.ToolWindowManager
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
+import com.smallcloud.refactai.Resources.refactAIRootSettingsID
 import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.aitoolbox.ToolboxPaneInvokeAction
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
-import com.smallcloud.refactai.settings.AppRootConfigurable
 import com.smallcloud.refactai.utils.getLastUsedProject
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
@@ -116,7 +116,7 @@ fun emitLogin(project: Project) {
         login()
         notification.expire()
     }).addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
-        ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
+        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         notification.expire()
     }).notify(project)
     lastNotification = notification
@@ -145,7 +145,7 @@ fun emitRegular(project: Project, editor: Editor) {
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
-        ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
+        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         notification.expire()
     })
 
@@ -179,7 +179,7 @@ fun emitInfo(msg: String) {
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
-        ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
+        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         notification.expire()
     })
     notification.notify(project)
@@ -193,7 +193,7 @@ fun emitError(msg: String) {
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
-        ShowSettingsUtilImpl.getInstance().showSettingsDialog(project, AppRootConfigurable::class.java)
+        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         notification.expire()
     })
     notification.notify(project)

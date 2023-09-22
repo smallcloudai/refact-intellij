@@ -13,7 +13,7 @@ class DiffLayout(
     private val editor: Editor,
     val request: SMCRequest,
 ) : Disposable {
-    private var inlayer: Inlayer = Inlayer(editor, request.body.intent)
+    private var inlayer: Inlayer = Inlayer(editor, "request.body.intent")
     private var blockEvents: Boolean = false
     private var lastPatch = Patch<String>()
     var rendered: Boolean = false

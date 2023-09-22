@@ -23,10 +23,6 @@ class CompletionState(
         private set(value) {
             field = value
         }
-    val stopTokens: List<String>
-        get() {
-            return if (multiline) listOf("\n\n") else listOf("\n", "\n\n")
-        }
 
     init {
         run {
@@ -89,13 +85,13 @@ class CompletionState(
         return Completion(
             originalText = requestedText,
             completion = editedCompletion,
-            currentLinesAreEqual = false,
+//            currentLinesAreEqual = false,
             multiline = currentMultiline,
-            startIndex = startIndex,
-            firstLineEndIndex = endIndex,
-            endIndex = maxOf(endIndex, startIndex),
+            offset = startIndex,
+//            firstLineEndIndex = endIndex,
+//            endIndex = maxOf(endIndex, startIndex),
             createdTs = System.currentTimeMillis(),
-            leftSymbolsToRemove = leftSymbolsToRemove,
+//            leftSymbolsToRemove = leftSymbolsToRemove,
         )
     }
 }

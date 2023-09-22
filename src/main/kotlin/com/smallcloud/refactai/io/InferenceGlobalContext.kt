@@ -4,7 +4,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
-import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.struct.DeploymentMode
@@ -196,8 +195,8 @@ class InferenceGlobalContext : Disposable {
         val apiKey = AccountManager.apiKey
         if (apiKey.isNullOrEmpty() && isCloud) return null
 
-        requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
-        requestData.client = "${Resources.client}-${Resources.version}"
+//        requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
+//        requestData.client = "${Resources.client}-${Resources.version}"
         return inferenceUri?.let { SMCRequest(it, requestData, apiKey ?: "self_hosted") }
     }
 

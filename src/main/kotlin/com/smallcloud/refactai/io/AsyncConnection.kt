@@ -88,7 +88,7 @@ class AsyncConnection : Disposable {
             headers: Map<String, String>? = null,
             requestProperties: Map<String, String>? = null,
             needVerify: Boolean = false,
-            stat: UsageStatistic,
+            stat: UsageStatistic = UsageStatistic(),
             dataReceiveEnded: (String) -> Unit,
             dataReceived: (String) -> Unit,
             errorDataReceived: (JsonObject) -> Unit,

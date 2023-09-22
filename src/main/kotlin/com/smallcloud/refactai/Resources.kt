@@ -7,11 +7,16 @@ import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
 import com.intellij.util.IconUtil
+import java.io.File
 import java.net.URI
 import javax.swing.Icon
 import javax.swing.UIManager
 
 fun getThisPlugin() = PluginManager.getPlugins().find { it.name == "Refact.ai" }
+
+private fun getHomePath() : File {
+    return getThisPlugin()!!.pluginPath.toFile()
+}
 
 private fun getVersion(): String {
     val thisPlugin = getThisPlugin()
@@ -20,6 +25,7 @@ private fun getVersion(): String {
     }
     return ""
 }
+
 
 private fun getPluginId(): PluginId {
     val thisPlugin = getThisPlugin()
@@ -55,6 +61,7 @@ object Resources {
     const val stagingFilterPrefix: String = "STAGING"
     val jbBuildVersion: String = ApplicationInfo.getInstance().build.toString()
     const val refactAIRootSettingsID = "refactai_root"
+    val homePluginPath: File = getHomePath()
 
     object Icons {
         private fun brushForTheme(icon: Icon): Icon {

@@ -11,6 +11,8 @@ import com.smallcloud.refactai.io.ConnectivityManager
 import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.listeners.QuickLongthinkActionsService
 import com.smallcloud.refactai.listeners.UninstallListener
+import com.smallcloud.refactai.lsp.LSPConfig
+import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.settings.AppSettingsState
@@ -55,6 +57,11 @@ class Initializer : StartupActivity.Background, Disposable {
         PluginInstaller.addStateListener(UninstallListener())
         UpdateChecker.instance
         QuickLongthinkActionsService.instance
+        LSPProcessHolder.instance.startup()
+        LSPProcessHolder.instance.startProcess(LSPConfig(
+                "HF", 8001,
+                "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",
+                "${Resources.client}-${Resources.version}"))
     }
 
     override fun dispose() {

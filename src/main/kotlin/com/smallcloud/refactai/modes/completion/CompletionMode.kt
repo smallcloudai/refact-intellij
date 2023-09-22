@@ -15,15 +15,12 @@ import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.streamedInferenceFetch
 import com.smallcloud.refactai.modes.EditorTextState
 import com.smallcloud.refactai.modes.Mode
-import com.smallcloud.refactai.modes.completion.prompt.FilesCollector
-import com.smallcloud.refactai.modes.completion.prompt.PromptCooker
 import com.smallcloud.refactai.modes.completion.prompt.PromptInfo
 import com.smallcloud.refactai.modes.completion.prompt.RequestCreator
 import com.smallcloud.refactai.modes.completion.renderer.AsyncCompletionLayout
 import com.smallcloud.refactai.modes.completion.structs.Completion
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.refactai.privacy.Privacy
-import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.statistic.CompletionStatistic
 import com.smallcloud.refactai.statistic.StatisticService
 import com.smallcloud.refactai.statistic.UsageStatistic
@@ -35,7 +32,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.statistic.HumanRobotStatistic.Companion.instance as HumanRobotStatistic
+import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyService
 
 class CompletionMode(
     override var needToRender: Boolean = true
@@ -69,12 +66,19 @@ class CompletionMode(
             }
         }
         val fileName = getActiveFile(event.editor.document) ?: return
-        if (PrivacyService.instance.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
+        if (PrivacyService.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
             == Privacy.DISABLED && !InferenceGlobalContext.isSelfHosted) return
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         var maybeState: EditorTextState? = null
         val debounceMs: Long
         val editor = event.editor
+        val logicalPos = event.editor.caretModel.logicalPosition
+        val text = editor.document.text
+
+        val currentLine = editor.document.text.substring(editor.document.getLineStartOffset(logicalPos.line),
+                editor.document.getLineEndOffset(logicalPos.line))
+
+        val isMultiline = currentLine.all { it == ' ' || it == '\t' }
         lastStatistic = CompletionStatistic()
         if (!event.force) {
             val docEvent = event.event ?: return
@@ -114,27 +118,27 @@ class CompletionMode(
 
         val state = maybeState ?: return
         if (!state.isValid()) return
-        state.getRidOfLeftSpacesInplace()
 
         var promptInfo: List<PromptInfo> = listOf()
-        if (InferenceGlobalContext.useMultipleFilesCompletion) {
-            editor.project?.let {
-                app.invokeAndWait {
-                    promptInfo = PromptCooker.cook(
-                        state,
-                        FilesCollector.getInstance(it).collect(),
-                        mostImportantFilesMaxCount = if (event.force) 25 else 6,
-                        lessImportantFilesMaxCount = if (event.force) 10 else 2,
-                        maxFileSize = if (event.force) 2_000_000 else 200_000
-                    )
-                }
-            }
-        }
+//        if (InferenceGlobalContext.useMultipleFilesCompletion) {
+//            editor.project?.let {
+//                app.invokeAndWait {
+//                    promptInfo = PromptCooker.cook(
+//                        state,
+//                        FilesCollector.getInstance(it).collect(),
+//                        mostImportantFilesMaxCount = if (event.force) 25 else 6,
+//                        lessImportantFilesMaxCount = if (event.force) 10 else 2,
+//                        maxFileSize = if (event.force) 2_000_000 else 200_000
+//                    )
+//                }
+//            }
+//        }
         val stat = UsageStatistic(scope, extension = getExtension(fileName))
         val request = RequestCreator.create(
-            fileName, state.text, state.offset, state.offset,
+            fileName, text, logicalPos.line, logicalPos.column,
             stat, "Infill", "infill", promptInfo,
-            stream = true, model = InferenceGlobalContext.model ?: Resources.defaultModel
+            stream = true, model = InferenceGlobalContext.model ?: Resources.defaultModel,
+                multiline=isMultiline
         ) ?: return
 
         processTask = scheduler.schedule({
@@ -143,10 +147,10 @@ class CompletionMode(
     }
 
     private fun renderCompletion(
-        editor: Editor,
-        state: EditorTextState,
-        completionData: Completion,
-        animation: Boolean
+            editor: Editor,
+            state: EditorTextState,
+            completionData: Completion,
+            animation: Boolean
     ) {
         var modificationStamp: Long = state.modificationStamp
         var offset: Int = state.offset
@@ -178,10 +182,10 @@ class CompletionMode(
         logger.info("Completion data: ${completionData.completion}")
         try {
             completionLayout?.also {
-                it.update(completionData, needToRender, animation)
+                it.update(completionData, state.offset, needToRender, animation)
             }.alsoIfNull {
                 completionLayout = AsyncCompletionLayout(editor).also {
-                    it.update(completionData, needToRender, animation)
+                    it.update(completionData, state.offset, needToRender, animation)
                 }
             }
         } catch (ex: Exception) {
@@ -223,16 +227,16 @@ class CompletionMode(
         editorState: EditorTextState,
         force: Boolean,
     ) {
-        val completionState = CompletionState(editorState, force = force)
-        if (!force && !completionState.readyForCompletion) return
-        if (!force && !completionState.multiline && hasOneLineCompletionBefore) {
-            hasOneLineCompletionBefore = false
-            return
-        }
-        if (force) {
-            request.body.maxTokens = 512
-        }
-        request.body.stopTokens = completionState.stopTokens
+//        val completionState = CompletionState(editorState, force = force)
+//        if (!force && !completionState.readyForCompletion) return
+//        if (!force && !completionState.multiline && hasOneLineCompletionBefore) {
+//            hasOneLineCompletionBefore = false
+//            return
+//        }
+//        if (force) {
+//            request.body.maxTokens = 512
+//        }
+//        request.body.stopTokens = completionState.stopTokens
         InferenceGlobalContext.status = ConnectionStatus.PENDING
         completionInProgress = true
         lastStatistic = CompletionStatistic()
@@ -241,33 +245,24 @@ class CompletionMode(
             InferenceGlobalContext.lastErrorMsg = null
             lastStatistic?.addStatistic("requestRendered")
         }) { prediction ->
-            if (!completionInProgress) {
+            val choice = prediction.choices.first()
+            if ((!completionInProgress) || choice.finishReason != null) {
                 return@streamedInferenceFetch
             }
-
-            if (prediction.status == null) {
-                InferenceGlobalContext.status = ConnectionStatus.ERROR
-                InferenceGlobalContext.lastErrorMsg = "Parameters are not correct"
-                return@streamedInferenceFetch
+            val completion: Completion = if (completionLayout?.lastCompletionData == null) {
+                Completion(request.body.inputs.sources.values.toList().first(),
+                        offset = editorState.offset,
+                        multiline = request.body.inputs.multiline,
+                        createdTs = prediction.created.toLong())
+            } else {
+                completionLayout!!.lastCompletionData!!
             }
+            completion.updateCompletion(choice.delta)
 
-            val headMidTail =
-                prediction.choices.firstOrNull()?.filesHeadMidTail?.get(request.body.cursorFile)
-                    ?: return@streamedInferenceFetch
-
-            editorState.restoreInplace()
-            val completionData = completionState.makeCompletion(
-                headMidTail.head,
-                headMidTail.mid,
-                headMidTail.tail,
-                prediction.choices.first().finishReason
-            )
-            if (!completionData.isMakeSense()) return@streamedInferenceFetch
-            if (!editorState.currentLineIsEmptySymbols() && headMidTail.head != editorState.offset) return@streamedInferenceFetch
             synchronized(this) {
-                CompletionCache.addCompletion(completionData)
+                CompletionCache.addCompletion(completion)
                 renderCompletion(
-                    editorState.editor, editorState, completionData, true
+                        editorState.editor, editorState, completion, true
                 )
             }
         }?.also {
@@ -335,9 +330,9 @@ class CompletionMode(
         completionLayout?.apply {
             applyPreview(caret ?: editor.caretModel.currentCaret)
             lastCompletionData?.let {
-                val nextLine = it.endIndex >= it.originalText.length || it.originalText[it.endIndex] == '\n'
-                hasOneLineCompletionBefore = !it.multiline && nextLine
-                HumanRobotStatistic.pushStat(editor, it.originalText, it.startIndex, it.endIndex, it.completion)
+//                val nextLine = it.endIndex >= it.originalText.length || it.originalText[it.endIndex] == '\n'
+//                hasOneLineCompletionBefore = !it.multiline && nextLine
+//                HumanRobotStatistic.pushStat(editor, it.originalText, it.startIndex, it.endIndex, it.completion)
             }
             dispose()
         }

@@ -1,31 +1,28 @@
 package com.smallcloud.refactai.struct
 
-import com.google.gson.annotations.SerializedName
 import com.smallcloud.refactai.statistic.UsageStatistic
 import java.net.URI
 
-data class POI(
-    val filename: String,
-    val cursor0: Int,
-    val cursor1: Int,
-    val priority: Double,
+
+data class SMCCursor(
+    val file: String = "",
+    val line: Int = 0,
+    val character: Int = 0
+)
+data class SMCInputs(
+    var sources: Map<String, String> = mapOf(),
+    val cursor: SMCCursor = SMCCursor(),
+    val multiline: Boolean = true
+
 )
 
 data class SMCRequestBody(
-    var sources: Map<String, String>,
-    var intent: String,
-    @SerializedName("function") var functionName: String,
-    @SerializedName("cursor_file") var cursorFile: String,
-    var cursor0: Int,
-    var cursor1: Int,
-    @SerializedName("max_tokens") var maxTokens: Int,
-    @SerializedName("max_edits") var maxEdits: Int,
-    @SerializedName("stop") var stopTokens: List<String>,
-    var temperature: Float = 0.8f,
-    var client: String = "",
-    var model: String = "",
-    var poi: List<POI>,
-    var stream: Boolean = true
+    var inputs: SMCInputs = SMCInputs(),
+    var stream: Boolean = true,
+    var parameters: Map<String, Any> = mapOf(
+            "temperature" to 0.1,
+            "max_new_tokens" to 20
+    ),
 )
 
 data class SMCRequest(

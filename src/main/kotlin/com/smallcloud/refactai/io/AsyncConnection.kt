@@ -6,9 +6,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException
 import com.intellij.openapi.Disposable
 import com.intellij.util.text.findTextRange
-import com.smallcloud.refactai.account.inferenceLogin
 import com.smallcloud.refactai.statistic.UsageStatistic
-import com.smallcloud.refactai.statistic.decorators.disableIfSelfHosted
 import com.smallcloud.refactai.struct.SMCExceptions
 import org.apache.hc.client5.http.async.methods.AbstractBinResponseConsumer
 import org.apache.hc.client5.http.async.methods.SimpleHttpRequest
@@ -87,11 +85,10 @@ class AsyncConnection : Disposable {
             body: String? = null,
             headers: Map<String, String>? = null,
             requestProperties: Map<String, String>? = null,
-            needVerify: Boolean = false,
             stat: UsageStatistic = UsageStatistic(),
-            dataReceiveEnded: (String) -> Unit,
-            dataReceived: (String) -> Unit,
-            errorDataReceived: (JsonObject) -> Unit,
+            dataReceiveEnded: (String) -> Unit = {},
+            dataReceived: (String) -> Unit = {},
+            errorDataReceived: (JsonObject) -> Unit = {},
             failedDataReceiveEnded: (Throwable?) -> Unit = {},
     ): CompletableFuture<Future<*>> {
         val requestProducer: AsyncRequestProducer = BasicRequestProducer(
@@ -107,7 +104,7 @@ class AsyncConnection : Disposable {
 
         return send(
                 requestProducer, uri,
-                needVerify = needVerify, stat = stat,
+                stat = stat,
                 dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
                 errorDataReceived = errorDataReceived, failedDataReceiveEnded = failedDataReceiveEnded
         )
@@ -118,7 +115,6 @@ class AsyncConnection : Disposable {
             body: String? = null,
             headers: Map<String, String>? = null,
             requestProperties: Map<String, String>? = null,
-            needVerify: Boolean = false,
             stat: UsageStatistic,
             dataReceiveEnded: (String) -> Unit = {},
             dataReceived: (String) -> Unit = {},
@@ -137,7 +133,7 @@ class AsyncConnection : Disposable {
         )
         return send(
                 requestProducer, uri,
-                needVerify = needVerify, stat = stat,
+                stat = stat,
                 dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
                 errorDataReceived = errorDataReceived, failedDataReceiveEnded = failedDataReceiveEnded
         )
@@ -146,7 +142,6 @@ class AsyncConnection : Disposable {
     private fun send(
             requestProducer: AsyncRequestProducer,
             uri: URI,
-            needVerify: Boolean = false,
             stat: UsageStatistic,
             dataReceiveEnded: (String) -> Unit,
             dataReceived: (String) -> Unit,
@@ -154,11 +149,7 @@ class AsyncConnection : Disposable {
             failedDataReceiveEnded: (Throwable?) -> Unit = {},
     ): CompletableFuture<Future<*>> {
         return CompletableFuture.supplyAsync {
-            if (needVerify) disableIfSelfHosted {
-                inferenceLogin()
-            }
-        }.thenApply {
-            return@thenApply client.execute(
+            return@supplyAsync client.execute(
                     requestProducer,
                     object : AbstractBinResponseConsumer<String>() {
                         private var bufferStr = ""

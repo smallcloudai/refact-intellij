@@ -6,11 +6,11 @@ import java.net.URI
 
 interface InferenceGlobalContextChangedNotifier {
     fun inferenceUriChanged(newUrl: URI?) {}
-    fun userInferenceUriChanged(newUrl: URI?) {}
+    fun userInferenceUriChanged(newUrl: String?) {}
     fun temperatureChanged(newTemp: Float?) {}
     fun modelChanged(newModel: String?) {}
     fun lastAutoModelChanged(newModel: String?) {}
-    fun useForceCompletionModeChanged(newValue: Boolean) {}
+    fun useAutoCompletionModeChanged(newValue: Boolean) {}
     fun useMultipleFilesCompletionChanged(newValue: Boolean) {}
     fun developerModeEnabledChanged(newValue: Boolean) {}
     fun deploymentModeChanged(newMode: DeploymentMode) {}

@@ -7,7 +7,6 @@ import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.defaultCloudUrl
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.statistic.StatisticService.Companion.instance as StatisticService
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 private var SINGLE_TIME_UNINSTALL = 0
@@ -24,8 +23,6 @@ class UninstallListener: PluginStateListener {
                 && SINGLE_TIME_UNINSTALL == 0) {
             SINGLE_TIME_UNINSTALL++
             UsageStats.addStatistic(true, UsageStatistic("uninstall"), defaultCloudUrl.toString(), "")
-            UsageStats.forceReport()
-            StatisticService.forceReport()
             BrowserUtil.browse("https://refact.ai/feedback?ide=${Resources.client}&tenant=${AccountManager.user}")
         }
     }

@@ -6,6 +6,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.IconUtil
 import java.io.File
 import java.net.URI
@@ -35,33 +36,39 @@ private fun getPluginId(): PluginId {
     return PluginId.getId("com.smallcloud.codify")
 }
 
+private fun getBinPrefix(): String {
+    var suffix = ""
+    if (SystemInfo.isMac) {
+        suffix = "apple-darwin"
+    } else if (SystemInfo.isWindows) {
+        suffix = "pc-windows-msvc"
+    } else if (SystemInfo.isLinux) {
+        suffix = "unknown-linux-gnu"
+    }
+
+    return "dist-${SystemInfo.OS_ARCH}-${suffix}"
+}
+
 object Resources {
-    //    val isNewUI: Boolean by lazy { NewUI.isEnabled() }
+    val binPrefix: String = getBinPrefix()
+
     const val defaultCloudAuthLink: String = "https://refact.smallcloud.ai/authentication?token=%s&utm_source=plugin&utm_medium=jetbrains&utm_campaign=login"
     val defaultCloudUrl: URI = URI("https://www.smallcloud.ai")
-    val defaultContrastUrlSuffix = URI("v1/contrast")
-    val defaultOldStyleChatUrlSuffix = URI("chat-v1/completions")
+    val defaultCodeCompletionUrlSuffix = URI("v1/code-completion")
     val defaultChatUrlSuffix = URI("v1/chat")
-    val defaultSelfHostedLongthinkFunctionsSuffix = URI("v1/longthink-functions")
     val defaultRecallUrl: URI = defaultCloudUrl.resolve("/v1/streamlined-login-recall-ticket")
-    val defaultLoginUrlSuffix: URI = URI("/v1/login")
-    val defaultLoginUrl: URI = defaultCloudUrl.resolve(defaultLoginUrlSuffix)
-    val defaultReportUrl: URI = defaultCloudUrl.resolve("/v1/usage-stats")
-    val defaultAcceptRejectReportUrl: URI = defaultCloudUrl.resolve("/v1/accept-reject-stats")
-    val defaultTabReportUrl: URI = defaultCloudUrl.resolve("/v1/tab-stats")
-    val defaultLikeReportUrl: URI = defaultCloudUrl.resolve("/v1/longthink-like")
+    val defaultLoginUrl: URI = defaultCloudUrl.resolve("/v1/login")
+    val defaultReportUrlSuffix: URI = URI("v1/telemetry-network")
+    val defaultSnippetAcceptedUrlSuffix: URI = URI("v1/snippet-accepted")
     const val defaultTemperature: Float = 0.2f
     const val defaultModel: String = "CONTRASTcode"
     val version: String = getVersion()
     const val client: String = "jetbrains"
     const val loginCoolDown: Int = 300 // sec
-    const val inferenceLoginCoolDown: Int = 300 // sec
     const val titleStr: String = "RefactAI"
     val pluginId: PluginId = getPluginId()
-    const val stagingFilterPrefix: String = "STAGING"
     val jbBuildVersion: String = ApplicationInfo.getInstance().build.toString()
     const val refactAIRootSettingsID = "refactai_root"
-    val homePluginPath: File = getHomePath()
 
     object Icons {
         private fun brushForTheme(icon: Icon): Icon {

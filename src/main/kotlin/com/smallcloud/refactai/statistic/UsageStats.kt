@@ -6,68 +6,21 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.Resources.defaultReportUrl
-import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
+import com.smallcloud.refactai.Resources.defaultReportUrlSuffix
+import com.smallcloud.refactai.Resources.defaultSnippetAcceptedUrlSuffix
 import com.smallcloud.refactai.io.sendRequest
-import com.smallcloud.refactai.statistic.decorators.disableIfSelfHosted
-import com.smallcloud.refactai.struct.DeploymentMode
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
-import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 
 class UsageStats: Disposable {
-    private var messages: MutableMap<String, Int>
-        set(newMap) {
-            ExtraState.usageStatsMessagesCache = newMap
-        }
-        get() {
-            return ExtraState.usageStatsMessagesCache
-        }
-    private var task: Future<*>? = null
-
-    private fun createTask() : Future<*> {
-        return AppExecutorUtil.getAppScheduledExecutorService().schedule({
-            report()
-            task = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay({
-                report()
-            }, 1, 1, TimeUnit.HOURS)
-        }, 5, TimeUnit.MINUTES)
-    }
-
-    init {
-        if (InferenceGlobalContext.isCloud) {
-            task = createTask()
-        }
-        ApplicationManager.getApplication().messageBus
-                .connect(this).subscribe(
-                        InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun deploymentModeChanged(newMode: DeploymentMode) {
-                        if (task != null) {
-                            if (newMode != DeploymentMode.CLOUD) {
-                                task?.cancel(true)
-                                task?.get()
-                                task = null
-                            }
-                        } else {
-                            if (newMode == DeploymentMode.CLOUD) {
-                                task = createTask()
-                            }
-                        }
-                    }
-                }
-        )
-    }
+    private val execService = AppExecutorUtil.getAppScheduledExecutorService()
 
     fun addStatistic(
         positive: Boolean,
         stat: UsageStatistic,
         relatedUrl: String,
         errorMessage: Any
-    ) = disableIfSelfHosted {
+    ) {
         var errorMessageStr = errorMessage.toString()
         val gson = Gson()
         if (errorMessageStr.length > 200) {
@@ -81,74 +34,52 @@ class UsageStats: Disposable {
         }
 
         val scopeJson = gson.toJson(scope)
-        val message = "${positive.compareTo(false)}\t" +
-                "$scopeJson\t" +
-                "$relatedUrl\t" +
-                "$errorMessageJson"
-        synchronized(this) {
-            if (messages.containsKey(message)) {
-                messages[message] = messages[message]!! + 1
-            } else {
-                messages[message] = 1
-            }
-        }
-    }
-
-    fun forceReport() = disableIfSelfHosted {
-        report()?.get()
-    }
-
-    private fun report(): Future<*>? {
-        val token: String = AccountManager.apiKey ?: return null
-
-        val headers = mutableMapOf(
-            "Content-Type" to "application/json",
-            "Authorization" to "Bearer $token"
-        )
-        val url = defaultReportUrl
-        val lastMessages: MutableMap<String, Int>
-        synchronized(this) {
-            lastMessages = HashMap(messages)
-            messages.clear()
-        }
-
-        if (lastMessages.isEmpty()) return null
-        var usage = ""
-        lastMessages.forEach {
-            usage += "${it.key}\t${it.value}\n"
-        }
-        val gson = Gson()
         val body = gson.toJson(
             mapOf(
-                "client_version" to "${Resources.client}-${Resources.version}",
-                "ide_version" to Resources.jbBuildVersion,
-                "usage" to usage
+                "success" to positive,
+                "error_message" to errorMessageJson,
+                "scope" to scopeJson,
+                "url" to relatedUrl,
             )
         )
-        return AppExecutorUtil.getAppExecutorService().submit {
+        val url = LSPProcessHolder.url.resolve(defaultReportUrlSuffix)
+        execService.submit {
             try {
-                val res = sendRequest(url, "POST", headers, body)
+                val res = sendRequest(url, "POST", body=body)
                 if (res.body.isNullOrEmpty()) return@submit
 
                 val json = gson.fromJson(res.body, JsonObject::class.java)
-                val retcode = if (json.has("retcode")) json.get("retcode").asString else null
-                if (retcode != null && retcode != "OK") {
+                val success = if (json.has("success")) json.get("success").asInt else null
+                if (success != null && success != 1) {
                     throw Exception(json.get("human_readable_message").asString)
                 }
             } catch (e: Exception) {
                 Logger.getInstance(UsageStats::class.java).warn("report to $url failed: $e")
-                instance.mergeMessages(lastMessages)
-                instance.addStatistic(false, UsageStatistic(scope="usage stats report"), url.toString(), e)
             }
         }
     }
 
-    private fun mergeMessages(newMessages: MutableMap<String, Int>) {
-        synchronized(this) {
-            messages = HashMap((messages.toList() + newMessages.toList())
-                .groupBy({ it.first }, { it.second })
-                .map { (key, values) -> key to values.sum() }
-                .toMap())
+    fun snippetAccepted(snippetId: Int) {
+        val url = LSPProcessHolder.url.resolve(defaultSnippetAcceptedUrlSuffix)
+        execService.submit {
+            try {
+                val gson = Gson()
+                val body = gson.toJson(
+                    mapOf(
+                        "snippet_telemetry_id" to snippetId,
+                    )
+                )
+                val res = sendRequest(url, "POST", body=body)
+                if (res.body.isNullOrEmpty()) return@submit
+
+                val json = gson.fromJson(res.body, JsonObject::class.java)
+                val success = if (json.has("success")) json.get("success").asInt else null
+                if (success != null && success != 1) {
+                    throw Exception(json.get("human_readable_message").asString)
+                }
+            } catch (e: Exception) {
+                Logger.getInstance(UsageStats::class.java).warn("report to $url failed: $e")
+            }
         }
     }
 
@@ -158,8 +89,5 @@ class UsageStats: Disposable {
             get() = ApplicationManager.getApplication().getService(UsageStats::class.java)
     }
 
-    override fun dispose() {
-        task?.cancel(true)
-        forceReport()
-    }
+    override fun dispose() {}
 }

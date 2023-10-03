@@ -39,7 +39,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
     var tooltipMessage: String? = null
     var inferenceMessage: String? = null
     var pluginIsEnabled: Boolean = true
-    var useForceCompletion: Boolean = false
+    var useAutoCompletion: Boolean = true
     var useMultipleFilesCompletion: Boolean = false
     var startupLoggedIn: Boolean = false
     var developerModeEnabled: Boolean = false
@@ -74,8 +74,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
                         instance.inferenceUri = newUrl?.toString()
                     }
 
-                    override fun userInferenceUriChanged(newUrl: URI?) {
-                        instance.userInferenceUri = newUrl?.toString()
+                    override fun userInferenceUriChanged(newUrl: String?) {
+                        instance.userInferenceUri = newUrl
                     }
 
                     override fun modelChanged(newModel: String?) {
@@ -86,8 +86,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
                         instance.temperature = newTemp
                     }
 
-                    override fun useForceCompletionModeChanged(newValue: Boolean) {
-                        instance.useForceCompletion = newValue
+                    override fun useAutoCompletionModeChanged(newValue: Boolean) {
+                        instance.useAutoCompletion = newValue
                     }
                     override fun useMultipleFilesCompletionChanged(newValue: Boolean) {
                         instance.useMultipleFilesCompletion = newValue

@@ -5,7 +5,6 @@ import com.intellij.notification.Notification
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
@@ -13,9 +12,7 @@ import com.intellij.openapi.editor.event.EditorFactoryEvent
 import com.intellij.openapi.editor.event.EditorFactoryListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.keymap.KeymapUtil
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindowManager
 import com.smallcloud.refactai.PluginState
@@ -23,15 +20,14 @@ import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.refactAIRootSettingsID
 import com.smallcloud.refactai.account.login
-import com.smallcloud.refactai.aitoolbox.ToolboxPaneInvokeAction
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
 import com.smallcloud.refactai.utils.getLastUsedProject
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
-import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyServiceInstance
 
 private var lastNotification: Notification? = null
@@ -149,8 +145,15 @@ fun emitRegular(project: Project, editor: Editor) {
         notification.expire()
     })
 
+    notification.addAction(NotificationAction.createSimple(if (InferenceGlobalContext.useAutoCompletion)
+        RefactAIBundle.message("notifications.pause") else RefactAIBundle.message("notifications.play")) {
+        InferenceGlobalContext.useAutoCompletion = !InferenceGlobalContext.useAutoCompletion
+        notification.expire()
+    })
+
+
     val chat = ToolWindowManager.getInstance(project).getToolWindow("Refact")
-    if (chat != null && LongthinkFunctionProvider.allChats.isNotEmpty()) {
+    if (chat != null && LSPProcessHolder.capabilities.codeChatModels.isNotEmpty()) {
         val chatShortcut = KeymapUtil.getShortcutText("ActivateRefactChatToolWindow")
         notification.addAction(NotificationAction.createSimple("Chat ($chatShortcut)") {
             chat.activate{
@@ -159,12 +162,6 @@ fun emitRegular(project: Project, editor: Editor) {
             notification.expire()
         })
     }
-    val f1Shortcut = KeymapUtil.getShortcutText("ActivateRefactToolWindow")
-    notification.addAction(DumbAwareAction.create("AI Toolbox ($f1Shortcut)") {
-        it.presentation.putClientProperty(Key(CommonDataKeys.EDITOR.name), editor)
-        ToolboxPaneInvokeAction().actionPerformed(it)
-        notification.expire()
-    })
 
 
     notification.notify(project)

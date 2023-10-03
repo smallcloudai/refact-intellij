@@ -8,7 +8,6 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources.defaultChatUrlSuffix
-import com.smallcloud.refactai.Resources.defaultOldStyleChatUrlSuffix
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.panes.gptchat.structs.ChatGPTRequest
@@ -30,8 +29,8 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 class ChatGPTProvider : ActionListener {
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
@@ -48,13 +47,13 @@ class ChatGPTProvider : ActionListener {
     private var cachedFile: String? = null
 
     private fun reconnect() {
-        if (LongthinkFunctionProvider.allChats.isNotEmpty() && InferenceGlobalContext.canRequest()) {
-            InferenceGlobalContext.inferenceUri?.let {
-                InferenceGlobalContext.checkConnection(it.resolve(
-                        if (InferenceGlobalContext.isNewChatStyle || InferenceGlobalContext.isSelfHosted)
-                    defaultChatUrlSuffix else defaultOldStyleChatUrlSuffix), false)
-            }
-        }
+//        if (LongthinkFunctionProvider.allChats.isNotEmpty() && InferenceGlobalContext.canRequest()) {
+//            InferenceGlobalContext.inferenceUri?.let {
+//                InferenceGlobalContext.checkConnection(it.resolve(
+//                        if (InferenceGlobalContext.isNewChatStyle || InferenceGlobalContext.isSelfHosted)
+//                    defaultChatUrlSuffix else defaultOldStyleChatUrlSuffix), false)
+//            }
+//        }
     }
 
     init {
@@ -104,9 +103,7 @@ class ChatGPTProvider : ActionListener {
 
         pane.add(MessageComponent(md2html(text), true))
         val message = MessageComponent(listOf(ParsedText("...", "...", false)), false)
-        val req = ChatGPTRequest(InferenceGlobalContext.inferenceUri!!.resolve(
-                if (InferenceGlobalContext.isNewChatStyle || InferenceGlobalContext.isSelfHosted)
-                    defaultChatUrlSuffix else defaultOldStyleChatUrlSuffix),
+        val req = ChatGPTRequest(LSPProcessHolder.url.resolve(defaultChatUrlSuffix),
                 AccountManager.apiKey, pane.getFullHistory())
         pane.add(message)
         processTask = scheduler.submit {
@@ -120,7 +117,7 @@ class ChatGPTProvider : ActionListener {
         try {
             val reqStr = MsgBuilder.build(req, pane.searchTextArea.selectedModel, cachedFile)
             var stop = false
-            val stat = UsageStatistic("chat-tab", pane.searchTextArea.selectedModel.model ?: "")
+            val stat = UsageStatistic("chat-tab", pane.searchTextArea.selectedModel ?: "")
 
             InferenceGlobalContext.connection.post(req.uri,
                     reqStr,
@@ -134,12 +131,15 @@ class ChatGPTProvider : ActionListener {
                             }
                             if (stop) return ""
                             return if (obj.has("choices")) {
+
                                 val choice0 = obj.get("choices").asJsonArray[0].asJsonObject
                                 if (choice0.has("finish_reason")
+                                        && choice0.get("finish_reason").isJsonPrimitive
+                                        && choice0.get("finish_reason").asJsonPrimitive.isString
                                         && choice0.get("finish_reason").asString == "stop") {
                                     stop = true
                                 }
-                                choice0.get("delta").asString
+                                choice0.get("delta").asJsonObject.get("content").asString
                             } else {
                                 obj.get("delta").asString
                             }

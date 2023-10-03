@@ -2,7 +2,6 @@ package com.smallcloud.refactai.io
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.struct.SMCExceptions
 import com.smallcloud.refactai.struct.SMCRequest
@@ -10,6 +9,7 @@ import com.smallcloud.refactai.struct.SMCStreamingPeace
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 private fun lookForCommonErrors(json: JsonObject, request: SMCRequest): String? {
@@ -43,8 +43,6 @@ private fun lookForCommonErrors(json: JsonObject, request: SMCRequest): String? 
     return null
 }
 
-private var lastInferenceVerifyTs: Long = -1
-
 fun streamedInferenceFetch(
         request: SMCRequest,
         dataReceiveEnded: (String) -> Unit,
@@ -57,14 +55,11 @@ fun streamedInferenceFetch(
             "Authorization" to "Bearer ${request.token}",
     )
 
-    if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return null
-    val now = System.currentTimeMillis()
-    val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCoolDown * 1000
-    if (needToVerify) lastInferenceVerifyTs = now
+    if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED || !LSPProcessHolder.lspIsWorking) return null
 
     val job = InferenceGlobalContext.connection.post(
             uri, body, headers,
-            needVerify = needToVerify, stat = request.stat,
+            stat = request.stat,
             dataReceiveEnded = dataReceiveEnded,
             dataReceived = {
                 val rawJson = gson.fromJson(it, JsonObject::class.java)
@@ -99,13 +94,10 @@ fun inferenceFetch(
     )
 
     if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return null
-    val now = System.currentTimeMillis()
-    val needToVerify = (now - lastInferenceVerifyTs) > Resources.inferenceLoginCoolDown * 1000
-    if (needToVerify) lastInferenceVerifyTs = now
 
     val job = InferenceGlobalContext.connection.post(
             uri, body, headers,
-            needVerify = needToVerify, stat = request.stat,
+            stat = request.stat,
             dataReceiveEnded = {
                 val rawJson = gson.fromJson(it, JsonObject::class.java)
                 if (rawJson.has("metering_balance")) {

@@ -24,20 +24,20 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.ui.scale.JBUIScale
+import com.intellij.util.IconUtil
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
-import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProviderChangedNotifier
-import com.smallcloud.refactai.aitoolbox.table.renderers.colorize
 import com.smallcloud.refactai.listeners.LastEditorGetterListener
 import com.smallcloud.refactai.listeners.SelectionChangedNotifier
-import com.smallcloud.refactai.struct.LongthinkFunctionEntry
-import org.jdesktop.swingx.renderer.DefaultListRenderer
+import com.smallcloud.refactai.lsp.LSPCapabilities
+import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import java.awt.*
 import java.awt.event.*
+import java.awt.image.RGBImageFilter
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import javax.swing.*
@@ -48,7 +48,27 @@ import javax.swing.text.BadLocationException
 import javax.swing.text.DefaultEditorKit.InsertBreakAction
 import javax.swing.text.PlainDocument
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
+
+private class FullColorizeFilter(val color: Color) : RGBImageFilter() {
+    override fun filterRGB(x: Int, y: Int, rgba: Int): Int {
+        val a = rgba shr 24 and 0xff
+        var r = rgba shr 16 and 0xff
+        var g = rgba shr 8 and 0xff
+        var b = rgba and 0xff
+        if (a != 0) {
+            r = color.red
+            g = color.green
+            b = color.blue
+        }
+        return a shl 24 or (r and 255 shl 16) or (g and 255 shl 8) or (b and 255)
+    }
+}
+
+
+internal fun colorize(originalIcon: Icon, foreground: Color): Icon {
+    return IconUtil.filterIcon(originalIcon, { FullColorizeFilter(foreground) }, null)
+}
 
 private fun getFilenameFromEditor(editor: Editor?): String {
     if (editor == null) return ""
@@ -66,7 +86,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
     private val myAddFileForContextCB: JCheckBox = JCheckBox(
             RefactAIBundle.message("aiToolbox.panes.chat.addFileForContext",
                     getFilenameFromEditor(initEditor)))
-    private val modelComboBox: ComboBox<LongthinkFunctionEntry>
+    private val modelComboBox: ComboBox<String>
     private val myExtraActionsPanel = NonOpaquePanel()
     private val myScrollPane: JBScrollPane
     private var myMultilineEnabled = true
@@ -397,19 +417,18 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             })
         }
 
-        modelComboBox = ComboBox(LongthinkFunctionProvider.allChats.toTypedArray()).apply {
+        modelComboBox = ComboBox(LSPProcessHolder.capabilities.codeChatModels.keys.toTypedArray()).apply {
             background = BACKGROUND_COLOR
             isOpaque = false
-            renderer = DefaultListRenderer { if (it != null) (it as LongthinkFunctionEntry).model else "" }
             ApplicationManager.getApplication().messageBus
                     .connect(this@CustomSearchTextArea)
-                    .subscribe(LongthinkFunctionProviderChangedNotifier.TOPIC, object : LongthinkFunctionProviderChangedNotifier {
-                        override fun longthinkFunctionsChanged(functions: List<LongthinkFunctionEntry>) {
+                    .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
+                        override fun capabilitiesChanged(newCaps: LSPCapabilities) {
                             val model = model as DefaultComboBoxModel
                             if (isEnabled) {
                                 model.removeAllElements()
-                                if (LongthinkFunctionProvider.allChats.isNotEmpty()) {
-                                    model.addAll(LongthinkFunctionProvider.allChats)
+                                if (newCaps.codeChatModels.keys.isNotEmpty()) {
+                                    model.addAll(newCaps.codeChatModels.keys)
                                     selectedIndex = 0
                                 }
                             }
@@ -460,8 +479,8 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             }
         }
 
-    val selectedModel: LongthinkFunctionEntry
-        get() = (modelComboBox.selectedItem as LongthinkFunctionEntry)
+    val selectedModel: String
+        get() = modelComboBox.selectedItem as String
 
     fun disableAttachFileCBAndModelSelector() {
         myAddFileForContextCB.isEnabled = false

@@ -7,14 +7,10 @@ data class Completion(
     val multiline: Boolean,
     val offset: Int,
     val createdTs: Long,
-    val isFromCache: Boolean = false
+    val isFromCache: Boolean = false,
+    var snippetTelemetryId: Int? = null
 ) {
     fun updateCompletion(text: String) {
         completion += text
     }
 }
-
-data class CompletionHash(
-    val text: String,
-    val offset: Int,
-)

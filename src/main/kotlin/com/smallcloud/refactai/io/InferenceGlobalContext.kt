@@ -5,13 +5,14 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
 import com.smallcloud.refactai.account.LoginStateService
-import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.struct.SMCRequestBody
 import java.net.URI
 import java.util.concurrent.Future
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
+import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
 
 class InferenceGlobalContext : Disposable {
     private val reconnectScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
@@ -44,7 +45,7 @@ class InferenceGlobalContext : Disposable {
         return status == ConnectionStatus.CONNECTED
     }
 
-    var status: ConnectionStatus = ConnectionStatus.DISCONNECTED
+    var status: ConnectionStatus = ConnectionStatus.CONNECTED
         set(newStatus) {
             if (field == newStatus) return
             field = newStatus
@@ -63,11 +64,9 @@ class InferenceGlobalContext : Disposable {
                     .lastErrorMsgChanged(field)
         }
 
-    var inferenceUri: URI?
+    var inferenceUri: String?
         get() {
-            if (AppSettingsState.instance.userInferenceUri != null)
-                return AppSettingsState.instance.userInferenceUri?.let { URI(it) }
-            return AppSettingsState.instance.inferenceUri?.let { URI(it) }
+            return AppSettingsState.userInferenceUri
         }
         set(newInferenceUrl) {
             if (newInferenceUrl == inferenceUri) return
@@ -77,7 +76,7 @@ class InferenceGlobalContext : Disposable {
 
             lastTask?.cancel(true)
             lastTask = reconnectScheduler.submit {
-                checkConnection(inferenceUri!!)
+//                checkConnection(inferenceUri!!)
                 if (!canRequest()) return@submit
 
                 ApplicationManager.getApplication().getService(LoginStateService::class.java)
@@ -91,24 +90,20 @@ class InferenceGlobalContext : Disposable {
     // cloudInferenceUri is uri from SMC server; must be change only in login method
     var cloudInferenceUri: URI?
         set(newInferenceUrl) {
-            if (newInferenceUrl == AppSettingsState.instance.inferenceUri?.let { URI(it) }) return
+            if (newInferenceUrl == AppSettingsState.inferenceUri?.let { URI(it) }) return
             messageBus
                     .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                     .inferenceUriChanged(newInferenceUrl)
         }
         get() {
-            return AppSettingsState.instance.inferenceUri?.let { URI(it) }
+            return AppSettingsState.inferenceUri?.let { URI(it) }
         }
-
-
-    private fun hasUserInferenceUri(): Boolean {
-        return AppSettingsState.instance.userInferenceUri != null
-    }
+    
 
     var isNewChatStyle: Boolean = false
 
     var temperature: Float?
-        get() = AppSettingsState.instance.temperature
+        get() = AppSettingsState.temperature
         set(newTemp) {
             if (newTemp == temperature) return
             messageBus
@@ -117,7 +112,7 @@ class InferenceGlobalContext : Disposable {
         }
 
     var developerModeEnabled: Boolean
-        get() = AppSettingsState.instance.developerModeEnabled
+        get() = AppSettingsState.developerModeEnabled
         set(newValue) {
             if (newValue == developerModeEnabled) return
             messageBus
@@ -126,10 +121,10 @@ class InferenceGlobalContext : Disposable {
         }
 
     var stagingVersion: String
-        get() = AppSettingsState.instance.stagingVersion
+        get() = AppSettingsState.stagingVersion
         set(newStr) {
-            if (newStr == AppSettingsState.instance.stagingVersion) return
-            AppSettingsState.instance.stagingVersion = newStr
+            if (newStr == AppSettingsState.stagingVersion) return
+            AppSettingsState.stagingVersion = newStr
         }
 
     var lastAutoModel: String? = null
@@ -142,7 +137,7 @@ class InferenceGlobalContext : Disposable {
         }
 
     var model: String?
-        get() = AppSettingsState.instance.model
+        get() = AppSettingsState.model
         set(newModel) {
             if (newModel == model) return
             messageBus
@@ -150,23 +145,23 @@ class InferenceGlobalContext : Disposable {
                     .modelChanged(newModel)
         }
     var longthinkModel: String?
-        get() = AppSettingsState.instance.longthinkModel
+        get() = AppSettingsState.longthinkModel
         set(newModel) {
-            if (newModel == AppSettingsState.instance.longthinkModel) return
-            AppSettingsState.instance.longthinkModel = newModel
+            if (newModel == AppSettingsState.longthinkModel) return
+            AppSettingsState.longthinkModel = newModel
         }
 
-    var useForceCompletion: Boolean
-        get() = AppSettingsState.instance.useForceCompletion
+    var useAutoCompletion: Boolean
+        get() = AppSettingsState.useAutoCompletion
         set(newValue) {
-            if (newValue == useForceCompletion) return
+            if (newValue == useAutoCompletion) return
             messageBus
                     .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                    .useForceCompletionModeChanged(newValue)
+                    .useAutoCompletionModeChanged(newValue)
         }
 
     var useMultipleFilesCompletion: Boolean
-        get() = AppSettingsState.instance.useMultipleFilesCompletion
+        get() = AppSettingsState.useMultipleFilesCompletion
         set(newValue) {
             if (newValue == useMultipleFilesCompletion) return
             messageBus
@@ -176,10 +171,15 @@ class InferenceGlobalContext : Disposable {
 
     val deploymentMode: DeploymentMode
         get() {
-            if (hasUserInferenceUri()) {
-                return DeploymentMode.SELF_HOSTED
+            if (AppSettingsState.userInferenceUri == null) {
+                return DeploymentMode.CLOUD
             }
-            return DeploymentMode.CLOUD
+
+            return when(AppSettingsState.userInferenceUri!!.lowercase()) {
+                "hf" -> DeploymentMode.HF
+                "refact" -> DeploymentMode.CLOUD
+                else -> DeploymentMode.SELF_HOSTED
+            }
         }
 
     val isCloud: Boolean
@@ -193,11 +193,11 @@ class InferenceGlobalContext : Disposable {
 
     fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
         val apiKey = AccountManager.apiKey
-        if (apiKey.isNullOrEmpty() && isCloud) return null
+//        if (apiKey.isNullOrEmpty() && isCloud) return null
 
 //        requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
 //        requestData.client = "${Resources.client}-${Resources.version}"
-        return inferenceUri?.let { SMCRequest(it, requestData, apiKey ?: "self_hosted") }
+        return SMCRequest(LSPProcessHolder.url, requestData, apiKey ?: "self_hosted")
     }
 
     override fun dispose() {

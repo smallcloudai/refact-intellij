@@ -5,7 +5,6 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.smallcloud.refactai.panes.gptchat.structs.ChatGPTRequest
-import com.smallcloud.refactai.struct.LongthinkFunctionEntry
 
 fun makeAttachedFile(editor: Editor): String {
     val file = editor.document.text
@@ -39,20 +38,20 @@ fun makeAttachedFile(editor: Editor): String {
 }
 
 object MsgBuilder {
-    fun build(req: ChatGPTRequest, longthink: LongthinkFunctionEntry, attachedFile: String? = null): String {
+    fun build(req: ChatGPTRequest, longthink: String, attachedFile: String? = null): String {
         val conversation = req.conversation
         val messages: MutableList<Map<String, Any>> = mutableListOf()
         if (attachedFile != null) {
             messages.add(
                     mapOf(
-                            "role" to "user",
-                            "content" to attachedFile
+                        "role" to "user",
+                        "content" to attachedFile
                     )
             )
             messages.add(
                     mapOf(
-                            "role" to "assistant",
-                            "content" to "Thanks for context, what's your question?"
+                        "role" to "assistant",
+                        "content" to "Thanks for context, what's your question?"
                     )
             )
         }
@@ -69,17 +68,20 @@ object MsgBuilder {
 
             messages.add(
                     mapOf(
-                            "role" to if (historyEntry.me) "user" else "assistant",
-                            "content" to text
+                        "role" to if (historyEntry.me) "user" else "assistant",
+                        "content" to text
                     )
             )
         }
 
         val msgDict = mutableMapOf(
-                "model" to if (longthink.model == "open-chat") "gpt3.5" else longthink.model,
-                "function" to longthink.functionName,
+                "model" to longthink,
                 "stream" to true,
-                "messages" to messages
+                "messages" to messages,
+                "parameters" to mapOf(
+                    "temperature" to 0.1,
+                    "max_new_tokens" to 1000
+                )
         )
         val gson = Gson()
         return gson.toJson(msgDict)

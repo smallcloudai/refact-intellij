@@ -14,7 +14,7 @@ data class LSPConfig(
             params.add("$address")
         }
         if (port != null) {
-            params.add("--port")
+            params.add("--http-port")
             params.add("$port")
         }
         if (apiKey != null) {
@@ -26,8 +26,13 @@ data class LSPConfig(
             params.add("$clientVersion")
         }
         if (useTelemetry) {
-            params.add("--use-telemetry")
+            params.add("--basic-telemetry")
         }
         return params
     }
+
+    val isValid: Boolean
+        get() {
+            return address!= null && port!= null && apiKey!= null && clientVersion!= null
+        }
 }

@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.account
 
+import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.diagnostic.Logger
@@ -7,21 +8,15 @@ import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.defaultCloudAuthLink
 import com.smallcloud.refactai.Resources.defaultLoginUrl
-import com.smallcloud.refactai.Resources.defaultLoginUrlSuffix
 import com.smallcloud.refactai.Resources.defaultRecallUrl
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.sendRequest
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.DeploymentMode
-import com.smallcloud.refactai.struct.LongthinkFunctionEntry
-import com.smallcloud.refactai.utils.makeGson
 import org.apache.http.client.utils.URIBuilder
 import java.net.URI
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as DiffIntentProviderInstance
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.listeners.QuickLongthinkActionsService.Companion.instance as QuickLongthinkActionsServiceInstance
-import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 private fun generateTicket(): String {
@@ -58,7 +53,7 @@ private fun tryTicketPass(): String? {
     val headers = mutableMapOf("Content-Type" to "application/json", "Authorization" to "codify-${AccountManager.ticket}")
     try {
         val result = sendRequest(defaultRecallUrl, "GET", headers, requestProperties = mapOf("redirect" to "follow", "cache" to "no-cache", "referrer" to "no-referrer"))
-        val gson = makeGson()
+        val gson = Gson()
         val body = gson.fromJson(result.body, JsonObject::class.java)
         val retcode = body.get("retcode").asString
         val humanReadableMessage = if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
@@ -87,8 +82,7 @@ private fun tryTicketPass(): String? {
 }
 
 private fun buildLoginUrl(): URI {
-    val urlBuilder = if (InferenceGlobalContext.isSelfHosted && InferenceGlobalContext.inferenceUri != null)
-        URIBuilder(InferenceGlobalContext.inferenceUri?.resolve(defaultLoginUrlSuffix)) else URIBuilder(defaultLoginUrl)
+    val urlBuilder = URIBuilder(defaultLoginUrl)
 
     if (InferenceGlobalContext.developerModeEnabled && InferenceGlobalContext.stagingVersion.isNotEmpty()) {
         urlBuilder.addParameter("want_staging_version", InferenceGlobalContext.stagingVersion)
@@ -107,7 +101,7 @@ private fun tryLoginWithApiKey(): String {
     try {
         val result = sendRequest(url, "GET", headers, requestProperties = mapOf("redirect" to "follow", "cache" to "no-cache", "referrer" to "no-referrer"))
 
-        val gson = makeGson()
+        val gson = Gson()
         val body = gson.fromJson(result.body, JsonObject::class.java)
         val retcode = body.get("retcode").asString
         val humanReadableMessage = if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
@@ -132,21 +126,6 @@ private fun tryLoginWithApiKey(): String {
                 PluginState.instance.loginMessage = body.get("login_message").asString
             }
 
-            if (body.has("longthink-functions-today-v2")) {
-                val cloudEntries = body.get("longthink-functions-today-v2").asJsonObject.entrySet().map {
-                    val elem = gson.fromJson(it.value, LongthinkFunctionEntry::class.java)
-                    elem.entryName = it.key
-                    return@map elem.mergeLocalInfo(ExtraState.getLocalLongthinkInfo(elem.entryName))
-                }
-                DiffIntentProviderInstance.defaultThirdPartyFunctions = cloudEntries
-                QuickLongthinkActionsServiceInstance.recreateActions()
-            }
-
-            if (body.has("longthink-filters")) {
-                val filters = body.get("longthink-filters").asJsonArray.map { it.asString }
-                DiffIntentProviderInstance.intentFilters = filters
-            }
-
             if (body.has("metering_balance")) {
                 AccountManager.meteringBalance = body.get("metering_balance").asInt
             }
@@ -156,7 +135,7 @@ private fun tryLoginWithApiKey(): String {
             }
 
             UsageStats.addStatistic(true, UsageStatistic("login"), url.toString(), "")
-            return if (InferenceGlobalContext.isCloud) inferenceLogin() else "OK"
+            return "OK"
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
             logError("login-failed", humanReadableMessage, false)
             UsageStats.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
@@ -187,7 +166,6 @@ fun checkLogin(force: Boolean = false): String {
     }
 
     when (InferenceGlobalContext.deploymentMode) {
-        DeploymentMode.SELF_HOSTED -> {}
         DeploymentMode.CLOUD -> {
             if (!AccountManager.ticket.isNullOrEmpty() &&
                     (AccountManager.apiKey.isNullOrEmpty() || force)) {
@@ -200,6 +178,8 @@ fun checkLogin(force: Boolean = false): String {
                 return ""
             }
         }
+
+        else -> {}
     }
 
     return tryLoginWithApiKey()

@@ -21,8 +21,6 @@ import com.smallcloud.refactai.modes.completion.renderer.AsyncCompletionLayout
 import com.smallcloud.refactai.modes.completion.structs.Completion
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.refactai.privacy.Privacy
-import com.smallcloud.refactai.statistic.CompletionStatistic
-import com.smallcloud.refactai.statistic.StatisticService
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.utils.getExtension
@@ -33,6 +31,7 @@ import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyService
+import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 class CompletionMode(
     override var needToRender: Boolean = true
@@ -43,8 +42,6 @@ class CompletionMode(
     private var processTask: Future<*>? = null
     private var completionLayout: AsyncCompletionLayout? = null
     private val logger = Logger.getInstance("StreamedCompletionMode")
-    private var lastStatistic: CompletionStatistic? = null
-    private var hasOneLineCompletionBefore: Boolean = false
     private var completionInProgress: Boolean = false
 
 
@@ -55,16 +52,6 @@ class CompletionMode(
     }
 
     override fun onTextChange(event: DocumentEventExtra) {
-        lastStatistic?.let {
-            if (completionLayout != null) {
-                it.addStatistic("cancel", "document_changed",
-                        fileExtension = getActiveFile(event.editor.document)?.let {filename ->
-                            getExtension(filename)
-                        })
-                StatisticService.instance.addCompletionStatistic(it)
-                lastStatistic = null
-            }
-        }
         val fileName = getActiveFile(event.editor.document) ?: return
         if (PrivacyService.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
             == Privacy.DISABLED && !InferenceGlobalContext.isSelfHosted) return
@@ -79,7 +66,6 @@ class CompletionMode(
                 editor.document.getLineEndOffset(logicalPos.line))
 
         val isMultiline = currentLine.all { it == ' ' || it == '\t' }
-        lastStatistic = CompletionStatistic()
         if (!event.force) {
             val docEvent = event.event ?: return
             if (docEvent.offset + docEvent.newLength > editor.document.text.length) return
@@ -89,14 +75,6 @@ class CompletionMode(
                 editor.document.modificationStamp,
                 docEvent.offset + docEvent.newLength + event.offsetCorrection
             )
-            val completionData = CompletionCache.getCompletion(maybeState.text, maybeState.offset)
-            if (completionData != null) {
-                processTask = scheduler.submit {
-                    renderCompletion(editor, maybeState!!, completionData, animation = false)
-                    lastStatistic?.addStatistic("cacheRendered")
-                }
-                return
-            }
 
             if (shouldIgnoreChange(docEvent, editor, maybeState.offset)) {
                 return
@@ -119,20 +97,7 @@ class CompletionMode(
         val state = maybeState ?: return
         if (!state.isValid()) return
 
-        var promptInfo: List<PromptInfo> = listOf()
-//        if (InferenceGlobalContext.useMultipleFilesCompletion) {
-//            editor.project?.let {
-//                app.invokeAndWait {
-//                    promptInfo = PromptCooker.cook(
-//                        state,
-//                        FilesCollector.getInstance(it).collect(),
-//                        mostImportantFilesMaxCount = if (event.force) 25 else 6,
-//                        lessImportantFilesMaxCount = if (event.force) 10 else 2,
-//                        maxFileSize = if (event.force) 2_000_000 else 200_000
-//                    )
-//                }
-//            }
-//        }
+        val promptInfo: List<PromptInfo> = listOf()
         val stat = UsageStatistic(scope, extension = getExtension(fileName))
         val request = RequestCreator.create(
             fileName, text, logicalPos.line, logicalPos.column,
@@ -192,9 +157,6 @@ class CompletionMode(
             logger.warn("Exception while rendering completion", ex)
             logger.debug("Exception while rendering completion cancelOrClose request")
             cancelOrClose()
-            lastStatistic?.let {
-                lastStatistic = null
-            }
         }
     }
 
@@ -227,42 +189,38 @@ class CompletionMode(
         editorState: EditorTextState,
         force: Boolean,
     ) {
-//        val completionState = CompletionState(editorState, force = force)
-//        if (!force && !completionState.readyForCompletion) return
-//        if (!force && !completionState.multiline && hasOneLineCompletionBefore) {
-//            hasOneLineCompletionBefore = false
-//            return
-//        }
-//        if (force) {
-//            request.body.maxTokens = 512
-//        }
-//        request.body.stopTokens = completionState.stopTokens
         InferenceGlobalContext.status = ConnectionStatus.PENDING
         completionInProgress = true
-        lastStatistic = CompletionStatistic()
+        if (force) {
+            request.body.parameters.maxNewTokens = 512
+        }
         streamedInferenceFetch(request, dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             InferenceGlobalContext.lastErrorMsg = null
-            lastStatistic?.addStatistic("requestRendered")
         }) { prediction ->
             val choice = prediction.choices.first()
-            if ((!completionInProgress) || choice.finishReason != null) {
+            if ((!completionInProgress) || (choice.delta.isEmpty() && !choice.finishReason.isNullOrEmpty())) {
                 return@streamedInferenceFetch
             }
             val completion: Completion = if (completionLayout?.lastCompletionData == null) {
                 Completion(request.body.inputs.sources.values.toList().first(),
-                        offset = editorState.offset,
-                        multiline = request.body.inputs.multiline,
-                        createdTs = prediction.created.toLong())
+                    offset = editorState.offset,
+                    multiline = request.body.inputs.multiline,
+                    createdTs = prediction.created.toLong(),
+                    isFromCache = prediction.cached,
+                    snippetTelemetryId = prediction.snippetTelemetryId
+                )
             } else {
                 completionLayout!!.lastCompletionData!!
+            }
+            if (completion.snippetTelemetryId == null) {
+                completion.snippetTelemetryId = prediction.snippetTelemetryId
             }
             completion.updateCompletion(choice.delta)
 
             synchronized(this) {
-                CompletionCache.addCompletion(completion)
                 renderCompletion(
-                        editorState.editor, editorState, completion, true
+                    editorState.editor, editorState, completion, !prediction.cached
                 )
             }
         }?.also {
@@ -279,16 +237,10 @@ class CompletionMode(
                 cancelOrClose()
                 requestFuture?.cancel(true)
                 catchNetExceptions(e.cause)
-                lastStatistic?.let {
-                    lastStatistic = null
-                }
             } catch (e: Exception) {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR
                 InferenceGlobalContext.lastErrorMsg = e.message
                 cancelOrClose()
-                lastStatistic?.let {
-                    lastStatistic = null
-                }
                 logger.warn("Exception while completion request processing", e)
             }
         }
@@ -297,14 +249,6 @@ class CompletionMode(
     private fun handleInterruptedException(requestFuture: Future<*>?, editor: Editor) {
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED
         requestFuture?.cancel(true)
-        lastStatistic?.let {
-            lastStatistic?.addStatistic("cancel", "request_abort",
-                    fileExtension = getActiveFile(editor.document)?.let {filename ->
-                        getExtension(filename)
-                    })
-            StatisticService.instance.addCompletionStatistic(lastStatistic!!)
-            lastStatistic = null
-        }
         cancelOrClose()
         logger.debug("lastReqJob abort")
     }
@@ -316,23 +260,10 @@ class CompletionMode(
     }
 
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
-        lastStatistic?.let {
-            if (completionLayout != null) {
-                it.addStatistic("accept", "tab",
-                        fileExtension = getActiveFile(editor.document)?.let {filename ->
-                            getExtension(filename)
-                        })
-                StatisticService.instance.addCompletionStatistic(it)
-                lastStatistic = null
-            }
-        }
-
         completionLayout?.apply {
             applyPreview(caret ?: editor.caretModel.currentCaret)
-            lastCompletionData?.let {
-//                val nextLine = it.endIndex >= it.originalText.length || it.originalText[it.endIndex] == '\n'
-//                hasOneLineCompletionBefore = !it.multiline && nextLine
-//                HumanRobotStatistic.pushStat(editor, it.originalText, it.startIndex, it.endIndex, it.completion)
+            lastCompletionData?.snippetTelemetryId?.let {
+                UsageStats.snippetAccepted(it)
             }
             dispose()
         }
@@ -340,16 +271,6 @@ class CompletionMode(
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
-        lastStatistic?.let {
-            if (completionLayout != null) {
-                it.addStatistic("cancel", "esc",
-                        fileExtension = getActiveFile(editor.document)?.let {filename ->
-                            getExtension(filename)
-                        })
-                StatisticService.instance.addCompletionStatistic(it)
-                lastStatistic = null
-            }
-        }
         cancelOrClose()
     }
 
@@ -357,36 +278,12 @@ class CompletionMode(
     }
 
     override fun caretPositionChanged(event: CaretEvent) {
-        lastStatistic?.let {
-            fun isWriting(): Boolean {
-                return event.newPosition.line == event.oldPosition.line &&
-                        event.newPosition.column == (event.oldPosition.column + 1)
-            }
-            if (completionLayout != null && !isWriting()) {
-                it.addStatistic("cancel", "caret_changed",
-                        fileExtension = getActiveFile(event.editor.document)?.let {filename ->
-                    getExtension(filename)
-                })
-                StatisticService.instance.addCompletionStatistic(it)
-                lastStatistic = null
-            }
-        }
         cancelOrClose()
     }
 
     override fun isInActiveState(): Boolean = completionLayout != null && completionLayout!!.rendered && needToRender
 
     override fun cleanup(editor: Editor) {
-        lastStatistic?.let {
-            if (completionLayout != null) {
-                it.addStatistic("cancel", "mode_changed",
-                        fileExtension = getActiveFile(editor.document)?.let {filename ->
-                            getExtension(filename)
-                        })
-                StatisticService.instance.addCompletionStatistic(it)
-                lastStatistic = null
-            }
-        }
         cancelOrClose()
     }
 
@@ -412,7 +309,6 @@ class CompletionMode(
     }
 
     private fun cancelOrClose() {
-        lastStatistic = null
         try {
             processTask?.cancel(true)
             processTask?.get()

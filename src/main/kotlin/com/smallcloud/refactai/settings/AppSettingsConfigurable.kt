@@ -53,12 +53,11 @@ class AppSettingsConfigurable : Configurable {
         modified = modified || (mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model != null)
 
         modified =
-            modified || (mySettingsComponent!!.contrastUrlText.isNotEmpty() && (InferenceGlobalContext.isCloud ||
-                    makeUrlGreat(mySettingsComponent!!.contrastUrlText) != InferenceGlobalContext.inferenceUri))
+            modified || (mySettingsComponent!!.contrastUrlText.isNotEmpty() &&
+                    mySettingsComponent!!.contrastUrlText != InferenceGlobalContext.inferenceUri)
         modified =
             modified || (mySettingsComponent!!.contrastUrlText.isEmpty() && !InferenceGlobalContext.isCloud)
 
-        modified = modified || mySettingsComponent!!.useForceCompletion != InferenceGlobalContext.useForceCompletion
         modified = modified || mySettingsComponent!!.useMultipleFilesCompletion != InferenceGlobalContext.useMultipleFilesCompletion
 
         modified = modified || mySettingsComponent!!.useDeveloperMode != InferenceGlobalContext.developerModeEnabled
@@ -88,11 +87,7 @@ class AppSettingsConfigurable : Configurable {
         AccountManager.apiKey = mySettingsComponent!!.tokenText.ifEmpty { null }
         InferenceGlobalContext.model = mySettingsComponent!!.modelText.ifEmpty { null }
         InferenceGlobalContext.inferenceUri =
-            if (mySettingsComponent!!.contrastUrlText.isEmpty()) null else
-                makeUrlGreat(mySettingsComponent!!.contrastUrlText)
-        mySettingsComponent!!.contrastUrlText = if (InferenceGlobalContext.isSelfHosted)
-            InferenceGlobalContext.inferenceUri.toString() else ""
-        InferenceGlobalContext.useForceCompletion = mySettingsComponent!!.useForceCompletion
+                mySettingsComponent!!.contrastUrlText.ifEmpty { null }
         InferenceGlobalContext.useMultipleFilesCompletion = mySettingsComponent!!.useMultipleFilesCompletion
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
         InferenceGlobalContext.longthinkModel = mySettingsComponent!!.longthinkModel.ifEmpty { null }
@@ -102,9 +97,7 @@ class AppSettingsConfigurable : Configurable {
     override fun reset() {
         mySettingsComponent!!.tokenText = AccountManager.apiKey ?: ""
         mySettingsComponent!!.modelText = InferenceGlobalContext.model ?: ""
-        mySettingsComponent!!.contrastUrlText =
-            if (InferenceGlobalContext.isSelfHosted) InferenceGlobalContext.inferenceUri.toString() else ""
-        mySettingsComponent!!.useForceCompletion = InferenceGlobalContext.useForceCompletion
+        mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
         mySettingsComponent!!.useMultipleFilesCompletion = InferenceGlobalContext.useMultipleFilesCompletion
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled
         mySettingsComponent!!.longthinkModel = InferenceGlobalContext.longthinkModel ?: ""

@@ -22,7 +22,7 @@ class DocumentListener : BulkAwareDocumentListener, Disposable {
 
     override fun documentChangedNonBulk(event: DocumentEvent) {
         Logger.getInstance("DocumentListener").debug("documentChangedNonBulk")
-        if (InferenceGlobalContext.useForceCompletion) return
+        if (!InferenceGlobalContext.useAutoCompletion) return
         val editor = getActiveEditor(event.document) ?: return
         val provider = ModeProvider.getOrCreateModeProvider(editor)
         provider.onTextChange(event, editor, false)

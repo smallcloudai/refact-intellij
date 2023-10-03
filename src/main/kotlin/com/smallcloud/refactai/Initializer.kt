@@ -3,15 +3,14 @@ package com.smallcloud.refactai
 import com.intellij.ide.plugins.PluginInstaller
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.io.ConnectivityManager
 import com.smallcloud.refactai.io.InferenceGlobalContext
-import com.smallcloud.refactai.listeners.QuickLongthinkActionsService
 import com.smallcloud.refactai.listeners.UninstallListener
-import com.smallcloud.refactai.lsp.LSPConfig
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.privacy.PrivacyService
@@ -27,11 +26,9 @@ class Initializer : StartupActivity.Background, Disposable {
     }
 
     private fun initialize(project: Project) {
+        Logger.getInstance("SMCInitializer").info("Bin prefix = ${Resources.binPrefix}")
         ConnectivityManager.instance.startup()
 
-        InferenceGlobalContext.instance.inferenceUri?.let {
-            InferenceGlobalContext.instance.checkConnection(it)
-        }
         if (InferenceGlobalContext.instance.canRequest()) {
             when (InferenceGlobalContext.instance.deploymentMode) {
                 DeploymentMode.CLOUD -> {
@@ -44,10 +41,7 @@ class Initializer : StartupActivity.Background, Disposable {
                     }
                 }
 
-                DeploymentMode.SELF_HOSTED -> {
-                    ApplicationManager.getApplication().getService(LoginStateService::class.java)
-                            .tryToWebsiteLogin(true)
-                }
+                else -> {}
             }
         }
         settingsStartup()
@@ -56,12 +50,7 @@ class Initializer : StartupActivity.Background, Disposable {
         PrivacyService.instance.projectOpened(project)
         PluginInstaller.addStateListener(UninstallListener())
         UpdateChecker.instance
-        QuickLongthinkActionsService.instance
         LSPProcessHolder.instance.startup()
-        LSPProcessHolder.instance.startProcess(LSPConfig(
-                "HF", 8001,
-                "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",
-                "${Resources.client}-${Resources.version}"))
     }
 
     override fun dispose() {

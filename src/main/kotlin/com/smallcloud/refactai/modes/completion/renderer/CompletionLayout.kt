@@ -23,7 +23,6 @@ class AsyncCompletionLayout(
     private val renderChunkTimeoutMs: Long = 2
     private var inlayer: AsyncInlayer? = null
     private var blockEvents: Boolean = false
-    private var textCache: String = ""
     private var isUpdating: Boolean = true
     private var updateTask: Future<*>? = null
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("SMCAsyncCompletionLayout", 1)
@@ -52,9 +51,13 @@ class AsyncCompletionLayout(
 
     private fun stopUpdate(needGet: Boolean = true) {
         synchronized(this) {
+            if (!scheduler.isShutdown) {
+                scheduler.shutdownNow()
+            }
             isUpdating = false
+            needToRender = false
             if (updateTask == null) return
-            if (needGet) {
+            if (needGet && (!updateTask?.isCancelled!! || !updateTask?.isDone!!)) {
                 updateTask!!.get()
             }
             updateTask = null
@@ -83,23 +86,6 @@ class AsyncCompletionLayout(
                 } else {
                     renderAndUpdateState(completionData, offset, needToRender, animation)
                 }
-//                    val currentLine = lastCompletionData!!.originalText.substring(lastCompletionData!!.offset)
-//                            .substringBefore('\n', "")
-//                    val patch = DiffUtils.diff(currentLine.toList(), lastCompletionData!!.completion.toList())
-//                    for (delta in patch.getDeltas()) {
-//                        renderAndUpdateState(completionData, offset + delta.source.position, needToRender, animation)
-//                    }
-//                    val i = 0
-//                }
-//                } else {
-//                    var deltasFirstLine = completionData.getForFirstLineEOSPatch().getDeltas()
-//                    if (deltasFirstLine.size == 1 &&
-//                            deltasFirstLine.first().type == DeltaType.INSERT &&
-//                            completionData.endIndex <= completionData.firstLineEndOfLineIndex) {
-//                        deltasFirstLine = completionData.getForFirstLinePatch().getDeltas()
-//                    }
-//                    renderAndUpdatePartialState(needToRender, animation, deltasFirstLine)
-//                    renderAndUpdatePartialState(needToRender, animation, deltasFirstLine)
             } catch (ex: Exception) {
                 dispose(false)
                 throw ex
@@ -135,6 +121,9 @@ class AsyncCompletionLayout(
                 if (needToRender) {
                     if (animation) {
                         for (ch in text.chunked(renderChunkSize)) {
+                            if (!this.needToRender) {
+                                return@let
+                            }
                             ApplicationManager.getApplication().invokeLater({
                                 inlayer.addText(currentOffset, ch)
                             }, { !this.needToRender })
@@ -170,6 +159,9 @@ class AsyncCompletionLayout(
             if (needToRender) {
                 if (animation) {
                     for (ch in text.chunked(renderChunkSize)) {
+                        if (!this.needToRender) {
+                            return@let
+                        }
                         ApplicationManager.getApplication().invokeLater({
                             inlayer.addText(offset, ch)
                         }, { !this.needToRender })

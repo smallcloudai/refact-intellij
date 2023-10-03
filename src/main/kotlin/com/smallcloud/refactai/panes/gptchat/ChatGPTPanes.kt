@@ -13,12 +13,12 @@ import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.containers.ContainerUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
-import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProviderChangedNotifier
-import com.smallcloud.refactai.struct.LongthinkFunctionEntry
+import com.smallcloud.refactai.lsp.LSPCapabilities
+import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
-import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as LongthinkFunctionProvider
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 
 class ChatGPTPanes(project: Project, parent: Disposable) {
@@ -48,14 +48,14 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
     }
 
     init {
-        setupPanes(LongthinkFunctionProvider.allChats.isNotEmpty())
+        setupPanes(LSPProcessHolder.capabilities.codeChatModels.isNotEmpty())
         ApplicationManager.getApplication()
                 .messageBus
                 .connect(PluginState.instance)
-                .subscribe(LongthinkFunctionProviderChangedNotifier.TOPIC,
-                        object : LongthinkFunctionProviderChangedNotifier {
-                    override fun longthinkFunctionsChanged(functions: List<LongthinkFunctionEntry>) {
-                        setupPanes(LongthinkFunctionProvider.allChats.isNotEmpty())
+                .subscribe(LSPProcessHolderChangedNotifier.TOPIC,
+                        object : LSPProcessHolderChangedNotifier {
+                    override fun capabilitiesChanged(newCaps: LSPCapabilities) {
+                        setupPanes(newCaps.codeChatModels.isNotEmpty())
                     }
                 })
     }

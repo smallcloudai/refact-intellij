@@ -29,7 +29,6 @@ import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.utils.makeLinksPanel
 import java.awt.event.ItemEvent
 import java.awt.event.ItemListener
-import java.net.URI
 import java.util.concurrent.TimeUnit
 import javax.swing.*
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
@@ -197,7 +196,7 @@ class AppRootComponent(private val project: Project) {
                 .messageBus
                 .connect(PluginState.instance)
                 .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun userInferenceUriChanged(newUrl: URI?) {
+                    override fun userInferenceUriChanged(newUrl: String?) {
                         revalidate()
                     }
 

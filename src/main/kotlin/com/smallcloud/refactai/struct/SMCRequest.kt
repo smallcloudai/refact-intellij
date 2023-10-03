@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.struct
 
+import com.google.gson.annotations.SerializedName
 import com.smallcloud.refactai.statistic.UsageStatistic
 import java.net.URI
 
@@ -16,13 +17,15 @@ data class SMCInputs(
 
 )
 
+data class SMCParameters(
+    var temperature: Float = 0.1f,
+    @SerializedName("max_new_tokens") var maxNewTokens: Int = 20
+)
+
 data class SMCRequestBody(
     var inputs: SMCInputs = SMCInputs(),
     var stream: Boolean = true,
-    var parameters: Map<String, Any> = mapOf(
-            "temperature" to 0.1,
-            "max_new_tokens" to 20
-    ),
+    var parameters: SMCParameters = SMCParameters()
 )
 
 data class SMCRequest(

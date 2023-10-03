@@ -1,6 +1,5 @@
 package com.smallcloud.refactai.settings
 
-import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
@@ -37,7 +36,6 @@ class AppSettingsComponent {
     }
     private val myModelText = JBTextField()
     private val myContrastUrlText = JBTextField()
-    private val myUseForceCompletionMode = JCheckBox(RefactAIBundle.message("advancedSettings.useForceCompletionMode"))
     private val myUseMultipleFilesCompletion = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion"))
     private val developerModeCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.developerMode")).apply {
         isVisible = false
@@ -73,15 +71,6 @@ class AppSettingsComponent {
             addComponentToRightColumn(
                 JBLabel(
                     RefactAIBundle.message("advancedSettings.inferenceURLDescription"),
-                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ), 0
-            )
-            addComponent(myUseForceCompletionMode, (UIUtil.DEFAULT_VGAP * 1.5).toInt())
-            val f1Shortcut = KeymapUtil.getShortcutText("ForceCompletionAction")
-
-            addComponent(
-                JBLabel(
-                    RefactAIBundle.message("advancedSettings.useForceCompletionModeDescription", f1Shortcut),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
@@ -127,14 +116,6 @@ class AppSettingsComponent {
         get() = myContrastUrlText.text
         set(newText) {
             myContrastUrlText.text = newText
-        }
-
-    var useForceCompletion: Boolean
-        get() {
-            return myUseForceCompletionMode.isSelected
-        }
-        set(value) {
-            myUseForceCompletionMode.isSelected = value
         }
 
     var useMultipleFilesCompletion: Boolean

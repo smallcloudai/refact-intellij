@@ -113,7 +113,6 @@ integrated into a single package that follows your privacy settings.
         <errorHandler implementation="com.smallcloud.refactai.PluginErrorReportSubmitter"/>
 
         <actionPromoter implementation="com.smallcloud.refactai.listeners.InlineActionsPromoter"/>
-        <actionPromoter implementation="com.smallcloud.refactai.listeners.DiffActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.CancelActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.ForceCompletionActionPromoter"/>
 
@@ -123,20 +122,14 @@ integrated into a single package that follows your privacy settings.
 
         <applicationService serviceImplementation="com.smallcloud.refactai.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.settings.PrivacyState"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.settings.ExtraState"/>
 
         <applicationService serviceImplementation="com.smallcloud.refactai.account.AccountManager"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.statistic.StatisticService"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.statistic.HumanRobotStatistic"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.io.InferenceGlobalContext"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.statistic.ExtraInfoService"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.privacy.PrivacyService"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.account.LoginStateService"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.statistic.UsageStats"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.UpdateChecker"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectivityManager"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.listeners.QuickLongthinkActionsService"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.lsp.LSPProcessHolder"/>
     </extensions>
     <actions>
@@ -155,7 +148,7 @@ integrated into a single package that follows your privacy settings.
         <action class="com.smallcloud.refactai.listeners.ForceCompletionAction"
                 id="ForceCompletionAction"
                 text="Make A Force Completion"
-                description="Refact AI Make A Force Completion">
+                description="Refact AI Make A Manual Trigger Completion">
             <keyboard-shortcut first-keystroke="alt SLASH" keymap="$default"/>
         </action>
         <group id="RefactAIPrivacy" popup="true" class="com.smallcloud.refactai.privacy.RefactAIPrivacyGroupAction">
@@ -171,17 +164,11 @@ integrated into a single package that follows your privacy settings.
             <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X" replace-all="true"/>
             <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X 10.5+" replace-all="true"/>
         </action>
-        <action id="ActivateRefactToolWindow"
-                class="com.smallcloud.refactai.aitoolbox.ToolboxPaneInvokeAction"
-                text="Refact AI Toolbox"
-                description="Refact AI Toolbox action">
-            <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
-        </action>
 
         <group id="RefactAIChatGroup">
-            <action id="RefactAIAskChat"
-                    text="Ask in Chat"
-                    class="com.smallcloud.refactai.listeners.AskChatAction"/>
+<!--            <action id="RefactAIAskChat"-->
+<!--                    text="Ask in Chat"-->
+<!--                    class="com.smallcloud.refactai.listeners.AskChatAction"/>-->
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <separator/>
         </group>

@@ -10,7 +10,6 @@ import com.intellij.openapi.editor.actionSystem.EditorAction
 import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.modes.ModeProvider
-import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class ForceCompletionAction :
     EditorAction(InlineCompletionHandler()),
@@ -34,7 +33,7 @@ class ForceCompletionAction :
             caret: Caret,
             dataContext: DataContext
         ): Boolean {
-            return InferenceGlobalContext.useForceCompletion
+            return true //InferenceGlobalContext.useForceCompletion
         }
     }
 }

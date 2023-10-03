@@ -20,7 +20,6 @@ import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources.Icons.HAND_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_RED_12x12
-import com.smallcloud.refactai.Resources.defaultContrastUrlSuffix
 import com.smallcloud.refactai.Resources.defaultTemperature
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.account.LoginStateService
@@ -74,7 +73,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     update(null)
                 }
 
-                override fun userInferenceUriChanged(newUrl: URI?) {
+                override fun userInferenceUriChanged(newUrl: String?) {
                     update(null)
                 }
 
@@ -202,7 +201,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 if (isPrivacyEnabled() || InferenceGlobalContext.isSelfHosted) {
                     var tooltipStr = "<html>"
                     if (InferenceGlobalContext.inferenceUri != null) {
-                        tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUri!!.resolve(defaultContrastUrlSuffix)}"
+                        tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUri}"
                     }
                     val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else
                         if (InferenceGlobalContext.lastAutoModel != null) InferenceGlobalContext.lastAutoModel else null

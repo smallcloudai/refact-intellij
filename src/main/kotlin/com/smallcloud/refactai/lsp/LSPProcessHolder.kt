@@ -69,7 +69,7 @@ class LSPProcessHolder: Disposable {
         Companion::class.java.getResourceAsStream(
                 "/bin/${binPrefix}/code-scratchpads${getExeSuffix()}").use { input ->
             if (input == null) {
-                emitError("LSP server not found for host operation system, please contact support")
+                emitError("LSP server is not found for host operating system, please contact support")
             } else {
                 val path = Paths.get(BIN_PATH)
                 path.parent.toFile().mkdirs()

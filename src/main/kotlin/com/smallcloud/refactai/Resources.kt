@@ -36,6 +36,15 @@ private fun getPluginId(): PluginId {
     return PluginId.getId("com.smallcloud.codify")
 }
 
+private fun getArch(): String {
+    val arch = SystemInfo.OS_ARCH
+    return when (arch) {
+        "amd64" -> "x86_64"
+        "aarch64" -> "aarch64"
+        else -> arch
+    }
+}
+
 private fun getBinPrefix(): String {
     var suffix = ""
     if (SystemInfo.isMac) {
@@ -46,7 +55,7 @@ private fun getBinPrefix(): String {
         suffix = "unknown-linux-gnu"
     }
 
-    return "dist-${SystemInfo.OS_ARCH}-${suffix}"
+    return "dist-${getArch()}-${suffix}"
 }
 
 object Resources {

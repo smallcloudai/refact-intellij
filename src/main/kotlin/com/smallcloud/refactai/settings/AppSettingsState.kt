@@ -12,6 +12,7 @@ import com.smallcloud.refactai.ExtraInfoChangedNotifier
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
+import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import java.net.URI
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 
@@ -43,6 +44,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
     var useMultipleFilesCompletion: Boolean = false
     var startupLoggedIn: Boolean = false
     var developerModeEnabled: Boolean = false
+    var xDebugLSPPort: Int? = null
     var longthinkModel: String? = null
     var stagingVersion: String = ""
 
@@ -113,6 +115,13 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
 
                 override fun pluginEnableChanged(newVal: Boolean) {
                     instance.pluginIsEnabled = newVal
+                }
+            })
+        messageBus
+            .connect(PluginState.instance)
+            .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
+                override fun xDebugLSPPortChanged(newPort: Int?) {
+                    instance.xDebugLSPPort = newPort
                 }
             })
     }

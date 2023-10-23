@@ -18,14 +18,15 @@ data class SMCInputs(
 )
 
 data class SMCParameters(
-    var temperature: Float = 0.1f,
+    var temperature: Float = 0.2f,
     @SerializedName("max_new_tokens") var maxNewTokens: Int = 20
 )
 
 data class SMCRequestBody(
     var inputs: SMCInputs = SMCInputs(),
     var stream: Boolean = true,
-    var parameters: SMCParameters = SMCParameters()
+    var parameters: SMCParameters = SMCParameters(),
+    @SerializedName("no_cache") var noCache: Boolean = false
 )
 
 data class SMCRequest(

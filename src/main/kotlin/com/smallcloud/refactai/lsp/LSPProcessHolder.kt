@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.SystemProperties.getUserHome
@@ -15,6 +16,7 @@ import com.smallcloud.refactai.Resources.binPrefix
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitError
+import com.smallcloud.refactai.settings.AppSettingsState
 import org.apache.hc.core5.concurrent.ComplexFuture
 import java.net.URI
 import java.nio.file.Files
@@ -34,6 +36,7 @@ private fun getExeSuffix(): String {
 interface LSPProcessHolderChangedNotifier {
     fun capabilitiesChanged(newCaps: LSPCapabilities) {}
 
+    fun xDebugLSPPortChanged(newPort: Int?) {}
     companion object {
         val TOPIC = Topic.create(
                 "Connection Changed Notifier",
@@ -41,6 +44,8 @@ interface LSPProcessHolderChangedNotifier {
         )
     }
 }
+
+@Service
 class LSPProcessHolder: Disposable {
     private var process: Process? = null
     private var lastConfig: LSPConfig? = null
@@ -49,7 +54,22 @@ class LSPProcessHolder: Disposable {
             "SMCLSPLoggerScheduler", 1
     )
     private var loggerTask: Future<*>? = null
+    private val schedulerCaps = AppExecutorUtil.createBoundedScheduledExecutorService(
+        "SMCLSPCapsRequesterScheduler", 1
+    )
+    private var capsTask: Future<*>? = null
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
+
+
+    var xDebugLSPPort: Int? = null
+        get() = AppSettingsState.instance.xDebugLSPPort
+        set(newValue) {
+            if (newValue == field) return
+            messageBus
+                .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
+                .xDebugLSPPortChanged(newValue)
+            settingsChanged()
+        }
 
     fun startup() {
         messageBus
@@ -66,8 +86,9 @@ class LSPProcessHolder: Disposable {
                         settingsChanged()
                     }
                 })
+
         Companion::class.java.getResourceAsStream(
-                "/bin/${binPrefix}/code-scratchpads${getExeSuffix()}").use { input ->
+                "/bin/${binPrefix}/refact-lsp${getExeSuffix()}").use { input ->
             if (input == null) {
                 emitError("LSP server is not found for host operating system, please contact support")
             } else {
@@ -80,9 +101,22 @@ class LSPProcessHolder: Disposable {
             }
         }
         settingsChanged()
+
+
+        capsTask = schedulerCaps.scheduleWithFixedDelay({
+            capabilities = getCaps()
+            if (capabilities.cloudName.isNotEmpty()) {
+                capsTask?.cancel(false)
+                schedulerCaps.scheduleWithFixedDelay({
+                    capabilities = getCaps()
+                }, 15, 15, TimeUnit.MINUTES)
+            }
+        }, 0, 3, TimeUnit.SECONDS)
     }
 
     private fun settingsChanged() {
+        terminate()
+        if (xDebugLSPPort != null) return
         val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
         val newConfig = LSPConfig(
                 address = address,
@@ -95,7 +129,7 @@ class LSPProcessHolder: Disposable {
     }
 
     val lspIsWorking: Boolean
-        get() = process!= null && process!!.isAlive
+        get() = xDebugLSPPort != null || process?.isAlive == true
 
     var capabilities: LSPCapabilities = LSPCapabilities()
         set(newValue) {
@@ -106,6 +140,7 @@ class LSPProcessHolder: Disposable {
                     .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
                     .capabilitiesChanged(field)
         }
+
     private fun startProcess(config: LSPConfig) {
         if (config == lastConfig) return
 
@@ -156,7 +191,7 @@ class LSPProcessHolder: Disposable {
 
     companion object {
         private val BIN_PATH = Path(getUserHome(), ".refact", "bin",
-                "code-scratchpads${getExeSuffix()}").toString()
+                "refact-lsp${getExeSuffix()}").toString()
         @JvmStatic
         val instance: LSPProcessHolder
             get() = ApplicationManager.getApplication().getService(LSPProcessHolder::class.java)
@@ -169,8 +204,9 @@ class LSPProcessHolder: Disposable {
 
     val url: URI
         get() {
-            if (lastConfig == null || lastConfig?.port == null) return URI("")
-            return URI("http://127.0.0.1:${lastConfig!!.port}/")
+            val port = xDebugLSPPort?: lastConfig?.port ?: return URI("")
+
+            return URI("http://127.0.0.1:${port}/")
         }
     private fun getCaps(): LSPCapabilities {
         var res = LSPCapabilities()
@@ -182,7 +218,7 @@ class LSPProcessHolder: Disposable {
             try {
                 requestFuture = it.get() as ComplexFuture
                 val out = requestFuture.get()
-                logger.warn("LSP caps_received " + it)
+                logger.warn("LSP caps_received " + out)
                 val gson = Gson()
                 res = gson.fromJson(out as String, LSPCapabilities::class.java)
                 logger.debug("caps_received request finished")

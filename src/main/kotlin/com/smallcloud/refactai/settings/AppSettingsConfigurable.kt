@@ -5,10 +5,10 @@ import com.intellij.openapi.options.Configurable
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import org.jetbrains.annotations.Nls
-import java.net.URI
 import javax.swing.JComponent
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 /**
  * Provides controller functionality for application settings.
@@ -61,6 +61,9 @@ class AppSettingsConfigurable : Configurable {
         modified = modified || mySettingsComponent!!.useMultipleFilesCompletion != InferenceGlobalContext.useMultipleFilesCompletion
 
         modified = modified || mySettingsComponent!!.useDeveloperMode != InferenceGlobalContext.developerModeEnabled
+
+        modified = modified || mySettingsComponent!!.xDebugLSPPort != LSPProcessHolder.xDebugLSPPort
+
         modified = modified || (mySettingsComponent!!.longthinkModel.isNotEmpty()
                 && (InferenceGlobalContext.longthinkModel == null ||
                 InferenceGlobalContext.longthinkModel != mySettingsComponent!!.longthinkModel))
@@ -72,17 +75,6 @@ class AppSettingsConfigurable : Configurable {
         return modified
     }
 
-    private fun makeUrlGreat(uri: String): URI {
-        var newUri = uri
-        if(!uri.startsWith("http://") && !uri.startsWith("https://")) {
-            newUri = "https://$newUri"
-        }
-        if(!uri.endsWith("/")) {
-            newUri = "$newUri/"
-        }
-        return URI(newUri)
-    }
-
     override fun apply() {
         AccountManager.apiKey = mySettingsComponent!!.tokenText.ifEmpty { null }
         InferenceGlobalContext.model = mySettingsComponent!!.modelText.ifEmpty { null }
@@ -92,6 +84,7 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
         InferenceGlobalContext.longthinkModel = mySettingsComponent!!.longthinkModel.ifEmpty { null }
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
+        LSPProcessHolder.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
     }
 
     override fun reset() {
@@ -102,6 +95,7 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled
         mySettingsComponent!!.longthinkModel = InferenceGlobalContext.longthinkModel ?: ""
         mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
+        mySettingsComponent!!.xDebugLSPPort = LSPProcessHolder.xDebugLSPPort
     }
 
     override fun disposeUIResources() {

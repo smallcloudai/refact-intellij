@@ -25,6 +25,8 @@ class AppSettingsComponent {
             override fun keyPressed(e: KeyEvent?) {
                 if (e?.keyCode == KeyEvent.VK_MINUS && e.isControlDown && e.isAltDown) {
                     developerModeCheckBox.isVisible = true
+                    myXDebugLSPPort.isVisible = true
+                    myXDebugLSPPortLabel.isVisible = true
                     myLongthinkModelText.isVisible = true
                     myLongthinkModelLabel.isVisible = true
                     myStagingVersionText.isVisible = true
@@ -40,7 +42,13 @@ class AppSettingsComponent {
     private val developerModeCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.developerMode")).apply {
         isVisible = false
     }
+    private val myXDebugLSPPort = JBTextField().apply {
+        isVisible = false
+    }
     private val myLongthinkModelText = JBTextField().apply {
+        isVisible = false
+    }
+    private val myXDebugLSPPortLabel = JBLabel("xDebug LSP port:").apply {
         isVisible = false
     }
     private val myLongthinkModelLabel = JBLabel("Longthink model:").apply {
@@ -87,6 +95,7 @@ class AppSettingsComponent {
                 ), 0
             )
             addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
+            addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
             addLabeledComponent(myLongthinkModelLabel, myLongthinkModelText, UIUtil.LARGE_VGAP)
             addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
             addComponentFillVertically(JPanel(), 0)
@@ -131,6 +140,18 @@ class AppSettingsComponent {
         set(newVal) {
             developerModeCheckBox.isSelected = newVal
         }
+    var xDebugLSPPort: Int?
+        get() =
+            try {
+                myXDebugLSPPort.text.toInt()
+            } catch (e: Exception) {
+                null
+            }
+
+        set(newVal) {
+            myXDebugLSPPort.text = newVal?.toString() ?: ""
+        }
+
     var longthinkModel: String
         get() = myLongthinkModelText.text
         set(newVal) {

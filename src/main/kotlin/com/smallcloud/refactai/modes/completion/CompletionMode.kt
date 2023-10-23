@@ -192,7 +192,8 @@ class CompletionMode(
         InferenceGlobalContext.status = ConnectionStatus.PENDING
         completionInProgress = true
         if (force) {
-            request.body.parameters.maxNewTokens = 512
+            request.body.parameters.maxNewTokens = 50
+            request.body.noCache = true
         }
         streamedInferenceFetch(request, dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED

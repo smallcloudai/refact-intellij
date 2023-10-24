@@ -61,10 +61,10 @@ class LSPProcessHolder: Disposable {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
 
 
-    var xDebugLSPPort: Int? = null
-        get() = AppSettingsState.instance.xDebugLSPPort
+    var xDebugLSPPort: Int?
+        get() { return AppSettingsState.instance.xDebugLSPPort }
         set(newValue) {
-            if (newValue == field) return
+            if (newValue == AppSettingsState.instance.xDebugLSPPort) return
             messageBus
                 .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
                 .xDebugLSPPortChanged(newValue)
@@ -200,6 +200,7 @@ class LSPProcessHolder: Disposable {
     override fun dispose() {
         terminate()
         scheduler.shutdown()
+        schedulerCaps.shutdown()
     }
 
     val url: URI

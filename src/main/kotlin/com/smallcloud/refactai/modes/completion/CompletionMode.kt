@@ -33,6 +33,8 @@ import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as I
 import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyService
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
+private val specialSymbolsRegex = "^[:\\s\\t\\n\\r(){},.\"'\\];]*\$".toRegex()
+
 class CompletionMode(
     override var needToRender: Boolean = true
 ) : Mode, CaretListener {
@@ -64,8 +66,12 @@ class CompletionMode(
 
         val currentLine = editor.document.text.substring(editor.document.getLineStartOffset(logicalPos.line),
                 editor.document.getLineEndOffset(logicalPos.line))
+        val rightOfCursor = currentLine.substring(logicalPos.column)
+        if (!rightOfCursor.matches(specialSymbolsRegex)) return
 
         val isMultiline = currentLine.all { it == ' ' || it == '\t' }
+
+
         if (!event.force) {
             val docEvent = event.event ?: return
             if (docEvent.offset + docEvent.newLength > editor.document.text.length) return

@@ -128,10 +128,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 })
     }
 
-//    override fun selectionChanged(event: FileEditorManagerEvent) {
-//        update(null)
-//    }
-
     override fun ID(): String {
         return javaClass.name
     }

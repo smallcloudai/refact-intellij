@@ -151,7 +151,7 @@ class LSPProcessHolder: Disposable {
         process = GeneralCommandLine(listOf(BIN_PATH) + lastConfig!!.toArgs())
                 .withRedirectErrorStream(true)
                 .createProcess()
-        process!!.waitFor(1, TimeUnit.SECONDS)
+        process!!.waitFor(3, TimeUnit.SECONDS)
         loggerTask = scheduler.submit {
             val reader = process!!.inputStream.bufferedReader()
             var line = reader.readLine()

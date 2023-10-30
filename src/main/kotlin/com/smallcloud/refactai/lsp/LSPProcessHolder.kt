@@ -115,17 +115,19 @@ class LSPProcessHolder: Disposable {
     }
 
     private fun settingsChanged() {
-        terminate()
-        if (xDebugLSPPort != null) return
-        val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
-        val newConfig = LSPConfig(
+        synchronized(this) {
+            terminate()
+            if (xDebugLSPPort != null) return
+            val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
+            val newConfig = LSPConfig(
                 address = address,
                 apiKey = AccountManager.apiKey,
                 port = 8001,
                 clientVersion = "${Resources.client}-${Resources.version}",
                 useTelemetry = true,
-        )
-        startProcess(newConfig)
+            )
+            startProcess(newConfig)
+        }
     }
 
     val lspIsWorking: Boolean

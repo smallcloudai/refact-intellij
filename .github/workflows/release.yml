@@ -10,7 +10,7 @@ jobs:
   # Run Gradle Wrapper Validation Action to verify the wrapper's checksum
   # Run verifyPlugin, IntelliJ Plugin Verifier, and test Gradle tasks
   # Build plugin and provide the artifact for the next workflow jobs
-  build:
+  release:
     name: Release
     runs-on: ubuntu-latest
     outputs:
@@ -31,6 +31,16 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build.yml
+          repo: smallcloudai/refact-lsp
+          branch: main
+          path: ./src/main/resources/bin
 
       # Validate wrapper
       - name: Gradle Wrapper Validation

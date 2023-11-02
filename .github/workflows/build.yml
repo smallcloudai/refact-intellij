@@ -34,6 +34,16 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
 
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build.yml
+          repo: smallcloudai/refact-lsp
+          branch: main
+          path: ./src/main/resources/bin
+
       # Validate wrapper
       - name: Gradle Wrapper Validation
         uses: gradle/wrapper-validation-action@v1.0.6
@@ -85,11 +95,7 @@ jobs:
           name: pluginVerifier-result
           path: ${{ github.workspace }}/build/reports/pluginVerifier
 
-#      # Run Qodana inspections
-#      - name: Qodana - Code Inspection
-#        uses: JetBrains/qodana-action@v2022.3.4
 
-      # Prepare plugin archive content for creating artifact
       - name: Prepare Plugin Artifact
         id: artifact
         shell: bash

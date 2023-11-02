@@ -97,7 +97,8 @@ integrated into a single package that follows your privacy settings.
         <postStartupActivity implementation="com.smallcloud.refactai.Initializer"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.refactai.listeners.DocumentListener"/>
         <editorFactoryListener implementation="com.smallcloud.refactai.listeners.LastEditorGetterListener"/>
-        <statusBarWidgetFactory implementation="com.smallcloud.refactai.status_bar.SMCStatusBarWidgetFactory"/>
+        <statusBarWidgetFactory id="Refact AI Status Bar"
+                                implementation="com.smallcloud.refactai.status_bar.SMCStatusBarWidgetFactory"/>
         <notificationGroup id="Refact AI Notification Group" displayType="BALLOON"/>
         <completion.contributor language="any"
                                 implementationClass="com.smallcloud.refactai.modes.completion.PopupCompletionContributor"

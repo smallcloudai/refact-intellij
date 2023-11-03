@@ -74,15 +74,7 @@ class LastEditorGetterListener : EditorFactoryListener, FileEditorManagerListene
         setup(editor)
     }
 
-    override fun editorCreated(event: EditorFactoryEvent) {
-//        val realEditor = event.editor.project?.let {
-//            getVirtualFile(event.editor)?.let { it1 ->
-//                FileEditorManager.getInstance(it).getAllEditors(it1) }
-//        }?.firstOrNull()
-//        if (realEditor != null) {
-//            setup(event.editor)
-//        }
-    }
+    override fun editorCreated(event: EditorFactoryEvent) {}
 
     override fun dispose() {}
 

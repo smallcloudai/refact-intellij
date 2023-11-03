@@ -60,11 +60,12 @@ class PluginState : Disposable {
                 .loginMessageChanged(newMsg)
         }
 
-    override fun dispose() {
-    }
+    override fun dispose() {}
 
     companion object {
-        var instance = PluginState()
+        @JvmStatic
+        val instance: PluginState
+            get() = ApplicationManager.getApplication().getService(PluginState::class.java)
         fun startup(settings: AppSettingsState) {
             instance.isEnabled = settings.pluginIsEnabled
         }

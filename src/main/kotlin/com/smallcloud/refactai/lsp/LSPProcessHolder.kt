@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.SystemProperties.getUserHome
@@ -45,7 +44,6 @@ interface LSPProcessHolderChangedNotifier {
     }
 }
 
-@Service
 class LSPProcessHolder: Disposable {
     private var process: Process? = null
     private var lastConfig: LSPConfig? = null
@@ -106,7 +104,7 @@ class LSPProcessHolder: Disposable {
         capsTask = schedulerCaps.scheduleWithFixedDelay({
             capabilities = getCaps()
             if (capabilities.cloudName.isNotEmpty()) {
-                capsTask?.cancel(false)
+                capsTask?.cancel(true)
                 schedulerCaps.scheduleWithFixedDelay({
                     capabilities = getCaps()
                 }, 15, 15, TimeUnit.MINUTES)

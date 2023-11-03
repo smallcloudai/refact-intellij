@@ -94,9 +94,9 @@ integrated into a single package that follows your privacy settings.
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="com.smallcloud.refactai.PluginState"/>
         <postStartupActivity implementation="com.smallcloud.refactai.Initializer"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.refactai.listeners.DocumentListener"/>
-        <editorFactoryListener implementation="com.smallcloud.refactai.listeners.LastEditorGetterListener"/>
         <statusBarWidgetFactory id="Refact AI Status Bar"
                                 implementation="com.smallcloud.refactai.status_bar.SMCStatusBarWidgetFactory"/>
         <notificationGroup id="Refact AI Notification Group" displayType="BALLOON"/>

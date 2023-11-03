@@ -40,7 +40,7 @@ class ConnectivityManager : Disposable {
 
     override fun dispose() {
         task?.cancel(true)
-        task?.get()
         task = null
+        scheduler.shutdownNow()
     }
 }

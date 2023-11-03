@@ -122,7 +122,7 @@ class LSPProcessHolder: Disposable {
             val newConfig = LSPConfig(
                 address = address,
                 apiKey = AccountManager.apiKey,
-                port = 8001,
+                port = (32000..32199).random(),
                 clientVersion = "${Resources.client}-${Resources.version}",
                 useTelemetry = true,
             )
@@ -175,7 +175,8 @@ class LSPProcessHolder: Disposable {
     }
 
     private fun safeTerminate() {
-        InferenceGlobalContext.connection.get(url.resolve("/v1/graceful-shutdown")).get().get()
+        InferenceGlobalContext.connection.get(URI(
+            "http://127.0.0.1:${lastConfig!!.port}/v1/graceful-shutdown")).get().get()
     }
 
     private fun terminate() {

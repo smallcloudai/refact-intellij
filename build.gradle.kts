@@ -1,7 +1,7 @@
 plugins {
     id("java")
     id("org.jetbrains.intellij") version "1.16.0"
-    id("org.jetbrains.kotlin.jvm") version "1.8.10"
+    id("org.jetbrains.kotlin.jvm") version "1.8.20"
     id("org.jetbrains.changelog") version "2.0.0"
     id("org.jetbrains.qodana") version "0.1.13"
     id("org.jetbrains.kotlinx.kover") version "0.6.1"
@@ -29,10 +29,12 @@ repositories {
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    version.set("2022.2.1")
-    type.set("PC") // Target IDE Platform
+    version.set("2023.2.1")
+    type.set("IU") // Target IDE Platform
 
-    plugins.set(listOf("Git4Idea"))
+    plugins.set(listOf(
+        "Git4Idea",
+    ))
 }
 
 val javaCompilerVersion = "17"
@@ -48,8 +50,8 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("222")
-        untilBuild.set("232.*")
+        sinceBuild.set("232")
+        untilBuild.set("233.*")
     }
 
     signPlugin {

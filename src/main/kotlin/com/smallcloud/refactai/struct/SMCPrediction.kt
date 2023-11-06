@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 data class SMCStreamingPeace(
     val choices: List<StreamingChoice>,
-    val created: Float,
+    val created: Double,
     val model: String,
     @SerializedName("snippet_telemetry_id") val snippetTelemetryId: Int? = null,
     val cached: Boolean = false

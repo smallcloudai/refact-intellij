@@ -90,7 +90,7 @@ class CompletionState(
             offset = startIndex,
 //            firstLineEndIndex = endIndex,
 //            endIndex = maxOf(endIndex, startIndex),
-            createdTs = System.currentTimeMillis(),
+//            createdTs = System.currentTimeMillis(),
 //            leftSymbolsToRemove = leftSymbolsToRemove,
         )
     }

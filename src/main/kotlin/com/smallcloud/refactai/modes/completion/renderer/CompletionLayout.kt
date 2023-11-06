@@ -70,6 +70,7 @@ class AsyncCompletionLayout(
             needToRender: Boolean,
             animation: Boolean
     ): Future<*>? {
+        if (lastCompletionData != null &&  completionData.createdTs != lastCompletionData?.createdTs) return null
         if (!isUpdating) return null
         updateTask = scheduler.submit {
             lastCompletionData = completionData

@@ -54,6 +54,7 @@ class CompletionMode(
     }
 
     override fun onTextChange(event: DocumentEventExtra) {
+        if (completionInProgress) return
         val fileName = getActiveFile(event.editor.document) ?: return
         if (PrivacyService.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
             == Privacy.DISABLED && !InferenceGlobalContext.isSelfHosted) return
@@ -209,11 +210,12 @@ class CompletionMode(
             if ((!completionInProgress) || (choice.delta.isEmpty() && !choice.finishReason.isNullOrEmpty())) {
                 return@streamedInferenceFetch
             }
-            val completion: Completion = if (completionLayout?.lastCompletionData == null) {
+            val completion: Completion = if (completionLayout?.lastCompletionData == null ||
+                completionLayout?.lastCompletionData?.createdTs != prediction.created) {
                 Completion(request.body.inputs.sources.values.toList().first(),
                     offset = editorState.offset,
                     multiline = request.body.inputs.multiline,
-                    createdTs = prediction.created.toLong(),
+                    createdTs = prediction.created,
                     isFromCache = prediction.cached,
                     snippetTelemetryId = prediction.snippetTelemetryId
                 )
@@ -236,6 +238,7 @@ class CompletionMode(
                 requestFuture = it.get()
                 requestFuture.get()
                 logger.debug("Completion request finished")
+                completionInProgress = false
             } catch (e: InterruptedException) {
                 handleInterruptedException(requestFuture, editorState.editor)
             } catch (e: InterruptedIOException) {

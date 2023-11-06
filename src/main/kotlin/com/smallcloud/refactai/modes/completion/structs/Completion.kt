@@ -6,7 +6,7 @@ data class Completion(
     var completion: String = "",
     val multiline: Boolean,
     val offset: Int,
-    val createdTs: Long,
+    val createdTs: Double = -1.0,
     val isFromCache: Boolean = false,
     var snippetTelemetryId: Int? = null
 ) {

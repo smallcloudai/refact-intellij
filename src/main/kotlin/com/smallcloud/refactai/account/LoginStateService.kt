@@ -74,6 +74,9 @@ class LoginStateService: Disposable {
             try {
                 Logger.getInstance("check_login").warn("call")
                 lastWebsiteLoginStatus = checkLogin(force)
+                if (lastWebsiteLoginStatus == "OK") {
+                    finishedGood()
+                }
                 emitLoginIfNeeded()
             } catch (e: Exception) {
                 e.message?.let { logError("check_login exception", it) }

@@ -1,11 +1,14 @@
 package com.smallcloud.refactai.lsp
 
+import com.smallcloud.refactai.struct.DeploymentMode
+
 data class LSPConfig(
         val address: String? = null,
         val port: Int? = null,
         var apiKey: String? = null,
         var clientVersion: String? = null,
-        var useTelemetry: Boolean = false
+        var useTelemetry: Boolean = false,
+        var deployment: DeploymentMode = DeploymentMode.CLOUD
 ) {
     fun toArgs(): List<String> {
         val params = mutableListOf<String>()
@@ -33,6 +36,11 @@ data class LSPConfig(
 
     val isValid: Boolean
         get() {
-            return address!= null && port!= null && apiKey!= null && clientVersion!= null
+            return address != null
+                && port != null
+                && clientVersion != null
+                // token must be if we are not selfhosted
+                && (deployment == DeploymentMode.SELF_HOSTED ||
+                (apiKey != null && (deployment == DeploymentMode.CLOUD || deployment == DeploymentMode.HF)))
         }
 }

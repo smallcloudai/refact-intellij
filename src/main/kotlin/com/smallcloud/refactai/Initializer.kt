@@ -36,7 +36,7 @@ class Initializer : ProjectActivity, Disposable {
 
         if (InferenceGlobalContext.instance.canRequest()) {
             when (InferenceGlobalContext.instance.deploymentMode) {
-                DeploymentMode.CLOUD -> {
+                DeploymentMode.CLOUD, DeploymentMode.SELF_HOSTED -> {
                     if (!AppSettingsState.instance.startupLoggedIn) {
                         AppSettingsState.instance.startupLoggedIn = true
                         login()

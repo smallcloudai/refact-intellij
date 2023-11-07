@@ -66,7 +66,9 @@ class LSPProcessHolder: Disposable {
             messageBus
                 .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
                 .xDebugLSPPortChanged(newValue)
-            settingsChanged()
+            AppExecutorUtil.getAppScheduledExecutorService().submit {
+                settingsChanged()
+            }
         }
 
     fun startup() {
@@ -74,14 +76,18 @@ class LSPProcessHolder: Disposable {
                 .connect(this)
                 .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                     override fun apiKeyChanged(newApiKey: String?) {
-                        settingsChanged()
+                        AppExecutorUtil.getAppScheduledExecutorService().submit {
+                            settingsChanged()
+                        }
                     }
                 })
         messageBus
                 .connect(this)
                 .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                     override fun userInferenceUriChanged(newUrl: String?) {
-                        settingsChanged()
+                        AppExecutorUtil.getAppScheduledExecutorService().submit {
+                            settingsChanged()
+                        }
                     }
                 })
 
@@ -112,17 +118,20 @@ class LSPProcessHolder: Disposable {
         }, 0, 3, TimeUnit.SECONDS)
     }
 
+
     private fun settingsChanged() {
         synchronized(this) {
             terminate()
             if (xDebugLSPPort != null) return
-            val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
+            val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else
+                InferenceGlobalContext.inferenceUri
             val newConfig = LSPConfig(
                 address = address,
                 apiKey = AccountManager.apiKey,
                 port = (32000..32199).random(),
                 clientVersion = "${Resources.client}-${Resources.version}",
                 useTelemetry = true,
+                deployment = InferenceGlobalContext.deploymentMode
             )
             startProcess(newConfig)
         }
@@ -145,6 +154,7 @@ class LSPProcessHolder: Disposable {
         if (config == lastConfig) return
 
         lastConfig = config
+        capabilities = LSPCapabilities()
         terminate()
         if (lastConfig == null || !lastConfig!!.isValid) return
         logger.warn("LSP start_process " + BIN_PATH + " " + lastConfig!!.toArgs())

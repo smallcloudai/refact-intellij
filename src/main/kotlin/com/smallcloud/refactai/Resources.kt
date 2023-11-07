@@ -66,7 +66,8 @@ object Resources {
     val defaultCodeCompletionUrlSuffix = URI("v1/code-completion")
     val defaultChatUrlSuffix = URI("v1/chat")
     val defaultRecallUrl: URI = defaultCloudUrl.resolve("/v1/streamlined-login-recall-ticket")
-    val defaultLoginUrl: URI = defaultCloudUrl.resolve("/v1/login")
+    val loginSuffixUrl = URI("v1/login")
+    val defaultLoginUrl: URI = defaultCloudUrl.resolve(loginSuffixUrl)
     val defaultReportUrlSuffix: URI = URI("v1/telemetry-network")
     val defaultSnippetAcceptedUrlSuffix: URI = URI("v1/snippet-accepted")
     const val defaultTemperature: Float = 0.2f

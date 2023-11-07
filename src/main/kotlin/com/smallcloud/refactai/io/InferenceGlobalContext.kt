@@ -77,7 +77,7 @@ class InferenceGlobalContext : Disposable {
             lastTask?.cancel(true)
             lastTask = reconnectScheduler.submit {
 //                checkConnection(inferenceUri!!)
-                if (!canRequest()) return@submit
+//                if (!canRequest()) return@submit
 
                 ApplicationManager.getApplication().getService(LoginStateService::class.java)
                         .tryToWebsiteLogin(force = true)

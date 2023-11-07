@@ -9,6 +9,7 @@ import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.defaultCloudAuthLink
 import com.smallcloud.refactai.Resources.defaultLoginUrl
 import com.smallcloud.refactai.Resources.defaultRecallUrl
+import com.smallcloud.refactai.Resources.loginSuffixUrl
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.sendRequest
 import com.smallcloud.refactai.statistic.UsageStatistic
@@ -48,6 +49,12 @@ fun logError(scope: String, msg: String, needChange: Boolean = true) {
     }
 }
 
+fun finishedGood() {
+    val conn = InferenceGlobalContext
+    conn.status = ConnectionStatus.CONNECTED
+    conn.lastErrorMsg = null
+}
+
 
 private fun tryTicketPass(): String? {
     val headers = mutableMapOf("Content-Type" to "application/json", "Authorization" to "codify-${AccountManager.ticket}")
@@ -62,6 +69,7 @@ private fun tryTicketPass(): String? {
             AccountManager.ticket = null
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             UsageStats.addStatistic(true, UsageStatistic("recall"), defaultRecallUrl.toString(), "")
+            finishedGood()
             return null
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
             logError("recall", humanReadableMessage, false)
@@ -82,7 +90,8 @@ private fun tryTicketPass(): String? {
 }
 
 private fun buildLoginUrl(): URI {
-    val urlBuilder = URIBuilder(defaultLoginUrl)
+    val urlBuilder = URIBuilder(if (InferenceGlobalContext.isCloud || InferenceGlobalContext.inferenceUri == null)
+        defaultLoginUrl else URI(InferenceGlobalContext.inferenceUri!!).resolve(loginSuffixUrl))
 
     if (InferenceGlobalContext.developerModeEnabled && InferenceGlobalContext.stagingVersion.isNotEmpty()) {
         urlBuilder.addParameter("want_staging_version", InferenceGlobalContext.stagingVersion)
@@ -135,6 +144,7 @@ private fun tryLoginWithApiKey(): String {
             }
 
             UsageStats.addStatistic(true, UsageStatistic("login"), url.toString(), "")
+            finishedGood()
             return "OK"
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
             logError("login-failed", humanReadableMessage, false)

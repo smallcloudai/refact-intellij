@@ -73,8 +73,15 @@ class UsageStats: Disposable {
                 if (res.body.isNullOrEmpty()) return@submit
 
                 val json = gson.fromJson(res.body, JsonObject::class.java)
-                val success = if (json.has("success")) json.get("success").asInt else null
-                if (success != null && success != 1) {
+                var success = false
+                if (json.has("success")) {
+                    if (json.get("success").asJsonPrimitive.isBoolean) {
+                        success = json.get("success").asBoolean
+                    } else if (json.get("success").asJsonPrimitive.isNumber) {
+                        success = json.get("success").asNumber.toInt() > 0
+                    }
+                }
+                if (!success) {
                     throw Exception(json.get("human_readable_message").asString)
                 }
             } catch (e: Exception) {

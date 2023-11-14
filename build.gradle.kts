@@ -61,6 +61,7 @@ tasks {
     }
 
     publishPlugin {
+        channels.set(listOf(System.getenv("PUBLISH_CHANNEL")))
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
 }
@@ -85,15 +86,20 @@ fun String.runCommand(
 
 fun getVersionString(baseVersion: String): String {
     val tag = "git tag -l --points-at HEAD".runCommand(workingDir = rootDir)
-    if (tag.isNotEmpty() && tag.contains(baseVersion)) return baseVersion
+    if (System.getenv("PUBLISH_EAP") != "1" &&
+        tag.isNotEmpty() && tag.contains(baseVersion)) return baseVersion
 
-    val branch = "git rev-parse --abbrev-ref HEAD".runCommand(workingDir = rootDir)
     val commitId = "git rev-parse --short=8 HEAD".runCommand(workingDir = rootDir)
-    val numberOfCommits = if (branch == "main") {
-        val lastTag = "git describe --tags --abbrev=0 @^".runCommand(workingDir = rootDir)
-        "git rev-list ${lastTag}..HEAD --count".runCommand(workingDir = rootDir)
+    return if (System.getenv("PUBLISH_EAP") == "1") {
+        "$baseVersion-eap-$commitId"
     } else {
-        "git rev-list --count HEAD ^origin/main".runCommand(workingDir = rootDir)
+        val branch = "git rev-parse --abbrev-ref HEAD".runCommand(workingDir = rootDir)
+        val numberOfCommits = if (branch == "main") {
+            val lastTag = "git describe --tags --abbrev=0 @^".runCommand(workingDir = rootDir)
+            "git rev-list ${lastTag}..HEAD --count".runCommand(workingDir = rootDir)
+        } else {
+            "git rev-list --count HEAD ^origin/main".runCommand(workingDir = rootDir)
+        }
+        "$baseVersion-$branch-$numberOfCommits-$commitId"
     }
-    return "$baseVersion-$branch-$numberOfCommits-$commitId"
 }

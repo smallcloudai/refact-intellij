@@ -6,6 +6,12 @@ on:
   # Trigger the workflow on any pull request
   pull_request:
   workflow_dispatch:
+    inputs:
+      eap:
+        required: true
+        description: "EAP"
+        default: 0
+        type: number
 
 jobs:
 
@@ -15,6 +21,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    env:
+      PUBLISH_EAP: ${{ github.event.inputs.eap }}
     outputs:
       version: ${{ steps.properties.outputs.version }}
       changelog: ${{ steps.properties.outputs.changelog }}

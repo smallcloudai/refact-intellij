@@ -1,4 +1,4 @@
-name: Build
+name: Release
 on:
   # Trigger the workflow on pushes to only the 'main' branch (this avoids duplicate checks being run e.g. for dependabot pull requests)
   push:
@@ -17,6 +17,15 @@ jobs:
       version: ${{ steps.properties.outputs.version }}
       changelog: ${{ steps.properties.outputs.changelog }}
     steps:
+      - name: Set env CHANNEL
+        shell: bash
+        run: |
+          GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          if [[ ${GIT_BRANCH} == "main" ]]; then 
+              echo "PUBLISH_CHANNEL=default" >> "$GITHUB_ENV"
+          else
+              echo "PUBLISH_CHANNEL=eap" >> "$GITHUB_ENV"
+          fi
 
       # Free GitHub Actions Environment Disk Space
       - name: Maximize Build Space
@@ -93,10 +102,6 @@ jobs:
           name: pluginVerifier-result
           path: ${{ github.workspace }}/build/reports/pluginVerifier
 
-#      # Run Qodana inspections
-#      - name: Qodana - Code Inspection
-#        uses: JetBrains/qodana-action@v2022.3.4
-
       # Prepare plugin archive content for creating artifact
       - name: Prepare Plugin Artifact
         id: artifact
@@ -118,13 +123,10 @@ jobs:
       - name: Publish Plugin
         env:
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+          PUBLISH_CHANNEL: ${{ env.PUBLISH_CHANNEL }}
+          PUBLISH_EAP: 1
           CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
         run: ./gradlew publishPlugin
 
-#      # Upload artifact as a release asset
-#      - name: Upload Release Asset
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        run: gh release upload ${{ github.event.release.tag_name }} ./build/distributions/*

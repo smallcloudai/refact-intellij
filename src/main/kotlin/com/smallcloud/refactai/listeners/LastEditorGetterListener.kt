@@ -70,8 +70,10 @@ class LastEditorGetterListener : EditorFactoryListener, FileEditorManagerListene
     }
 
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
-        val editor = EditorFactory.getInstance().allEditors.first { getVirtualFile(it) == file }
-        setup(editor)
+        val editor = EditorFactory.getInstance().allEditors.firstOrNull { getVirtualFile(it) == file }
+        if (editor != null) {
+            setup(editor)
+        }
     }
 
     override fun editorCreated(event: EditorFactoryEvent) {}

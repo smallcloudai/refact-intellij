@@ -122,7 +122,7 @@ class ChatGPTProvider : ActionListener {
             InferenceGlobalContext.connection.post(req.uri,
                     reqStr,
                     mapOf("Authorization" to "Bearer ${req.token}"),
-                    dataReceived = { response ->
+                    dataReceived = { response, _ ->
                         fun parse(response: String?): String? {
                             val gson = Gson()
                             val obj = gson.fromJson(response, JsonObject::class.java)

@@ -61,14 +61,15 @@ fun streamedInferenceFetch(
             uri, body, headers,
             stat = request.stat,
             dataReceiveEnded = dataReceiveEnded,
-            dataReceived = {
-                val rawJson = gson.fromJson(it, JsonObject::class.java)
+            dataReceived = {body: String, reqId: String ->
+                val rawJson = gson.fromJson(body, JsonObject::class.java)
                 if (rawJson.has("metering_balance")) {
                     AccountManager.instance.meteringBalance = rawJson.get("metering_balance").asInt
                 }
 
-                val json = gson.fromJson(it, SMCStreamingPeace::class.java)
+                val json = gson.fromJson(body, SMCStreamingPeace::class.java)
                 InferenceGlobalContext.lastAutoModel = json.model
+                json.requestId = reqId
                 UsageStats.addStatistic(true, request.stat, request.uri.toString(), "")
                 dataReceived(json)
             },
@@ -76,7 +77,8 @@ fun streamedInferenceFetch(
                 lookForCommonErrors(it, request)?.let { message ->
                     throw SMCExceptions(message)
                 }
-            }
+            },
+            requestId=request.id
     )
 
     return job

@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.struct
 
+import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
 
 data class SMCStreamingPeace(
@@ -7,7 +8,9 @@ data class SMCStreamingPeace(
     val created: Double,
     val model: String,
     @SerializedName("snippet_telemetry_id") val snippetTelemetryId: Int? = null,
-    val cached: Boolean = false
+    val cached: Boolean = false,
+    @Expose
+    var requestId: String = ""
 )
 
 

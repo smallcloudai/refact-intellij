@@ -87,9 +87,10 @@ class AsyncConnection : Disposable {
             requestProperties: Map<String, String>? = null,
             stat: UsageStatistic = UsageStatistic(),
             dataReceiveEnded: (String) -> Unit = {},
-            dataReceived: (String) -> Unit = {},
+            dataReceived: (String, String) -> Unit =  { _: String, _: String -> },
             errorDataReceived: (JsonObject) -> Unit = {},
             failedDataReceiveEnded: (Throwable?) -> Unit = {},
+            requestId: String = ""
     ): CompletableFuture<Future<*>> {
         val requestProducer: AsyncRequestProducer = BasicRequestProducer(
                 BasicRequestBuilder
@@ -106,20 +107,22 @@ class AsyncConnection : Disposable {
                 requestProducer, uri,
                 stat = stat,
                 dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
-                errorDataReceived = errorDataReceived, failedDataReceiveEnded = failedDataReceiveEnded
+                errorDataReceived = errorDataReceived, failedDataReceiveEnded = failedDataReceiveEnded,
+                requestId=requestId
         )
     }
 
     fun post(
-            uri: URI,
-            body: String? = null,
-            headers: Map<String, String>? = null,
-            requestProperties: Map<String, String>? = null,
-            stat: UsageStatistic,
-            dataReceiveEnded: (String) -> Unit = {},
-            dataReceived: (String) -> Unit = {},
-            errorDataReceived: (JsonObject) -> Unit = {},
-            failedDataReceiveEnded: (Throwable?) -> Unit = {},
+        uri: URI,
+        body: String? = null,
+        headers: Map<String, String>? = null,
+        requestProperties: Map<String, String>? = null,
+        stat: UsageStatistic,
+        dataReceiveEnded: (String) -> Unit = {},
+        dataReceived: (String, String) -> Unit = { _: String, _: String -> },
+        errorDataReceived: (JsonObject) -> Unit = {},
+        failedDataReceiveEnded: (Throwable?) -> Unit = {},
+        requestId: String = ""
     ): CompletableFuture<Future<*>> {
         val requestProducer: AsyncRequestProducer = BasicRequestProducer(
                 BasicRequestBuilder
@@ -135,7 +138,8 @@ class AsyncConnection : Disposable {
                 requestProducer, uri,
                 stat = stat,
                 dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
-                errorDataReceived = errorDataReceived, failedDataReceiveEnded = failedDataReceiveEnded
+                errorDataReceived = errorDataReceived, failedDataReceiveEnded = failedDataReceiveEnded,
+                requestId=requestId
         )
     }
 
@@ -144,9 +148,10 @@ class AsyncConnection : Disposable {
             uri: URI,
             stat: UsageStatistic,
             dataReceiveEnded: (String) -> Unit,
-            dataReceived: (String) -> Unit,
+            dataReceived: (String, String) -> Unit,
             errorDataReceived: (JsonObject) -> Unit,
             failedDataReceiveEnded: (Throwable?) -> Unit = {},
+            requestId: String = ""
     ): CompletableFuture<Future<*>> {
         return CompletableFuture.supplyAsync {
             return@supplyAsync client.execute(
@@ -179,7 +184,7 @@ class AsyncConnection : Disposable {
                                 } catch (_: JsonSyntaxException) {
                                 }
                                 val (dataPieces, maybeLeftOverBuffer) = lookForCompletedDataInStreamingBuf(bufferStr)
-                                dataPieces.forEach { dataReceived(it) }
+                                dataPieces.forEach { dataReceived(it, requestId) }
                                 if (maybeLeftOverBuffer == null) {
                                     return
                                 } else {

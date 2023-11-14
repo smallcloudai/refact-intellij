@@ -3,7 +3,15 @@ package com.smallcloud.refactai.struct
 import com.google.gson.annotations.SerializedName
 import com.smallcloud.refactai.statistic.UsageStatistic
 import java.net.URI
+import java.util.concurrent.ThreadLocalRandom
+import kotlin.streams.asSequence
 
+private val charPool : List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+private fun uuid() = ThreadLocalRandom.current()
+    .ints(8.toLong(), 0, charPool.size)
+    .asSequence()
+    .map(charPool::get)
+    .joinToString("")
 
 data class SMCCursor(
     val file: String = "",
@@ -30,8 +38,9 @@ data class SMCRequestBody(
 )
 
 data class SMCRequest(
-        var uri: URI,
-        var body: SMCRequestBody,
-        var token: String,
-        var stat: UsageStatistic = UsageStatistic(),
+    var uri: URI,
+    var body: SMCRequestBody,
+    var token: String,
+    var id: String = uuid(),
+    var stat: UsageStatistic = UsageStatistic(),
 )

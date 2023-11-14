@@ -65,10 +65,17 @@ class CompletionMode(
         val editor = event.editor
         val logicalPos = event.editor.caretModel.logicalPosition
         val text = editor.document.text
+        var offset = -1
+        ApplicationManager.getApplication().runReadAction {
+            offset = editor.caretModel.offset
+        }
 
         val currentLine = editor.document.text.substring(editor.document.getLineStartOffset(logicalPos.line),
                 editor.document.getLineEndOffset(logicalPos.line))
-        val rightOfCursor = currentLine.substring(logicalPos.column)
+        val rightOfCursor = editor.document.text.substring(offset,
+            editor.document.getLineEndOffset(logicalPos.line))
+        val pos = offset - editor.document.getLineStartOffset(logicalPos.line)
+
         if (!rightOfCursor.matches(specialSymbolsRegex)) return
 
         val isMultiline = currentLine.all { it == ' ' || it == '\t' }
@@ -107,7 +114,7 @@ class CompletionMode(
         val promptInfo: List<PromptInfo> = listOf()
         val stat = UsageStatistic(scope, extension = getExtension(fileName))
         val request = RequestCreator.create(
-            fileName, text, logicalPos.line, logicalPos.column,
+            fileName, text, logicalPos.line, pos,
             stat, "Infill", "infill", promptInfo,
             stream = true, model = InferenceGlobalContext.model ?: Resources.defaultModel,
                 multiline=isMultiline

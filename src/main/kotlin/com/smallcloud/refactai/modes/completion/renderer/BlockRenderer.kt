@@ -21,6 +21,11 @@ class AsyncBlockElementRenderer(
                 field = value
             }
         }
+        get() {
+            return field.map {
+                it.replace("\t", " ".repeat(editor.settings.getTabSize(editor.project)))
+            }
+        }
 
     override fun calcWidthInPixels(inlay: Inlay<*>): Int {
         synchronized(this) {

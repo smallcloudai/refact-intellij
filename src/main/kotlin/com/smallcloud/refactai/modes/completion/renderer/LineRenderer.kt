@@ -20,11 +20,15 @@ class AsyncLineRenderer(
                 field = value
             }
         }
+        get() {
+            return field.replace("\t", " ".repeat(editor.settings.getTabSize(editor.project)))
+        }
 
     override fun calcWidthInPixels(inlay: Inlay<*>): Int {
         synchronized(this) {
             val width = editor.contentComponent
                 .getFontMetrics(RenderHelper.getFont(editor, deprecated)).stringWidth(text)
+
             return maxOf(width, 1)
         }
     }

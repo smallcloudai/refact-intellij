@@ -224,7 +224,6 @@ class LSPProcessHolder: Disposable {
         var res = LSPCapabilities()
         InferenceGlobalContext.connection.get(url.resolve("/v1/caps"),
                 dataReceiveEnded = {},
-                dataReceived = {},
                 errorDataReceived = {}).also {
             var requestFuture: ComplexFuture<*>? = null
             try {

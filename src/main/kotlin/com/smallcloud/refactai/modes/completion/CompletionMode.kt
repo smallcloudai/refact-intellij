@@ -34,7 +34,6 @@ import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as Priv
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 private val specialSymbolsRegex = "^[:\\s\\t\\n\\r(){},.\"'\\];]*\$".toRegex()
-
 class CompletionMode(
     override var needToRender: Boolean = true
 ) : Mode, CaretListener {
@@ -42,6 +41,8 @@ class CompletionMode(
     private val app = ApplicationManager.getApplication()
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("SMCCompletionScheduler", 1)
     private var processTask: Future<*>? = null
+    private var lastRequestId: String = ""
+    private var requestTask: Future<*>? = null
     private var completionLayout: AsyncCompletionLayout? = null
     private val logger = Logger.getInstance("StreamedCompletionMode")
     private var completionInProgress: Boolean = false
@@ -71,7 +72,6 @@ class CompletionMode(
         if (!rightOfCursor.matches(specialSymbolsRegex)) return
 
         val isMultiline = currentLine.all { it == ' ' || it == '\t' }
-
 
         if (!event.force) {
             val docEvent = event.event ?: return
@@ -202,12 +202,23 @@ class CompletionMode(
             request.body.parameters.maxNewTokens = 50
             request.body.noCache = true
         }
+        if (requestTask != null && requestTask!!.isDone && requestTask!!.isCancelled ) {
+            requestTask!!.cancel(true)
+        }
+        lastRequestId = request.id
         streamedInferenceFetch(request, dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             InferenceGlobalContext.lastErrorMsg = null
         }) { prediction ->
             val choice = prediction.choices.first()
-            if ((!completionInProgress) || (choice.delta.isEmpty() && !choice.finishReason.isNullOrEmpty())) {
+            if (lastRequestId != prediction.requestId) {
+                completionLayout?.dispose()
+                completionLayout = null
+                return@streamedInferenceFetch
+            }
+
+            if ((!completionInProgress)
+                || (choice.delta.isEmpty() && !choice.finishReason.isNullOrEmpty())) {
                 return@streamedInferenceFetch
             }
             val completion: Completion = if (completionLayout?.lastCompletionData == null ||
@@ -226,26 +237,23 @@ class CompletionMode(
                 completion.snippetTelemetryId = prediction.snippetTelemetryId
             }
             completion.updateCompletion(choice.delta)
-
             synchronized(this) {
                 renderCompletion(
                     editorState.editor, editorState, completion, !prediction.cached
                 )
             }
         }?.also {
-            var requestFuture: Future<*>? = null
             try {
-                requestFuture = it.get()
-                requestFuture.get()
+                requestTask = it.get()
+                requestTask!!.get()
                 logger.debug("Completion request finished")
                 completionInProgress = false
             } catch (e: InterruptedException) {
-                handleInterruptedException(requestFuture, editorState.editor)
+                handleInterruptedException(requestTask, editorState.editor)
             } catch (e: InterruptedIOException) {
-                handleInterruptedException(requestFuture, editorState.editor)
+                handleInterruptedException(requestTask, editorState.editor)
             } catch (e: ExecutionException) {
                 cancelOrClose()
-                requestFuture?.cancel(true)
                 catchNetExceptions(e.cause)
             } catch (e: Exception) {
                 InferenceGlobalContext.status = ConnectionStatus.ERROR

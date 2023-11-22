@@ -21,6 +21,8 @@ import com.smallcloud.refactai.listeners.GlobalCaretListener
 import com.smallcloud.refactai.listeners.GlobalFocusListener
 import com.smallcloud.refactai.modes.completion.CompletionMode
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
+import com.smallcloud.refactai.modes.diff.DiffMode
+import com.smallcloud.refactai.modes.highlight.HighlightMode
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.statistic.UsageStats
 import java.lang.System.currentTimeMillis
@@ -32,6 +34,8 @@ import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as I
 
 enum class ModeType {
     Completion,
+    Diff,
+    Highlight
 }
 
 
@@ -39,6 +43,8 @@ class ModeProvider(
     private val editor: Editor,
     private val modes: Map<ModeType, Mode> = mapOf(
         ModeType.Completion to CompletionMode(),
+        ModeType.Diff to DiffMode(),
+        ModeType.Highlight to HighlightMode()
     ),
     private var activeMode: Mode? = null,
     private val pluginState: PluginState = PluginState.instance,
@@ -103,7 +109,12 @@ class ModeProvider(
     fun isInCompletionMode(): Boolean =
         activeMode === modes[ModeType.Completion]
 
+    fun isInDiffMode(): Boolean = activeMode === modes[ModeType.Diff]
+    fun isInHighlightMode(): Boolean = activeMode === modes[ModeType.Highlight]
     fun getCompletionMode(): Mode = modes[ModeType.Completion]!!
+
+    fun getDiffMode(): DiffMode = (modes[ModeType.Diff] as DiffMode?)!!
+    fun getHighlightMode(): HighlightMode = (modes[ModeType.Highlight] as HighlightMode?)!!
 
     fun switchMode(newMode: ModeType = ModeType.Completion) {
         if (activeMode == modes[newMode]) return

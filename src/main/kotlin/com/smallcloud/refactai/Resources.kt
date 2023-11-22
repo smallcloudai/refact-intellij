@@ -64,9 +64,11 @@ object Resources {
     const val defaultCloudAuthLink: String = "https://refact.smallcloud.ai/authentication?token=%s&utm_source=plugin&utm_medium=jetbrains&utm_campaign=login"
     val defaultCloudUrl: URI = URI("https://www.smallcloud.ai")
     val defaultCodeCompletionUrlSuffix = URI("v1/code-completion")
+    val defaultContrastUrlSuffix = URI("v1/contrast")
     val defaultChatUrlSuffix = URI("v1/chat")
     val defaultRecallUrl: URI = defaultCloudUrl.resolve("/v1/streamlined-login-recall-ticket")
     val loginSuffixUrl = URI("v1/login")
+    val defaultLikeReportUrl: URI = defaultCloudUrl.resolve("/v1/longthink-like")
     val defaultLoginUrl: URI = defaultCloudUrl.resolve(loginSuffixUrl)
     val defaultReportUrlSuffix: URI = URI("v1/telemetry-network")
     val defaultSnippetAcceptedUrlSuffix: URI = URI("v1/snippet-accepted")
@@ -77,6 +79,7 @@ object Resources {
     const val loginCoolDown: Int = 300 // sec
     const val titleStr: String = "RefactAI"
     val pluginId: PluginId = getPluginId()
+    const val stagingFilterPrefix: String = "STAGING"
     val jbBuildVersion: String = ApplicationInfo.getInstance().build.toString()
     const val refactAIRootSettingsID = "refactai_root"
 

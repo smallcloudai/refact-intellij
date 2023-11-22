@@ -4,10 +4,8 @@ import com.intellij.ide.plugins.PluginInstaller
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
-import com.intellij.openapi.util.Disposer
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.io.ConnectivityManager
@@ -27,9 +25,8 @@ class Initializer : ProjectActivity, Disposable {
         initialize(project)
     }
     private fun initialize(project: Project) {
-        val listener = LastEditorGetterListener()
-        Disposer.register(PluginState.instance, listener)
-        EditorFactory.getInstance().addEditorFactoryListener(listener, PluginState.instance)
+        val listener = LastEditorGetterListener.instance
+//        Disposer.register(PluginState.instance, listener)
 
         Logger.getInstance("SMCInitializer").info("Bin prefix = ${Resources.binPrefix}")
         ConnectivityManager.instance.startup()

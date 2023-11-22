@@ -48,6 +48,7 @@ class LastEditorGetterListener : EditorFactoryListener, FileEditorManagerListene
         ApplicationManager.getApplication()
                 .messageBus.connect(this)
                 .subscribe<FileEditorManagerListener>(FileEditorManagerListener.FILE_EDITOR_MANAGER, this)
+        instance = this
     }
 
     private fun setup(editor: Editor) {
@@ -81,6 +82,7 @@ class LastEditorGetterListener : EditorFactoryListener, FileEditorManagerListene
     override fun dispose() {}
 
     companion object {
+        lateinit var instance: LastEditorGetterListener
         var LAST_EDITOR: Editor? = null
     }
 }

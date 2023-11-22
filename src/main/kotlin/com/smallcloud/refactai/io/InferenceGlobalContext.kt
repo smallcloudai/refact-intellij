@@ -4,10 +4,9 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
+import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.LoginStateService
-import com.smallcloud.refactai.struct.DeploymentMode
-import com.smallcloud.refactai.struct.SMCRequest
-import com.smallcloud.refactai.struct.SMCRequestBody
+import com.smallcloud.refactai.struct.*
 import java.net.URI
 import java.util.concurrent.Future
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
@@ -198,6 +197,17 @@ class InferenceGlobalContext : Disposable {
 //        requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
 //        requestData.client = "${Resources.client}-${Resources.version}"
         return SMCRequest(LSPProcessHolder.url, requestData, apiKey ?: "self_hosted")
+    }
+
+    @Deprecated("Will be removed in next release")
+    fun makeRequestOld(requestData: SMCRequestBodyOld): SMCRequestOld? {
+        val apiKey = AccountManager.apiKey
+//        if (apiKey.isNullOrEmpty() && isCloud) return null
+
+        requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
+        requestData.client = "${Resources.client}-${Resources.version}"
+        val uri = inferenceUri?.let { URI(it) } ?: cloudInferenceUri ?: return null
+        return SMCRequestOld(uri, requestData, apiKey ?: "self_hosted")
     }
 
     override fun dispose() {

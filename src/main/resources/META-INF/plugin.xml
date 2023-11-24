@@ -51,6 +51,18 @@
     version</a>.
 </p>
 
+<h3>Refact Enterprise Edition</h3>
+<p>Refact Enterprise Edition is tailored for teams looking for complete control of their Refact experience. This plan includes a suite of advanced features such as:</p>
+
+<ul>
+	<li><strong>Fine-Tuning</strong></li>
+	<li><strong>Access Control</strong></li>
+	<li><strong>vLLM Support</strong></li>
+</ul>
+
+<p>For a detailed guide on all the features and benefits of the Refact Enterprise Edition, please refer to our <a href="https://docs.refact.ai/guides/enterprise/">documentation</a>.</p>
+
+
 <h3>Support & Feedback</h3>
 <p>
     Join our <a href="https://www.smallcloud.ai/discord">Discord</a> to get to know other community members, send us
@@ -64,22 +76,21 @@
 </h5>
 ]]></description>
 
-
     <change-notes><![CDATA[
-<p>Refact.ai is an AI coding assistant, available for JetBrains IDEs and Visual Studio Code. In this major release, we introduce</p>
+<p>Refact.ai is an AI coding assistant, available for JetBrains IDEs and Visual Studio Code.</p>
+
+<p>In this major release, we introduce:</p>
 <ul>
-  <li>All new AI Toolbox, that allows you to operate on existing code.
-  You can automatically make your code shorter, cleaner, and fix bugs — improving your efficiency as an engineer.</li>
-  <li>The new Refact.ai Chat integration is ready to give you hints on APIs usage, documentation links, and much more.</li>
-  <li>The new Privacy Settings page lets you point out which code is OK to send to the cloud for inference,
-  and which isn’t. This works on per project and even per file basis.</li>
+<li>RustRover support.</li>
+<li>All new plugins are powered by <a href="https://github.com/smallcloudai/refact-lsp">Refact LSP</a>, our new open-source server written in Rust! Refact LSP converts high-level code completion, or chat requests into low-level LLM prompts and converts results back. </li>
+<li>Bugfixes and performance improvements</li>
 </ul>
-<p>Our code completion is fast & responsive, looks up and down from the cursor position,
-and works with 20+ programming languages!
-</p>
+
+<p>Our code completion is now faster and more responsive with improved indentation, multiline code completion and chat responsiveness.</p>
+
 <p>In the Pro version, you can enjoy all of those AI features,
-integrated into a single package that follows your privacy settings.
-</p>
+integrated into a single package that follows your privacy settings.</p>
+
 <p>Check out our Trial version, ready to start working for you in seconds!</p>
 ]]></change-notes>
 

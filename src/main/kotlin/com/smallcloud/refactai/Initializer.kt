@@ -25,9 +25,6 @@ class Initializer : ProjectActivity, Disposable {
         initialize(project)
     }
     private fun initialize(project: Project) {
-        val listener = LastEditorGetterListener.instance
-//        Disposer.register(PluginState.instance, listener)
-
         Logger.getInstance("SMCInitializer").info("Bin prefix = ${Resources.binPrefix}")
         ConnectivityManager.instance.startup()
 

@@ -41,6 +41,7 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
             "; VM: " + properties.getProperty("java.vm.name", "unknown") +
             "; Vendor: " + properties.getProperty("java.vendor", "unknown")
         val os = SystemInfo.getOsNameAndVersion()
+        val arch = SystemInfo.OS_ARCH
         val issueBody = """
       |An internal error happened in the IDE plugin.
       |
@@ -56,6 +57,7 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
       |- IDE: $ideNameAndVersion
       |- JDK: $jdk
       |- OS: $os
+      |- ARCH: $arch
       |- MODE: $mode
       |
       |### Additional information

@@ -6,7 +6,8 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
-import com.intellij.util.SystemProperties.getUserHome
+import com.intellij.openapi.util.io.FileUtil.getTempDirectory
+import com.intellij.openapi.util.io.FileUtil.setExecutable
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
 import com.intellij.util.messages.Topic
@@ -99,9 +100,7 @@ class LSPProcessHolder: Disposable {
                 val path = Paths.get(BIN_PATH)
                 path.parent.toFile().mkdirs()
                 Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
-                if (!SystemInfo.isWindows) {
-                    GeneralCommandLine(listOf("chmod", "+x", BIN_PATH)).createProcess()
-                }
+                setExecutable(path.toFile())
             }
         }
         settingsChanged()
@@ -158,10 +157,22 @@ class LSPProcessHolder: Disposable {
         terminate()
         if (lastConfig == null || !lastConfig!!.isValid) return
         logger.warn("LSP start_process " + BIN_PATH + " " + lastConfig!!.toArgs())
-        process = GeneralCommandLine(listOf(BIN_PATH) + lastConfig!!.toArgs())
-                .withRedirectErrorStream(true)
-                .createProcess()
-        process!!.waitFor(3, TimeUnit.SECONDS)
+        var attempt = 0
+        while (attempt < 5) {
+            try {
+                process = GeneralCommandLine(listOf(BIN_PATH) + lastConfig!!.toArgs())
+                    .withRedirectErrorStream(true)
+                    .createProcess()
+                process!!.waitFor(3, TimeUnit.SECONDS)
+                break
+            } catch (e: Exception) {
+                attempt++
+                logger.warn("LSP start_process didn't start attempt=${attempt}")
+                if (attempt == 5) {
+                    throw e
+                }
+            }
+        }
         loggerTask = scheduler.submit {
             val reader = process!!.inputStream.bufferedReader()
             var line = reader.readLine()
@@ -201,8 +212,7 @@ class LSPProcessHolder: Disposable {
     }
 
     companion object {
-        private val BIN_PATH = Path(getUserHome(), ".refact", "bin",
-                "refact-lsp${getExeSuffix()}").toString()
+        private val BIN_PATH = Path(getTempDirectory(), "refact-lsp${getExeSuffix()}").toString()
         @JvmStatic
         val instance: LSPProcessHolder
             get() = ApplicationManager.getApplication().getService(LSPProcessHolder::class.java)

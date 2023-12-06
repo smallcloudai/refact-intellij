@@ -234,7 +234,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     component!!.icon = getIcon()
                     component!!.toolTipText = newMsg ?: getTooltipText()
                     myStatusBar!!.updateWidget(ID())
-                    val statusBar = WindowManager.getInstance().getStatusBar(myProject)
+                    val statusBar = WindowManager.getInstance().getStatusBar(project)
                     statusBar?.component?.updateUI()
                 },
                 ModalityState.any()

@@ -15,6 +15,7 @@ import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.LightEditActionFactory
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.text.StringUtil
@@ -24,7 +25,6 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.ui.scale.JBUIScale
-import com.intellij.util.IconUtil
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -67,7 +67,7 @@ private class FullColorizeFilter(val color: Color) : RGBImageFilter() {
 
 
 internal fun colorize(originalIcon: Icon, foreground: Color): Icon {
-    return IconUtil.filterIcon(originalIcon, { FullColorizeFilter(foreground) }, null)
+    return IconLoader.filterIcon(originalIcon) { FullColorizeFilter(foreground) }
 }
 
 private fun getFilenameFromEditor(editor: Editor?): String {

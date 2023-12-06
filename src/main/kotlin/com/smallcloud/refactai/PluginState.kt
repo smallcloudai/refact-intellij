@@ -67,7 +67,7 @@ class PluginState : Disposable {
         val instance: PluginState
             get() = ApplicationManager.getApplication().getService(PluginState::class.java)
         fun startup(settings: AppSettingsState) {
-            instance.isEnabled = settings.pluginIsEnabled
+            instance.isEnabled = true
         }
     }
 }

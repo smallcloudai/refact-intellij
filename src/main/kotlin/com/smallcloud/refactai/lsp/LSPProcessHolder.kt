@@ -25,6 +25,7 @@ import java.nio.file.StandardCopyOption
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
+import kotlin.io.path.deleteIfExists
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
@@ -99,6 +100,7 @@ class LSPProcessHolder: Disposable {
             } else {
                 val path = Paths.get(BIN_PATH)
                 path.parent.toFile().mkdirs()
+                path.deleteIfExists()
                 Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
                 setExecutable(path.toFile())
             }

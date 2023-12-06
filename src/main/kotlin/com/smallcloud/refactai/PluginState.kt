@@ -11,7 +11,6 @@ interface ExtraInfoChangedNotifier {
     fun tooltipMessageChanged(newMsg: String?) {}
     fun inferenceMessageChanged(newMsg: String?) {}
     fun loginMessageChanged(newMsg: String?) {}
-    fun pluginEnableChanged(newVal: Boolean) {}
 
     companion object {
         val TOPIC = Topic.create("Extra Info Changed Notifier", ExtraInfoChangedNotifier::class.java)
@@ -20,15 +19,6 @@ interface ExtraInfoChangedNotifier {
 
 class PluginState : Disposable {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
-
-    var isEnabled: Boolean = false
-        set(value) {
-            if (value == field) return
-            field = value
-            messageBus
-                .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
-                .pluginEnableChanged(field)
-        }
 
     var tooltipMessage: String? = null
         get() = AppSettingsState.instance.tooltipMessage
@@ -67,7 +57,6 @@ class PluginState : Disposable {
         val instance: PluginState
             get() = ApplicationManager.getApplication().getService(PluginState::class.java)
         fun startup(settings: AppSettingsState) {
-            instance.isEnabled = true
         }
     }
 }

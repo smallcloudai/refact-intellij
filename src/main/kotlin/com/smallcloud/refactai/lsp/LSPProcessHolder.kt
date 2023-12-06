@@ -3,13 +3,13 @@ package com.smallcloud.refactai.lsp
 import com.google.gson.Gson
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.util.io.FileUtil.getTempDirectory
 import com.intellij.openapi.util.io.FileUtil.setExecutable
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.intellij.util.io.delete
 import com.intellij.util.messages.MessageBus
 import com.intellij.util.messages.Topic
 import com.smallcloud.refactai.Resources
@@ -26,7 +26,6 @@ import java.nio.file.StandardCopyOption
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
-import kotlin.io.path.exists
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
@@ -101,15 +100,11 @@ class LSPProcessHolder: Disposable {
             } else {
                 val path = Paths.get(BIN_PATH)
                 path.parent.toFile().mkdirs()
-                if (path.exists()) {
-                    path.delete()
-                }
                 Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
                 setExecutable(path.toFile())
             }
         }
         settingsChanged()
-
 
         capsTask = schedulerCaps.scheduleWithFixedDelay({
             capabilities = getCaps()
@@ -217,7 +212,9 @@ class LSPProcessHolder: Disposable {
     }
 
     companion object {
-        private val BIN_PATH = Path(getTempDirectory(), "refact-lsp${getExeSuffix()}").toString()
+        private val BIN_PATH = Path(getTempDirectory(),
+            ApplicationInfo.getInstance().build.toString().replace(Regex("[^A-Za-z0-9 ]"), "_") +
+            "_refact_lsp${getExeSuffix()}").toString()
         @JvmStatic
         val instance: LSPProcessHolder
             get() = ApplicationManager.getApplication().getService(LSPProcessHolder::class.java)

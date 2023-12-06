@@ -3,8 +3,6 @@ package com.smallcloud.refactai.privacy
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.project.VetoableProjectManagerListener
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.smallcloud.refactai.settings.PrivacyState
@@ -73,14 +71,10 @@ data class PrivacyMember(
 }
 
 
-class PrivacyService : VetoableProjectManagerListener, Disposable {
+class PrivacyService : Disposable {
     private var privacyTree: MutableMap<String, PrivacyMember> = emptyMap<String, PrivacyMember>().toMutableMap()
 
-    init {
-        ProjectManager.getInstance().addProjectManagerListener(this)
-    }
-
-    override fun projectOpened(project: Project) {
+    fun projectOpened(project: Project) {
         val path = project.basePath
         val virtualFile = VirtualFileManager.getInstance().findFileByNioPath(Path.of(path))
         val node = virtualFile?.let { getMember(it) }
@@ -231,11 +225,7 @@ class PrivacyService : VetoableProjectManagerListener, Disposable {
             get() = ApplicationManager.getApplication().getService(PrivacyService::class.java)
     }
 
-    override fun canClose(project: Project): Boolean {
-        return true
-    }
-
     override fun dispose() {
-        ProjectManager.getInstance().removeProjectManagerListener(this)
+
     }
 }

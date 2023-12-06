@@ -39,7 +39,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
     var loginMessage: String? = null
     var tooltipMessage: String? = null
     var inferenceMessage: String? = null
-    var pluginIsEnabled: Boolean = true
     var useAutoCompletion: Boolean = true
     var useMultipleFilesCompletion: Boolean = false
     var startupLoggedIn: Boolean = false
@@ -111,10 +110,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
 
                 override fun inferenceMessageChanged(newMsg: String?) {
                     instance.inferenceMessage = newMsg
-                }
-
-                override fun pluginEnableChanged(newVal: Boolean) {
-                    instance.pluginIsEnabled = newVal
                 }
             })
         messageBus

@@ -100,10 +100,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 override fun inferenceMessageChanged(newMsg: String?) {
                     update(newMsg)
                 }
-
-                override fun pluginEnableChanged(newVal: Boolean) {
-                    update(null)
-                }
             })
         ApplicationManager.getApplication()
             .messageBus
@@ -158,8 +154,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private fun getIcon(): Icon {
-        if (!PluginState.instance.isEnabled)
-            return AllIcons.Diff.GutterCheckBoxIndeterminate
         if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud) {
             return LOGO_12x12
         }
@@ -240,7 +234,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     component!!.icon = getIcon()
                     component!!.toolTipText = newMsg ?: getTooltipText()
                     myStatusBar!!.updateWidget(ID())
-                    val statusBar = WindowManager.getInstance().getStatusBar(myProject)
+                    val statusBar = WindowManager.getInstance().getStatusBar(project)
                     statusBar?.component?.updateUI()
                 },
                 ModalityState.any()

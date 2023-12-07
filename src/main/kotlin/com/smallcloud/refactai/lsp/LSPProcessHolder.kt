@@ -3,6 +3,7 @@ package com.smallcloud.refactai.lsp
 import com.google.gson.Gson
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
@@ -104,7 +105,6 @@ class LSPProcessHolder: Disposable {
             }
         }
         settingsChanged()
-
 
         capsTask = schedulerCaps.scheduleWithFixedDelay({
             capabilities = getCaps()
@@ -212,7 +212,9 @@ class LSPProcessHolder: Disposable {
     }
 
     companion object {
-        private val BIN_PATH = Path(getTempDirectory(), "refact-lsp${getExeSuffix()}").toString()
+        private val BIN_PATH = Path(getTempDirectory(),
+            ApplicationInfo.getInstance().build.toString().replace(Regex("[^A-Za-z0-9 ]"), "_") +
+            "_refact_lsp${getExeSuffix()}").toString()
         @JvmStatic
         val instance: LSPProcessHolder
             get() = ApplicationManager.getApplication().getService(LSPProcessHolder::class.java)

@@ -49,8 +49,6 @@ class ModeProvider(
     private var activeMode: Mode? = null,
     private val pluginState: PluginState = PluginState.instance,
 ) : Disposable, InferenceGlobalContextChangedNotifier {
-    private val isEnabled: Boolean
-        get() = pluginState.isEnabled
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -123,37 +121,28 @@ class ModeProvider(
     }
 
     fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {
-        if (!isEnabled) return
         if (event?.newFragment.toString() == DUMMY_IDENTIFIER) return
         beforeTextChangeEventsQueue.add(DocumentEventExtra(event, editor, currentTimeMillis()))
     }
 
     fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean) {
-        if (!isEnabled) return
         if (event?.newFragment.toString() == DUMMY_IDENTIFIER) return
         onTextChangeEventsQueue.add(DocumentEventExtra(event, editor, currentTimeMillis(), force))
     }
 
     fun onCaretChange(event: CaretEvent) {
-        if (!isEnabled) return
         activeMode?.onCaretChange(event)
     }
 
-    fun focusGained() {
-        if (!isEnabled) return
-    }
+    fun focusGained() {}
 
-    fun focusLost() {
-        if (!isEnabled) return
-    }
+    fun focusLost() {}
 
     fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
-        if (!isEnabled) return
         activeMode?.onTabPressed(editor, caret, dataContext)
     }
 
     fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
-        if (!isEnabled) return
         activeMode?.onEscPressed(editor, caret, dataContext)
     }
 

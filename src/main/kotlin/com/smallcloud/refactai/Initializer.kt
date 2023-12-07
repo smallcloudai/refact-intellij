@@ -10,7 +10,6 @@ import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.io.ConnectivityManager
 import com.smallcloud.refactai.io.InferenceGlobalContext
-import com.smallcloud.refactai.listeners.LastEditorGetterListener
 import com.smallcloud.refactai.listeners.UninstallListener
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.notifications.notificationStartup
@@ -19,12 +18,16 @@ import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.settingsStartup
 import com.smallcloud.refactai.statistic.UsageStats
 import com.smallcloud.refactai.struct.DeploymentMode
+import java.util.concurrent.atomic.AtomicBoolean
 
 class Initializer : ProjectActivity, Disposable {
     override suspend fun execute(project: Project) {
-        initialize(project)
-    }
-    private fun initialize(project: Project) {
+        PrivacyService.instance.projectOpened(project)
+        val shouldInitialize = !(initialized.getAndSet(true) || ApplicationManager.getApplication().isUnitTestMode)
+        if (!shouldInitialize) {
+            return
+        }
+
         Logger.getInstance("SMCInitializer").info("Bin prefix = ${Resources.binPrefix}")
         ConnectivityManager.instance.startup()
 
@@ -46,7 +49,6 @@ class Initializer : ProjectActivity, Disposable {
         settingsStartup()
         notificationStartup()
         UsageStats.instance
-        PrivacyService.instance.projectOpened(project)
         PluginInstaller.addStateListener(UninstallListener())
         UpdateChecker.instance
         LSPProcessHolder.instance.startup()
@@ -55,4 +57,7 @@ class Initializer : ProjectActivity, Disposable {
     override fun dispose() {
     }
 
+    companion object {
+        private val initialized = AtomicBoolean(false)
+    }
 }

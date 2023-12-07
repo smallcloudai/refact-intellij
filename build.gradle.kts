@@ -19,7 +19,7 @@ dependencies {
 
 
 group = "com.smallcloud"
-version = getVersionString("1.2.5")
+version = getVersionString("1.2.7")
 
 repositories {
     mavenCentral()

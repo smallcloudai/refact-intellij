@@ -52,7 +52,7 @@ class AppSettingsConfigurable : Configurable {
     override fun isModified(): Boolean {
         var modified =
             (mySettingsComponent!!.tokenText.isNotEmpty() && (AccountManager.apiKey == null ||
-                    mySettingsComponent!!.tokenText != AccountManager.apiKey))
+                    mySettingsComponent!!.tokenText.trim() != AccountManager.apiKey))
         modified = modified || (mySettingsComponent!!.tokenText.isEmpty() && AccountManager.apiKey != null)
 
         modified = modified || (mySettingsComponent!!.modelText.isNotEmpty()
@@ -84,7 +84,7 @@ class AppSettingsConfigurable : Configurable {
     }
 
     override fun apply() {
-        AccountManager.apiKey = mySettingsComponent!!.tokenText.ifEmpty { null }
+        AccountManager.apiKey = mySettingsComponent!!.tokenText.trim().ifEmpty { null }
         InferenceGlobalContext.model = mySettingsComponent!!.modelText.ifEmpty { null }
         InferenceGlobalContext.inferenceUri =
             makeRightUrl(mySettingsComponent!!.contrastUrlText.ifEmpty { null })

@@ -69,7 +69,7 @@ class HistoryComponent(private val state: State): JBPanel<HistoryComponent>(), N
         mainPanel.isOpaque = false
         mainPanel.border = JBUI.Borders.emptyLeft(8)
         add(mainPanel)
-        var helloString = RefactAIBundle.message("aiToolbox.panes.chat.helloString", "\uD83D\uDC4B")
+        var helloString = RefactAIBundle.message("aiToolbox.panes.chat.helloString")
         if (!AccountManager.isLoggedIn) {
             helloString += " ${RefactAIBundle.message("aiToolbox.panes.chat.dontForgetLogin")}"
         }

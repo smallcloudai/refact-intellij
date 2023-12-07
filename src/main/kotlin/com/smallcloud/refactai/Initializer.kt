@@ -5,7 +5,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.startup.StartupActivity
+import com.intellij.openapi.startup.ProjectActivity
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.io.ConnectivityManager
@@ -20,8 +20,8 @@ import com.smallcloud.refactai.statistic.UsageStats
 import com.smallcloud.refactai.struct.DeploymentMode
 import java.util.concurrent.atomic.AtomicBoolean
 
-class Initializer : StartupActivity, Disposable {
-    override fun runActivity(project: Project) {
+class Initializer : ProjectActivity, Disposable {
+    override suspend fun execute(project: Project) {
         PrivacyService.instance.projectOpened(project)
         val shouldInitialize = !(initialized.getAndSet(true) || ApplicationManager.getApplication().isUnitTestMode)
         if (!shouldInitialize) {

@@ -1,6 +1,6 @@
 package com.smallcloud.refactai.aitoolbox.table.renderers
 
-import com.intellij.openapi.util.IconLoader
+import com.intellij.util.IconUtil
 import java.awt.Color
 import java.awt.image.RGBImageFilter
 import javax.swing.Icon
@@ -23,5 +23,5 @@ private class FullColorizeFilter(val color: Color) : RGBImageFilter() {
 
 
 internal fun colorize(originalIcon: Icon, foreground: Color): Icon {
-    return IconLoader.filterIcon(originalIcon) { FullColorizeFilter(foreground) }
+    return IconUtil.filterIcon(originalIcon, { FullColorizeFilter(foreground) }, null)
 }

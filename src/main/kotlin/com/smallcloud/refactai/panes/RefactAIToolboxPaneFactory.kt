@@ -7,12 +7,25 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentFactory
+
+import com.intellij.util.ui.JBUI
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.aitoolbox.ToolboxPane
 import com.smallcloud.refactai.panes.gptchat.ChatGPTPanes
 import com.smallcloud.refactai.utils.getLastUsedProject
+import org.cef.browser.CefBrowser
+import org.cef.handler.CefLoadHandlerAdapter
+import java.awt.BorderLayout
+import javax.swing.JPanel
+import com.google.gson.JsonObject
+import com.google.gson.Gson
+import com.intellij.ui.jcef.*
 
+val JS_POOL_SIZE = "200"
 class RefactAIToolboxPaneFactory : ToolWindowFactory {
+    init {
+        System.setProperty("ide.browser.jcef.jsQueryPoolSize", JS_POOL_SIZE)
+    }
     override fun init(toolWindow: ToolWindow) {
         toolWindow.setIcon(Resources.Icons.LOGO_RED_13x13)
         super.init(toolWindow)
@@ -40,6 +53,77 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
         content.isCloseable = false
         content.putUserData(panesKey, gptChatPanes)
         toolWindow.contentManager.addContent(content)
+
+
+        val browser = JBCefBrowser()
+        browser.jbCefClient.setProperty(
+            JBCefClient.Properties.JS_QUERY_POOL_SIZE,
+            JS_POOL_SIZE,
+        )
+        // browser.loadURL("http://127.0.0.1:8001/webgui/chat.html");
+        browser.loadHTML("""<html>
+          <body>
+              <iframe id="chat" src="http://127.0.0.1:8001/webgui/chat.html"></iframe>
+          </body>
+          <script>
+          (function(){
+              const iframe = document.getElementById("chat")
+               window.addEventListener("message", (event) => {
+                 const wasFromIframe = event.source === iframe.contentWindow;
+                 if(wasFromIframe) {
+                    const { type, ...data } = event.data; 
+                    window.postIntellijMessage && window.postIntellijMessage(type, data);
+                  } else  {
+                    iframe.contentWindow.postMessage(event.data, "*");
+                  }
+               })
+          })()
+          </script>
+        </html>""".trimIndent())
+        val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
+        myJSQueryOpenInBrowser.addHandler { msg ->
+            val json = Gson().fromJson(msg, JsonObject::class.java)
+            val type = json.get("type").asString
+            val data = json.get("data").asJsonObject
+            when(type) {
+                "user_submit_name" -> {
+                    data.addProperty("type", "update_name")
+                    val dataAsJson = Gson().toJson(data)
+                    val script = """window.postMessage($dataAsJson, "*");"""
+                    browser.executeJavaScriptAsync(script)
+                }
+            }
+
+            null
+        }
+
+        browser.jbCefClient.addLoadHandler(object: CefLoadHandlerAdapter() {
+            override fun onLoadingStateChange(
+                browser: CefBrowser?,
+                isLoading: Boolean,
+                canGoBack: Boolean,
+                canGoForward: Boolean
+            ) {
+                if (!isLoading) {
+                    // The page has finished loading
+                    val script = """window.postIntellijMessage = function(type, data) {
+                        const msg = JSON.stringify({type, data});
+                        ${myJSQueryOpenInBrowser.inject("msg")}
+                    }""".trimIndent()
+                    browser?.executeJavaScript(script, browser.url, 0);
+                }
+            }
+        }, browser.cefBrowser)
+
+
+        val chatIframeContent: Content = contentFactory.createContent(
+              browser.component,
+            "Iframe",
+            false
+        )
+
+        chatIframeContent.isCloseable = false
+        toolWindow.contentManager.addContent(chatIframeContent)
     }
 
     companion object {

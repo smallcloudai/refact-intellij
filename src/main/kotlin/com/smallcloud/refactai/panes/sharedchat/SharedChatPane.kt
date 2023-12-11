@@ -34,12 +34,25 @@ class SharedChatPane {
             val data = json.get("data").asJsonObject
             when (type) {
                 // TODO: handle events from chat.html
-                "user_submit_name" -> {
-                    data.addProperty("type", "update_name")
-                    val dataAsJson = Gson().toJson(data)
-                    val script = """window.postMessage($dataAsJson, "*");"""
-                    browser.executeJavaScriptAsync(script)
+                "chat-question-enter-hit" -> {
+
                 }
+                "open-new-file" -> {
+
+                }
+                "stop-clicked" -> {
+
+                }
+                "diff-paste-back" -> {
+
+                }
+ 
+//                "user_submit_name" -> {
+//                    data.addProperty("type", "update_name")
+//                    val dataAsJson = Gson().toJson(data)
+//                    val script = """window.postMessage($dataAsJson, "*");"""
+//                    browser.executeJavaScriptAsync(script)
+//                }
             }
 
             null

@@ -1,6 +1,5 @@
 package com.smallcloud.refactai.settings
 
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
@@ -27,7 +26,7 @@ import com.smallcloud.refactai.account.AccountManager.Companion.instance as Acco
     Storage("CodifySettings.xml", deprecated = true),
     Storage("SMCSettings.xml"),
 ])
-class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable {
+class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var apiKey: String? = null
     var temperature: Float? = null
     var model: String? = null
@@ -135,8 +134,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState>, Disposable 
         val instance: AppSettingsState
             get() = ApplicationManager.getApplication().getService(AppSettingsState::class.java)
     }
-
-    override fun dispose() {}
 }
 
 fun settingsStartup() {

@@ -52,6 +52,7 @@ class ChatGPTPane : JPanel(), Disposable {
         rows = 3
     }).also {
         it.setExtraActions(sendAction)
+        Disposer.register(this, it)
     }
 
 

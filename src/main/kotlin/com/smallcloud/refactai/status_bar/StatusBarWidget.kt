@@ -225,13 +225,21 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private fun update(newMsg: String?) {
+        val icon = if (ApplicationManager.getApplication().isDispatchThread) {
+            ApplicationManager.getApplication().runWriteAction<Icon> {
+                return@runWriteAction getIcon()
+            }
+        } else {
+            getIcon()
+        }
+
         ApplicationManager.getApplication()
             .invokeLater(
                 {
                     if (project.isDisposed || myStatusBar == null) {
                         return@invokeLater
                     }
-                    component!!.icon = getIcon()
+                    component!!.icon = icon
                     component!!.toolTipText = newMsg ?: getTooltipText()
                     myStatusBar!!.updateWidget(ID())
                     val statusBar = WindowManager.getInstance().getStatusBar(project)

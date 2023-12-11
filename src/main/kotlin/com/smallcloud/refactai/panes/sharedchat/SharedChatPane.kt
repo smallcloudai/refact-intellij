@@ -46,13 +46,6 @@ class SharedChatPane {
                 "diff-paste-back" -> {
 
                 }
- 
-//                "user_submit_name" -> {
-//                    data.addProperty("type", "update_name")
-//                    val dataAsJson = Gson().toJson(data)
-//                    val script = """window.postMessage($dataAsJson, "*");"""
-//                    browser.executeJavaScriptAsync(script)
-//                }
             }
 
             null
@@ -76,8 +69,9 @@ class SharedChatPane {
 
                     // populate the chat with some data.
                     val initData = """{"command":"chat-models-populate","chat_models":["gpt-3.5-turbo"],"chat_use_model":"gpt-3.5-turbo"}"""
-                    val initScript = """window.postMessage($initData, "*");"""
-                    browser.executeJavaScript(initScript, browser.url, 0)
+                    // val initScript = """window.postMessage($initData, "*");"""
+                    // browser.executeJavaScript(initScript, browser.url, 0)
+                    postMessage(initData)
 
                 }
             }
@@ -88,6 +82,90 @@ class SharedChatPane {
 
     fun getComponent(): JComponent {
         return webView.component
+    }
+    fun setFireUpOptions() {
+        val command =  "chat-set-fireup-options"
+        val json = JsonObject()
+        json.addProperty("command", command)
+        // todo: chat_attach_file: string
+        postMessage(json)
+    }
+
+    fun chatModelsPopulate() {
+        val command = "chat-models-populate"
+        val json = JsonObject()
+        json.addProperty("command", command)
+        // TODO: add models
+        // chat_models: Array<string>
+        postMessage(json)
+    }
+
+    fun chatEndStreaming() {
+        val command = "chat-end-streaming"
+        val json = JsonObject()
+        json.addProperty("command", command)
+        postMessage(json)
+    }
+
+    fun chatErrorStreaming() {
+        val command = "chat-error-streaming"
+        val json = JsonObject()
+        json.addProperty("command", command)
+        // todo: backup_user_phrase, error_message
+        postMessage(json)
+    }
+
+    fun chatPostQuestion() {
+        val command = "chat-post-question"
+        val json = JsonObject()
+        json.addProperty("command",command)
+        // todo: question_html?, question_raw, messages_backup, have_editor
+        postMessage(json)
+    }
+
+    fun chatPostDecoration() {
+        val command = "chat-post-decoration"
+        val json = JsonObject()
+        json.addProperty("command", command)
+        postMessage(json)
+    }
+
+    fun chatPostAnswer() {
+        val command = "chat-post-answer"
+        val json = JsonObject()
+        json.addProperty("command", command)
+        // todo: question_html?, question_raw, messages_backup, have_editor
+        postMessage(json)
+    }
+
+    fun chatSetQuestionText() {
+        val command = "chat-set-question-text"
+        val json = JsonObject()
+        json.addProperty("command", command)
+        // todo: value.question
+        postMessage(json)
+    }
+
+    fun clearChat() {
+        val command = "clea-chat"
+        val json = JsonObject()
+        json.addProperty("command", command)
+        postMessage(json)
+    }
+
+    fun noop() {
+        val json = JsonObject()
+        json.addProperty("command", "nop")
+        postMessage(json)
+    }
+
+    fun postMessage(json: JsonObject) {
+        val message = Gson().toJson(json)
+        postMessage(message)
+    }
+    fun postMessage(message: String) {
+        val script = """window.postMessage($message, "*");"""
+        webView.cefBrowser.executeJavaScript(script, webView.cefBrowser.url, 0)
     }
 
 }

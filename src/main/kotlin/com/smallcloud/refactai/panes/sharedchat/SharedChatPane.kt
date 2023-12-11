@@ -3,6 +3,7 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.ui.jcef.*
+import com.smallcloud.refactai.panes.gptchat.utils.md2html
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import javax.swing.JComponent
@@ -122,9 +123,15 @@ class SharedChatPane {
         val command = "chat-post-question"
         val json = JsonObject()
         json.addProperty("command",command)
-        val questionHtml = "" // TODO: figure out how to parse markdown
-        json.addProperty("question_html", questionHtml)
-        json.addProperty("question_ram", question)
+        val maybeParsedQuestion = md2html(question)
+        if (maybeParsedQuestion.isEmpty()) {
+            json.addProperty("question_html", question)
+            json.addProperty("question_raw", question)
+        } else {
+            val parsedQuestion = maybeParsedQuestion.last()
+            json.addProperty("question_html", parsedQuestion.htmlText)
+            json.addProperty("question_raw", parsedQuestion.rawText)
+        }
         json.addProperty("message_backup", Gson().toJson(messageBackup))
         postMessage(json)
     }
@@ -140,9 +147,17 @@ class SharedChatPane {
         val command = "chat-post-answer"
         val json = JsonObject()
         json.addProperty("command", command)
-        val questionHtml = "" // TODO: figure out how to parse markdown
-        json.addProperty("question_html", questionHtml)
-        json.addProperty("question_ram", question)
+
+        val maybeParsedQuestion = md2html(question)
+        if (maybeParsedQuestion.isEmpty()) {
+            json.addProperty("question_html", question)
+            json.addProperty("question_raw", question)
+        } else {
+            val parsedQuestion = maybeParsedQuestion.last()
+            json.addProperty("question_html", parsedQuestion.htmlText)
+            json.addProperty("question_raw", parsedQuestion.rawText)
+        }
+        
         json.addProperty("message_backup", Gson().toJson(messageBackup))
         postMessage(json)
     }

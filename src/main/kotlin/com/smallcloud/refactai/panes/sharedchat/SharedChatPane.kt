@@ -83,20 +83,22 @@ class SharedChatPane {
     fun getComponent(): JComponent {
         return webView.component
     }
-    fun setFireUpOptions() {
+    fun setFireUpOptions(attachFile: String?) {
         val command =  "chat-set-fireup-options"
         val json = JsonObject()
         json.addProperty("command", command)
-        // todo: chat_attach_file: string
+        if(attachFile != null) {
+            json.addProperty("chat_attach_file", attachFile)
+        }
         postMessage(json)
     }
 
-    fun chatModelsPopulate() {
+    fun chatModelsPopulate(models: Set<String>) {
         val command = "chat-models-populate"
         val json = JsonObject()
         json.addProperty("command", command)
-        // TODO: add models
-        // chat_models: Array<string>
+        val modelsJson = Gson().toJson(models)
+        json.addProperty("chat_models", modelsJson)
         postMessage(json)
     }
 
@@ -107,19 +109,23 @@ class SharedChatPane {
         postMessage(json)
     }
 
-    fun chatErrorStreaming() {
+    fun chatErrorStreaming(backUserPhrase: String = "", errorMessage: String = "") {
         val command = "chat-error-streaming"
         val json = JsonObject()
         json.addProperty("command", command)
-        // todo: backup_user_phrase, error_message
+        json.addProperty("backup_user_phrase", backUserPhrase)
+        json.addProperty("error_message", errorMessage)
         postMessage(json)
     }
 
-    fun chatPostQuestion() {
+    fun chatPostQuestion(question: String, messageBackup: List<Pair<String, String>>) {
         val command = "chat-post-question"
         val json = JsonObject()
         json.addProperty("command",command)
-        // todo: question_html?, question_raw, messages_backup, have_editor
+        val questionHtml = "" // TODO: figure out how to parse markdown
+        json.addProperty("question_html", questionHtml)
+        json.addProperty("question_ram", question)
+        json.addProperty("message_backup", Gson().toJson(messageBackup))
         postMessage(json)
     }
 
@@ -130,19 +136,23 @@ class SharedChatPane {
         postMessage(json)
     }
 
-    fun chatPostAnswer() {
+    fun chatPostAnswer(question: String, messageBackup: List<Pair<String, String>>) {
         val command = "chat-post-answer"
         val json = JsonObject()
         json.addProperty("command", command)
-        // todo: question_html?, question_raw, messages_backup, have_editor
+        val questionHtml = "" // TODO: figure out how to parse markdown
+        json.addProperty("question_html", questionHtml)
+        json.addProperty("question_ram", question)
+        json.addProperty("message_backup", Gson().toJson(messageBackup))
         postMessage(json)
     }
 
-    fun chatSetQuestionText() {
+    fun chatSetQuestionText(question: String) {
         val command = "chat-set-question-text"
         val json = JsonObject()
         json.addProperty("command", command)
-        // todo: value.question
+        val value = mapOf<String, String>("question" to question)
+        json.addProperty("value", Gson().toJson(value))
         postMessage(json)
     }
 

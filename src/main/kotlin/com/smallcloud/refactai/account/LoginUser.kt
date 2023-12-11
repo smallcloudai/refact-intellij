@@ -12,9 +12,6 @@ import com.smallcloud.refactai.Resources.defaultRecallUrl
 import com.smallcloud.refactai.Resources.loginSuffixUrl
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.sendRequest
-import com.smallcloud.refactai.listeners.QuickLongthinkActionsService.Companion.instance as QuickLongthinkActionsServiceInstance
-import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as DiffIntentProviderInstance
-import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.struct.LongthinkFunctionEntry
@@ -22,7 +19,10 @@ import com.smallcloud.refactai.utils.makeGson
 import org.apache.http.client.utils.URIBuilder
 import java.net.URI
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
+import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as DiffIntentProviderInstance
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+import com.smallcloud.refactai.listeners.QuickLongthinkActionsService.Companion.instance as QuickLongthinkActionsServiceInstance
+import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 private fun generateTicket(): String {

@@ -21,7 +21,7 @@ import javax.swing.JPanel
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 
-class ChatGPTPanes(project: Project, parent: Disposable) {
+class ChatGPTPanes(project: Project, private val parent: Disposable) {
     private val paneBaseName = "Chat"
     private val panes = JBRunnerTabs(project, parent)
     private val holder = JPanel().also {
@@ -92,6 +92,7 @@ class ChatGPTPanes(project: Project, parent: Disposable) {
     fun addTab(intent: String = "", selectedText: String = "",
                needInsertCode: Boolean = false, needSend: Boolean = false) {
         val newPane = ChatGPTPane()
+        Disposer.register(parent, newPane)
         if (intent.isNotEmpty() && needSend) {
             newPane.send(intent, selectedText)
         }

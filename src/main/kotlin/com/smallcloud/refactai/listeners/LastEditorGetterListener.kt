@@ -1,6 +1,5 @@
 package com.smallcloud.refactai.listeners
 
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
@@ -15,6 +14,7 @@ import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.Topic
+import com.smallcloud.refactai.PluginState
 import java.util.concurrent.ScheduledFuture
 
 
@@ -41,19 +41,19 @@ class GlobalSelectionListener : SelectionListener {
     }
 }
 
-class LastEditorGetterListener : EditorFactoryListener, FileEditorManagerListener, Disposable {
+class LastEditorGetterListener : EditorFactoryListener, FileEditorManagerListener {
     private val selectorListener = GlobalSelectionListener()
 
     init {
         ApplicationManager.getApplication()
-                .messageBus.connect(this)
+                .messageBus.connect(PluginState.instance)
                 .subscribe<FileEditorManagerListener>(FileEditorManagerListener.FILE_EDITOR_MANAGER, this)
         instance = this
     }
 
     private fun setup(editor: Editor) {
         LAST_EDITOR = editor
-        LAST_EDITOR!!.selectionModel.addSelectionListener(selectorListener, this)
+        LAST_EDITOR!!.selectionModel.addSelectionListener(selectorListener, PluginState.instance)
     }
 
     private fun getVirtualFile(editor: Editor): VirtualFile? {
@@ -78,8 +78,6 @@ class LastEditorGetterListener : EditorFactoryListener, FileEditorManagerListene
     }
 
     override fun editorCreated(event: EditorFactoryEvent) {}
-
-    override fun dispose() {}
 
     companion object {
         lateinit var instance: LastEditorGetterListener

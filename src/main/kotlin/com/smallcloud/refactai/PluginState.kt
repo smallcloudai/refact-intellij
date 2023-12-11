@@ -23,8 +23,7 @@ class PluginState : Disposable {
     var tooltipMessage: String? = null
         get() = AppSettingsState.instance.tooltipMessage
         set(newMsg) {
-            if (field == newMsg) return
-            field = newMsg
+            if (AppSettingsState.instance.tooltipMessage == newMsg) return
             messageBus
                 .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
                 .tooltipMessageChanged(field)

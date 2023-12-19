@@ -1,10 +1,17 @@
 name: Release
+
 on:
   # Trigger the workflow on pushes to only the 'main' branch (this avoids duplicate checks being run e.g. for dependabot pull requests)
   push:
     tags:
       - v1.*
   workflow_dispatch:
+    inputs:
+      lsp_branch:
+        required: true
+        description: "lsp_branch"
+        default: "main"
+        type: string
 jobs:
 
   # Run Gradle Wrapper Validation Action to verify the wrapper's checksum
@@ -51,7 +58,7 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build.yml
           repo: smallcloudai/refact-lsp
-          branch: main
+          branch: ${{ github.event.inputs.lsp_branch }}
           path: ./src/main/resources/bin
 
       # Validate wrapper

@@ -128,7 +128,7 @@ class LSPProcessHolder: Disposable {
                 address = address,
                 apiKey = AccountManager.apiKey,
                 port = (32000..32199).random(),
-                clientVersion = "${Resources.client}-${Resources.version}",
+                clientVersion = "${Resources.client}-${Resources.version}/${Resources.jbBuildVersion}",
                 useTelemetry = true,
                 deployment = InferenceGlobalContext.deploymentMode
             )
@@ -224,6 +224,21 @@ class LSPProcessHolder: Disposable {
         terminate()
         scheduler.shutdown()
         schedulerCaps.shutdown()
+    }
+
+    fun buildInfo(): String {
+        var res = ""
+        InferenceGlobalContext.connection.get(url.resolve("/build_info"),
+            dataReceiveEnded = {},
+            errorDataReceived = {}).also {
+            try {
+                res = it.get().get() as String
+                logger.debug("build_info request finished")
+            } catch (e: Exception) {
+                logger.debug("build_info ${e.message}")
+            }
+        }
+        return res
     }
 
     val url: URI

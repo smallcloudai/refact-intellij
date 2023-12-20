@@ -12,6 +12,7 @@ import com.smallcloud.refactai.struct.DeploymentMode
 import java.awt.Component
 import java.net.URLEncoder
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 private fun String.urlEncoded(): String = URLEncoder.encode(this, "UTF-8")
 
@@ -42,6 +43,7 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
             "; Vendor: " + properties.getProperty("java.vendor", "unknown")
         val os = SystemInfo.getOsNameAndVersion()
         val arch = SystemInfo.OS_ARCH
+        var buildInfo = LSPProcessHolder.buildInfo()
         val issueBody = """
       |An internal error happened in the IDE plugin.
       |
@@ -59,6 +61,7 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
       |- OS: $os
       |- ARCH: $arch
       |- MODE: $mode
+      |- LSP BUILD INFO: $buildInfo
       |
       |### Additional information
       |${additionalInfo.orEmpty()}

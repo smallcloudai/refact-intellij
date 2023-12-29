@@ -6,12 +6,6 @@ on:
   # Trigger the workflow on any pull request
   pull_request:
   workflow_dispatch:
-    inputs:
-      lsp_branch:
-        required: true
-        description: "lsp_branch"
-        default: "main"
-        type: string
 
 jobs:
   build:
@@ -36,6 +30,20 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
 
+      - name: "setup vars"
+        id: setupvars
+        run: |
+          echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
+
+      - uses: convictional/trigger-workflow-and-wait@v1.6.1
+        name: "Build refact-lsp"
+        with:
+          owner: smallcloudai
+          repo: refact-lsp
+          workflow_file_name: build.yml
+          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          ref: ${{ steps.setupvars.outputs.lsp_version }}
+
       - name: Download artifact
         id: download-artifact
         uses: dawidd6/action-download-artifact@v2
@@ -43,7 +51,7 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build.yml
           repo: smallcloudai/refact-lsp
-          branch: ${{ github.event.inputs.lsp_branch }}
+          branch: ${{ steps.setupvars.outputs.lsp_version }}
           path: ./src/main/resources/bin
 
       # Validate wrapper

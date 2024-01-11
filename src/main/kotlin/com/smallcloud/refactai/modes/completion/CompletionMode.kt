@@ -224,10 +224,6 @@ class CompletionMode(
                 return@streamedInferenceFetch
             }
 
-            if ((!completionInProgress)
-                || (choice.delta.isEmpty() && !choice.finishReason.isNullOrEmpty())) {
-                return@streamedInferenceFetch
-            }
             val completion: Completion = if (completionLayout?.lastCompletionData == null ||
                 completionLayout?.lastCompletionData?.createdTs != prediction.created) {
                 Completion(request.body.inputs.sources.values.toList().first(),
@@ -242,6 +238,10 @@ class CompletionMode(
             }
             if (completion.snippetTelemetryId == null) {
                 completion.snippetTelemetryId = prediction.snippetTelemetryId
+            }
+            if ((!completionInProgress)
+                || (choice.delta.isEmpty() && !choice.finishReason.isNullOrEmpty())) {
+                return@streamedInferenceFetch
             }
             completion.updateCompletion(choice.delta)
             synchronized(this) {

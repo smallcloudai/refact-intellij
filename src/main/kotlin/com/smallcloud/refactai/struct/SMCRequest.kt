@@ -34,7 +34,7 @@ data class SMCInputs(
 
 data class SMCParameters(
     var temperature: Float = 0.2f,
-    @SerializedName("max_new_tokens") var maxNewTokens: Int = 20
+    @SerializedName("max_new_tokens") var maxNewTokens: Int = 50
 )
 
 data class SMCRequestBody(

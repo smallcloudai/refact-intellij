@@ -127,36 +127,4 @@ class AsyncInlayer(
             collectedTexts[offset] += text
         }
     }
-
-    fun addTextToLast(text: String) {
-        synchronized(this) {
-            val entry = realTexts.maxBy { it.key }
-            addText(entry.key, text)
-        }
-    }
-
-    fun addTextWithoutRenderingToLast(text: String) {
-        synchronized(this) {
-            val entry = realTexts.maxBy { it.key }
-            addTextWithoutRendering(entry.key, text)
-        }
-    }
-
-    fun getLastText(): String? {
-        synchronized(this) {
-//            try {
-                val entry = realTexts.maxBy { it.key }
-                return getText(entry.key)
-//            } catch (e: Exception) {
-//                throw e
-//            }
-        }
-    }
-
-    fun setLastText(realBlockText: String) {
-        synchronized(this) {
-            val entry = realTexts.maxBy { it.key }
-            setText(entry.key, realBlockText)
-        }
-    }
 }

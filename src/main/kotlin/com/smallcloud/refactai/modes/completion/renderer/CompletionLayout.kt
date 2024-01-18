@@ -125,15 +125,15 @@ class AsyncCompletionLayout(
                             if (!this.needToRender) {
                                 return@let
                             }
-                            ApplicationManager.getApplication().invokeLater({
+                            ApplicationManager.getApplication().invokeAndWait {
                                 inlayer.addText(currentOffset, ch)
-                            }, { !this.needToRender })
+                            }
                             Thread.sleep(renderChunkTimeoutMs)
                         }
                     } else {
-                        ApplicationManager.getApplication().invokeLater({
+                        ApplicationManager.getApplication().invokeAndWait {
                             inlayer.addText(currentOffset, text)
-                        }, { !this.needToRender })
+                        }
                     }
                     rendered = true
                 } else {
@@ -163,15 +163,15 @@ class AsyncCompletionLayout(
                         if (!this.needToRender) {
                             return@let
                         }
-                        ApplicationManager.getApplication().invokeLater({
+                        ApplicationManager.getApplication().invokeAndWait {
                             inlayer.addText(offset, ch)
-                        }, { !this.needToRender })
+                        }
                         Thread.sleep(renderChunkTimeoutMs)
                     }
                 } else {
-                    ApplicationManager.getApplication().invokeLater({
+                    ApplicationManager.getApplication().invokeAndWait {
                         inlayer.addText(offset, text)
-                    }, { !this.needToRender })
+                    }
                 }
                 rendered = true
             } else {

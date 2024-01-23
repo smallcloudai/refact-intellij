@@ -6,7 +6,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
-import com.intellij.openapi.startup.ProjectActivity
+import com.intellij.openapi.startup.StartupActivity
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.io.ConnectivityManager
@@ -23,8 +23,8 @@ import com.smallcloud.refactai.struct.DeploymentMode
 import java.util.concurrent.atomic.AtomicBoolean
 
 
-class Initializer : ProjectActivity, Disposable {
-    override suspend fun execute(project: Project) {
+class Initializer : StartupActivity, Disposable {
+     private fun execute(project: Project) {
         val shouldInitialize = !(initialized.getAndSet(true) || ApplicationManager.getApplication().isUnitTestMode)
         if (shouldInitialize) {
             Logger.getInstance("SMCInitializer").info("Bin prefix = ${Resources.binPrefix}")
@@ -61,5 +61,9 @@ class Initializer : ProjectActivity, Disposable {
 
     companion object {
         private val initialized = AtomicBoolean(false)
+    }
+
+    override fun runActivity(project: Project) {
+        execute(project)
     }
 }

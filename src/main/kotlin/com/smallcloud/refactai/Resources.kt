@@ -7,7 +7,6 @@ import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.SystemInfo
-import com.intellij.ui.NewUiValue
 import com.intellij.util.IconUtil
 import java.io.File
 import java.net.URI
@@ -95,11 +94,11 @@ object Resources {
         }
 
         private fun resizeSquaredIcon(icon: Icon, width: Int): Icon {
-            return if (NewUiValue.isEnabled()) {
-                icon
-            } else {
-                IconUtil.resizeSquared(icon, width)
-            }
+//            return if (NewUiValue.isEnabled()) {
+//                icon
+//            } else {
+                return IconUtil.resizeSquared(icon, width)
+//            }
         }
 
         private fun makeIcon12(path: String): Icon {

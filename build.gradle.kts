@@ -19,7 +19,7 @@ dependencies {
 
 
 group = "com.smallcloud"
-version = getVersionString("1.2.11")
+version = getVersionString("1.2.12")
 
 repositories {
     mavenCentral()
@@ -29,7 +29,10 @@ repositories {
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    version.set("2023.2.1")
+//    version.set("2022.3.1.19")
+//    version.set("2023.3.2")
+    version.set("2022.3.1")
+//    type.set("AI") // Target IDE Platform
     type.set("PC") // Target IDE Platform
 
     plugins.set(listOf(
@@ -50,7 +53,7 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("232")
+        sinceBuild.set("223")
         untilBuild.set("233.*")
     }
 

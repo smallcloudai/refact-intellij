@@ -204,6 +204,9 @@ class AsyncConnection : Disposable {
                     },
                     object : FutureCallback<String> {
                         override fun completed(result: String) {
+                            if (result.isNotEmpty()) {
+                                dataReceived(result, requestId)
+                            }
                             dataReceiveEnded(result)
                         }
 

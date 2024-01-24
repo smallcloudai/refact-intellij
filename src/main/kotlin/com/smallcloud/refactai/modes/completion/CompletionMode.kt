@@ -116,7 +116,7 @@ class CompletionMode(
         val request = RequestCreator.create(
             fileName, text, logicalPos.line, pos,
             stat, "Infill", "infill", promptInfo,
-            stream = true, model = InferenceGlobalContext.model ?: Resources.defaultModel,
+            stream = false, model = InferenceGlobalContext.model ?: Resources.defaultModel,
                 multiline=isMultiline
         ) ?: return
 
@@ -216,6 +216,7 @@ class CompletionMode(
         streamedInferenceFetch(request, dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             InferenceGlobalContext.lastErrorMsg = null
+            completionInProgress = false
         }) { prediction ->
             val choice = prediction.choices.first()
             if (lastRequestId != prediction.requestId) {
@@ -254,7 +255,7 @@ class CompletionMode(
                 requestTask = it.get()
                 requestTask!!.get()
                 logger.debug("Completion request finished")
-                completionInProgress = false
+//                completionInProgress = false
             } catch (e: InterruptedException) {
                 handleInterruptedException(requestTask, editorState.editor)
             } catch (e: InterruptedIOException) {

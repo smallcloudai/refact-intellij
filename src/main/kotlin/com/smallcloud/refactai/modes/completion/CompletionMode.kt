@@ -116,7 +116,7 @@ class CompletionMode(
         val request = RequestCreator.create(
             fileName, text, logicalPos.line, pos,
             stat, "Infill", "infill", promptInfo,
-            stream = true, model = InferenceGlobalContext.model ?: Resources.defaultModel,
+            stream = false, model = InferenceGlobalContext.model ?: Resources.defaultModel,
                 multiline=isMultiline
         ) ?: return
 

@@ -158,7 +158,7 @@ class AsyncConnection : Disposable {
                     requestProducer,
                     object : AbstractBinResponseConsumer<String>() {
                         private var bufferStr = ""
-
+                        private var isStreaming = false
                         override fun releaseResources() {
                         }
 
@@ -177,6 +177,7 @@ class AsyncConnection : Disposable {
                             val part = Charset.forName("UTF-8").decode(src)
                             bufferStr += part
                             if (part.startsWith(STREAMING_PREFIX)) {
+                                isStreaming = true
                                 try {
                                     val data = Gson().fromJson(bufferStr, JsonObject::class.java)
                                     errorDataReceived(data)
@@ -191,6 +192,12 @@ class AsyncConnection : Disposable {
                                     bufferStr = maybeLeftOverBuffer
                                 }
                             }
+                            if (!isStreaming && endOfStream) {
+                                if (bufferStr.isNotEmpty()) {
+                                    dataReceived(bufferStr, requestId)
+                                }
+                            }
+
                         }
 
                         override fun start(response: HttpResponse?, contentType: ContentType?) {

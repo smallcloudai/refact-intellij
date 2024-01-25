@@ -12,7 +12,6 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.impl.ApplicationInfoImpl
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.util.Urls
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -27,6 +26,8 @@ class UpdateChecker : Disposable {
     )
     private var task: Future<*>? = null
     private var notification: Notification? = null
+    // ApplicationInfoImpl.DEFAULT_PLUGINS_HOST
+    private var DEFAULT_PLUGINS_HOST: String = "https://plugins.jetbrains.com"
 
     init {
         task = scheduler.scheduleWithFixedDelay({
@@ -35,8 +36,6 @@ class UpdateChecker : Disposable {
     }
 
     private fun checkNewVersion() {
-        val pluginHost = ApplicationInfoImpl.DEFAULT_PLUGINS_HOST
-
         val objectMapper = ObjectMapper()
 
         val data = Gson().toJson(
@@ -48,24 +47,28 @@ class UpdateChecker : Disposable {
 
         val thisPlugin = getThisPlugin() ?: return
 
-        val newVersions = HttpRequests
-            .post(
-                Urls.newFromEncoded("${pluginHost}/api/search/compatibleUpdates").toExternalForm(),
-                HttpRequests.JSON_CONTENT_TYPE
-            )
-            .productNameAsUserAgent()
-            .throwStatusCodeException(false)
-            .connect {
-                it.write(data)
-                objectMapper.readValue(it.inputStream, object : TypeReference<List<IdeCompatibleUpdate>>() {})
+        try {
+            val newVersions = HttpRequests
+                .post(
+                    Urls.newFromEncoded("${DEFAULT_PLUGINS_HOST}/api/search/compatibleUpdates").toExternalForm(),
+                    HttpRequests.JSON_CONTENT_TYPE
+                )
+                .productNameAsUserAgent()
+                .throwStatusCodeException(false)
+                .connect {
+                    it.write(data)
+                    objectMapper.readValue(it.inputStream, object : TypeReference<List<IdeCompatibleUpdate>>() {})
+                }
+            if (newVersions.isEmpty()) {
+                return
             }
-        if (newVersions.isEmpty()) {
-            return
-        }
-        val thisNewPlugin = newVersions.find { it.pluginId == Resources.pluginId.idString } ?: return
+            val thisNewPlugin = newVersions.find { it.pluginId == Resources.pluginId.idString } ?: return
 
-        if (thisNewPlugin.version > thisPlugin.version) {
-            emitUpdate(thisNewPlugin.version)
+            if (thisNewPlugin.version > thisPlugin.version) {
+                emitUpdate(thisNewPlugin.version)
+            }
+        } catch (_: Exception) {
+            // do nothing
         }
     }
 

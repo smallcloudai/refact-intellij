@@ -93,49 +93,27 @@ object Resources {
             }
         }
 
-        private fun resizeSquaredIcon(icon: Icon, width: Int): Icon {
-//            return if (NewUiValue.isEnabled()) {
-//                icon
-//            } else {
-                return IconUtil.resizeSquared(icon, width)
-//            }
+        private fun makeIcon(path: String): Icon {
+            return brushForTheme(IconLoader.getIcon(path, Resources::class.java))
         }
 
-        private fun makeIcon12(path: String): Icon {
-            return brushForTheme(resizeSquaredIcon(IconLoader.getIcon(path, Resources::class.java), 12))
-        }
+        val LOGO_RED_12x12: Icon = IconLoader.getIcon("/icons/refactai_logo_red_12x12.svg", Resources::class.java)
+        val LOGO_RED_13x13: Icon = IconLoader.getIcon("/icons/refactai_logo_red_13x13.svg", Resources::class.java)
+        val LOGO_12x12: Icon = IconLoader.getIcon("/icons/refactai_logo_12x12.svg", Resources::class.java)
+        val LOGO_RED_16x16: Icon = IconLoader.getIcon("/icons/refactai_logo_red_16x16.svg", Resources::class.java)
 
-        private fun makeIcon16(path: String): Icon {
-            return brushForTheme(resizeSquaredIcon(IconLoader.getIcon(path, Resources::class.java), 16))
-        }
+        val LIKE_CHECKED_16x16: Icon = makeIcon("/icons/like_checked_16x16.svg")
+        val LIKE_UNCHECKED_16x16: Icon = makeIcon("/icons/like_unchecked_16x16.svg")
+        val LIKE_CHECKED_24x24: Icon = makeIcon("/icons/like_checked_24x24.svg")
+        val LIKE_UNCHECKED_24x24: Icon = makeIcon("/icons/like_unchecked_24x24.svg")
 
-        private fun makeIcon24(path: String): Icon {
-            return brushForTheme(resizeSquaredIcon(IconLoader.getIcon(path, Resources::class.java), 24))
-        }
+        val BOOKMARK_CHECKED_16x16: Icon = makeIcon("/icons/bookmark_checked_16x16.svg")
+        val DESCRIPTION_16x16: Icon = makeIcon("/icons/description_16x16.svg")
+        val BOOKMARK_CHECKED_24x24: Icon = makeIcon("/icons/bookmark_checked_24x24.svg")
+        val BOOKMARK_UNCHECKED_24x24: Icon = makeIcon("/icons/bookmark_unchecked_24x24.svg")
 
-        val LOGO_RED_12x12: Icon = resizeSquaredIcon(
-                IconLoader.getIcon("/icons/refactai_logo_red.svg", Resources::class.java),
-                12)
-        val LOGO_RED_13x13: Icon = resizeSquaredIcon(
-                IconLoader.getIcon("/icons/refactai_logo_red.svg", Resources::class.java),
-                13)
-        val LOGO_12x12: Icon = makeIcon12("/icons/refactai_logo.svg")
-        val LOGO_RED_16x16: Icon = resizeSquaredIcon(
-                IconLoader.getIcon("/icons/refactai_logo_red.svg", Resources::class.java),
-                16)
-
-        val LIKE_CHECKED_16x16: Icon = makeIcon16("/icons/like_checked.svg")
-        val LIKE_UNCHECKED_16x16: Icon = makeIcon16("/icons/like_unchecked.svg")
-        val LIKE_CHECKED_24x24: Icon = makeIcon24("/icons/like_checked.svg")
-        val LIKE_UNCHECKED_24x24: Icon = makeIcon24("/icons/like_unchecked.svg")
-
-        val BOOKMARK_CHECKED_16x16: Icon = makeIcon16("/icons/bookmark_checked.svg")
-        val DESCRIPTION_16x16: Icon = makeIcon16("/icons/description.svg")
-        val BOOKMARK_CHECKED_24x24: Icon = makeIcon24("/icons/bookmark_checked.svg")
-        val BOOKMARK_UNCHECKED_24x24: Icon = makeIcon24("/icons/bookmark_unchecked.svg")
-
-        val COIN_16x16: Icon = makeIcon16("/icons/coin.svg")
-        val HAND_12x12: Icon = makeIcon12("/icons/hand.svg")
+        val COIN_16x16: Icon = makeIcon("/icons/coin_16x16.svg")
+        val HAND_12x12: Icon = makeIcon("/icons/hand_12x12.svg")
     }
 
     object ExtraUserDataKeys {

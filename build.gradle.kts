@@ -9,7 +9,7 @@ plugins {
 
 dependencies {
     implementation("dev.gitlive:kotlin-diff-utils:5.0.7")
-    implementation("org.apache.httpcomponents.client5:httpclient5:5.2.1") {
+    implementation("org.apache.httpcomponents.client5:httpclient5:5.3.1") {
         exclude("org.slf4j")
     }
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")

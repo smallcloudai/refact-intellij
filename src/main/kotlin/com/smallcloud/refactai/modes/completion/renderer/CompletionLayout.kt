@@ -9,7 +9,6 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.util.alsoIfNull
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.modes.completion.structs.Completion
 import dev.gitlive.difflib.DiffUtils
@@ -78,7 +77,7 @@ class AsyncCompletionLayout(
                 blockEvents = true
                 editor.document.startGuardedBlockChecking()
 
-                inlayer.alsoIfNull {
+                if (inlayer == null) {
                     inlayer = AsyncInlayer(editor)
                 }
 

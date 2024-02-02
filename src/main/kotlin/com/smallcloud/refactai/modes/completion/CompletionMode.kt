@@ -8,7 +8,6 @@ import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.util.alsoIfNull
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
@@ -160,12 +159,11 @@ class CompletionMode(
         )
         logger.info("Completion data: ${completionData.completion}")
         try {
+            if (completionLayout == null) {
+                completionLayout = AsyncCompletionLayout(editor)
+            }
             completionLayout?.also {
                 it.update(completionData, state.offset, needToRender, animation)
-            }.alsoIfNull {
-                completionLayout = AsyncCompletionLayout(editor).also {
-                    it.update(completionData, state.offset, needToRender, animation)
-                }
             }
         } catch (ex: Exception) {
             logger.warn("Exception while rendering completion", ex)

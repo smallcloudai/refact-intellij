@@ -36,7 +36,6 @@ class AppSettingsComponent {
 
         })
     }
-    private val myModelText = JBTextField()
     private val myContrastUrlText = JBTextField()
     private val myUseMultipleFilesCompletion = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion"))
     private val developerModeCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.developerMode")).apply {
@@ -64,16 +63,6 @@ class AppSettingsComponent {
 
     init {
         mainPanel = FormBuilder.createFormBuilder().run {
-            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.secretApiKey")}: "),
-                myTokenText, 1, false)
-            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.model")}: "), myModelText,
-                (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
-            addComponentToRightColumn(
-                JBLabel(
-                    RefactAIBundle.message("advancedSettings.leaveIfNotSure"), UIUtil.ComponentStyle.SMALL,
-                    UIUtil.FontColor.BRIGHTER
-                ), 0
-            )
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.inferenceURL")}: "),
                 myContrastUrlText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
             addComponentToRightColumn(
@@ -82,6 +71,8 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
+            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.secretApiKey")}: "),
+                myTokenText, 1, false)
             addComponentFillVertically(JPanel(), 0)
         }.panel
 
@@ -113,12 +104,6 @@ class AppSettingsComponent {
         get() = myTokenText.text
         set(newText) {
             myTokenText.text = newText
-        }
-
-    var modelText: String
-        get() = myModelText.text
-        set(newText) {
-            myModelText.text = newText
         }
 
     var contrastUrlText: String

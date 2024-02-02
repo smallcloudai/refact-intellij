@@ -55,11 +55,6 @@ class AppSettingsConfigurable : Configurable {
                     mySettingsComponent!!.tokenText.trim() != AccountManager.apiKey))
         modified = modified || (mySettingsComponent!!.tokenText.isEmpty() && AccountManager.apiKey != null)
 
-        modified = modified || (mySettingsComponent!!.modelText.isNotEmpty()
-                && (InferenceGlobalContext.model == null ||
-                InferenceGlobalContext.model != mySettingsComponent!!.modelText))
-        modified = modified || (mySettingsComponent!!.modelText.isEmpty() && InferenceGlobalContext.model != null)
-
         modified =
             modified || (mySettingsComponent!!.contrastUrlText.isNotEmpty() &&
                     mySettingsComponent!!.contrastUrlText != InferenceGlobalContext.inferenceUri)
@@ -85,7 +80,6 @@ class AppSettingsConfigurable : Configurable {
 
     override fun apply() {
         AccountManager.apiKey = mySettingsComponent!!.tokenText.trim().ifEmpty { null }
-        InferenceGlobalContext.model = mySettingsComponent!!.modelText.ifEmpty { null }
         InferenceGlobalContext.inferenceUri =
             makeRightUrl(mySettingsComponent!!.contrastUrlText.ifEmpty { null })
         mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
@@ -98,7 +92,6 @@ class AppSettingsConfigurable : Configurable {
 
     override fun reset() {
         mySettingsComponent!!.tokenText = AccountManager.apiKey ?: ""
-        mySettingsComponent!!.modelText = InferenceGlobalContext.model ?: ""
         mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
         mySettingsComponent!!.useMultipleFilesCompletion = InferenceGlobalContext.useMultipleFilesCompletion
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled

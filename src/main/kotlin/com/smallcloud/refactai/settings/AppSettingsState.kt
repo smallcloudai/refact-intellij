@@ -13,8 +13,8 @@ import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import java.net.URI
+import java.util.concurrent.atomic.AtomicInteger
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-
 
 /**
  * Supports storing the application settings in a persistent way.
@@ -45,6 +45,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var xDebugLSPPort: Int? = null
     var longthinkModel: String? = null
     var stagingVersion: String = ""
+    var rateUsNotification: Boolean = false
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -133,6 +134,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
         @JvmStatic
         val instance: AppSettingsState
             get() = ApplicationManager.getApplication().getService(AppSettingsState::class.java)
+
+        val acceptedCompletionCounter = AtomicInteger(0)
     }
 }
 

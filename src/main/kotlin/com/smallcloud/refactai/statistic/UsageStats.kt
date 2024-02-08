@@ -9,6 +9,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources.defaultReportUrlSuffix
 import com.smallcloud.refactai.Resources.defaultSnippetAcceptedUrlSuffix
 import com.smallcloud.refactai.io.sendRequest
+import com.smallcloud.refactai.settings.AppSettingsState.Companion.acceptedCompletionCounter
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 
@@ -84,6 +85,7 @@ class UsageStats: Disposable {
                 if (!success) {
                     throw Exception(json.get("human_readable_message").asString)
                 }
+                acceptedCompletionCounter.incrementAndGet()
             } catch (e: Exception) {
                 Logger.getInstance(UsageStats::class.java).warn("report to $url failed: $e")
             }

@@ -30,9 +30,9 @@ class UpdateChecker : Disposable {
     private var DEFAULT_PLUGINS_HOST: String = "https://plugins.jetbrains.com"
 
     init {
-        task = scheduler.scheduleWithFixedDelay({
+        task = scheduler.schedule({
             checkNewVersion()
-        }, 1, 5 * 60, TimeUnit.MINUTES)
+        }, 1, TimeUnit.MINUTES)
     }
 
     private fun checkNewVersion() {

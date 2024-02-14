@@ -166,7 +166,11 @@ class ModeProvider(
                 providersToTs[hashId] = currentTimeMillis()
                 editor.caretModel.addCaretListener(GlobalCaretListener())
                 ObjectUtils.consumeIfCast(editor, EditorEx::class.java) {
-                    it.addFocusListener(GlobalFocusListener(), modeProvider)
+                    try {
+                        it.addFocusListener(GlobalFocusListener(), modeProvider)
+                    } catch (e: UnsupportedOperationException) {
+                        // nothing
+                    }
                 }
                 modeProvider
             }

@@ -35,6 +35,9 @@ private class ProjectViewPrivacySetterAction(
     override fun update(e: AnActionEvent) {
         e.presentation.text = message
     }
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.EDT
+    }
 }
 
 class RefactAIPrivacyGroupAction : ActionGroup() {
@@ -76,5 +79,8 @@ class RefactAIPrivacyGroupAction : ActionGroup() {
                 event.presentation.icon = Resources.Icons.HAND_12x12
             }
         }
+    }
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.EDT
     }
 }

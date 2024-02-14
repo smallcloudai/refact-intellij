@@ -7,8 +7,7 @@ import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
-import com.intellij.openapi.util.io.FileUtil.getTempDirectory
-import com.intellij.openapi.util.io.FileUtil.setExecutable
+import com.intellij.openapi.util.io.FileUtil.*
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
 import com.intellij.util.messages.Topic
@@ -98,10 +97,17 @@ class LSPProcessHolder: Disposable {
             if (input == null) {
                 emitError("LSP server is not found for host operating system, please contact support")
             } else {
-                val path = Paths.get(BIN_PATH)
-                path.parent.toFile().mkdirs()
-                Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
-                setExecutable(path.toFile())
+                for (i in 0..4) {
+                    try {
+                        val path = Paths.get(BIN_PATH)
+                        path.parent.toFile().mkdirs()
+                        Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
+                        setExecutable(path.toFile())
+                        break
+                    } catch (_: Exception) {
+                        // nothing
+                    }
+                }
             }
         }
         settingsChanged()
@@ -222,6 +228,7 @@ class LSPProcessHolder: Disposable {
 
     override fun dispose() {
         terminate()
+        delete(Path(BIN_PATH))
         scheduler.shutdown()
         schedulerCaps.shutdown()
     }

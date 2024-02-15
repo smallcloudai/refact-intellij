@@ -10,10 +10,12 @@ import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.smallcloud.refactai.modes.EditorTextState
 import com.smallcloud.refactai.modes.completion.structs.Completion
 import dev.gitlive.difflib.DiffUtils
 import dev.gitlive.difflib.patch.DeltaType
 import java.util.concurrent.Future
+import kotlin.math.min
 
 class AsyncCompletionLayout(
         private val editor: Editor
@@ -64,10 +66,10 @@ class AsyncCompletionLayout(
     }
 
     fun update(
-            completionData: Completion,
-            offset: Int,
-            needToRender: Boolean,
-            animation: Boolean
+        completionData: Completion,
+        editorState: EditorTextState,
+        needToRender: Boolean,
+        animation: Boolean
     ): Future<*>? {
         if (lastCompletionData != null &&  completionData.createdTs != lastCompletionData?.createdTs) return null
         if (!isUpdating) return null
@@ -82,9 +84,9 @@ class AsyncCompletionLayout(
                 }
 
                 if (completionData.multiline) {
-                    renderAndUpdateMultilineState(completionData, offset, needToRender, animation)
+                    renderAndUpdateMultilineState(completionData, editorState, needToRender, animation)
                 } else {
-                    renderAndUpdateState(completionData, offset, needToRender, animation)
+                    renderAndUpdateState(completionData, editorState, needToRender, animation)
                 }
             } catch (ex: Exception) {
                 dispose(false)
@@ -99,7 +101,7 @@ class AsyncCompletionLayout(
 
     private fun renderAndUpdateState(
             completionData: Completion,
-            offset: Int,
+            editorState: EditorTextState,
             needToRender: Boolean,
             animation: Boolean) {
         inlayer?.let { inlayer ->
@@ -108,7 +110,7 @@ class AsyncCompletionLayout(
             val patch = DiffUtils.diff(currentLine.toList(), completionData.completion.toList())
             for (delta in patch.getDeltas()) {
                 if (delta.type != DeltaType.INSERT) { continue }
-                val currentOffset = offset + delta.source.position
+                val currentOffset = editorState.offset + delta.source.position
                 var blockText = delta.target.lines?.joinToString("") ?: ""
                 val currentText = inlayer.getText(currentOffset) ?: ""
                 if (blockText.startsWith(currentText)) {
@@ -142,13 +144,28 @@ class AsyncCompletionLayout(
         }
     }
 
+    private fun countSpacesBeforeFirstSymbol(string: String): Int {
+        var count = 0
+        for (char in string) {
+            if (char.isWhitespace()) {
+                count++
+            } else {
+                break
+            }
+        }
+        return count
+    }
+
     private fun renderAndUpdateMultilineState(
             completionData: Completion,
-            offset: Int,
+            editorState: EditorTextState,
             needToRender: Boolean,
             animation: Boolean) {
         inlayer?.let { inlayer ->
             var blockText = lastCompletionData!!.completion
+            val trimLen = min(editorState.offsetByCurrentLine, countSpacesBeforeFirstSymbol(blockText))
+            val offset = editorState.offset - (editorState.offsetByCurrentLine - trimLen)
+            blockText = blockText.substring(trimLen)
             val currentText = inlayer.getText(offset) ?: ""
             if (blockText.startsWith(currentText)) {
                 blockText = blockText.substring(currentText.length)
@@ -199,7 +216,11 @@ class AsyncCompletionLayout(
 
     private fun applyPreviewInternal() {
         lastCompletionData?.let { completion ->
-            val startIndex = completion.offset
+            var startIndex = completion.offset
+            if (completion.multiline) {
+                val line = editor.document.getLineNumber(completion.offset)
+                startIndex -= (editor.document.getLineEndOffset(line) - editor.document.getLineStartOffset(line))
+            }
             var endIndex = completion.offset
             if (!completion.multiline) {
                 val currentLine = completion.originalText.substring(startIndex)
@@ -207,7 +228,7 @@ class AsyncCompletionLayout(
                 endIndex = completion.offset + currentLine.length
             }
             editor.document.replaceString(startIndex, endIndex, completion.completion)
-            editor.caretModel.moveToOffset(completion.offset + completion.completion.length)
+            editor.caretModel.moveToOffset(startIndex + completion.completion.length)
         }
     }
 

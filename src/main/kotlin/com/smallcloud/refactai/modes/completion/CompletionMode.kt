@@ -63,25 +63,32 @@ class CompletionMode(
         val debounceMs: Long
         val editor = event.editor
         val logicalPos = event.editor.caretModel.logicalPosition
-        val text = editor.document.text
+        var text = editor.document.text
         var offset = -1
         ApplicationManager.getApplication().runReadAction {
             offset = editor.caretModel.offset
         }
 
-        val currentLine = editor.document.text.substring(editor.document.getLineStartOffset(logicalPos.line),
+        val currentLine = text.substring(editor.document.getLineStartOffset(logicalPos.line),
                 editor.document.getLineEndOffset(logicalPos.line))
-        val rightOfCursor = editor.document.text.substring(offset,
+        val rightOfCursor = text.substring(offset,
             editor.document.getLineEndOffset(logicalPos.line))
-        val pos = offset - editor.document.getLineStartOffset(logicalPos.line)
 
         if (!rightOfCursor.matches(specialSymbolsRegex)) return
 
         val isMultiline = currentLine.all { it == ' ' || it == '\t' }
+        var pos = 0
+        if (isMultiline) {
+            val startOffset = editor.document.getLineStartOffset(logicalPos.line)
+            val endOffset = editor.document.getLineEndOffset(logicalPos.line)
+            text = text.removeRange(startOffset, endOffset)
+        } else {
+            pos = offset - editor.document.getLineStartOffset(logicalPos.line)
+        }
 
         if (!event.force) {
             val docEvent = event.event ?: return
-            if (docEvent.offset + docEvent.newLength > editor.document.text.length) return
+            if (docEvent.offset + docEvent.newLength > text.length) return
             if (docEvent.newLength + docEvent.oldLength <= 0) return
             maybeState = EditorTextState(
                 editor,
@@ -120,7 +127,7 @@ class CompletionMode(
         ) ?: return
 
         processTask = scheduler.schedule({
-            process(request, state, event.force)
+            process(request, state, event.force, )
         }, debounceMs, TimeUnit.MILLISECONDS)
     }
 
@@ -163,7 +170,7 @@ class CompletionMode(
                 completionLayout = AsyncCompletionLayout(editor)
             }
             completionLayout?.also {
-                it.update(completionData, state.offset, needToRender, animation)
+                it.update(completionData, state, needToRender, animation)
             }
         } catch (ex: Exception) {
             logger.warn("Exception while rendering completion", ex)

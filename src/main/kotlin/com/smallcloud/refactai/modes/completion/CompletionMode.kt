@@ -88,7 +88,7 @@ class CompletionMode(
 
         if (!event.force) {
             val docEvent = event.event ?: return
-            if (docEvent.offset + docEvent.newLength > text.length) return
+            if (docEvent.offset + docEvent.newLength > editor.document.text.length) return
             if (docEvent.newLength + docEvent.oldLength <= 0) return
             maybeState = EditorTextState(
                 editor,

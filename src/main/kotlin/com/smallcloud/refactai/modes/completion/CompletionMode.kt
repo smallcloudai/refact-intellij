@@ -8,6 +8,7 @@ import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.project.Project
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
@@ -28,6 +29,8 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.Path
+import kotlin.io.path.relativeTo
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyService
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
@@ -55,7 +58,7 @@ class CompletionMode(
 
     override fun onTextChange(event: DocumentEventExtra) {
         if (completionInProgress) return
-        val fileName = getActiveFile(event.editor.document) ?: return
+        val fileName = getActiveFile(event.editor.document, event.editor.project) ?: return
         if (PrivacyService.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
             == Privacy.DISABLED && !InferenceGlobalContext.isSelfHosted) return
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
@@ -333,9 +336,10 @@ class CompletionMode(
         return false
     }
 
-    private fun getActiveFile(document: Document): String? {
-        val file = FileDocumentManager.getInstance().getFile(document)
-        return file?.presentableName
+    private fun getActiveFile(document: Document, project: Project?): String? {
+        val projectPath = project?.basePath ?: return null
+        val file = FileDocumentManager.getInstance().getFile(document) ?: return null
+        return Path(file.path).relativeTo(Path(projectPath)).toString()
     }
 
     private fun cancelOrClose() {

@@ -30,7 +30,6 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
-import kotlin.io.path.relativeTo
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyService
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
@@ -339,7 +338,7 @@ class CompletionMode(
     private fun getActiveFile(document: Document, project: Project?): String? {
         val projectPath = project?.basePath ?: return null
         val file = FileDocumentManager.getInstance().getFile(document) ?: return null
-        return Path(file.path).relativeTo(Path(projectPath)).toString()
+        return Path(file.path).toUri().toString().replace(Path(projectPath).toUri().toString(), "")
     }
 
     private fun cancelOrClose() {

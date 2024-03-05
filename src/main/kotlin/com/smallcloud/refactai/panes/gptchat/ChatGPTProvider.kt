@@ -122,6 +122,7 @@ class ChatGPTProvider : ActionListener {
                                 AccountManager.meteringBalance = obj.get("metering_balance").asInt
                             }
                             if (stop) return ""
+                            if (obj.has("content")) return ""
                             return if (obj.has("choices")) {
 
                                 val choice0 = obj.get("choices").asJsonArray[0].asJsonObject

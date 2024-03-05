@@ -129,7 +129,6 @@ integrated into a single package that follows your privacy settings.</p>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.AcceptActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.CancelActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.ForceCompletionActionPromoter"/>
-        <actionPromoter implementation="com.smallcloud.refactai.listeners.DiffActionsPromoter"/>
 
         <toolWindow id="Refact" anchor="right"
                     canCloseContents="true"
@@ -137,11 +136,7 @@ integrated into a single package that follows your privacy settings.</p>
 
         <applicationService serviceImplementation="com.smallcloud.refactai.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.settings.PrivacyState"/>
-
-        <applicationService serviceImplementation="com.smallcloud.refactai.settings.ExtraState"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.statistic.ExtraInfoService"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.listeners.QuickLongthinkActionsService"/>
+        
         <editorFactoryListener implementation="com.smallcloud.refactai.listeners.LastEditorGetterListener"/>
 
         <applicationService serviceImplementation="com.smallcloud.refactai.account.AccountManager"/>
@@ -154,12 +149,6 @@ integrated into a single package that follows your privacy settings.</p>
         <applicationService serviceImplementation="com.smallcloud.refactai.lsp.LSPProcessHolder"/>
     </extensions>
     <actions>
-        <action id="ActivateRefactToolWindow"
-                class="com.smallcloud.refactai.aitoolbox.ToolboxPaneInvokeAction"
-                text="Refact AI Toolbox"
-                description="Refact AI Toolbox action">
-            <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
-        </action>
         <action class="com.smallcloud.refactai.listeners.TabPressedAction"
                 id="TabPressedAction"
                 text="Accept Inline Completion"
@@ -187,9 +176,7 @@ integrated into a single package that follows your privacy settings.</p>
         <action id="ActivateRefactChatToolWindow"
                 text="Open Refact Toolbox"
                 class="com.smallcloud.refactai.panes.gptchat.ChatGPTPaneInvokeAction">
-            <keyboard-shortcut first-keystroke="control shift C" keymap="$default"/>
-            <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X" replace-all="true"/>
-            <keyboard-shortcut first-keystroke="control shift C" keymap="Mac OS X 10.5+" replace-all="true"/>
+            <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
         </action>
 
         <group id="RefactAIChatGroup">

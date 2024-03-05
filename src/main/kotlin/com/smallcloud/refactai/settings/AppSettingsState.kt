@@ -43,7 +43,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var startupLoggedIn: Boolean = false
     var developerModeEnabled: Boolean = false
     var xDebugLSPPort: Int? = null
-    var longthinkModel: String? = null
     var stagingVersion: String = ""
     var rateUsNotification: Boolean = false
 

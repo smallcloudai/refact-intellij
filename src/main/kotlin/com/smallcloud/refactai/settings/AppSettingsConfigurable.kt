@@ -67,12 +67,6 @@ class AppSettingsConfigurable : Configurable {
 
         modified = modified || mySettingsComponent!!.xDebugLSPPort != LSPProcessHolder.xDebugLSPPort
 
-        modified = modified || (mySettingsComponent!!.longthinkModel.isNotEmpty()
-                && (InferenceGlobalContext.longthinkModel == null ||
-                InferenceGlobalContext.longthinkModel != mySettingsComponent!!.longthinkModel))
-        modified = modified || (mySettingsComponent!!.longthinkModel.isEmpty()
-                && InferenceGlobalContext.longthinkModel != null)
-
         modified = modified || mySettingsComponent!!.stagingVersion != InferenceGlobalContext.stagingVersion
 
         return modified
@@ -85,7 +79,6 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
         InferenceGlobalContext.useMultipleFilesCompletion = mySettingsComponent!!.useMultipleFilesCompletion
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
-        InferenceGlobalContext.longthinkModel = mySettingsComponent!!.longthinkModel.ifEmpty { null }
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
         LSPProcessHolder.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
     }
@@ -95,7 +88,6 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
         mySettingsComponent!!.useMultipleFilesCompletion = InferenceGlobalContext.useMultipleFilesCompletion
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled
-        mySettingsComponent!!.longthinkModel = InferenceGlobalContext.longthinkModel ?: ""
         mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
         mySettingsComponent!!.xDebugLSPPort = LSPProcessHolder.xDebugLSPPort
     }

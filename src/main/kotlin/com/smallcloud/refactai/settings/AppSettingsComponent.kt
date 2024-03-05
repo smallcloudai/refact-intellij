@@ -27,8 +27,6 @@ class AppSettingsComponent {
                     developerModeCheckBox.isVisible = true
                     myXDebugLSPPort.isVisible = true
                     myXDebugLSPPortLabel.isVisible = true
-                    myLongthinkModelText.isVisible = true
-                    myLongthinkModelLabel.isVisible = true
                     myStagingVersionText.isVisible = true
                     myStagingVersionLabel.isVisible = true
                 }
@@ -44,13 +42,7 @@ class AppSettingsComponent {
     private val myXDebugLSPPort = JBTextField().apply {
         isVisible = false
     }
-    private val myLongthinkModelText = JBTextField().apply {
-        isVisible = false
-    }
     private val myXDebugLSPPortLabel = JBLabel("xDebug LSP port:").apply {
-        isVisible = false
-    }
-    private val myLongthinkModelLabel = JBLabel("Longthink model:").apply {
         isVisible = false
     }
     private val myStagingVersionText = JBTextField().apply {
@@ -87,7 +79,6 @@ class AppSettingsComponent {
             )
             addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
             addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
-            addLabeledComponent(myLongthinkModelLabel, myLongthinkModelText, UIUtil.LARGE_VGAP)
             addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
             addComponentFillVertically(JPanel(), 0)
         }.panel
@@ -137,11 +128,6 @@ class AppSettingsComponent {
             myXDebugLSPPort.text = newVal?.toString() ?: ""
         }
 
-    var longthinkModel: String
-        get() = myLongthinkModelText.text
-        set(newVal) {
-            myLongthinkModelText.text = newVal
-        }
     var stagingVersion: String
         get() = myStagingVersionText.text
         set(newVal) {

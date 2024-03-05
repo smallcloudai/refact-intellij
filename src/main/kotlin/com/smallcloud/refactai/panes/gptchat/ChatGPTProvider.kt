@@ -46,15 +46,7 @@ class ChatGPTProvider : ActionListener {
     private var canceled: Boolean = false
     private var cachedFile: String? = null
 
-    private fun reconnect() {
-//        if (LongthinkFunctionProvider.allChats.isNotEmpty() && InferenceGlobalContext.canRequest()) {
-//            InferenceGlobalContext.inferenceUri?.let {
-//                InferenceGlobalContext.checkConnection(it.resolve(
-//                        if (InferenceGlobalContext.isNewChatStyle || InferenceGlobalContext.isSelfHosted)
-//                    defaultChatUrlSuffix else defaultOldStyleChatUrlSuffix), false)
-//            }
-//        }
-    }
+    private fun reconnect() {}
 
     init {
         reconnect()

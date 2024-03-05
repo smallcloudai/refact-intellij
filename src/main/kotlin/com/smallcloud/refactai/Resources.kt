@@ -2,10 +2,8 @@ package com.smallcloud.refactai
 
 import com.intellij.ide.plugins.PluginManager
 import com.intellij.openapi.application.ApplicationInfo
-import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
-import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.IconUtil
 import java.io.File
@@ -16,7 +14,7 @@ import javax.swing.UIManager
 
 fun getThisPlugin() = PluginManager.getPlugins().find { it.name == "Refact.ai" }
 
-private fun getHomePath() : File {
+private fun getHomePath(): File {
     return getThisPlugin()!!.pluginPath.toFile()
 }
 
@@ -65,11 +63,9 @@ object Resources {
     const val defaultCloudAuthLink: String = "https://refact.smallcloud.ai/authentication?token=%s&utm_source=plugin&utm_medium=jetbrains&utm_campaign=login"
     val defaultCloudUrl: URI = URI("https://www.smallcloud.ai")
     val defaultCodeCompletionUrlSuffix = URI("v1/code-completion")
-    val defaultContrastUrlSuffix = URI("v1/contrast")
     val defaultChatUrlSuffix = URI("v1/chat")
     val defaultRecallUrl: URI = defaultCloudUrl.resolve("/v1/streamlined-login-recall-ticket")
     val loginSuffixUrl = URI("v1/login")
-    val defaultLikeReportUrl: URI = defaultCloudUrl.resolve("/v1/longthink-like")
     val defaultLoginUrl: URI = defaultCloudUrl.resolve(loginSuffixUrl)
     val defaultReportUrlSuffix: URI = URI("v1/telemetry-network")
     val defaultSnippetAcceptedUrlSuffix: URI = URI("v1/snippet-accepted")
@@ -80,7 +76,6 @@ object Resources {
     const val loginCoolDown: Int = 300 // sec
     const val titleStr: String = "RefactAI"
     val pluginId: PluginId = getPluginId()
-    const val stagingFilterPrefix: String = "STAGING"
     val jbBuildVersion: String = ApplicationInfo.getInstance().build.toString()
     const val refactAIRootSettingsID = "refactai_root"
 
@@ -102,22 +97,7 @@ object Resources {
         val LOGO_12x12: Icon = IconLoader.getIcon("/icons/refactai_logo_12x12.svg", Resources::class.java)
         val LOGO_RED_16x16: Icon = IconLoader.getIcon("/icons/refactai_logo_red_16x16.svg", Resources::class.java)
 
-        val LIKE_CHECKED_16x16: Icon = makeIcon("/icons/like_checked_16x16.svg")
-        val LIKE_UNCHECKED_16x16: Icon = makeIcon("/icons/like_unchecked_16x16.svg")
-        val LIKE_CHECKED_24x24: Icon = makeIcon("/icons/like_checked_24x24.svg")
-        val LIKE_UNCHECKED_24x24: Icon = makeIcon("/icons/like_unchecked_24x24.svg")
-
-        val BOOKMARK_CHECKED_16x16: Icon = makeIcon("/icons/bookmark_checked_16x16.svg")
-        val DESCRIPTION_16x16: Icon = makeIcon("/icons/description_16x16.svg")
-        val BOOKMARK_CHECKED_24x24: Icon = makeIcon("/icons/bookmark_checked_24x24.svg")
-        val BOOKMARK_UNCHECKED_24x24: Icon = makeIcon("/icons/bookmark_unchecked_24x24.svg")
-
         val COIN_16x16: Icon = makeIcon("/icons/coin_16x16.svg")
         val HAND_12x12: Icon = makeIcon("/icons/hand_12x12.svg")
-    }
-
-    object ExtraUserDataKeys {
-        val addedFromHL = Key.create<Boolean>("refact.added_from_hl")
-        val lastEditor = Key.create<Editor>("refact.last_editor")
     }
 }

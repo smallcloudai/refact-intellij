@@ -14,15 +14,10 @@ import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.sendRequest
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.DeploymentMode
-import com.smallcloud.refactai.struct.LongthinkFunctionEntry
-import com.smallcloud.refactai.utils.makeGson
 import org.apache.http.client.utils.URIBuilder
 import java.net.URI
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.aitoolbox.LongthinkFunctionProvider.Companion.instance as DiffIntentProviderInstance
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.listeners.QuickLongthinkActionsService.Companion.instance as QuickLongthinkActionsServiceInstance
-import com.smallcloud.refactai.settings.ExtraState.Companion.instance as ExtraState
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 private fun generateTicket(): String {
@@ -115,7 +110,7 @@ private fun tryLoginWithApiKey(): String {
     try {
         val result = sendRequest(url, "GET", headers, requestProperties = mapOf("redirect" to "follow", "cache" to "no-cache", "referrer" to "no-referrer"))
 
-        val gson = makeGson()
+        val gson = Gson()
         val body = gson.fromJson(result.body, JsonObject::class.java)
         val retcode = body.get("retcode").asString
         val humanReadableMessage = if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
@@ -140,20 +135,6 @@ private fun tryLoginWithApiKey(): String {
                 PluginState.instance.loginMessage = body.get("login_message").asString
             }
 
-            if (body.has("longthink-functions-today-v2")) {
-                val cloudEntries = body.get("longthink-functions-today-v2").asJsonObject.entrySet().map {
-                    val elem = gson.fromJson(it.value, LongthinkFunctionEntry::class.java)
-                    elem.entryName = it.key
-                    return@map elem.mergeLocalInfo(ExtraState.getLocalLongthinkInfo(elem.entryName))
-                }
-                DiffIntentProviderInstance.defaultThirdPartyFunctions = cloudEntries
-                QuickLongthinkActionsServiceInstance.recreateActions()
-            }
-
-            if (body.has("longthink-filters")) {
-                val filters = body.get("longthink-filters").asJsonArray.map { it.asString }
-                DiffIntentProviderInstance.intentFilters = filters
-            }
             if (body.has("metering_balance")) {
                 AccountManager.meteringBalance = body.get("metering_balance").asInt
             }

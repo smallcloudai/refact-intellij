@@ -47,6 +47,7 @@ class CompletionMode(
     private var completionLayout: AsyncCompletionLayout? = null
     private val logger = Logger.getInstance("StreamedCompletionMode")
     private var completionInProgress: Boolean = false
+    private var temperatureCounter: Int = 0
 
 
     override fun beforeDocumentChangeNonBulk(event: DocumentEventExtra) {
@@ -215,6 +216,12 @@ class CompletionMode(
         if (force) {
             request.body.parameters.maxNewTokens = 50
             request.body.noCache = true
+            temperatureCounter++
+        } else {
+            temperatureCounter = 0
+        }
+        if (temperatureCounter > 1) {
+            request.body.parameters.temperature = 0.6F
         }
         if (requestTask != null && requestTask!!.isDone && requestTask!!.isCancelled ) {
             requestTask!!.cancel(true)

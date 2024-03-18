@@ -38,9 +38,18 @@ fun makeAttachedFile(editor: Editor): String {
 }
 
 object MsgBuilder {
-    fun build(req: ChatGPTRequest, longthink: String, attachedFile: String? = null): String {
+    fun build(req: ChatGPTRequest, longthink: String,
+              attachedFile: String? = null, systemPrompt: String? = null): String {
         val conversation = req.conversation
         val messages: MutableList<Map<String, Any>> = mutableListOf()
+        systemPrompt?.let {
+            messages.add(
+                mapOf(
+                    "role" to "user",
+                    "content" to it
+                )
+            )
+        }
         if (attachedFile != null) {
             messages.add(
                     mapOf(

@@ -16,6 +16,7 @@ import com.smallcloud.refactai.panes.gptchat.ui.MessageComponent
 import com.smallcloud.refactai.panes.gptchat.utils.MsgBuilder
 import com.smallcloud.refactai.panes.gptchat.utils.makeAttachedFile
 import com.smallcloud.refactai.panes.gptchat.utils.md2html
+import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.statistic.UsageStats
 import com.smallcloud.refactai.struct.DeploymentMode
@@ -105,9 +106,10 @@ class ChatGPTProvider : ActionListener {
 
     private fun process(pane: ChatGPTPane, req: ChatGPTRequest, lastAnswer: State.QuestionAnswer, message: MessageComponent) {
         pane.sendingState = ChatGPTPane.SendingState.PENDING
+        val defaultSystemPrompt = AppSettingsState.instance.defaultSystemPrompt.ifEmpty { null }
         canceled = false
         try {
-            val reqStr = MsgBuilder.build(req, pane.searchTextArea.selectedModel, cachedFile)
+            val reqStr = MsgBuilder.build(req, pane.searchTextArea.selectedModel, cachedFile, defaultSystemPrompt)
             var stop = false
             val stat = UsageStatistic("chat-tab", pane.searchTextArea.selectedModel ?: "")
 

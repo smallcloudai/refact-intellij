@@ -68,6 +68,7 @@ class AppSettingsConfigurable : Configurable {
         modified = modified || mySettingsComponent!!.xDebugLSPPort != LSPProcessHolder.xDebugLSPPort
 
         modified = modified || mySettingsComponent!!.stagingVersion != InferenceGlobalContext.stagingVersion
+        modified = modified || mySettingsComponent!!.defaultSystemPrompt != AppSettingsState.instance.defaultSystemPrompt
 
         return modified
     }
@@ -81,6 +82,7 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
         LSPProcessHolder.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
+        AppSettingsState.instance.defaultSystemPrompt = mySettingsComponent!!.defaultSystemPrompt
     }
 
     override fun reset() {
@@ -90,6 +92,7 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled
         mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
         mySettingsComponent!!.xDebugLSPPort = LSPProcessHolder.xDebugLSPPort
+        mySettingsComponent!!.defaultSystemPrompt = AppSettingsState.instance.defaultSystemPrompt
     }
 
     override fun disposeUIResources() {

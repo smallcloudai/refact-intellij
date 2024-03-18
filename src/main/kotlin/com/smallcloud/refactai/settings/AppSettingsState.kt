@@ -45,6 +45,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var xDebugLSPPort: Int? = null
     var stagingVersion: String = ""
     var rateUsNotification: Boolean = false
+    var defaultSystemPrompt: String = ""
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus

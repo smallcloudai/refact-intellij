@@ -420,6 +420,7 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
         modelComboBox = ComboBox(LSPProcessHolder.capabilities.codeChatModels.keys.toTypedArray()).apply {
             background = BACKGROUND_COLOR
             isOpaque = false
+            selectedItem = LSPProcessHolder.capabilities.codeChatDefaultModel
             ApplicationManager.getApplication().messageBus
                     .connect(this@CustomSearchTextArea)
                     .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {

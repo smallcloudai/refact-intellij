@@ -104,8 +104,8 @@ class LSPProcessHolder: Disposable {
                         Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
                         setExecutable(path.toFile())
                         break
-                    } catch (_: Exception) {
-                        // nothing
+                    } catch (e: Exception) {
+                        logger.warn(e.message)
                     }
                 }
             }

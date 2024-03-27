@@ -24,7 +24,7 @@ class SharedChatPane {
                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/refact-chat-js@0.1/dist/chat/style.css">
            </head>
            <body style="height:100%; padding:0px; margin: 0px;">
-               <div id="refact-chat"></div>
+               <div id="refact-chat" style="height:100%;"></div>
            </body>
            <script type="module">
                import * as refactChatJs from 'https://cdn.jsdelivr.net/npm/refact-chat-js@0.1/+esm'
@@ -71,6 +71,8 @@ class SharedChatPane {
             null
         }
 
+        var scriptAdded = false;
+
         browser.jbCefClient.addLoadHandler(object: CefLoadHandlerAdapter() {
             override fun onLoadingStateChange(
                 browser: CefBrowser,
@@ -78,13 +80,14 @@ class SharedChatPane {
                 canGoBack: Boolean,
                 canGoForward: Boolean
             ) {
-                if(!isLoading) {
+                if(!scriptAdded) {
                     println("adding script to  browser")
-                    val script = """window.postIntellijMessage = function(type, data) {
-                        const msg = JSON.stringify({type, data});
+                    val script = """window.postIntellijMessage = function(event) {
+                        const msg = JSON.stringify(event);
                         ${myJSQueryOpenInBrowser.inject("msg")}
                     }""".trimIndent()
                     browser.executeJavaScript(script, browser.url, 0);
+                    scriptAdded = true;
                 }
             }
         }, browser.cefBrowser)

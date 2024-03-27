@@ -10,6 +10,7 @@ import com.intellij.ui.content.ContentFactory
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.gptchat.ChatGPTPanes
 import com.smallcloud.refactai.utils.getLastUsedProject
+import com.smallcloud.refactai.panes.sharedchat.SharedChatPane
 
 class RefactAIToolboxPaneFactory : ToolWindowFactory {
     override fun init(toolWindow: ToolWindow) {
@@ -20,15 +21,23 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()
 
-        val gptChatPanes = ChatGPTPanes(project, toolWindow.disposable)
-        val content: Content = contentFactory.createContent(
-                gptChatPanes.getComponent(),
-                "Chat",
-                false
+//        val gptChatPanes = ChatGPTPanes(project, toolWindow.disposable)
+//        val content: Content = contentFactory.createContent(
+//                gptChatPanes.getComponent(),
+//                "Chat",
+//                false
+//        )
+//        content.isCloseable = false
+//        content.putUserData(panesKey, gptChatPanes)
+//        toolWindow.contentManager.addContent(content)
+
+        val chatIframeContent: Content = contentFactory.createContent(
+            SharedChatPane().getComponent(),
+            "Shared Chat",
+            false
         )
-        content.isCloseable = false
-        content.putUserData(panesKey, gptChatPanes)
-        toolWindow.contentManager.addContent(content)
+        chatIframeContent.isCloseable = false
+        toolWindow.contentManager.addContent(chatIframeContent)
     }
 
     companion object {

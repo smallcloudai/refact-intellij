@@ -1,6 +1,9 @@
 package com.smallcloud.refactai.panes.sharedchat.events
 
 import com.google.gson.annotations.SerializedName
+import com.google.gson.*
+import java.io.Serializable
+import java.lang.reflect.Type
 
 // Lsp responses
 
@@ -158,8 +161,32 @@ class Events {
 
     open class Payload(open val id: String)
 
-    abstract class FromChat(val type: EventNames.FromChat, open val payload: Payload)
-    abstract class ToChat(val type: EventNames.ToChat, open val payload: Payload)
+    abstract class FromChat(val type: EventNames.FromChat, open val payload: Payload): Serializable
+
+    class FromChatDeserializer : JsonDeserializer<FromChat> {
+        // Step 2 https://jleehey.github.io/2020/06/08/deserializing-inherited-types-with-gson.html
+        override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): FromChat? {
+            val type = p0?.asJsonObject?.get("type")?.asString
+            val payload = p0?.asJsonObject?.get("payload")
+            if(type == null || payload == null) return null
+
+            return when(type) {
+                EventNames.FromChat.READY.value -> p2?.deserialize(payload, Ready::class.java)
+                EventNames.FromChat.REQUEST_PROMPTS.value -> p2?.deserialize(payload, SystemPrompts.Request::class.java)
+                EventNames.FromChat.REQUEST_AT_COMMAND_COMPLETION.value -> p2?.deserialize(payload, AtCommands.Completion.Request::class.java)
+                EventNames.FromChat.SAVE_CHAT.value -> p2?.deserialize(payload, Chat.Save::class.java)
+                EventNames.FromChat.ASK_QUESTION.value -> p2?.deserialize(payload, Chat.AskQuestion::class.java)
+                EventNames.FromChat.STOP_STREAMING.value -> p2?.deserialize(payload, Chat.Stop::class.java)
+                EventNames.FromChat.NEW_FILE.value -> p2?.deserialize(payload, Editor.NewFile::class.java)
+                EventNames.FromChat.PASTE_DIFF.value -> p2?.deserialize(payload, Editor.Paste::class.java)
+                EventNames.FromChat.REQUEST_CAPS.value -> p2?.deserialize(payload, Caps.Request::class.java)
+                else -> null
+            }
+        }
+
+    }
+
+    abstract class ToChat(val type: EventNames.ToChat, open val payload: Payload): Serializable
 
     data class Ready(val id: String): FromChat(EventNames.FromChat.READY, Payload(id))
 
@@ -573,4 +600,10 @@ class Events {
         ): ToChat(EventNames.ToChat.RECEIVE_CAPS_ERROR, ErrorPayload(id, error))
     }
 
+    companion object {
+        fun parse(msg: String?): FromChat? {
+            val gson = GsonBuilder().registerTypeAdapter(FromChat::class.java, FromChatDeserializer()).create()
+            return gson.fromJson(msg, FromChat::class.java)
+        }
+    }
 }

@@ -4,6 +4,7 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefJSQuery
+import com.smallcloud.refactai.panes.sharedchat.events.Events
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import javax.swing.JComponent
@@ -68,6 +69,7 @@ class SharedChatPane {
             // TODO: add handlers here.
             println("event from chat");
             println(msg)
+            Events.parse(msg)
             null
         }
 

@@ -164,7 +164,6 @@ class Events {
     abstract class FromChat(val type: EventNames.FromChat, open val payload: Payload): Serializable
 
     class FromChatDeserializer : JsonDeserializer<FromChat> {
-        // Step 2 https://jleehey.github.io/2020/06/08/deserializing-inherited-types-with-gson.html
         override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): FromChat? {
             val type = p0?.asJsonObject?.get("type")?.asString
             val payload = p0?.asJsonObject?.get("payload")
@@ -186,6 +185,7 @@ class Events {
 
     }
 
+    // TODO: Serialize to Chat
     abstract class ToChat(val type: EventNames.ToChat, open val payload: Payload): Serializable
 
     data class Ready(val id: String): FromChat(EventNames.FromChat.READY, Payload(id))

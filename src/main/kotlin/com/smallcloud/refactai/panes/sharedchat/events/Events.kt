@@ -102,10 +102,10 @@ data class SystemPrompt(
     val description: String,
 )
 
-typealias SystemPrompts = Map<String, SystemPrompt>
+typealias SystemPromptMap = Map<String, SystemPrompt>
 
 data class CustomPromptsResponse(
-    @SerializedName("system_prompts") val systemPrompts: SystemPrompts,
+    @SerializedName("system_prompts") val systemPrompts: SystemPromptMap,
     // Might need to update this
     @SerializedName("toolbox_commands") val toolboxCommands: Map<String, Unit>
 )
@@ -198,8 +198,8 @@ class Events {
     class SystemPrompts() {
         data class Request(val id: String): FromChat(EventNames.FromChat.REQUEST_PROMPTS, Payload(id))
 
-        data class SystemPromptsPayload(override val id: String, val prompts: SystemPrompts): Payload(id)
-        data class Receive(val id: String, val prompts: SystemPrompts): ToChat(EventNames.ToChat.RECEIVE_PROMPTS, SystemPromptsPayload(id, prompts))
+        data class SystemPromptsPayload(override val id: String, val prompts: SystemPromptMap): Payload(id)
+        data class Receive(val id: String, val prompts: SystemPromptMap): ToChat(EventNames.ToChat.RECEIVE_PROMPTS, SystemPromptsPayload(id, prompts))
 
         data class SystemPromptsErrorPayload(override val id: String, val error: String): Payload(id)
         data class Error(val id: String, val error: String): ToChat(EventNames.ToChat.RECEIVE_PROMPTS_ERROR, SystemPromptsErrorPayload(id, error))

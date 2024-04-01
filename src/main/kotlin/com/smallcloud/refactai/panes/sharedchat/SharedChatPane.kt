@@ -6,8 +6,10 @@ import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.events.Events
+import com.smallcloud.refactai.panes.sharedchat.events.SystemPromptMap
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
+import java.util.concurrent.Future
 import javax.swing.JComponent
 
 
@@ -30,7 +32,11 @@ class SharedChatPane {
     }
 
     private fun handleSystemPrompts(id: String) {
-        TODO("Not yet implemented")
+        this.lsp.fetchSystemPrompts().also { res ->
+            val prompts: SystemPromptMap = res.get()
+            val message: Events.SystemPrompts.Receive = Events.SystemPrompts.Receive(id, prompts)
+            this.postMessage(message)
+        }
     }
 
     fun handleEvent(event: Events.FromChat) {
@@ -40,7 +46,7 @@ class SharedChatPane {
 
         when (event) {
             is Events.Caps.Request -> this.handleCaps(event.id)
-            is Events.SystemPrompts.Request -> TODO()
+            is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
             is Events.AtCommands.Completion.Request -> TODO()
             is Events.Chat.Save -> TODO()
             is Events.Chat.AskQuestion -> TODO()

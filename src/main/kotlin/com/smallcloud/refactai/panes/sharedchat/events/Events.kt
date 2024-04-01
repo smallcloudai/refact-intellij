@@ -2,6 +2,7 @@ package com.smallcloud.refactai.panes.sharedchat.events
 
 import com.google.gson.annotations.SerializedName
 import com.google.gson.*
+import com.smallcloud.refactai.lsp.LSPCapabilities
 import java.io.Serializable
 import java.lang.reflect.Type
 
@@ -159,14 +160,19 @@ class EventNames {
 
 class Events {
 
-    open class Payload(open val id: String)
+    open class Payload(
+        @Transient
+        open val id: String
+    ): Serializable
 
     abstract class FromChat(val type: EventNames.FromChat, open val payload: Payload): Serializable
 
-    class FromChatDeserializer : JsonDeserializer<FromChat> {
+    private class FromChatDeserializer : JsonDeserializer<FromChat> {
         override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): FromChat? {
             val type = p0?.asJsonObject?.get("type")?.asString
             val payload = p0?.asJsonObject?.get("payload")
+            // println("deserialize")
+            // println("p0: $p0, p1: $p1, p2: $p2, type: $type, payload: $payload")
             if(type == null || payload == null) return null
 
             return when(type) {
@@ -185,7 +191,6 @@ class Events {
 
     }
 
-    // TODO: Serialize to Chat
     abstract class ToChat(val type: EventNames.ToChat, open val payload: Payload): Serializable
 
     data class Ready(val id: String): FromChat(EventNames.FromChat.READY, Payload(id))
@@ -377,8 +382,6 @@ class Events {
             ): ToChat(EventNames.ToChat.CHAT_RESPONSE, Choice(id, delta, index, finishReason))
 
         }
-
-        // backup
 
         data class BackupPayload(
             override val id: String,
@@ -577,16 +580,18 @@ class Events {
     class Caps {
         data class Request(
             val id: String
-        ): FromChat(EventNames.FromChat.REQUEST_CAPS, Payload(id))
+        ): FromChat(EventNames.FromChat.REQUEST_CAPS, Payload(id)) {
+            constructor() : this("")
+        }
 
         data class CapsPayload(
             override val id: String,
-            val caps: CapsResponse
+            val caps: LSPCapabilities
         ): Payload(id)
 
         data class Receive(
             val id: String,
-            val caps: CapsResponse
+            val caps: LSPCapabilities
         ): ToChat(EventNames.ToChat.RECEIVE_CAPS, CapsPayload(id, caps))
 
         data class ErrorPayload(
@@ -602,8 +607,19 @@ class Events {
 
     companion object {
         fun parse(msg: String?): FromChat? {
-            val gson = GsonBuilder().registerTypeAdapter(FromChat::class.java, FromChatDeserializer()).create()
+            val gson = GsonBuilder()
+                .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
+                .create()
             return gson.fromJson(msg, FromChat::class.java)
+        }
+
+        fun stringify(event: ToChat): String {
+            // TODO: figure out how to get the attributes from the parent class
+            val json = JsonObject()
+            val payload = Gson().toJsonTree(event).asJsonObject
+            json.addProperty("type", event.type.value)
+            json.add("payload", payload)
+            return Gson().toJson(json)
         }
     }
 }

@@ -1,12 +1,14 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.smallcloud.refactai.lsp.LSPProcessHolder
-import com.smallcloud.refactai.panes.sharedchat.events.Events
-import com.smallcloud.refactai.panes.sharedchat.events.SystemPromptMap
+import com.smallcloud.refactai.panes.sharedchat.events.*
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import java.util.concurrent.Future
@@ -39,20 +41,104 @@ class SharedChatPane {
         }
     }
 
-    fun handleEvent(event: Events.FromChat) {
-//        println("handleEvent")
-//        println(event)
-//        println("type: ${event.type}, class: ${event.javaClass.name}")
+    private fun handleCompletion(
+        id: String,
+        query: String,
+        cursor: Int,
+        number: Int,
+        trigger: String?
+    ) {
+        try {
+            this.lsp.fetchCommandCompletion(query, cursor, number, trigger).also { res ->
+                val completions = res.get()
+                val message = Events.AtCommands.Completion.Receive(id, completions)
+                this.postMessage(message)
+            }
+        } catch (_: Exception) {}
+
+        try {
+            this.lsp.fetchCommandPreview(query).also { res ->
+                val preview = res.get()
+                val message = Events.AtCommands.Preview.Receive(id, preview)
+                this.postMessage(message)
+            }
+        } catch(_: Exception) {}
+
+    }
+
+    fun handleChat(id: String, messages: ChatMessages, model: String, title: String? = null) {
+        // TODO: send the chat to the lsp and stream back the response
+        println("handleChat: id: $id, messages: $messages, model: $model, title: $title")
+        val gson = GsonBuilder()
+            .registerTypeAdapter(Events.Chat.Response.ResponsePayload::class.java, Events.Chat.ResponseDeserializer())
+            .registerTypeAdapter(Delta::class.java, DeltaDeserializer())
+            .create()
+        fun dataReceived(str0: String, str1: String) {
+
+        }
+
+        this.lsp.sendChat(
+            id,
+            messages,
+            model,
+            // dataReceived = {p0, p1 -> println("chat_request_received $p0 $p1")},
+            dataReceived = {str, requestId ->
+
+                println("chat_request_received")
+                println("str: $str")
+                val res = gson.fromJson(str, Events.Chat.Response.ResponsePayload::class.java)
+
+                println("res: $res, id: $requestId")
+                // Other tpes
+                when(res) {
+                    is Events.Chat.Response.Choices -> {
+                        val messageObj = JsonObject()
+                        messageObj.addProperty("type", EventNames.ToChat.CHAT_RESPONSE.value)
+                        val payloadObj = gson.toJsonTree(res, Events.Chat.Response.Choices::class.java)
+                        payloadObj.asJsonObject.addProperty("id", requestId)
+                        messageObj.add("payload", payloadObj)
+                        val message = gson.toJson(messageObj)
+                        this.postMessage(message)
+                    }
+                }
+            },
+            dataReceiveEnded = {str -> println("chat_request_ended $str")},
+            errorDataReceived = {e -> println("chat_request_error $e")},
+            failedDataReceiveEnded = {e -> println("chat_request_failed_ended $e")}
+        )
+    }
+
+    fun handleChatSave(id: String, messages: ChatMessages, model: String, title: String? = null) {
+        // TODO: save the chat
+        println("handleChatSave: id: $id, messages: $messages, model: $model, title: $title")
+    }
+
+    fun handleChatStop(id: String) {
+        // TODO: stop the chat
+        println("handleChatStop: id: $id")
+    }
+
+    fun handlePaste(id: String, content: String) {
+        // TODO: paste the content
+        println("handlePaste: id: $id, content: $content")
+    }
+
+    fun handleNewFile(id: String, content: String) {
+        // TODO: create a new file
+        println("handleNewFile: id: $id, content: $content")
+    }
+
+    private fun handleEvent(event: Events.FromChat) {
 
         when (event) {
             is Events.Caps.Request -> this.handleCaps(event.id)
             is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
-            is Events.AtCommands.Completion.Request -> TODO()
-            is Events.Chat.Save -> TODO()
-            is Events.Chat.AskQuestion -> TODO()
-            is Events.Chat.Stop -> TODO()
-            is Events.Editor.Paste -> TODO()
-            is Events.Editor.NewFile -> TODO()
+            is Events.AtCommands.Completion.Request -> this.handleCompletion(event.id, event.query, event.cursor, event.number, event.trigger)
+            is Events.Chat.AskQuestion -> this.handleChat(event.id, event.messages, event.model, event.title)
+            is Events.Chat.Save -> this.handleChatSave(event.id, event.messages, event.model, event.title)
+            is Events.Chat.Stop -> this.handleChatStop(event.id)
+            is Events.Editor.Paste -> this.handlePaste(event.id, event.content)
+            is Events.Editor.NewFile -> this.handleNewFile(event.id, event.content)
             else -> Unit
         }
     }
@@ -103,6 +189,7 @@ class SharedChatPane {
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
 
         myJSQueryOpenInBrowser.addHandler { msg ->
+            // println("myJSQueryOpenInBrowser: msg: $msg")
             val event = Events.parse(msg)
             if(event != null) { this.handleEvent(event) }
             null
@@ -144,7 +231,11 @@ class SharedChatPane {
 
     private fun postMessage(message: Events.ToChat) {
         val json = Events.stringify(message)
-        val script = """window.postMessage($json, "*");"""
+        this.postMessage(json)
+    }
+
+    private fun postMessage(message: String) {
+        val script = """window.postMessage($message, "*");"""
         webView.cefBrowser.executeJavaScript(script, webView.cefBrowser.url, 0)
     }
 

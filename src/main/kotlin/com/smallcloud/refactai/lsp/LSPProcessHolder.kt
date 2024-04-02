@@ -1,6 +1,7 @@
 package com.smallcloud.refactai.lsp
 
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationInfo
@@ -19,8 +20,7 @@ import com.smallcloud.refactai.Resources.binPrefix
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitError
-import com.smallcloud.refactai.panes.sharedchat.events.SystemPrompt
-import com.smallcloud.refactai.panes.sharedchat.events.SystemPromptMap
+import com.smallcloud.refactai.panes.sharedchat.events.*
 import com.smallcloud.refactai.settings.AppSettingsState
 import org.apache.hc.core5.concurrent.ComplexFuture
 import java.net.URI
@@ -302,7 +302,7 @@ class LSPProcessHolder(val project: Project): Disposable {
     }
 
     fun fetchCaps(): Future<LSPCapabilities> {
-
+        // check this.capabilities, if it's not empty use it, otherwise fetch it from server
          val res = InferenceGlobalContext.connection.get(
             url.resolve("/v1/caps"),
             dataReceiveEnded = {},
@@ -330,7 +330,90 @@ class LSPProcessHolder(val project: Project): Disposable {
         return json
     }
 
+    fun fetchCommandCompletion(query: String, cursor: Int, count: Int, trigger: String?): Future<CommandCompletionResponse> {
+        val queryOrTrigger = trigger ?: query
+        val place = trigger?.length ?: count
+        val requestBody = Gson().toJson(mapOf("query" to queryOrTrigger, "cursor" to place, "top_n" to count))
 
+        val res = InferenceGlobalContext.connection.post(
+            url.resolve("/v1/completion"),
+            requestBody,
+        )
+        // could have detail message
+        val json = res.thenApply {
+            val body = it.get() as String
+            // handle error
+            // if(body.startsWith("detail"))
+            Gson().fromJson<CommandCompletionResponse>(body, CommandCompletionResponse::class.java)
+        }
+
+        return json
+    }
+
+    fun fetchCommandPreview(query: String): Future<Array<Events.AtCommands.Preview.PreviewContent>> {
+        val requestBody = Gson().toJson(mapOf("query" to query))
+        val response = InferenceGlobalContext.connection.post(
+            url.resolve("/v1/at-command-preview"),
+            requestBody
+        )
+
+        val json = response.thenApply {
+            val responseBody = it.get() as String
+            if (responseBody.startsWith("detail")) {
+                Array(0) { Events.AtCommands.Preview.PreviewContent("") }
+            } else {
+                Gson().fromJson<Array<Events.AtCommands.Preview.PreviewContent>>(
+                    responseBody,
+                    Array<Events.AtCommands.Preview.PreviewContent>::class.java
+                )
+            }
+        }
+
+        return json
+    }
+
+    fun sendChat(
+        id: String,
+        messages: ChatMessages,
+        model: String,
+        dataReceived: (String, String) -> Unit,
+        dataReceiveEnded: (String) -> Unit,
+        errorDataReceived: (JsonObject) -> Unit,
+        failedDataReceiveEnded: (Throwable?) -> Unit,
+    ): Future<Void> {
+        val parameters = mapOf("max_new_tokens" to 1000)
+        // TODO: figure out why properties on the parent class are missing from json serialization
+        val requestBody = Gson().toJson(mapOf(
+            "messages" to messages.map{ mapOf("role" to it.role, "content" to it.content) },
+            "model" to model,
+            "parameters" to parameters,
+            "stream" to true
+        ))
+
+        println("send_chat $requestBody")
+        val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")
+        val response = InferenceGlobalContext.connection.post(
+            url.resolve("/v1/chat"),
+            requestBody,
+            headers = headers,
+            dataReceived = dataReceived,
+            dataReceiveEnded = dataReceiveEnded,
+            errorDataReceived = errorDataReceived,
+            failedDataReceiveEnded = failedDataReceiveEnded,
+            requestId = id,
+//            dataReceived = {p0, p1 -> println("chat_request_received $p0 $p1")},
+//            dataReceiveEnded = {str -> println("chat_request_ended $str")},
+//            errorDataReceived = {e -> println("chat_request_error $e")},
+//            failedDataReceiveEnded = {e -> println("chat_request_failed_ended $e")}
+        )
+
+         return response.thenApply {
+            it.get()
+             null
+
+        }
+
+    }
     // chat ?
     // prompts?
     // statistics?

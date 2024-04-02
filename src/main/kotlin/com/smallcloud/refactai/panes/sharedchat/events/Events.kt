@@ -8,7 +8,7 @@ import java.lang.reflect.Type
 
 // Lsp responses
 
-enum class ChatRole(val value: String) {
+enum class ChatRole(val value: String): Serializable {
     USER("user"),
     ASSISTANT("assistant"),
     CONTEXT_FILE("context_file"),
@@ -23,28 +23,68 @@ data class ChatContextFile(
     val usefulness: Int? = null
 )
 
-sealed class ChatMessage() {
-    // Should be a tuple
-    sealed class BaseMessage<T>(val role: ChatRole, val content: T)
 
-    class UserMessage(content: String): BaseMessage<String>(ChatRole.USER, content)
 
-    class AssistantMessage(content: String): BaseMessage<String>(ChatRole.ASSISTANT, content)
+abstract class ChatMessage<T>(
+    val role: String,
+    @Transient
+    open val content: T
+): Serializable {
+}
+data class UserMessage(override val content: String): ChatMessage<String>(ChatRole.USER.value, content)
 
-    class SystemMessage(content: String): BaseMessage<String>(ChatRole.SYSTEM, content)
+data class AssistantMessage(override val content: String): ChatMessage<String>(ChatRole.ASSISTANT.value, content)
 
-    class ContentFileMessage(content: Array<ChatContextFile>): BaseMessage<Array<ChatContextFile>>(ChatRole.CONTEXT_FILE, content)
+data class SystemMessage(override val content: String): ChatMessage<String>(ChatRole.SYSTEM.value, content)
+
+data class ContentFileMessage(override val content: Array<ChatContextFile>): ChatMessage<Array<ChatContextFile>>(ChatRole.CONTEXT_FILE.value, content) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ContentFileMessage
+
+        return content.contentEquals(other.content)
+    }
+
+    override fun hashCode(): Int {
+        return content.contentHashCode()
+    }
 }
 
-typealias ChatMessages = Array<ChatMessage>
+typealias ChatMessages = Array<ChatMessage<*>>
 
-class Delta() {
-    sealed class Base<T>(val role: ChatRole, val content: T)
+class ChatMessageDeserializer: JsonDeserializer<ChatMessage<*>> {
+    override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): ChatMessage<*>? {
 
-    class Assistant(content: String): Base<String>(ChatRole.ASSISTANT, content)
 
-    class ContextFile(content: ChatMessages): Base<ChatMessages>(ChatRole.CONTEXT_FILE, content)
+        val role = p0?.asJsonObject?.get("role")?.asString
+        return when(role) {
+            ChatRole.USER.value -> p2?.deserialize<UserMessage>(p0, UserMessage::class.java)
+            ChatRole.ASSISTANT.value -> p2?.deserialize<AssistantMessage>(p0, AssistantMessage::class.java)
+            ChatRole.CONTEXT_FILE.value -> p2?.deserialize<ContentFileMessage>(p0, ContentFileMessage::class.java)
+            ChatRole.SYSTEM.value -> p2?.deserialize<SystemMessage>(p0, SystemMessage::class.java)
+            else -> null
+        }
+        
+    }
 }
+
+abstract class Delta<T>(val role: String, val content: T)
+class AssistantDelta(content: String): Delta<String>(ChatRole.ASSISTANT.value, content)
+class ContextFileDelta(content: ChatMessages): Delta<ChatMessages>(ChatRole.CONTEXT_FILE.value, content)
+
+class DeltaDeserializer: JsonDeserializer<Delta<*>> {
+    override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): Delta<*>? {
+        val role = p0?.asJsonObject?.get("role")?.asString
+        return when(role) {
+            ChatRole.ASSISTANT.value -> p2?.deserialize(p0, AssistantDelta::class.java)
+            ChatRole.CONTEXT_FILE.value -> p2?.deserialize(p0, ContextFileDelta::class.java)
+            else -> null
+        }
+    }
+}
+
 
 
 data class ScratchPad(
@@ -180,7 +220,21 @@ class Events {
                 EventNames.FromChat.REQUEST_PROMPTS.value -> p2?.deserialize(payload, SystemPrompts.Request::class.java)
                 EventNames.FromChat.REQUEST_AT_COMMAND_COMPLETION.value -> p2?.deserialize(payload, AtCommands.Completion.Request::class.java)
                 EventNames.FromChat.SAVE_CHAT.value -> p2?.deserialize(payload, Chat.Save::class.java)
-                EventNames.FromChat.ASK_QUESTION.value -> p2?.deserialize(payload, Chat.AskQuestion::class.java)
+                EventNames.FromChat.ASK_QUESTION.value -> {
+                    val messages = JsonArray()
+                    payload.asJsonObject.get("messages").asJsonArray.forEach {
+                        val pair = it.asJsonArray
+                        val role = pair.get(0)
+                        val content = pair.get(1)
+                        val obj = JsonObject()
+                        obj.add("role", role)
+                        obj.add("content", content)
+                        messages.add(obj)
+                    }
+
+                    payload.asJsonObject.add("messages", messages)
+                    return p2?.deserialize(payload, Chat.AskQuestion::class.java)
+                }
                 EventNames.FromChat.STOP_STREAMING.value -> p2?.deserialize(payload, Chat.Stop::class.java)
                 EventNames.FromChat.NEW_FILE.value -> p2?.deserialize(payload, Editor.NewFile::class.java)
                 EventNames.FromChat.PASTE_DIFF.value -> p2?.deserialize(payload, Editor.Paste::class.java)
@@ -192,6 +246,7 @@ class Events {
     }
 
     abstract class ToChat(val type: EventNames.ToChat, open val payload: Payload): Serializable
+
 
     data class Ready(val id: String): FromChat(EventNames.FromChat.READY, Payload(id))
 
@@ -209,9 +264,21 @@ class Events {
     class AtCommands {
 
         class Completion {
+
+            data class RequestPayload(
+                override val id: String,
+                val query: String,
+                val cursor: Int,
+                val number: Int = 5,
+                val trigger: String? = null,
+            ) : Payload(id)
             data class Request(
-                val id: String
-            ) : FromChat(EventNames.FromChat.REQUEST_AT_COMMAND_COMPLETION, Payload(id))
+                val id: String,
+                val query: String,
+                val cursor: Int,
+                val number: Int = 5,
+                val trigger: String? = null,
+            ) : FromChat(EventNames.FromChat.REQUEST_AT_COMMAND_COMPLETION, RequestPayload(id, query, cursor, number, trigger))
 
             data class CompletionPayload(
                 override val id: String,
@@ -233,13 +300,49 @@ class Events {
 
             data class PreviewPayload(
                 override val id: String,
-                val preview: PreviewContent,
-            ): Payload(id)
+                val preview: Array<PreviewContent>,
+            ): Payload(id) {
+                override fun equals(other: Any?): Boolean {
+                    if (this === other) return true
+                    if (javaClass != other?.javaClass) return false
+
+                    other as PreviewPayload
+
+                    if (id != other.id) return false
+                    if (!preview.contentEquals(other.preview)) return false
+
+                    return true
+                }
+
+                override fun hashCode(): Int {
+                    var result = id.hashCode()
+                    result = 31 * result + preview.contentHashCode()
+                    return result
+                }
+            }
 
             data class Receive(
                 val id: String,
-                val preview: PreviewContent,
-            ) : ToChat(EventNames.ToChat.RECEIVE_AT_COMMAND_PREVIEW, PreviewPayload(id, preview))
+                val preview: Array<PreviewContent>,
+            ) : ToChat(EventNames.ToChat.RECEIVE_AT_COMMAND_PREVIEW, PreviewPayload(id, preview)) {
+                override fun equals(other: Any?): Boolean {
+                    if (this === other) return true
+                    if (javaClass != other?.javaClass) return false
+
+                    other as Receive
+
+                    if (id != other.id) return false
+                    if (!preview.contentEquals(other.preview)) return false
+
+                    return true
+                }
+
+                override fun hashCode(): Int {
+                    var result = id.hashCode()
+                    result = 31 * result + preview.contentHashCode()
+                    return result
+                }
+            }
         }
     }
 
@@ -349,17 +452,26 @@ class Events {
                 CONTEXT_FILE("context_file")
             }
 
+            abstract class ResponsePayload()
+
+//            data class UserMessage(
+//                override val id: String,
+//                val role: Roles,
+//                val content: String
+//            ): Payload(id)
+
             data class UserMessage(
-                override val id: String,
                 val role: Roles,
                 val content: String
-            ): Payload(id)
+            ): ResponsePayload()
 
-            data class Question(
-                val id: String,
-                val role: Roles,
-                val content: String,
-            ): ToChat(EventNames.ToChat.CHAT_RESPONSE, UserMessage(id, role, content))
+
+
+//            data class Question(
+//                val id: String,
+//                val role: Roles,
+//                val content: String,
+//            ): ToChat(EventNames.ToChat.CHAT_RESPONSE, UserMessage(id, role, content))
 
             enum class FinishReasons(value: String) {
                 STOP("stop"),
@@ -367,19 +479,74 @@ class Events {
             }
 
             data class Choice(
-                override val id: String,
-                val delta: Delta,
+                // override val id: String,
+                val delta: AssistantDelta,
                 val index: Int,
                 @SerializedName("finish_reason") val finishReason: FinishReasons?,
-            ): Payload(id)
+            ) // : Payload(id)
+
+            data class Choices(
+                val choices: Array<Choice>,
+                val created: String,
+                val model: String,
+            ): ResponsePayload() {
+                override fun equals(other: Any?): Boolean {
+                    if (this === other) return true
+                    if (javaClass != other?.javaClass) return false
+
+                    other as Choices
+
+                    if (!choices.contentEquals(other.choices)) return false
+                    if (created != other.created) return false
+                    if (model != other.model) return false
+
+                    return true
+                }
+
+                override fun hashCode(): Int {
+                    var result = choices.contentHashCode()
+                    result = 31 * result + created.hashCode()
+                    result = 31 * result + model.hashCode()
+                    return result
+                }
+            }
 
 
-            data class Assistant(
-                val id: String,
-                val delta: Delta,
-                val index: Int,
-                val finishReason: FinishReasons? = null,
-            ): ToChat(EventNames.ToChat.CHAT_RESPONSE, Choice(id, delta, index, finishReason))
+//            data class Assistant(
+//                val id: String,
+//                val delta: Delta,
+//                val index: Int,
+//                val finishReason: FinishReasons? = null,
+//            ): ToChat(EventNames.ToChat.CHAT_RESPONSE, Choice(
+//                // id,
+//                delta,
+//                index,
+//                finishReason
+//            ))
+
+        }
+
+        class ResponseDeserializer : JsonDeserializer<Response.ResponsePayload> {
+            override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): Response.ResponsePayload? {
+                println("ResponseDeserializer")
+                println("p0: $p0, p1: $p1, p2: $p2")
+                val role = p0?.asJsonObject?.get("role")?.asString
+
+                if (role == "user" || role === "context_file") {
+                    return p2?.deserialize(p0, Response.UserMessage::class.java)
+                }
+
+                // {"choices":[{"delta":{"content":" today","role":"assistant"},"finish_reason":null,"index":0}],"created":1712072101.203,"model":"gpt-3.5-turbo"}
+
+                val choices = p0?.asJsonObject?.get("choices")?.asJsonArray
+
+                if (choices !== null) {
+                    return p2?.deserialize(p0, Response.Choices::class.java)
+                }
+
+                return p2?.deserialize(p0, Response.ResponsePayload::class.java)
+                // TODO("Not yet implemented")
+            }
 
         }
 
@@ -607,8 +774,11 @@ class Events {
 
     companion object {
         fun parse(msg: String?): FromChat? {
+            // TODO: parse messages correctly
+            // println("parse: $msg")
             val gson = GsonBuilder()
                 .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
+                .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())
                 .create()
             return gson.fromJson(msg, FromChat::class.java)
         }

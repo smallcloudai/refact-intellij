@@ -66,7 +66,7 @@ class ChatMessageDeserializer: JsonDeserializer<ChatMessage<*>> {
             ChatRole.SYSTEM.value -> p2?.deserialize<SystemMessage>(p0, SystemMessage::class.java)
             else -> null
         }
-        
+
     }
 }
 
@@ -448,8 +448,8 @@ class Events {
         // receive
         class Response {
             enum class Roles(value: String) {
-                USER("user"),
-                CONTEXT_FILE("context_file")
+                @SerializedName("user") USER("user"),
+                @SerializedName("context_file") CONTEXT_FILE("context_file")
             }
 
             abstract class ResponsePayload()
@@ -528,8 +528,8 @@ class Events {
 
         class ResponseDeserializer : JsonDeserializer<Response.ResponsePayload> {
             override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): Response.ResponsePayload? {
-                println("ResponseDeserializer")
-                println("p0: $p0, p1: $p1, p2: $p2")
+//                println("ResponseDeserializer")
+//                println("p0: $p0, p1: $p1, p2: $p2")
                 val role = p0?.asJsonObject?.get("role")?.asString
 
                 if (role == "user" || role === "context_file") {

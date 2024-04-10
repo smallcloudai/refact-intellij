@@ -1,8 +1,12 @@
 package com.smallcloud.refactai.panes.sharedchat
 
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.project.Project
+import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefClient
@@ -11,11 +15,10 @@ import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.events.*
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
-import java.util.concurrent.Future
 import javax.swing.JComponent
 
 
-class SharedChatPane {
+class SharedChatPane (val project: Project) {
     private val jsPoolSize = "200"
     private val lsp: LSPProcessHolder = LSPProcessHolder()
 
@@ -66,30 +69,25 @@ class SharedChatPane {
 
     }
 
-    fun handleChat(id: String, messages: ChatMessages, model: String, title: String? = null) {
+    private fun handleChat(id: String, messages: ChatMessages, model: String, title: String? = null) {
         // TODO: send the chat to the lsp and stream back the response
         println("handleChat: id: $id, messages: $messages, model: $model, title: $title")
         val gson = GsonBuilder()
             .registerTypeAdapter(Events.Chat.Response.ResponsePayload::class.java, Events.Chat.ResponseDeserializer())
             .registerTypeAdapter(Delta::class.java, DeltaDeserializer())
             .create()
-        fun dataReceived(str0: String, str1: String) {
-
-        }
 
         this.lsp.sendChat(
             id,
             messages,
             model,
-            // dataReceived = {p0, p1 -> println("chat_request_received $p0 $p1")},
             dataReceived = {str, requestId ->
-
-                println("chat_request_received")
-                println("str: $str")
+//                println("chat_request_received")
+//                println("str: $str")
                 val res = gson.fromJson(str, Events.Chat.Response.ResponsePayload::class.java)
 
-                println("res: $res, id: $requestId")
-                // Other tpes
+                // println("res: $res, id: $requestId")
+
                 when(res) {
                     is Events.Chat.Response.Choices -> {
                         val messageObj = JsonObject()
@@ -100,32 +98,78 @@ class SharedChatPane {
                         val message = gson.toJson(messageObj)
                         this.postMessage(message)
                     }
+                    is Events.Chat.Response.UserMessage -> {
+                        val messageObj = JsonObject()
+                        messageObj.addProperty("type", EventNames.ToChat.CHAT_RESPONSE.value)
+                        val payloadObj = gson.toJsonTree(res, Events.Chat.Response.UserMessage::class.java)
+                        payloadObj.asJsonObject.addProperty("id", requestId)
+                        messageObj.add("payload", payloadObj)
+                        val message = gson.toJson(messageObj)
+                        println("Message For User")
+                        println(message)
+                        this.postMessage(message)
+                    }
                 }
             },
-            dataReceiveEnded = {str -> println("chat_request_ended $str")},
-            errorDataReceived = {e -> println("chat_request_error $e")},
-            failedDataReceiveEnded = {e -> println("chat_request_failed_ended $e")}
+            dataReceiveEnded = { str ->
+                println("chat_request_ended $str")
+                val messageObj = JsonObject()
+                messageObj.addProperty("type", EventNames.ToChat.DONE_STREAMING.value)
+                val payloadObj = JsonObject()
+                payloadObj.asJsonObject.addProperty("id", id)
+                messageObj.add("payload", payloadObj)
+                val message = gson.toJson(messageObj)
+                this.postMessage(message)
+            },
+            errorDataReceived = { json ->
+                val messageObj = JsonObject()
+                messageObj.addProperty("type", EventNames.ToChat.ERROR_STREAMING.value)
+                val payloadObj = JsonObject()
+                payloadObj.asJsonObject.addProperty("id", id)
+                // Maybe has detail property
+                payloadObj.asJsonObject.addProperty("message", json.toString())
+                messageObj.add("payload", payloadObj)
+                val message = gson.toJson(messageObj)
+                this.postMessage(message)
+            },
+            failedDataReceiveEnded = {e ->
+                val messageObj = JsonObject()
+                messageObj.addProperty("type", EventNames.ToChat.ERROR_STREAMING.value)
+                val payloadObj = JsonObject()
+                payloadObj.asJsonObject.addProperty("id", id)
+                // Maybe has detail property
+                payloadObj.asJsonObject.addProperty("message", e.toString())
+                messageObj.add("payload", payloadObj)
+                val message = gson.toJson(messageObj)
+                this.postMessage(message)
+            }
         )
     }
 
-    fun handleChatSave(id: String, messages: ChatMessages, model: String, title: String? = null) {
+    private fun handleChatSave(id: String, messages: ChatMessages, model: String, title: String? = null) {
         // TODO: save the chat
         println("handleChatSave: id: $id, messages: $messages, model: $model, title: $title")
     }
 
-    fun handleChatStop(id: String) {
+    private fun handleChatStop(id: String) {
         // TODO: stop the chat
         println("handleChatStop: id: $id")
     }
 
-    fun handlePaste(id: String, content: String) {
+    private fun handlePaste(id: String, content: String) {
         // TODO: paste the content
         println("handlePaste: id: $id, content: $content")
     }
 
-    fun handleNewFile(id: String, content: String) {
-        // TODO: create a new file
-        println("handleNewFile: id: $id, content: $content")
+    private fun handleNewFile(id: String, content: String) {
+        // TODO: file type?
+        val vf = LightVirtualFile("Untitled", content)
+
+        val fileDescriptor = OpenFileDescriptor(project, vf)
+
+        ApplicationManager.getApplication().invokeLater {
+            val e = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+        }
     }
 
     private fun handleEvent(event: Events.FromChat) {
@@ -139,6 +183,7 @@ class SharedChatPane {
             is Events.Chat.Stop -> this.handleChatStop(event.id)
             is Events.Editor.Paste -> this.handlePaste(event.id, event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.id, event.content)
+            // copy?
             else -> Unit
         }
     }
@@ -189,7 +234,8 @@ class SharedChatPane {
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
 
         myJSQueryOpenInBrowser.addHandler { msg ->
-            // println("myJSQueryOpenInBrowser: msg: $msg")
+            println("myJSQueryOpenInBrowser: msg: $msg")
+            // error with save messages
             val event = Events.parse(msg)
             if(event != null) { this.handleEvent(event) }
             null

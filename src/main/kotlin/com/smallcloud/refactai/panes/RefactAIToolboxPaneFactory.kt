@@ -12,6 +12,7 @@ import com.smallcloud.refactai.panes.gptchat.ChatGPTPanes
 import com.smallcloud.refactai.utils.getLastUsedProject
 import com.smallcloud.refactai.panes.sharedchat.SharedChatPane
 
+
 class RefactAIToolboxPaneFactory : ToolWindowFactory {
     override fun init(toolWindow: ToolWindow) {
         toolWindow.setIcon(Resources.Icons.LOGO_RED_13x13)
@@ -32,7 +33,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
 //        toolWindow.contentManager.addContent(content)
 
         val chatIframeContent: Content = contentFactory.createContent(
-            SharedChatPane().getComponent(),
+            SharedChatPane(project).getComponent(),
             "Shared Chat",
             false
         )

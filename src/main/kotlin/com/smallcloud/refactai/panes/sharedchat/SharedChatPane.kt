@@ -3,13 +3,19 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
+import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.event.SelectionEvent
+import com.intellij.openapi.editor.event.SelectionListener
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
@@ -31,62 +37,112 @@ class SharedChatPane (val project: Project) {
         System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
     }
 
-    private fun getActiveFileInfo(): Events.ActiveFile.FileInfo? {
-        /**
-         * type FileInfo = {
-         *     name: string;
-         *     line1: number | null;
-         *     line2: number | null;
-         *     can_paste: boolean;
-         *     attach: boolean;
-         *     path: string;
-         *     content?: string | undefined;
-         *     usefulness?: number | undefined;
-         *     cursor: number | null;
-         * }
-         **/
-        val fileEditorManager = FileEditorManager.getInstance(project)
-        val selectedFiles = fileEditorManager.selectedFiles
-        if (selectedFiles.isEmpty()) { return null }
+    private fun getLanguage(fm: FileEditorManager): Language? {
+        val editor = fm.selectedTextEditor
+        val language = editor?.document?.let {
+            PsiDocumentManager.getInstance(project).getPsiFile(it)?.language
+        }
 
-        val virtualFile = fileEditorManager.selectedFiles[0]
-        val filePath = virtualFile.path
-        val fileName = virtualFile.name
+        return language
+    }
 
-        return Events.ActiveFile.FileInfo(fileName, filePath, true)
+    private fun sendSelectedSnippet(id: String) {
+        this.getSelectedSnippet { snippet ->
+            if(snippet != null) {
+                val type = EventNames.ToChat.SET_SELECTED_SNIPPET.value
+                val payload = JsonObject()
+                payload.addProperty("id", id)
+                payload.add("snippet", Gson().toJsonTree(snippet))
+                val messageObj = JsonObject()
+                messageObj.addProperty("type", type)
+                messageObj.add("payload", payload)
+                val message = Gson().toJson(messageObj)
+                this.postMessage(message)
+            }
+        }
+    }
 
-        // val editor = fileEditorManager.selectedTextEditor
-        // editor?.caretModel?.currentCaret.editor.
-//        ApplicationManager.getApplication().runReadAction {
-//            editor?.caretModel.currentCaret?.offset
-//        }
+    private fun getSelectedSnippet(cb: (Events.Editor.Snippet?) -> Unit) {
+        ApplicationManager.getApplication().invokeAndWait {
+            val fileEditorManager = FileEditorManager.getInstance(project)
+            val editor = fileEditorManager.selectedTextEditor
+            val file = fileEditorManager.selectedFiles[0]
+            val path = file.path
+            val name = file.name
+            val language = this.getLanguage(fileEditorManager)?.id
+            val caretModel = editor?.caretModel
 
+            val selection = caretModel?.currentCaret?.selectionRange
+            val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
+
+            val code = editor?.document?.getText(range)
+            if (language == null || code == null) {
+                cb(null)
+            } else {
+                val snippet = Events.Editor.Snippet(language, code, path, name)
+                cb(snippet)
+            }
+        }
+    }
+    private fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo?) -> Unit) {
+        ApplicationManager.getApplication().invokeAndWait {
+            val fileEditorManager = FileEditorManager.getInstance(project)
+            val editor = fileEditorManager.selectedTextEditor
+
+            val cursor = editor?.caretModel?.offset
+
+            val virtualFile = fileEditorManager.selectedFiles[0]
+            val filePath = virtualFile.path
+            val fileName = virtualFile.name
+
+
+            val selection = editor?.caretModel?.currentCaret?.selectionRange
+            val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
+
+            val code = editor?.document?.getText(range)
+
+            val fileInfo = Events.ActiveFile.FileInfo(
+                fileName,
+                filePath,
+                canPaste = true,
+                cursor = cursor,
+                line1 = selection?.startOffset,
+                line2 = selection?.endOffset,
+                content = code,
+            )
+            cb(fileInfo)
+        }
     }
 
     private fun sendActiveFileInfo(id: String) {
-        val file = this.getActiveFileInfo()
-        val type = EventNames.ToChat.ACTIVE_FILE_INFO.value
-        val payload = JsonObject()
-        payload.addProperty("id", id)
 
-        if(file === null) {
-            val fileJson = JsonObject()
-            fileJson.addProperty("can_paste", false)
-            payload.add("file", fileJson)
-            val messageObj = JsonObject()
-            messageObj.addProperty("type", type)
-            messageObj.add("payload", payload)
-            val message = Gson().toJson(messageObj)
-            return this.postMessage(message)
-        }
+            this.getActiveFileInfo { file ->
+                val type = EventNames.ToChat.ACTIVE_FILE_INFO.value
+                val payload = JsonObject()
+                payload.addProperty("id", id)
 
-        val fileJson = Gson().toJsonTree(file, Events.ActiveFile.FileInfo::class.java)
-        payload.add("file", fileJson)
-        val messageObj = JsonObject()
-        messageObj.addProperty("type", type)
-        messageObj.add("payload", payload)
-        val message = Gson().toJson(messageObj)
-        return this.postMessage(message)
+                println("sendActiveFileInfo: file: $file")
+
+                if (file === null) {
+                    val fileJson = JsonObject()
+                    fileJson.addProperty("can_paste", false)
+                    payload.add("file", fileJson)
+                    val messageObj = JsonObject()
+                    messageObj.addProperty("type", type)
+                    messageObj.add("payload", payload)
+                    val message = Gson().toJson(messageObj)
+                    this.postMessage(message)
+                }
+
+                val fileJson = Gson().toJsonTree(file, Events.ActiveFile.FileInfo::class.java)
+                payload.add("file", fileJson)
+                val messageObj = JsonObject()
+                messageObj.addProperty("type", type)
+                messageObj.add("payload", payload)
+                val message = Gson().toJson(messageObj)
+                this.postMessage(message)
+            }
+
     }
 
     private fun handleCaps(id: String) {
@@ -236,7 +292,7 @@ class SharedChatPane (val project: Project) {
     }
 
     private fun addEventListener(id: String) {
-        var listener: FileEditorManagerListener = object : FileEditorManagerListener {
+        val listener: FileEditorManagerListener = object : FileEditorManagerListener {
             override fun fileOpened(@NotNull source: FileEditorManager, @NotNull file: VirtualFile) {
                 this@SharedChatPane.sendActiveFileInfo(id)
             }
@@ -246,14 +302,26 @@ class SharedChatPane (val project: Project) {
             }
 
             override fun selectionChanged(@NotNull event: FileEditorManagerEvent) {
+                println("\n### selectionChanged: id: $id ###\n")
                 this@SharedChatPane.sendActiveFileInfo(id)
-                // TODO: selected snippet
+                this@SharedChatPane.sendSelectedSnippet(id)
             }
+
         }
 
-        // FileEditorManager.getInstance(project).addFileEditorManagerListener(listener);
-        // FileEditorManager.getInstance(project).addFileEditorManagerListener()
+        val selectionListener = object : SelectionListener {
+            override fun selectionChanged(event: SelectionEvent) {
+                println("\n### Selection Changed ###\n")
+                this@SharedChatPane.sendSelectedSnippet(id)
+            }
+
+        }
+
         project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, listener)
+
+        // TODO: this is marked as to be depricated
+        val ef = EditorFactory.getInstance()
+        ef.eventMulticaster.addSelectionListener(selectionListener)
     }
 
     private fun handleEvent(event: Events.FromChat) {
@@ -377,6 +445,7 @@ class SharedChatPane (val project: Project) {
     }
 
     private fun postMessage(message: String) {
+        println("postMessage: $message")
         val script = """window.postMessage($message, "*");"""
         webView.cefBrowser.executeJavaScript(script, webView.cefBrowser.url, 0)
     }

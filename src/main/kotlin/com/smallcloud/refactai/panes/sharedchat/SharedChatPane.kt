@@ -1,11 +1,15 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
@@ -15,6 +19,7 @@ import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.events.*
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
+import org.jetbrains.annotations.NotNull
 import javax.swing.JComponent
 
 
@@ -24,6 +29,64 @@ class SharedChatPane (val project: Project) {
 
     init {
         System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
+    }
+
+    private fun getActiveFileInfo(): Events.ActiveFile.FileInfo? {
+        /**
+         * type FileInfo = {
+         *     name: string;
+         *     line1: number | null;
+         *     line2: number | null;
+         *     can_paste: boolean;
+         *     attach: boolean;
+         *     path: string;
+         *     content?: string | undefined;
+         *     usefulness?: number | undefined;
+         *     cursor: number | null;
+         * }
+         **/
+        val fileEditorManager = FileEditorManager.getInstance(project)
+        val selectedFiles = fileEditorManager.selectedFiles
+        if (selectedFiles.isEmpty()) { return null }
+
+        val virtualFile = fileEditorManager.selectedFiles[0]
+        val filePath = virtualFile.path
+        val fileName = virtualFile.name
+
+        return Events.ActiveFile.FileInfo(fileName, filePath, true)
+
+        // val editor = fileEditorManager.selectedTextEditor
+        // editor?.caretModel?.currentCaret.editor.
+//        ApplicationManager.getApplication().runReadAction {
+//            editor?.caretModel.currentCaret?.offset
+//        }
+
+    }
+
+    private fun sendActiveFileInfo(id: String) {
+        val file = this.getActiveFileInfo()
+        val type = EventNames.ToChat.ACTIVE_FILE_INFO.value
+        val payload = JsonObject()
+        payload.addProperty("id", id)
+
+        if(file === null) {
+            val fileJson = JsonObject()
+            fileJson.addProperty("can_paste", false)
+            payload.add("file", fileJson)
+            val messageObj = JsonObject()
+            messageObj.addProperty("type", type)
+            messageObj.add("payload", payload)
+            val message = Gson().toJson(messageObj)
+            return this.postMessage(message)
+        }
+
+        val fileJson = Gson().toJsonTree(file, Events.ActiveFile.FileInfo::class.java)
+        payload.add("file", fileJson)
+        val messageObj = JsonObject()
+        messageObj.addProperty("type", type)
+        messageObj.add("payload", payload)
+        val message = Gson().toJson(messageObj)
+        return this.postMessage(message)
     }
 
     private fun handleCaps(id: String) {
@@ -172,9 +235,34 @@ class SharedChatPane (val project: Project) {
         }
     }
 
+    private fun addEventListener(id: String) {
+        var listener: FileEditorManagerListener = object : FileEditorManagerListener {
+            override fun fileOpened(@NotNull source: FileEditorManager, @NotNull file: VirtualFile) {
+                this@SharedChatPane.sendActiveFileInfo(id)
+            }
+
+            override fun fileClosed(@NotNull source: FileEditorManager, @NotNull file: VirtualFile) {
+                this@SharedChatPane.sendActiveFileInfo(id)
+            }
+
+            override fun selectionChanged(@NotNull event: FileEditorManagerEvent) {
+                this@SharedChatPane.sendActiveFileInfo(id)
+                // TODO: selected snippet
+            }
+        }
+
+        // FileEditorManager.getInstance(project).addFileEditorManagerListener(listener);
+        // FileEditorManager.getInstance(project).addFileEditorManagerListener()
+        project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, listener)
+    }
+
     private fun handleEvent(event: Events.FromChat) {
 
         when (event) {
+            is Events.Ready -> {
+                this.sendActiveFileInfo(event.id)
+                this.addEventListener(event.id)
+            }
             is Events.Caps.Request -> this.handleCaps(event.id)
             is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
             is Events.AtCommands.Completion.Request -> this.handleCompletion(event.id, event.query, event.cursor, event.number, event.trigger)
@@ -183,7 +271,6 @@ class SharedChatPane (val project: Project) {
             is Events.Chat.Stop -> this.handleChatStop(event.id)
             is Events.Editor.Paste -> this.handlePaste(event.id, event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.id, event.content)
-            // copy?
             else -> Unit
         }
     }
@@ -194,8 +281,17 @@ class SharedChatPane (val project: Project) {
            <head>
                <title>Refact.ai</title>
                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/refact-chat-js@0.1/dist/chat/style.css">
+               <style>
+                 body {
+                    margin: 0;
+                    height: 100%;
+                    padding: 0px;
+                    margin: 0px;
+                 }
+                 
+               </style>
            </head>
-           <body style="height:100%; padding:0px; margin: 0px;">
+           <body>
                <div id="refact-chat" style="height:100%;"></div>
            </body>
            <script type="module">
@@ -289,3 +385,4 @@ class SharedChatPane (val project: Project) {
         return webView.component
     }
 }
+

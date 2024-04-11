@@ -688,12 +688,12 @@ class Events {
     class ActiveFile {
         data class FileInfo(
             val name: String,
-            val line1: Int,
-            val line2: Int,
-            @SerializedName("can_paste") val canPaste: Boolean,
-            val attach: Boolean,
             val path: String,
-            val cursor: Int,
+            @SerializedName("can_paste") val canPaste: Boolean,
+            val attach: Boolean = false,
+            val line1: Int? = null,
+            val line2: Int? = null,
+            val cursor: Int? = null,
             val content: String? = null,
             val usefulness: Int? = null,
         )

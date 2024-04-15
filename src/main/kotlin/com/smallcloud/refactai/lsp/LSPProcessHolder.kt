@@ -28,6 +28,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.Future
+import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
@@ -302,7 +303,10 @@ class LSPProcessHolder(val project: Project): Disposable {
     }
 
     fun fetchCaps(): Future<LSPCapabilities> {
-        // check this.capabilities, if it's not empty use it, otherwise fetch it from server
+        if(this.capabilities.codeChatModels.isNotEmpty()) {
+            return FutureTask { this.capabilities }
+        }
+
          val res = InferenceGlobalContext.connection.get(
             url.resolve("/v1/caps"),
             dataReceiveEnded = {},
@@ -390,7 +394,6 @@ class LSPProcessHolder(val project: Project): Disposable {
             "stream" to true
         ))
 
-        println("send_chat $requestBody")
         val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")
         val response = InferenceGlobalContext.connection.post(
             url.resolve("/v1/chat"),

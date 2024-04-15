@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
@@ -26,6 +27,7 @@ import com.smallcloud.refactai.panes.sharedchat.events.*
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import org.jetbrains.annotations.NotNull
+import java.util.concurrent.Future
 import javax.swing.JComponent
 
 
@@ -85,7 +87,7 @@ class SharedChatPane (val project: Project) {
         }
     }
     private fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo?) -> Unit) {
-        ApplicationManager.getApplication().invokeAndWait {
+        ApplicationManager.getApplication().invokeLater {
             val fileEditorManager = FileEditorManager.getInstance(project)
             val editor = fileEditorManager.selectedTextEditor
 
@@ -101,10 +103,12 @@ class SharedChatPane (val project: Project) {
 
             val code = editor?.document?.getText(range)
 
+            val canPaste = selection != null && !selection.isEmpty
+
             val fileInfo = Events.ActiveFile.FileInfo(
                 fileName,
                 filePath,
-                canPaste = true,
+                canPaste,
                 cursor = cursor,
                 line1 = selection?.startOffset,
                 line2 = selection?.endOffset,
@@ -121,7 +125,6 @@ class SharedChatPane (val project: Project) {
                 val payload = JsonObject()
                 payload.addProperty("id", id)
 
-                println("sendActiveFileInfo: file: $file")
 
                 if (file === null) {
                     val fileJson = JsonObject()
@@ -146,11 +149,8 @@ class SharedChatPane (val project: Project) {
     }
 
     private fun handleCaps(id: String) {
-        // Note: I'll need to look in how to do async effectively in kotlin
         this.lsp.fetchCaps().also { caps ->
-            // Handle errors?
             val message: Events.Caps.Receive = Events.Caps.Receive(id, caps.get())
-            println("handleCaps: message: $message")
             this.postMessage(message)
         }
     }
@@ -189,8 +189,6 @@ class SharedChatPane (val project: Project) {
     }
 
     private fun handleChat(id: String, messages: ChatMessages, model: String, title: String? = null) {
-        // TODO: send the chat to the lsp and stream back the response
-        println("handleChat: id: $id, messages: $messages, model: $model, title: $title")
         val gson = GsonBuilder()
             .registerTypeAdapter(Events.Chat.Response.ResponsePayload::class.java, Events.Chat.ResponseDeserializer())
             .registerTypeAdapter(Delta::class.java, DeltaDeserializer())
@@ -276,8 +274,15 @@ class SharedChatPane (val project: Project) {
     }
 
     private fun handlePaste(id: String, content: String) {
-        // TODO: paste the content
-        println("handlePaste: id: $id, content: $content")
+        ApplicationManager.getApplication().invokeLater {
+            val editor = FileEditorManager.getInstance(project).selectedTextEditor
+            val selection = editor?.caretModel?.currentCaret?.selectionRange
+            if (selection != null) {
+                WriteCommandAction.runWriteCommandAction(project) {
+                    editor.document.insertString(selection.startOffset, content)
+                }
+            }
+        }
     }
 
     private fun handleNewFile(id: String, content: String) {
@@ -302,7 +307,6 @@ class SharedChatPane (val project: Project) {
             }
 
             override fun selectionChanged(@NotNull event: FileEditorManagerEvent) {
-                println("\n### selectionChanged: id: $id ###\n")
                 this@SharedChatPane.sendActiveFileInfo(id)
                 this@SharedChatPane.sendSelectedSnippet(id)
             }
@@ -311,7 +315,7 @@ class SharedChatPane (val project: Project) {
 
         val selectionListener = object : SelectionListener {
             override fun selectionChanged(event: SelectionEvent) {
-                println("\n### Selection Changed ###\n")
+                this@SharedChatPane.sendActiveFileInfo(id)
                 this@SharedChatPane.sendSelectedSnippet(id)
             }
 
@@ -343,9 +347,10 @@ class SharedChatPane (val project: Project) {
         }
     }
 
+    // TODO: figure out how to detect dark mode
     val html = """
         <!doctype html>
-        <html lang="en" class="light">
+        <html lang="en" class="dark">
            <head>
                <title>Refact.ai</title>
                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/refact-chat-js@0.1/dist/chat/style.css">
@@ -360,7 +365,7 @@ class SharedChatPane (val project: Project) {
                </style>
            </head>
            <body>
-               <div id="refact-chat" style="height:100%;"></div>
+               <div id="refact-chat"></div>
            </body>
            <script type="module">
                import * as refactChatJs from 'https://cdn.jsdelivr.net/npm/refact-chat-js@0.1/+esm'
@@ -375,9 +380,10 @@ class SharedChatPane (val project: Project) {
                        accentColor: "gray",
                        scaling: "90%",
                      },
+                     // TODO: set the following options to true if the features are enabled
                      features: {
-                       vecdb: false,
-                       ast: false,
+                       vecdb: true,
+                       ast: true,
                      }
                    };
                    refactChatJs.render(element, options);

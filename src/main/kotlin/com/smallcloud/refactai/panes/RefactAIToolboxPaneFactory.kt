@@ -32,14 +32,30 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
 //        content.putUserData(panesKey, gptChatPanes)
 //        toolWindow.contentManager.addContent(content)
 
+        val sp = SharedChatPane(project)
+
         val chatIframeContent: Content = contentFactory.createContent(
-            SharedChatPane(project).getComponent(),
+            sp.getComponent(),
             "Shared Chat",
             false
         )
         chatIframeContent.isCloseable = false
+
         toolWindow.contentManager.addContent(chatIframeContent)
+        // Uncomment to enable dev tools
+//        val devToolsBrowser = JBCefBrowser.createBuilder()
+//            .setCefBrowser(sp.webView.cefBrowser.devTools)
+//            .setClient(sp.webView.jbCefClient)
+//            .build();
+//
+//        val c = contentFactory.createContent(devToolsBrowser.component, "Shared Chat Dev", false)
+//        toolWindow.contentManager.addContent(c)
+//        devToolsBrowser.openDevtools()
+
+
     }
+
+
 
     companion object {
         private val panesKey = Key.create<ChatGPTPanes>("refact.panes")

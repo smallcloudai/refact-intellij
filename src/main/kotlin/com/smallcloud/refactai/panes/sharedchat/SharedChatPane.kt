@@ -353,13 +353,33 @@ class SharedChatPane (val project: Project) {
         <html lang="en" class="dark">
            <head>
                <title>Refact.ai</title>
-               <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/refact-chat-js@0.1/dist/chat/style.css">
+               <meta name="viewport" content="width=device-width, initial-scale=1.0">
+               <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/refact-chat-js@0.2/dist/chat/style.css">
                <style>
+                 html {
+                    height: 100%;
+                 }
+                  
                  body {
                     margin: 0;
+                    min-height: 100%;
                     height: 100%;
                     padding: 0px;
                     margin: 0px;
+                 }
+
+                 #refact-chat {
+                   height: 100%;
+                 }
+                 
+                 #refact-chat > div > div {
+                   /* TODO: dvh isn't supported in jbcef 
+                   *  until chrome version 108 https://caniuse.com/viewport-unit-variants,
+                   * check with window.navigator.userAgent
+                   * tracked here https://youtrack.jetbrains.com/issue/JBR-6782/Update-CEF-to-version-122.1.9-jcef-242-dev
+                   */
+                   
+                   height: 100vh;
                  }
                  
                </style>
@@ -368,7 +388,7 @@ class SharedChatPane (val project: Project) {
                <div id="refact-chat"></div>
            </body>
            <script type="module">
-               import * as refactChatJs from 'https://cdn.jsdelivr.net/npm/refact-chat-js@0.1/+esm'
+               import * as refactChatJs from 'https://cdn.jsdelivr.net/npm/refact-chat-js@0.2/+esm'
 
                window.onload = function() {
                    console.log(refactChatJs);
@@ -431,16 +451,6 @@ class SharedChatPane (val project: Project) {
                 }
             }
         }, browser.cefBrowser)
-
-//        val devTools = browser.cefBrowser.devTools
-//        val devToolsBrowser = JBCefBrowser.createBuilder()
-//            .setCefBrowser(devTools)
-//            .setClient(browser.jbCefClient)
-//            .build();
-//
-//        devToolsBrowser.openDevtools()
-//
-//
 
         browser
     }

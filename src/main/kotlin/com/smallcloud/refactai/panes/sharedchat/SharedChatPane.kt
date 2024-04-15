@@ -326,6 +326,8 @@ class SharedChatPane (val project: Project) {
         // TODO: this is marked as to be depricated
         val ef = EditorFactory.getInstance()
         ef.eventMulticaster.addSelectionListener(selectionListener)
+
+        // TODO: add event for changing colour mode
     }
 
     private fun handleEvent(event: Events.FromChat) {
@@ -348,9 +350,12 @@ class SharedChatPane (val project: Project) {
     }
 
     // TODO: figure out how to detect dark mode
-    val html = """
+    fun getHtml(): String {
+        val isDarkMode = UIUtil.isUnderDarcula()
+        val mode = if (isDarkMode) {"dark" } else { "light" }
+        return """
         <!doctype html>
-        <html lang="en" class="dark">
+        <html lang="en" class="$mode">
            <head>
                <title>Refact.ai</title>
                <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -412,6 +417,7 @@ class SharedChatPane (val project: Project) {
            </script>
         </html>
     """.trimIndent()
+    }
 
     val webView by lazy {
         val browser = JBCefBrowser()

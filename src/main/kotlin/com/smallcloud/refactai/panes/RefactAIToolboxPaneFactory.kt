@@ -9,6 +9,7 @@ import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentFactory
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.gptchat.ChatGPTPanes
+import com.smallcloud.refactai.panes.sharedchat.ChatPanes
 import com.smallcloud.refactai.utils.getLastUsedProject
 import com.smallcloud.refactai.panes.sharedchat.SharedChatPane
 
@@ -32,16 +33,23 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
 //        content.putUserData(panesKey, gptChatPanes)
 //        toolWindow.contentManager.addContent(content)
 
-        val sp = SharedChatPane(project)
+        val chatPanes = ChatPanes(project, toolWindow.disposable)
+        val content: Content = contentFactory.createContent(chatPanes.getComponent(), "Chat", false)
+        content.isCloseable = false
+        toolWindow.contentManager.addContent(content)
 
-        val chatIframeContent: Content = contentFactory.createContent(
-            sp.getComponent(),
-            "Shared Chat",
-            false
-        )
-        chatIframeContent.isCloseable = false
+//        val sp = SharedChatPane(project)
+//
+//        val chatIframeContent: Content = contentFactory.createContent(
+//            sp.getComponent(),
+//            "Shared Chat",
+//            false
+//        )
+//        chatIframeContent.isCloseable = false
+//
+//        toolWindow.contentManager.addContent(chatIframeContent)
 
-        toolWindow.contentManager.addContent(chatIframeContent)
+
         // Uncomment to enable dev tools
 //        val devToolsBrowser = JBCefBrowser.createBuilder()
 //            .setCefBrowser(sp.webView.cefBrowser.devTools)

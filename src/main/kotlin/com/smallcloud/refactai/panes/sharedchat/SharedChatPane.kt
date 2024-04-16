@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.intellij.lang.Language
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.EditorFactory
@@ -14,6 +15,7 @@ import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
@@ -22,6 +24,7 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefJSQuery
+import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.events.*
 import org.cef.browser.CefBrowser
@@ -29,9 +32,10 @@ import org.cef.handler.CefLoadHandlerAdapter
 import org.jetbrains.annotations.NotNull
 import java.util.concurrent.Future
 import javax.swing.JComponent
+import javax.swing.JPanel
 
 
-class SharedChatPane (val project: Project) {
+class SharedChatPane (val project: Project): JPanel(), Disposable {
     private val jsPoolSize = "200"
     private val lsp: LSPProcessHolder = LSPProcessHolder()
 
@@ -425,6 +429,7 @@ class SharedChatPane (val project: Project) {
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
             jsPoolSize,
         )
+        val html = this.getHtml()
         browser.loadHTML(html)
 
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
@@ -473,7 +478,13 @@ class SharedChatPane (val project: Project) {
     }
 
     fun getComponent(): JComponent {
+
         return webView.component
+    }
+
+    override fun dispose() {
+        webView.dispose()
+        Disposer.dispose(this)
     }
 }
 

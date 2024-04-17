@@ -39,6 +39,9 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     private val jsPoolSize = "200"
     private val lsp: LSPProcessHolder = LSPProcessHolder()
 
+    var id: String? = null;
+    var defaultChatModel: String? = null
+
     init {
         System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
     }
@@ -154,7 +157,9 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun handleCaps(id: String) {
         this.lsp.fetchCaps().also { caps ->
-            val message: Events.Caps.Receive = Events.Caps.Receive(id, caps.get())
+            val res = caps.get()
+            val message: Events.Caps.Receive = Events.Caps.Receive(id, res)
+            this.defaultChatModel = res.codeChatDefaultModel
             this.postMessage(message)
         }
     }
@@ -270,6 +275,10 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     private fun handleChatSave(id: String, messages: ChatMessages, model: String, title: String? = null) {
         // TODO: save the chat
         println("handleChatSave: id: $id, messages: $messages, model: $model, title: $title")
+    private fun handleChatSave(id: String, messages: ChatMessages, maybeModel: String, maybeTitle: String) {
+        val model = maybeModel.ifEmpty {this.defaultChatModel ?: ""}
+        val title = maybeTitle.ifEmpty { messages.first { it.role == "user" }.content.toString() }
+        ChatHistory.instance.state.save(id, messages, model, title)
     }
 
     private fun handleChatStop(id: String) {
@@ -340,6 +349,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             is Events.Ready -> {
                 this.sendActiveFileInfo(event.id)
                 this.addEventListener(event.id)
+                this.id = event.id
             }
             is Events.Caps.Request -> this.handleCaps(event.id)
             is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)

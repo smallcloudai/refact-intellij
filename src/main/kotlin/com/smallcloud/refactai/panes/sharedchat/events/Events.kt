@@ -26,8 +26,10 @@ data class ChatContextFile(
 
 
 abstract class ChatMessage<T>(
+    @SerializedName("role")
     val role: String,
     @Transient
+    @SerializedName("content")
     open val content: T
 ): Serializable {
 }
@@ -67,6 +69,20 @@ class ChatMessageDeserializer: JsonDeserializer<ChatMessage<*>> {
             else -> null
         }
 
+    }
+}
+
+class ChatMessageSerializer: JsonSerializer<ChatMessage<*>> {
+    override fun serialize(p0: ChatMessage<*>, p1: Type?, p2: JsonSerializationContext?): JsonElement? {
+        println("serializing user message")
+        println("p0: $p0, p1: $p1, p2: $p2")
+        return when (p0) {
+            is UserMessage -> p2?.serialize(p0, UserMessage::class.java)
+            is AssistantMessage -> p2?.serialize(p0, AssistantMessage::class.java)
+            is ContentFileMessage -> p2?.serialize(p0, ContentFileMessage::class.java)
+            is SystemMessage -> p2?.serialize(p0, SystemMessage::class.java)
+            else -> JsonNull.INSTANCE
+        }
     }
 }
 
@@ -220,6 +236,21 @@ class Events {
                 EventNames.FromChat.REQUEST_PROMPTS.value -> p2?.deserialize(payload, SystemPrompts.Request::class.java)
                 EventNames.FromChat.REQUEST_AT_COMMAND_COMPLETION.value -> p2?.deserialize(payload, AtCommands.Completion.Request::class.java)
                 EventNames.FromChat.SAVE_CHAT.value -> p2?.deserialize(payload, Chat.Save::class.java)
+                EventNames.FromChat.SAVE_CHAT.value -> {
+                    val messages = JsonArray()
+                    payload.asJsonObject.get("messages").asJsonArray.forEach {
+                        val pair = it.asJsonArray
+                        val role = pair.get(0)
+                        val content = pair.get(1)
+                        val obj = JsonObject()
+                        obj.add("role", role)
+                        obj.add("content", content)
+                        messages.add(obj)
+                    }
+
+                    payload.asJsonObject.add("messages", messages)
+                    return p2?.deserialize(payload, Chat.Save::class.java)
+                }
                 EventNames.FromChat.ASK_QUESTION.value -> {
                     val messages = JsonArray()
                     payload.asJsonObject.get("messages").asJsonArray.forEach {
@@ -383,7 +414,7 @@ class Events {
             val id: String,
             val messages: ChatMessages,
             val model: String,
-            val title: String? = null,
+            val title: String,
             val attachFile: Boolean = false,
         ): FromChat(EventNames.FromChat.SAVE_CHAT, ThreadPayload(id, messages, model, title, attachFile)) {
             override fun equals(other: Any?): Boolean {

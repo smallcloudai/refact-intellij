@@ -42,6 +42,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     var id: String? = null;
     var defaultChatModel: String? = null
 
+    var chatThreadToRestore: Events.Chat.Thread? = null
+
     init {
         System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
     }

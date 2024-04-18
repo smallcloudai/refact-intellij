@@ -315,7 +315,9 @@ class LSPProcessHolder(val project: Project): Disposable {
 
         return res.thenApply {
             val body = it.get() as String
-            Gson().fromJson(body, LSPCapabilities::class.java)
+            val caps = Gson().fromJson(body, LSPCapabilities::class.java)
+            this.capabilities = caps
+            caps
         }
     }
 
@@ -409,6 +411,7 @@ class LSPProcessHolder(val project: Project): Disposable {
 //            errorDataReceived = {e -> println("chat_request_error $e")},
 //            failedDataReceiveEnded = {e -> println("chat_request_failed_ended $e")}
         )
+
 
          return response.thenApply {
             it.get()

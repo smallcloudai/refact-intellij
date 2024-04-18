@@ -54,12 +54,11 @@ data class ContentFileMessage(override val content: Array<ChatContextFile>): Cha
     }
 }
 
+
 typealias ChatMessages = Array<ChatMessage<*>>
 
 class ChatMessageDeserializer: JsonDeserializer<ChatMessage<*>> {
     override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): ChatMessage<*>? {
-
-
         val role = p0?.asJsonObject?.get("role")?.asString
         return when(role) {
             ChatRole.USER.value -> p2?.deserialize<UserMessage>(p0, UserMessage::class.java)
@@ -68,14 +67,11 @@ class ChatMessageDeserializer: JsonDeserializer<ChatMessage<*>> {
             ChatRole.SYSTEM.value -> p2?.deserialize<SystemMessage>(p0, SystemMessage::class.java)
             else -> null
         }
-
     }
 }
 
 class ChatMessageSerializer: JsonSerializer<ChatMessage<*>> {
     override fun serialize(p0: ChatMessage<*>, p1: Type?, p2: JsonSerializationContext?): JsonElement? {
-        println("serializing user message")
-        println("p0: $p0, p1: $p1, p2: $p2")
         return when (p0) {
             is UserMessage -> p2?.serialize(p0, UserMessage::class.java)
             is AssistantMessage -> p2?.serialize(p0, AssistantMessage::class.java)
@@ -85,6 +81,7 @@ class ChatMessageSerializer: JsonSerializer<ChatMessage<*>> {
         }
     }
 }
+
 
 abstract class Delta<T>(val role: String, val content: T)
 class AssistantDelta(content: String): Delta<String>(ChatRole.ASSISTANT.value, content)
@@ -227,8 +224,6 @@ class Events {
         override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): FromChat? {
             val type = p0?.asJsonObject?.get("type")?.asString
             val payload = p0?.asJsonObject?.get("payload")
-            // println("deserialize")
-            // println("p0: $p0, p1: $p1, p2: $p2, type: $type, payload: $payload")
             if(type == null || payload == null) return null
 
             return when(type) {
@@ -248,6 +243,7 @@ class Events {
                     }
 
                     payload.asJsonObject.add("messages", messages)
+
                     return p2?.deserialize(payload, Chat.Save::class.java)
                 }
                 EventNames.FromChat.ASK_QUESTION.value -> {
@@ -558,8 +554,6 @@ class Events {
 
         class ResponseDeserializer : JsonDeserializer<Response.ResponsePayload> {
             override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): Response.ResponsePayload? {
-//                println("ResponseDeserializer")
-//                println("p0: $p0, p1: $p1, p2: $p2")
                 val role = p0?.asJsonObject?.get("role")?.asString
 
                 if (role == "user" || role === "context_file") {
@@ -805,7 +799,7 @@ class Events {
     companion object {
         fun parse(msg: String?): FromChat? {
             // TODO: parse messages correctly
-            // println("parse: $msg")
+
             val gson = GsonBuilder()
                 .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
                 .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())

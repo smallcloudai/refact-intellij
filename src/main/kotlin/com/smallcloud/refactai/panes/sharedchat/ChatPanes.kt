@@ -112,11 +112,6 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
         val newPane = SharedChatPane(project)
         val component:  JComponent = newPane.webView.component
         val info = TabInfo(component)
-//        val nextNumber = panes.tabs.map {
-//            it.text.split(" ").last().toInt()
-//        }.reduce {
-//                 acc, cur -> if (cur == acc + 1) { cur } else { acc }
-//        }.or(0)
         info.text = title ?: "Chat"
         Disposer.register(parent, newPane)
 

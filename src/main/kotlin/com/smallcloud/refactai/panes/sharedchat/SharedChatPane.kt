@@ -272,12 +272,9 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         )
     }
 
-    private fun handleChatSave(id: String, messages: ChatMessages, model: String, title: String? = null) {
-        // TODO: save the chat
-        println("handleChatSave: id: $id, messages: $messages, model: $model, title: $title")
     private fun handleChatSave(id: String, messages: ChatMessages, maybeModel: String, maybeTitle: String) {
         val model = maybeModel.ifEmpty {this.defaultChatModel ?: ""}
-        val title = maybeTitle.ifEmpty { messages.first { it.role == "user" }.content.toString() }
+        val title = maybeTitle.ifEmpty { messages.first { it.role == "user" }.content.toString().substring(0, 10).trim() }
         ChatHistory.instance.state.save(id, messages, model, title)
     }
 
@@ -343,6 +340,42 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         // TODO: add event for changing colour mode
     }
 
+    fun restoreWhenReady(id: String, messages: ChatMessages, model: String) {
+        val chatThread = Events.Chat.Thread(id, messages, model)
+        this.chatThreadToRestore = chatThread
+    }
+
+    fun maybeRestore(id: String) {
+        if(this.chatThreadToRestore != null) {
+            val event = JsonObject()
+            event.addProperty("type", EventNames.ToChat.RESTORE_CHAT.value)
+            val payload = JsonObject()
+            payload.addProperty("id", id)
+            val chat = JsonObject()
+            chat.addProperty("id", this.chatThreadToRestore!!.id)
+            chat.addProperty("model", this.chatThreadToRestore!!.model)
+            chat.addProperty("title", this.chatThreadToRestore!!.title)
+            val messages = JsonArray()
+            ChatHistory.instance.gson.toJsonTree(this.chatThreadToRestore!!.messages).asJsonArray.forEach {
+                val message = it.asJsonObject
+                val role = message.get("role")
+                val content = message.get("content")
+                val arr = JsonArray()
+                arr.add(role)
+                arr.add(content)
+                messages.add(arr)
+            }
+            chat.add("messages", messages)
+            payload.add("chat", chat)
+            event.add("payload", payload)
+            val json = Gson().toJson(event)
+            this.postMessage(json)
+            this.id = this.chatThreadToRestore!!.id
+            this.chatThreadToRestore = null
+
+        }
+    }
+
     private fun handleEvent(event: Events.FromChat) {
 
         when (event) {
@@ -350,6 +383,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                 this.sendActiveFileInfo(event.id)
                 this.addEventListener(event.id)
                 this.id = event.id
+                this.maybeRestore(event.id)
             }
             is Events.Caps.Request -> this.handleCaps(event.id)
             is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
@@ -393,7 +427,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                  
                  #refact-chat > div > div {
                    /* TODO: dvh isn't supported in jbcef 
-                   *  until chrome version 108 https://caniuse.com/viewport-unit-variants,
+                   *  needs at least chrome version 108 https://caniuse.com/viewport-unit-variants,
                    * check with window.navigator.userAgent
                    * tracked here https://youtrack.jetbrains.com/issue/JBR-6782/Update-CEF-to-version-122.1.9-jcef-242-dev
                    */

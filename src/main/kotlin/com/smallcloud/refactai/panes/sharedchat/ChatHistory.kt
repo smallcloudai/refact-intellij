@@ -11,6 +11,7 @@ import com.intellij.util.xmlb.annotations.Property
 import com.intellij.util.xmlb.annotations.Transient
 import com.intellij.util.xmlb.annotations.XMap
 import com.smallcloud.refactai.panes.sharedchat.events.ChatMessage
+import com.smallcloud.refactai.panes.sharedchat.events.ChatMessageDeserializer
 import com.smallcloud.refactai.panes.sharedchat.events.ChatMessageSerializer
 import com.smallcloud.refactai.panes.sharedchat.events.ChatMessages
 
@@ -60,18 +61,18 @@ data class ChatHistoryItem(
 
 @State(name = "com.smallcloud.refactai.panes.sharedchat.RefactChatHistory", storages = [
     Storage("refactaiChatHistory.xml"),
-    // Storage(StoragePathMacros.WORKSPACE_FILE)
 ])
 class ChatHistory: PersistentStateComponent<ChatHistory> {
     @MapAnnotation
     var chatHistory: MutableMap<String, String> = emptyMap<String, String>().toMutableMap()
 
-    private var gson = GsonBuilder().registerTypeAdapter(ChatMessage::class.java, ChatMessageSerializer()).create()
+    var gson = GsonBuilder()
+        .registerTypeAdapter(ChatMessage::class.java, ChatMessageSerializer())
+        .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())
+        .create()
 
     fun setItem(item: ChatHistoryItem) {
         val json = gson.toJson(item)
-        println("### setItem ###")
-        println(item)
         chatHistory[item.id] = json
     }
 
@@ -106,8 +107,6 @@ class ChatHistory: PersistentStateComponent<ChatHistory> {
     }
 
     override fun loadState(state: ChatHistory) {
-        println("\n### loadState ###")
-        println(state)
         XmlSerializerUtil.copyBean(state, this)
     }
 

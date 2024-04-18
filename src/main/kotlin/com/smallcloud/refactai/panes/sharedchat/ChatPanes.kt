@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.google.gson.GsonBuilder
 import com.intellij.execution.ui.layout.impl.JBRunnerTabs
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
@@ -10,10 +11,10 @@ import javax.swing.JPanel
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.containers.ContainerUtil
 import com.smallcloud.refactai.RefactAIBundle
-import com.smallcloud.refactai.panes.gptchat.ChatGPTPane
 import javax.swing.JComponent
 
 class ChatPanes(val project: Project, private val parent: Disposable) {
@@ -32,27 +33,91 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
         }, BorderLayout.CENTER)
     }
 
-    private fun setupPanes(isAvailable: Boolean) {
+    private fun setupPanes() {
         invokeLater {
             holder.removeAll()
-            if (isAvailable) {
-                holder.add(panes)
+            holder.add(panes)
+            restoreOrAddNew()
+        }
+    }
+
+    private fun restoreOrAddNew() {
+        ChatHistory.instance.state.let {
+            if (it.chatHistory.isNotEmpty()) {
+                it.getAll().forEach { item ->
+                    restoreTab(item)
+                }
             } else {
-                holder.add(placeholder)
+                addTab()
             }
         }
     }
 
-    init {
-        setupPanes(true)
-        addTab()
-    }
-
-    fun addTab() {
+    private fun restoreTab(item: ChatHistoryItem) {
+        // TODO: add this
         val newPane = SharedChatPane(project)
         val component:  JComponent = newPane.webView.component
         val info = TabInfo(component)
-        info.text = "Chat ${panes.tabs.size + 1}"
+        info.text = item.title ?: "Chat"
+
+        newPane.restoreWhenReady(item.id, item.messages, item.model)
+        Disposer.register(parent, newPane)
+        // Add button
+        info.setActions(DefaultActionGroup(object : AnAction(AllIcons.General.Add) {
+            override fun actionPerformed(e: AnActionEvent) {
+                addTab()
+            }
+
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.EDT
+            }
+        }), ActionPlaces.EDITOR_TAB)
+
+        // Delete button
+        info.setTabLabelActions(DefaultActionGroup(object : AnAction(AllIcons.Actions.Close) {
+            override fun actionPerformed(e: AnActionEvent) {
+                // TODO: cancel requests
+                // (info.component as SharedChatPane).cancelRequest()
+                panes.removeTab(info)
+                ChatHistory.instance.removeItem(item.id)
+                Disposer.dispose(newPane)
+                if (getVisibleTabs().isEmpty()) {
+                    addTab()
+                }
+            }
+
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.EDT
+            }
+        }), ActionPlaces.EDITOR_TAB)
+
+        panes.addTab(info)
+
+//        val devToolsBrowser = JBCefBrowser.createBuilder()
+//            .setCefBrowser(newPane.webView.cefBrowser.devTools)
+//            .setClient(newPane.webView.jbCefClient)
+//            .build();
+//
+//        val devInfo = TabInfo(devToolsBrowser.component)
+//        devInfo.text = "DevTools"
+//        panes.addTab(devInfo)
+//        devToolsBrowser.openDevtools()
+    }
+
+    init {
+        setupPanes()
+    }
+
+    fun addTab(title: String? = null) {
+        val newPane = SharedChatPane(project)
+        val component:  JComponent = newPane.webView.component
+        val info = TabInfo(component)
+//        val nextNumber = panes.tabs.map {
+//            it.text.split(" ").last().toInt()
+//        }.reduce {
+//                 acc, cur -> if (cur == acc + 1) { cur } else { acc }
+//        }.or(0)
+        info.text = title ?: "Chat"
         Disposer.register(parent, newPane)
 
         // Add button
@@ -72,7 +137,7 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
                 // TODO: cancel requests
                 // (info.component as SharedChatPane).cancelRequest()
                 panes.removeTab(info)
-                // TODO: remove from history
+                ChatHistory.instance.state.removeItem(newPane.id)
                 Disposer.dispose(newPane)
                 if (getVisibleTabs().isEmpty()) {
                     addTab()

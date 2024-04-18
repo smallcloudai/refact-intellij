@@ -235,7 +235,6 @@ class Events {
                 EventNames.FromChat.READY.value -> p2?.deserialize(payload, Ready::class.java)
                 EventNames.FromChat.REQUEST_PROMPTS.value -> p2?.deserialize(payload, SystemPrompts.Request::class.java)
                 EventNames.FromChat.REQUEST_AT_COMMAND_COMPLETION.value -> p2?.deserialize(payload, AtCommands.Completion.Request::class.java)
-                EventNames.FromChat.SAVE_CHAT.value -> p2?.deserialize(payload, Chat.Save::class.java)
                 EventNames.FromChat.SAVE_CHAT.value -> {
                     val messages = JsonArray()
                     payload.asJsonObject.get("messages").asJsonArray.forEach {

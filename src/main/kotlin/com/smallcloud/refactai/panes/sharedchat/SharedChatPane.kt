@@ -2,6 +2,7 @@ package com.smallcloud.refactai.panes.sharedchat
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable

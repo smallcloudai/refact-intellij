@@ -27,6 +27,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
@@ -316,7 +317,6 @@ class LSPProcessHolder(val project: Project): Disposable {
         return res.thenApply {
             val body = it.get() as String
             val caps = Gson().fromJson(body, LSPCapabilities::class.java)
-            this.capabilities = caps
             caps
         }
     }
@@ -386,7 +386,7 @@ class LSPProcessHolder(val project: Project): Disposable {
         dataReceiveEnded: (String) -> Unit,
         errorDataReceived: (JsonObject) -> Unit,
         failedDataReceiveEnded: (Throwable?) -> Unit,
-    ): Future<Void> {
+    ): CompletableFuture<Future<*>> {
         val parameters = mapOf("max_new_tokens" to 1000)
         // TODO: figure out why properties on the parent class are missing from json serialization
         val requestBody = Gson().toJson(mapOf(
@@ -397,7 +397,7 @@ class LSPProcessHolder(val project: Project): Disposable {
         ))
 
         val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")
-        val response = InferenceGlobalContext.connection.post(
+        val request = InferenceGlobalContext.connection.post(
             url.resolve("/v1/chat"),
             requestBody,
             headers = headers,
@@ -406,21 +406,9 @@ class LSPProcessHolder(val project: Project): Disposable {
             errorDataReceived = errorDataReceived,
             failedDataReceiveEnded = failedDataReceiveEnded,
             requestId = id,
-//            dataReceived = {p0, p1 -> println("chat_request_received $p0 $p1")},
-//            dataReceiveEnded = {str -> println("chat_request_ended $str")},
-//            errorDataReceived = {e -> println("chat_request_error $e")},
-//            failedDataReceiveEnded = {e -> println("chat_request_failed_ended $e")}
         )
 
-
-         return response.thenApply {
-            it.get()
-             null
-
-        }
+         return request
 
     }
-    // chat ?
-    // prompts?
-    // statistics?
 }

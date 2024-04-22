@@ -152,6 +152,7 @@ class AsyncConnection : Disposable {
         failedDataReceiveEnded: (Throwable?) -> Unit = {},
         requestId: String = ""
     ): CompletableFuture<Future<*>> {
+        var canceled = false;
         return CompletableFuture.supplyAsync {
             return@supplyAsync client.execute(
                 requestProducer,
@@ -173,6 +174,8 @@ class AsyncConnection : Disposable {
 
                     override fun data(src: ByteBuffer?, endOfStream: Boolean) {
                         src ?: return
+                        if(canceled) return;
+
                         val part = Charset.forName("UTF-8").decode(src)
                         bufferStr += part
                         if (part.startsWith(STREAMING_PREFIX)) {
@@ -223,7 +226,11 @@ class AsyncConnection : Disposable {
                         failedDataReceiveEnded(ex)
                     }
 
-                    override fun cancelled() {}
+                    override fun cancelled() {
+                        // TODO: figure out how to stop the stream fro the lsp
+                        canceled = true
+                        dataReceiveEnded("Canceled")
+                    }
                 }
             )
         }
@@ -253,4 +260,5 @@ class AsyncConnection : Disposable {
     override fun dispose() {
         client.close()
     }
+
 }

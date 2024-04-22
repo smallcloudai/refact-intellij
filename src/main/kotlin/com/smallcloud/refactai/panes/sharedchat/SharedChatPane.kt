@@ -31,12 +31,16 @@ import com.smallcloud.refactai.panes.sharedchat.events.*
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import org.jetbrains.annotations.NotNull
+import java.util.*
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
+
 import javax.swing.JComponent
 import javax.swing.JPanel
 
 
 class SharedChatPane (val project: Project): JPanel(), Disposable {
+
     private val jsPoolSize = "200"
     private val lsp: LSPProcessHolder = LSPProcessHolder()
 
@@ -44,6 +48,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     var defaultChatModel: String? = null
 
     var chatThreadToRestore: Events.Chat.Thread? = null
+
+    private var lastProcess: CompletableFuture<Future<*>>? = null;
 
     init {
         System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
@@ -75,56 +81,60 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private fun getSelectedSnippet(cb: (Events.Editor.Snippet?) -> Unit) {
-        ApplicationManager.getApplication().invokeAndWait {
-            val fileEditorManager = FileEditorManager.getInstance(project)
-            val editor = fileEditorManager.selectedTextEditor
-            val file = fileEditorManager.selectedFiles[0]
-            val path = file.path
-            val name = file.name
-            val language = this.getLanguage(fileEditorManager)?.id
-            val caretModel = editor?.caretModel
+        ApplicationManager.getApplication().invokeLater {
+            if(project.isDisposed == false) {
+                val fileEditorManager = FileEditorManager.getInstance(project)
+                val editor = fileEditorManager.selectedTextEditor
+                val file = fileEditorManager.selectedFiles[0]
+                val path = file.path
+                val name = file.name
+                val language = this.getLanguage(fileEditorManager)?.id
+                val caretModel = editor?.caretModel
 
-            val selection = caretModel?.currentCaret?.selectionRange
-            val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
+                val selection = caretModel?.currentCaret?.selectionRange
+                val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
 
-            val code = editor?.document?.getText(range)
-            if (language == null || code == null) {
-                cb(null)
-            } else {
-                val snippet = Events.Editor.Snippet(language, code, path, name)
-                cb(snippet)
+                val code = editor?.document?.getText(range)
+                if (language == null || code == null) {
+                    cb(null)
+                } else {
+                    val snippet = Events.Editor.Snippet(language, code, path, name)
+                    cb(snippet)
+                }
             }
         }
     }
     private fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo?) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            val fileEditorManager = FileEditorManager.getInstance(project)
-            val editor = fileEditorManager.selectedTextEditor
+            if(project.isDisposed == false) {
+                val fileEditorManager = FileEditorManager.getInstance(project)
+                val editor = fileEditorManager.selectedTextEditor
 
-            val cursor = editor?.caretModel?.offset
+                val cursor = editor?.caretModel?.offset
 
-            val virtualFile = fileEditorManager.selectedFiles[0]
-            val filePath = virtualFile.path
-            val fileName = virtualFile.name
+                val virtualFile = fileEditorManager.selectedFiles[0]
+                val filePath = virtualFile.path
+                val fileName = virtualFile.name
 
 
-            val selection = editor?.caretModel?.currentCaret?.selectionRange
-            val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
+                val selection = editor?.caretModel?.currentCaret?.selectionRange
+                val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
 
-            val code = editor?.document?.getText(range)
+                val code = editor?.document?.getText(range)
 
-            val canPaste = selection != null && !selection.isEmpty
+                val canPaste = selection != null && !selection.isEmpty
 
-            val fileInfo = Events.ActiveFile.FileInfo(
-                fileName,
-                filePath,
-                canPaste,
-                cursor = cursor,
-                line1 = selection?.startOffset,
-                line2 = selection?.endOffset,
-                content = code,
-            )
-            cb(fileInfo)
+                val fileInfo = Events.ActiveFile.FileInfo(
+                    fileName,
+                    filePath,
+                    canPaste,
+                    cursor = cursor,
+                    line1 = selection?.startOffset,
+                    line2 = selection?.endOffset,
+                    content = code,
+                )
+                cb(fileInfo)
+            }
         }
     }
 
@@ -206,16 +216,13 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             .registerTypeAdapter(Delta::class.java, DeltaDeserializer())
             .create()
 
-        this.lsp.sendChat(
+        val future = this.lsp.sendChat(
             id,
             messages,
             model,
             dataReceived = {str, requestId ->
-//                println("chat_request_received")
-//                println("str: $str")
-                val res = gson.fromJson(str, Events.Chat.Response.ResponsePayload::class.java)
 
-                // println("res: $res, id: $requestId")
+                val res = gson.fromJson(str, Events.Chat.Response.ResponsePayload::class.java)
 
                 when(res) {
                     is Events.Chat.Response.Choices -> {
@@ -273,17 +280,19 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                 this.postMessage(message)
             }
         )
+        
+        this.lastProcess = future
+
     }
 
-    private fun handleChatSave(id: String, messages: ChatMessages, maybeModel: String, maybeTitle: String) {
+    private fun handleChatSave(id: String, messages: ChatMessages, maybeModel: String) {
         val model = maybeModel.ifEmpty {this.defaultChatModel ?: ""}
-        val title = maybeTitle.ifEmpty { messages.first { it.role == "user" }.content.toString().substring(0, 10).trim() }
-        ChatHistory.instance.state.save(id, messages, model, title)
+        ChatHistory.instance.state.save(id, messages, model)
     }
 
-    private fun handleChatStop(id: String) {
-        // TODO: stop the chat
-        println("handleChatStop: id: $id")
+    fun handleChatStop(id: String) {
+        // TODO: stop the stream from the lsp
+        this.lastProcess?.get()?.cancel(true)
     }
 
     private fun handlePaste(id: String, content: String) {
@@ -375,7 +384,6 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             this.postMessage(json)
             this.id = this.chatThreadToRestore!!.id
             this.chatThreadToRestore = null
-
         }
     }
 
@@ -392,7 +400,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
             is Events.AtCommands.Completion.Request -> this.handleCompletion(event.id, event.query, event.cursor, event.number, event.trigger)
             is Events.Chat.AskQuestion -> this.handleChat(event.id, event.messages, event.model, event.title)
-            is Events.Chat.Save -> this.handleChatSave(event.id, event.messages, event.model, event.title)
+            is Events.Chat.Save -> this.handleChatSave(event.id, event.messages, event.model)
             is Events.Chat.Stop -> this.handleChatStop(event.id)
             is Events.Editor.Paste -> this.handlePaste(event.id, event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.id, event.content)
@@ -482,7 +490,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
 
         myJSQueryOpenInBrowser.addHandler { msg ->
-            println("myJSQueryOpenInBrowser: msg: $msg")
+            // println("myJSQueryOpenInBrowser: msg: $msg")
             // error with save messages
             val event = Events.parse(msg)
             if(event != null) { this.handleEvent(event) }
@@ -519,7 +527,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private fun postMessage(message: String) {
-        println("postMessage: $message")
+        // println("postMessage: $message")
         val script = """window.postMessage($message, "*");"""
         webView.cefBrowser.executeJavaScript(script, webView.cefBrowser.url, 0)
     }

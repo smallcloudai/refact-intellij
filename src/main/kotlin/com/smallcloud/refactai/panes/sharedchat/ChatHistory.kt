@@ -76,9 +76,14 @@ class ChatHistory: PersistentStateComponent<ChatHistory> {
         chatHistory[item.id] = json
     }
 
-    fun save(id: String, messages: ChatMessages, model: String, title: String) {
+    fun save(id: String, messages: ChatMessages, model: String) {
         val maybeItem = this.getItem(id);
         if (maybeItem == null) {
+            val title = messages.first { it.role == "user" }.content.toString().let {
+                val end = it.length.coerceAtMost(16)
+                it.substring(0, end)
+            }
+
             val newItem = ChatHistoryItem(id, messages, model, title)
             setItem(newItem)
         } else {

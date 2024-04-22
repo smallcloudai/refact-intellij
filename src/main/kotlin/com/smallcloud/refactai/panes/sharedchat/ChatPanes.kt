@@ -77,10 +77,9 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
         info.setTabLabelActions(DefaultActionGroup(object : AnAction(AllIcons.Actions.Close) {
             override fun actionPerformed(e: AnActionEvent) {
                 // TODO: cancel requests
-                // (info.component as SharedChatPane).cancelRequest()
+                newPane.handleChatStop(item.id)
                 panes.removeTab(info)
-                ChatHistory.instance.removeItem(item.id)
-                Disposer.dispose(newPane)
+                ChatHistory.instance.state.removeItem(item.id)
                 if (getVisibleTabs().isEmpty()) {
                     addTab()
                 }

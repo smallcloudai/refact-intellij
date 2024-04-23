@@ -61,6 +61,9 @@ class RefactAIPrivacyGroupAction : ActionGroup() {
                 override fun update(e: AnActionEvent) {
                     e.presentation.text = RefactAIBundle.message("privacy.privacyRules")
                 }
+                override fun getActionUpdateThread(): ActionUpdateThread {
+                    return ActionUpdateThread.BGT
+                }
             }
         )
     }

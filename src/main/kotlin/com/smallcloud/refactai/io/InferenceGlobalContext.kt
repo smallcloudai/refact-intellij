@@ -11,7 +11,6 @@ import com.smallcloud.refactai.struct.SMCRequestBody
 import java.net.URI
 import java.util.concurrent.Future
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
 
 class InferenceGlobalContext : Disposable {
@@ -154,15 +153,6 @@ class InferenceGlobalContext : Disposable {
                     .useAutoCompletionModeChanged(newValue)
         }
 
-    var useMultipleFilesCompletion: Boolean
-        get() = AppSettingsState.useMultipleFilesCompletion
-        set(newValue) {
-            if (newValue == useMultipleFilesCompletion) return
-            messageBus
-                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                    .useMultipleFilesCompletionChanged(newValue)
-        }
-
     val deploymentMode: DeploymentMode
         get() {
             if (AppSettingsState.userInferenceUri == null) {
@@ -185,13 +175,37 @@ class InferenceGlobalContext : Disposable {
             return deploymentMode == DeploymentMode.SELF_HOSTED
         }
 
+    var astIsEnabled: Boolean
+        get() = AppSettingsState.astIsEnabled
+        set(newValue) {
+            if (newValue == astIsEnabled) return
+            messageBus
+                   .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                   .astFlagChanged(newValue)
+        }
+
+    var vecdbIsEnabled: Boolean
+        get() = AppSettingsState.vecdbIsEnabled
+        set(newValue) {
+            if (newValue == vecdbIsEnabled) return
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .vecdbFlagChanged(newValue)
+        }
+
+    var xDebugLSPPort: Int?
+        get() { return AppSettingsState.xDebugLSPPort }
+        set(newValue) {
+            if (newValue == AppSettingsState.xDebugLSPPort) return
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .xDebugLSPPortChanged(newValue)
+        }
+
     fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
         val apiKey = AccountManager.apiKey
-//        if (apiKey.isNullOrEmpty() && isCloud) return null
 
-//        requestData.temperature = if (temperature != null) temperature!! else Resources.defaultTemperature
-//        requestData.client = "${Resources.client}-${Resources.version}"
-        return SMCRequest(LSPProcessHolder.url, requestData, apiKey ?: "self_hosted")
+        return SMCRequest(requestData, apiKey ?: "self_hosted")
     }
 
     override fun dispose() {

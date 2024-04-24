@@ -8,11 +8,11 @@ import com.intellij.openapi.diagnostic.IdeaLoggingEvent
 import com.intellij.openapi.diagnostic.SubmittedReportInfo
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.Consumer
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.buildInfo
 import com.smallcloud.refactai.struct.DeploymentMode
 import java.awt.Component
 import java.net.URLEncoder
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 private fun String.urlEncoded(): String = URLEncoder.encode(this, "UTF-8")
 
@@ -43,7 +43,6 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
             "; Vendor: " + properties.getProperty("java.vendor", "unknown")
         val os = SystemInfo.getOsNameAndVersion()
         val arch = SystemInfo.OS_ARCH
-        var buildInfo = LSPProcessHolder.buildInfo()
         val issueBody = """
       |An internal error happened in the IDE plugin.
       |

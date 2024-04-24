@@ -3,17 +3,19 @@ package com.smallcloud.refactai.statistic
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources.defaultReportUrlSuffix
 import com.smallcloud.refactai.Resources.defaultSnippetAcceptedUrlSuffix
 import com.smallcloud.refactai.io.sendRequest
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.acceptedCompletionCounter
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
 
-class UsageStats: Disposable {
+class UsageStats(private val project: Project): Disposable {
     private val execService = AppExecutorUtil.getAppScheduledExecutorService()
 
     fun addStatistic(
@@ -43,7 +45,7 @@ class UsageStats: Disposable {
                 "url" to relatedUrl,
             )
         )
-        val url = LSPProcessHolder.url.resolve(defaultReportUrlSuffix)
+        val url = getLSPProcessHolder(project).url.resolve(defaultReportUrlSuffix)
         execService.submit {
             try {
                 val res = sendRequest(url, "POST", body=body)
@@ -61,7 +63,7 @@ class UsageStats: Disposable {
     }
 
     fun snippetAccepted(snippetId: Int) {
-        val url = LSPProcessHolder.url.resolve(defaultSnippetAcceptedUrlSuffix)
+        val url = getLSPProcessHolder(project).url.resolve(defaultSnippetAcceptedUrlSuffix)
         execService.submit {
             try {
                 val gson = Gson()
@@ -95,7 +97,10 @@ class UsageStats: Disposable {
     companion object {
         @JvmStatic
         val instance: UsageStats
-            get() = ApplicationManager.getApplication().getService(UsageStats::class.java)
+            get() {
+                val project = ProjectManager.getInstance().openProjects.first()
+                return project.service()
+            }
     }
 
     override fun dispose() {}

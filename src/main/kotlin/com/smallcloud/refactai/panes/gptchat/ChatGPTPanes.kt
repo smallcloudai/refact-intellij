@@ -18,10 +18,10 @@ import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
 
-class ChatGPTPanes(project: Project, private val parent: Disposable) {
+class ChatGPTPanes(private val project: Project, private val parent: Disposable) {
     private val paneBaseName = "Chat"
     private val panes = JBRunnerTabs(project, parent)
     private val holder = JPanel().also {
@@ -48,7 +48,7 @@ class ChatGPTPanes(project: Project, private val parent: Disposable) {
     }
 
     init {
-        setupPanes(LSPProcessHolder.capabilities.codeChatModels.isNotEmpty())
+        setupPanes(getLSPProcessHolder(project).capabilities.codeChatModels.isNotEmpty())
         ApplicationManager.getApplication()
                 .messageBus
                 .connect(PluginState.instance)
@@ -91,7 +91,7 @@ class ChatGPTPanes(project: Project, private val parent: Disposable) {
 
     fun addTab(intent: String = "", selectedText: String = "",
                needInsertCode: Boolean = false, needSend: Boolean = false) {
-        val newPane = ChatGPTPane()
+        val newPane = ChatGPTPane(project)
         Disposer.register(parent, newPane)
         if (intent.isNotEmpty() && needSend) {
             newPane.send(intent, selectedText)

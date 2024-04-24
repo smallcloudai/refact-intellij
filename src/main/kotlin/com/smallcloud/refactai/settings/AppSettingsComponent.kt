@@ -33,13 +33,15 @@ class AppSettingsComponent {
                     myXDebugLSPPortLabel.isVisible = true
                     myStagingVersionText.isVisible = true
                     myStagingVersionLabel.isVisible = true
+                    vecdbCheckbox.isVisible = true
                 }
             }
 
         })
     }
     private val myContrastUrlText = JBTextField()
-    private val myUseMultipleFilesCompletion = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion"))
+    private val myModelText = JBTextField()
+    private val astCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion"))
     private val developerModeCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.developerMode")).apply {
         isVisible = false
     }
@@ -56,6 +58,9 @@ class AppSettingsComponent {
         isVisible = false
     }
     private val defaultSystemPromptTextArea = JBTextArea()
+    private val vecdbCheckbox = JCheckBox("VECDB").apply {
+        isVisible = false
+    }
 
 
     init {
@@ -75,10 +80,18 @@ class AppSettingsComponent {
 
         experimentalPanel = FormBuilder.createFormBuilder().run {
             addComponent(TitledSeparator(RefactAIBundle.message("advancedSettings.experimentalFeatures")))
-            addComponent(myUseMultipleFilesCompletion, UIUtil.LARGE_VGAP)
+            addComponent(astCheckbox, UIUtil.LARGE_VGAP)
             addComponent(
                 JBLabel(
                     RefactAIBundle.message("advancedSettings.useMultipleFilesCompletionDescription"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
+            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.codeCompletionModel")}: "),
+                myModelText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.codeCompletionModelDesc"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
@@ -94,6 +107,7 @@ class AppSettingsComponent {
             addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
             addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
             addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
+            addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
             addComponentFillVertically(JPanel(), 0)
         }.panel
 
@@ -104,6 +118,7 @@ class AppSettingsComponent {
 
     val preferredFocusedComponent: JComponent
         get() = myTokenText
+
 
     var tokenText: String
         get() = myTokenText.text
@@ -123,19 +138,23 @@ class AppSettingsComponent {
             defaultSystemPromptTextArea.text = newText
         }
 
-    var useMultipleFilesCompletion: Boolean
-        get() {
-            return myUseMultipleFilesCompletion.isSelected
-        }
-        set(value) {
-            myUseMultipleFilesCompletion.isSelected = value
-        }
-
     var useDeveloperMode: Boolean
         get() = developerModeCheckBox.isSelected
         set(newVal) {
             developerModeCheckBox.isSelected = newVal
         }
+
+    var astIsEnabled: Boolean
+        get() = astCheckbox.isSelected
+        set(newVal) {
+            astCheckbox.isSelected = newVal
+        }
+    var vecdbIsEnabled: Boolean
+        get() = vecdbCheckbox.isSelected
+        set(newVal) {
+            vecdbCheckbox.isSelected = newVal
+        }
+
     var xDebugLSPPort: Int?
         get() =
             try {

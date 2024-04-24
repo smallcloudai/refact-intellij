@@ -6,8 +6,8 @@ import com.smallcloud.refactai.struct.SMCCursor
 import com.smallcloud.refactai.struct.SMCInputs
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.struct.SMCRequestBody
+import java.net.URI
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 object RequestCreator {
     fun create(
@@ -16,7 +16,9 @@ object RequestCreator {
         stat: UsageStatistic,
         intent: String, functionName: String,
         promptInfo: List<PromptInfo>,
-        model: String,
+        baseUrl: URI,
+        model: String? = null,
+        useAst: Boolean = false,
         stream: Boolean = true,
         multiline: Boolean = false
     ): SMCRequest? {
@@ -33,13 +35,15 @@ object RequestCreator {
         val requestBody = SMCRequestBody(
             inputs = inputs,
             stream = stream,
+            model = model,
+            useAst = useAst
         )
 
         return InferenceGlobalContext.makeRequest(
             requestBody,
         )?.also {
             it.stat = stat
-            it.uri = LSPProcessHolder.url.resolve(Resources.defaultCodeCompletionUrlSuffix)
+            it.uri = baseUrl.resolve(Resources.defaultCodeCompletionUrlSuffix)
         }
     }
 }

@@ -2,13 +2,13 @@ package com.smallcloud.refactai.settings
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.project.ProjectManager
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import org.jetbrains.annotations.Nls
 import javax.swing.JComponent
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 
 /**
  * Provides controller functionality for application settings.
@@ -24,6 +24,7 @@ class AppSettingsConfigurable : Configurable {
                     mySettingsComponent?.splitter?.revalidate()
                 }
             })
+        val project = ProjectManager.getInstance().openProjects.first()
     }
 
     // A default constructor with no arguments is required because this implementation
@@ -61,14 +62,15 @@ class AppSettingsConfigurable : Configurable {
         modified =
             modified || (mySettingsComponent!!.contrastUrlText.isEmpty() && !InferenceGlobalContext.isCloud)
 
-        modified = modified || mySettingsComponent!!.useMultipleFilesCompletion != InferenceGlobalContext.useMultipleFilesCompletion
-
         modified = modified || mySettingsComponent!!.useDeveloperMode != InferenceGlobalContext.developerModeEnabled
 
-        modified = modified || mySettingsComponent!!.xDebugLSPPort != LSPProcessHolder.xDebugLSPPort
+        modified = modified || mySettingsComponent!!.xDebugLSPPort != InferenceGlobalContext.xDebugLSPPort
 
         modified = modified || mySettingsComponent!!.stagingVersion != InferenceGlobalContext.stagingVersion
         modified = modified || mySettingsComponent!!.defaultSystemPrompt != AppSettingsState.instance.defaultSystemPrompt
+
+        modified = modified || mySettingsComponent!!.astIsEnabled != InferenceGlobalContext.astIsEnabled
+        modified = modified || mySettingsComponent!!.vecdbIsEnabled != InferenceGlobalContext.vecdbIsEnabled
 
         return modified
     }
@@ -78,21 +80,23 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.inferenceUri =
             makeRightUrl(mySettingsComponent!!.contrastUrlText.ifEmpty { null })
         mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
-        InferenceGlobalContext.useMultipleFilesCompletion = mySettingsComponent!!.useMultipleFilesCompletion
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
-        LSPProcessHolder.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
+        InferenceGlobalContext.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
         AppSettingsState.instance.defaultSystemPrompt = mySettingsComponent!!.defaultSystemPrompt
+        InferenceGlobalContext.astIsEnabled = mySettingsComponent!!.astIsEnabled
+        InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
     }
 
     override fun reset() {
         mySettingsComponent!!.tokenText = AccountManager.apiKey ?: ""
         mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
-        mySettingsComponent!!.useMultipleFilesCompletion = InferenceGlobalContext.useMultipleFilesCompletion
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled
         mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
-        mySettingsComponent!!.xDebugLSPPort = LSPProcessHolder.xDebugLSPPort
+        mySettingsComponent!!.xDebugLSPPort = InferenceGlobalContext.xDebugLSPPort
         mySettingsComponent!!.defaultSystemPrompt = AppSettingsState.instance.defaultSystemPrompt
+        mySettingsComponent!!.astIsEnabled = InferenceGlobalContext.astIsEnabled
+        mySettingsComponent!!.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
     }
 
     override fun disposeUIResources() {

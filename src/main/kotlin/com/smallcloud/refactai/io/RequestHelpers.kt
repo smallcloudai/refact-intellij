@@ -9,7 +9,6 @@ import com.smallcloud.refactai.struct.SMCStreamingPeace
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 private fun lookForCommonErrors(json: JsonObject, request: SMCRequest): String? {
@@ -55,7 +54,7 @@ fun streamedInferenceFetch(
         "Authorization" to "Bearer ${request.token}",
     )
 
-    if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED || !LSPProcessHolder.lspIsWorking) return null
+    if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return null
 
     val job = InferenceGlobalContext.connection.post(
         uri, body, headers,

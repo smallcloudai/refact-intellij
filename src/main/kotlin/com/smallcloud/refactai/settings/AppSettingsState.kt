@@ -11,7 +11,6 @@ import com.smallcloud.refactai.ExtraInfoChangedNotifier
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
-import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import java.net.URI
 import java.util.concurrent.atomic.AtomicInteger
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
@@ -39,13 +38,14 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var tooltipMessage: String? = null
     var inferenceMessage: String? = null
     var useAutoCompletion: Boolean = true
-    var useMultipleFilesCompletion: Boolean = false
     var startupLoggedIn: Boolean = false
     var developerModeEnabled: Boolean = false
     var xDebugLSPPort: Int? = null
     var stagingVersion: String = ""
     var rateUsNotification: Boolean = false
     var defaultSystemPrompt: String = ""
+    var astIsEnabled: Boolean = false
+    var vecdbIsEnabled: Boolean = false
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -90,11 +90,18 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     override fun useAutoCompletionModeChanged(newValue: Boolean) {
                         instance.useAutoCompletion = newValue
                     }
-                    override fun useMultipleFilesCompletionChanged(newValue: Boolean) {
-                        instance.useMultipleFilesCompletion = newValue
-                    }
                     override fun developerModeEnabledChanged(newValue: Boolean) {
                         instance.developerModeEnabled = newValue
+                    }
+
+                    override fun astFlagChanged(newValue: Boolean) {
+                        instance.astIsEnabled = newValue
+                    }
+                    override fun vecdbFlagChanged(newValue: Boolean) {
+                        instance.vecdbIsEnabled = newValue
+                    }
+                    override fun xDebugLSPPortChanged(newPort: Int?) {
+                        instance.xDebugLSPPort = newPort
                     }
                 })
         messageBus
@@ -110,13 +117,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
 
                 override fun inferenceMessageChanged(newMsg: String?) {
                     instance.inferenceMessage = newMsg
-                }
-            })
-        messageBus
-            .connect(PluginState.instance)
-            .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
-                override fun xDebugLSPPortChanged(newPort: Int?) {
-                    instance.xDebugLSPPort = newPort
                 }
             })
     }

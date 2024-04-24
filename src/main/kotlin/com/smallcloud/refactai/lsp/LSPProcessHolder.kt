@@ -90,6 +90,16 @@ class LSPProcessHolder: Disposable {
                             settingsChanged()
                         }
                     }
+                    override fun astFlagChanged(newValue: Boolean) {
+                        AppExecutorUtil.getAppScheduledExecutorService().submit {
+                            settingsChanged()
+                        }
+                    }
+                    override fun vecdbFlagChanged(newValue: Boolean) {
+                        AppExecutorUtil.getAppScheduledExecutorService().submit {
+                            settingsChanged()
+                        }
+                    }
                 })
 
         Companion::class.java.getResourceAsStream(
@@ -136,7 +146,9 @@ class LSPProcessHolder: Disposable {
                 port = (32000..32199).random(),
                 clientVersion = "${Resources.client}-${Resources.version}/${Resources.jbBuildVersion}",
                 useTelemetry = true,
-                deployment = InferenceGlobalContext.deploymentMode
+                deployment = InferenceGlobalContext.deploymentMode,
+                ast = InferenceGlobalContext.astIsEnabled,
+                vecdb = InferenceGlobalContext.vecdbIsEnabled,
             )
             startProcess(newConfig)
         }

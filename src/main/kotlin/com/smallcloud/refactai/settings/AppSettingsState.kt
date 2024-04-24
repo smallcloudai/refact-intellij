@@ -46,6 +46,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var stagingVersion: String = ""
     var rateUsNotification: Boolean = false
     var defaultSystemPrompt: String = ""
+    var astIsEnabled: Boolean = false
+    var vecdbIsEnabled: Boolean = false
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -95,6 +97,13 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     }
                     override fun developerModeEnabledChanged(newValue: Boolean) {
                         instance.developerModeEnabled = newValue
+                    }
+
+                    override fun astFlagChanged(newValue: Boolean) {
+                        instance.astIsEnabled = newValue
+                    }
+                    override fun vecdbFlagChanged(newValue: Boolean) {
+                        instance.vecdbIsEnabled = newValue
                     }
                 })
         messageBus

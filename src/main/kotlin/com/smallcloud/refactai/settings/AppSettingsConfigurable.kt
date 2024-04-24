@@ -70,6 +70,9 @@ class AppSettingsConfigurable : Configurable {
         modified = modified || mySettingsComponent!!.stagingVersion != InferenceGlobalContext.stagingVersion
         modified = modified || mySettingsComponent!!.defaultSystemPrompt != AppSettingsState.instance.defaultSystemPrompt
 
+        modified = modified || mySettingsComponent!!.astIsEnabled != InferenceGlobalContext.astIsEnabled
+        modified = modified || mySettingsComponent!!.vecdbIsEnabled != InferenceGlobalContext.vecdbIsEnabled
+
         return modified
     }
 
@@ -83,6 +86,8 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
         LSPProcessHolder.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
         AppSettingsState.instance.defaultSystemPrompt = mySettingsComponent!!.defaultSystemPrompt
+        InferenceGlobalContext.astIsEnabled = mySettingsComponent!!.astIsEnabled
+        InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
     }
 
     override fun reset() {
@@ -93,6 +98,8 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
         mySettingsComponent!!.xDebugLSPPort = LSPProcessHolder.xDebugLSPPort
         mySettingsComponent!!.defaultSystemPrompt = AppSettingsState.instance.defaultSystemPrompt
+        mySettingsComponent!!.astIsEnabled = InferenceGlobalContext.astIsEnabled
+        mySettingsComponent!!.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
     }
 
     override fun disposeUIResources() {

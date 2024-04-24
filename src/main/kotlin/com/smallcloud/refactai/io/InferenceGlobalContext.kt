@@ -185,6 +185,24 @@ class InferenceGlobalContext : Disposable {
             return deploymentMode == DeploymentMode.SELF_HOSTED
         }
 
+    var astIsEnabled: Boolean
+        get() = AppSettingsState.astIsEnabled
+        set(newValue) {
+            if (newValue == astIsEnabled) return
+            messageBus
+                   .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                   .astFlagChanged(newValue)
+        }
+
+    var vecdbIsEnabled: Boolean
+        get() = AppSettingsState.vecdbIsEnabled
+        set(newValue) {
+            if (newValue == vecdbIsEnabled) return
+            messageBus
+                .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .vecdbFlagChanged(newValue)
+        }
+
     fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
         val apiKey = AccountManager.apiKey
 //        if (apiKey.isNullOrEmpty() && isCloud) return null

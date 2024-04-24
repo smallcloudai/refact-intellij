@@ -41,13 +41,15 @@ data class SMCRequestBody(
     var inputs: SMCInputs = SMCInputs(),
     var stream: Boolean = true,
     var parameters: SMCParameters = SMCParameters(),
-    @SerializedName("no_cache") var noCache: Boolean = false
+    var model: String? = null,
+    @SerializedName("no_cache") var noCache: Boolean = false,
+    @SerializedName("use_ast") var useAst: Boolean = false,
 )
 
 data class SMCRequest(
-    var uri: URI,
     var body: SMCRequestBody,
     var token: String,
+    var uri: URI = URI(""),
     var id: String = uuid(),
     var stat: UsageStatistic = UsageStatistic(),
 )

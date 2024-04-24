@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.Project
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.Resources.defaultChatUrlSuffix
@@ -31,9 +32,9 @@ import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
-class ChatGPTProvider : ActionListener {
+class ChatGPTProvider(val project: Project) : ActionListener {
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
             "SMCChatProviderScheduler", 1
     )
@@ -96,7 +97,7 @@ class ChatGPTProvider : ActionListener {
 
         pane.add(MessageComponent(md2html(text), true))
         val message = MessageComponent(listOf(ParsedText("...", "...", false)), false)
-        val req = ChatGPTRequest(LSPProcessHolder.url.resolve(defaultChatUrlSuffix),
+        val req = ChatGPTRequest(getLSPProcessHolder(project).url.resolve(defaultChatUrlSuffix),
                 AccountManager.apiKey, pane.getFullHistory())
         pane.add(message)
         processTask = scheduler.submit {

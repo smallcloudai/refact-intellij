@@ -5,22 +5,19 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.startup.StartupActivity
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.io.ConnectivityManager
 import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.listeners.UninstallListener
-import com.smallcloud.refactai.lsp.LSPProcessHolder
-import com.smallcloud.refactai.lsp.lspProjectInitialize
 import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.settingsStartup
-import com.smallcloud.refactai.statistic.UsageStats
 import com.smallcloud.refactai.struct.DeploymentMode
 import java.util.concurrent.atomic.AtomicBoolean
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
 
 class Initializer : StartupActivity, Disposable {
@@ -47,13 +44,11 @@ class Initializer : StartupActivity, Disposable {
             }
             settingsStartup()
             notificationStartup()
-            UsageStats.instance
             PluginInstaller.addStateListener(UninstallListener())
             UpdateChecker.instance
-            LSPProcessHolder.instance.startup()
         }
-        PrivacyService.instance.projectOpened(project)
-        lspProjectInitialize(ProjectRootManager.getInstance(project).contentRoots.map { it.toString() })
+         getLSPProcessHolder(project)
+         PrivacyService.instance.projectOpened(project)
     }
 
     override fun dispose() {

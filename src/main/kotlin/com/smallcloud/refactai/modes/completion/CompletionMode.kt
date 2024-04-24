@@ -10,7 +10,6 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.streamedInferenceFetch
 import com.smallcloud.refactai.modes.EditorTextState
@@ -31,6 +30,7 @@ import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyService
 import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
@@ -65,6 +65,7 @@ class CompletionMode(
         var maybeState: EditorTextState? = null
         val debounceMs: Long
         val editor = event.editor
+        val project = editor.project!!
         val logicalPos = event.editor.caretModel.logicalPosition
         var text = editor.document.text
         var offset = -1
@@ -122,11 +123,13 @@ class CompletionMode(
 
         val promptInfo: List<PromptInfo> = listOf()
         val stat = UsageStatistic(scope, extension = getExtension(fileName))
+        val baseUrl = getLSPProcessHolder(project).url
         val request = RequestCreator.create(
             fileName, text, logicalPos.line, pos,
             stat, "Infill", "infill", promptInfo,
-            stream = false, model = InferenceGlobalContext.model ?: Resources.defaultModel,
-                multiline=isMultiline
+            baseUrl = baseUrl,
+            stream = false, model = InferenceGlobalContext.model,
+            multiline = isMultiline, useAst = InferenceGlobalContext.astIsEnabled,
         ) ?: return
 
         processTask = scheduler.schedule({
@@ -231,6 +234,9 @@ class CompletionMode(
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
             InferenceGlobalContext.lastErrorMsg = null
         }) { prediction ->
+            if (prediction.choices == null || prediction.choices.isEmpty()) {
+                throw Exception("No choices found")
+            }
             val choice = prediction.choices.first()
             if (lastRequestId != prediction.requestId) {
                 completionLayout?.dispose()

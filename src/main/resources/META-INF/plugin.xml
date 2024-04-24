@@ -143,10 +143,10 @@ integrated into a single package that follows your privacy settings.</p>
         <applicationService serviceImplementation="com.smallcloud.refactai.io.InferenceGlobalContext"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.privacy.PrivacyService"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.account.LoginStateService"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.statistic.UsageStats"/>
+        <projectService serviceImplementation="com.smallcloud.refactai.statistic.UsageStats"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.UpdateChecker"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectivityManager"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.lsp.LSPProcessHolder"/>
+        <projectService serviceImplementation="com.smallcloud.refactai.lsp.LSPProcessHolder"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.refactai.listeners.TabPressedAction"

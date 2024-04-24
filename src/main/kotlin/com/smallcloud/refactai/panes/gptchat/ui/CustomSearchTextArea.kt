@@ -14,6 +14,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.LightEditActionFactory
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.util.registry.Registry
@@ -48,7 +49,7 @@ import javax.swing.text.BadLocationException
 import javax.swing.text.DefaultEditorKit.InsertBreakAction
 import javax.swing.text.PlainDocument
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
 private class FullColorizeFilter(val color: Color) : RGBImageFilter() {
     override fun filterRGB(x: Int, y: Int, rgba: Int): Int {
@@ -77,7 +78,7 @@ private fun getFilenameFromEditor(editor: Editor?): String {
     return file?.name ?: ""
 }
 
-class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeListener, Disposable {
+class CustomSearchTextArea(val textArea: JTextArea, private val project: Project) : JPanel(), PropertyChangeListener, Disposable {
     private var initEditor: Editor? = LastEditorGetterListener.LAST_EDITOR
     private val myIconsPanel: JPanel = NonOpaquePanel()
     private val myNewLineButton: ActionButton
@@ -417,10 +418,10 @@ class CustomSearchTextArea(val textArea: JTextArea) : JPanel(), PropertyChangeLi
             })
         }
 
-        modelComboBox = ComboBox(LSPProcessHolder.capabilities.codeChatModels.keys.toTypedArray()).apply {
+        modelComboBox = ComboBox(getLSPProcessHolder(project).capabilities.codeChatModels.keys.toTypedArray()).apply {
             background = BACKGROUND_COLOR
             isOpaque = false
-            selectedItem = LSPProcessHolder.capabilities.codeChatDefaultModel
+            selectedItem = getLSPProcessHolder(project).capabilities.codeChatDefaultModel
             ApplicationManager.getApplication().messageBus
                     .connect(this@CustomSearchTextArea)
                     .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {

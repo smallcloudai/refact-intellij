@@ -11,9 +11,11 @@ interface InferenceGlobalContextChangedNotifier {
     fun modelChanged(newModel: String?) {}
     fun lastAutoModelChanged(newModel: String?) {}
     fun useAutoCompletionModeChanged(newValue: Boolean) {}
-    fun useMultipleFilesCompletionChanged(newValue: Boolean) {}
     fun developerModeEnabledChanged(newValue: Boolean) {}
     fun deploymentModeChanged(newMode: DeploymentMode) {}
+    fun astFlagChanged(newValue: Boolean) {}
+    fun vecdbFlagChanged(newValue: Boolean) {}
+    fun xDebugLSPPortChanged(newPort: Int?) {}
 
     companion object {
         val TOPIC = Topic.create(

@@ -35,7 +35,7 @@ import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import javax.swing.event.HyperlinkEvent
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.instance as LSPProcessHolder
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyServiceInstance
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
 
@@ -197,7 +197,7 @@ fun emitRegular(project: Project, editor: Editor) {
 
 
     val chat = ToolWindowManager.getInstance(project).getToolWindow("Refact")
-    if (chat != null && LSPProcessHolder.capabilities.codeChatModels.isNotEmpty()) {
+    if (chat != null && getLSPProcessHolder(project).capabilities.codeChatModels.isNotEmpty()) {
         val chatShortcut = KeymapUtil.getShortcutText("ActivateRefactChatToolWindow")
         notification.addAction(NotificationAction.createSimple("Chat ($chatShortcut)") {
             chat.activate{

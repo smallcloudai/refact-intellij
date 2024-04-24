@@ -5,7 +5,9 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.util.io.FileUtil.*
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -16,7 +18,6 @@ import com.smallcloud.refactai.Resources.binPrefix
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitError
-import com.smallcloud.refactai.settings.AppSettingsState
 import org.apache.hc.core5.concurrent.ComplexFuture
 import java.net.URI
 import java.nio.file.Files
@@ -33,19 +34,18 @@ private fun getExeSuffix(): String {
     if (SystemInfo.isWindows) return ".exe"
     return ""
 }
+
 interface LSPProcessHolderChangedNotifier {
     fun capabilitiesChanged(newCaps: LSPCapabilities) {}
-
-    fun xDebugLSPPortChanged(newPort: Int?) {}
     companion object {
         val TOPIC = Topic.create(
-                "Connection Changed Notifier",
-                LSPProcessHolderChangedNotifier::class.java
+            "Connection Changed Notifier",
+            LSPProcessHolderChangedNotifier::class.java
         )
     }
 }
 
-class LSPProcessHolder: Disposable {
+class LSPProcessHolder(val project: Project): Disposable {
     private var process: Process? = null
     private var lastConfig: LSPConfig? = null
     private val logger = Logger.getInstance("LSPProcessHolder")
@@ -60,19 +60,7 @@ class LSPProcessHolder: Disposable {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
 
 
-    var xDebugLSPPort: Int?
-        get() { return AppSettingsState.instance.xDebugLSPPort }
-        set(newValue) {
-            if (newValue == AppSettingsState.instance.xDebugLSPPort) return
-            messageBus
-                .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
-                .xDebugLSPPortChanged(newValue)
-            AppExecutorUtil.getAppScheduledExecutorService().submit {
-                settingsChanged()
-            }
-        }
-
-    fun startup() {
+    init {
         messageBus
                 .connect(this)
                 .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
@@ -86,6 +74,22 @@ class LSPProcessHolder: Disposable {
                 .connect(this)
                 .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                     override fun userInferenceUriChanged(newUrl: String?) {
+                        AppExecutorUtil.getAppScheduledExecutorService().submit {
+                            settingsChanged()
+                        }
+                    }
+                    override fun astFlagChanged(newValue: Boolean) {
+                        AppExecutorUtil.getAppScheduledExecutorService().submit {
+                            settingsChanged()
+                        }
+                    }
+                    override fun vecdbFlagChanged(newValue: Boolean) {
+                        AppExecutorUtil.getAppScheduledExecutorService().submit {
+                            settingsChanged()
+                        }
+                    }
+
+                    override fun xDebugLSPPortChanged(newPort: Int?) {
                         AppExecutorUtil.getAppScheduledExecutorService().submit {
                             settingsChanged()
                         }
@@ -127,7 +131,7 @@ class LSPProcessHolder: Disposable {
     private fun settingsChanged() {
         synchronized(this) {
             terminate()
-            if (xDebugLSPPort != null) return
+            if (InferenceGlobalContext.xDebugLSPPort != null) return
             val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else
                 InferenceGlobalContext.inferenceUri
             val newConfig = LSPConfig(
@@ -136,23 +140,25 @@ class LSPProcessHolder: Disposable {
                 port = (32000..32199).random(),
                 clientVersion = "${Resources.client}-${Resources.version}/${Resources.jbBuildVersion}",
                 useTelemetry = true,
-                deployment = InferenceGlobalContext.deploymentMode
+                deployment = InferenceGlobalContext.deploymentMode,
+                ast = InferenceGlobalContext.astIsEnabled,
+                vecdb = InferenceGlobalContext.vecdbIsEnabled,
             )
             startProcess(newConfig)
         }
     }
 
     val lspIsWorking: Boolean
-        get() = xDebugLSPPort != null || process?.isAlive == true
+        get() = InferenceGlobalContext.xDebugLSPPort != null || process?.isAlive == true
 
     var capabilities: LSPCapabilities = LSPCapabilities()
         set(newValue) {
             if (newValue == field) return
             field = newValue
-            ApplicationManager.getApplication()
-                    .messageBus
-                    .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
-                    .capabilitiesChanged(field)
+            project
+                .messageBus
+                .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
+                .capabilitiesChanged(field)
         }
 
     private fun startProcess(config: LSPConfig) {
@@ -193,7 +199,9 @@ class LSPProcessHolder: Disposable {
         }
         try {
             InferenceGlobalContext.connection.ping(url)
+            buildInfo = getBuildInfo()
             capabilities = getCaps()
+            lspProjectInitialize(project)
         } catch (e: Exception) {
             logger.warn("LSP bad_things_happened " + e.message)
         }
@@ -222,8 +230,9 @@ class LSPProcessHolder: Disposable {
             ApplicationInfo.getInstance().build.toString().replace(Regex("[^A-Za-z0-9 ]"), "_") +
             "_refact_lsp${getExeSuffix()}").toString()
         @JvmStatic
-        val instance: LSPProcessHolder
-            get() = ApplicationManager.getApplication().getService(LSPProcessHolder::class.java)
+        fun getInstance(project: Project): LSPProcessHolder = project.service()
+
+        var buildInfo: String = ""
     }
 
     override fun dispose() {
@@ -233,7 +242,7 @@ class LSPProcessHolder: Disposable {
         schedulerCaps.shutdown()
     }
 
-    fun buildInfo(): String {
+    private fun getBuildInfo(): String {
         var res = ""
         InferenceGlobalContext.connection.get(url.resolve("/build_info"),
             dataReceiveEnded = {},
@@ -250,7 +259,7 @@ class LSPProcessHolder: Disposable {
 
     val url: URI
         get() {
-            val port = xDebugLSPPort?: lastConfig?.port ?: return URI("")
+            val port = InferenceGlobalContext.xDebugLSPPort?: lastConfig?.port ?: return URI("")
 
             return URI("http://127.0.0.1:${port}/")
         }
@@ -259,7 +268,7 @@ class LSPProcessHolder: Disposable {
         InferenceGlobalContext.connection.get(url.resolve("/v1/caps"),
                 dataReceiveEnded = {},
                 errorDataReceived = {}).also {
-            var requestFuture: ComplexFuture<*>? = null
+            var requestFuture: ComplexFuture<*>?
             try {
                 requestFuture = it.get() as ComplexFuture
                 val out = requestFuture.get()

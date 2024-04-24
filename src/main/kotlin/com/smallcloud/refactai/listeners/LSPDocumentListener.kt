@@ -17,8 +17,9 @@ class LSPDocumentListener : BulkAwareDocumentListener, Disposable {
         val editor = getActiveEditor(event.document) ?: return
         val vFile = getVirtualFile(editor) ?: return
         if (!vFile.exists()) return
+        val project = editor.project!!
 
-        lspDocumentDidChanged(vFile.url, editor.document.text)
+        lspDocumentDidChanged(project, vFile.url, editor.document.text)
     }
 
     private fun getActiveEditor(document: Document): Editor? {

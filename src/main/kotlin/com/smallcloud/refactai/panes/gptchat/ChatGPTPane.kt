@@ -5,6 +5,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBTextArea
@@ -25,7 +26,7 @@ import javax.swing.JTextArea
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 
 
-class ChatGPTPane : JPanel(), Disposable {
+class ChatGPTPane(project: Project) : JPanel(), Disposable {
     private val sendAction = object : DumbAwareAction(CollaborationToolsIcons.Send) {
         init {
             templatePresentation.hoveredIcon = CollaborationToolsIcons.SendHovered
@@ -50,13 +51,13 @@ class ChatGPTPane : JPanel(), Disposable {
 
     var searchTextArea: CustomSearchTextArea = CustomSearchTextArea(JBTextArea().apply {
         rows = 3
-    }).also {
+    }, project).also {
         it.setExtraActions(sendAction)
         Disposer.register(this, it)
     }
 
 
-    private val listener = ChatGPTProvider()
+    private val listener = ChatGPTProvider(project)
     val state = State()
     private var contentPanel = HistoryComponent(state)
     private var progressBar: JProgressBar? = null

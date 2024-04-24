@@ -107,14 +107,11 @@ integrated into a single package that follows your privacy settings.</p>
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="com.smallcloud.refactai.PluginState"/>
         <postStartupActivity implementation="com.smallcloud.refactai.Initializer"/>
-        <editorFactoryDocumentListener implementation="com.smallcloud.refactai.listeners.DocumentListener"/>
+        <editorFactoryDocumentListener implementation="com.smallcloud.refactai.codecompletion.RefactInlineCompletionDocumentListener"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.refactai.listeners.LSPDocumentListener"/>
         <statusBarWidgetFactory id="Refact AI Status Bar"
                                 implementation="com.smallcloud.refactai.status_bar.SMCStatusBarWidgetFactory"/>
         <notificationGroup id="Refact AI Notification Group" displayType="BALLOON"/>
-        <completion.contributor language="any"
-                                implementationClass="com.smallcloud.refactai.modes.completion.PopupCompletionContributor"
-                                order="first"/>
 
         <projectConfigurable parentId="tools" instance="com.smallcloud.refactai.settings.AppRootConfigurable"
                              id="refactai_root"
@@ -127,7 +124,6 @@ integrated into a single package that follows your privacy settings.</p>
 
         <actionPromoter implementation="com.smallcloud.refactai.listeners.InlineActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.AcceptActionsPromoter"/>
-        <actionPromoter implementation="com.smallcloud.refactai.listeners.CancelActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.ForceCompletionActionPromoter"/>
 
         <toolWindow id="Refact" anchor="right"
@@ -147,6 +143,7 @@ integrated into a single package that follows your privacy settings.</p>
         <applicationService serviceImplementation="com.smallcloud.refactai.UpdateChecker"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectivityManager"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.lsp.LSPProcessHolder"/>
+        <inline.completion.provider implementation="com.smallcloud.refactai.codecompletion.RefactAICompletionProvider" order="first"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.refactai.listeners.TabPressedAction"
@@ -154,12 +151,6 @@ integrated into a single package that follows your privacy settings.</p>
                 text="Accept Inline Completion"
                 description="Refact AI Accept Inline Completion">
             <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>
-        </action>
-        <action class="com.smallcloud.refactai.listeners.CancelPressedAction"
-                id="CancelPressedAction"
-                text="Cancel Inline Completion"
-                description="Refact AI Cancel Inline Completion">
-            <keyboard-shortcut first-keystroke="ESCAPE" keymap="$default"/>
         </action>
         <action class="com.smallcloud.refactai.listeners.ForceCompletionAction"
                 id="ForceCompletionAction"
@@ -174,15 +165,12 @@ integrated into a single package that follows your privacy settings.</p>
         </group>
 <!--        For display shortcut on the pane, action must be with mask "Activate${id.filterNot { it.isWhitespace() }}ToolWindow"-->
         <action id="ActivateRefactChatToolWindow"
-                text="Open Refact Toolbox"
+                text="Open Refact Chat"
                 class="com.smallcloud.refactai.panes.gptchat.ChatGPTPaneInvokeAction">
             <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
         </action>
 
         <group id="RefactAIChatGroup">
-<!--            <action id="RefactAIAskChat"-->
-<!--                    text="Ask in Chat"-->
-<!--                    class="com.smallcloud.refactai.listeners.AskChatAction"/>-->
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <separator/>
         </group>

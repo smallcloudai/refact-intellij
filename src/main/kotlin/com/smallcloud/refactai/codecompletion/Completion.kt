@@ -1,4 +1,4 @@
-package com.smallcloud.refactai.modes.completion.structs
+package com.smallcloud.refactai.codecompletion
 
 
 data class Completion(

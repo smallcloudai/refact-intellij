@@ -97,7 +97,7 @@ class InferenceGlobalContext : Disposable {
         get() {
             return AppSettingsState.inferenceUri?.let { URI(it) }
         }
-    
+
 
     var isNewChatStyle: Boolean = false
 

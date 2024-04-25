@@ -31,12 +31,15 @@ import com.smallcloud.refactai.panes.sharedchat.events.*
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import org.jetbrains.annotations.NotNull
+import java.beans.PropertyChangeEvent
+import java.beans.PropertyChangeListener
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.UIManager
 
 
 class SharedChatPane (val project: Project): JPanel(), Disposable {
@@ -349,7 +352,18 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         val ef = EditorFactory.getInstance()
         ef.eventMulticaster.addSelectionListener(selectionListener)
 
-        // TODO: add event for changing colour mode
+        UIManager.addPropertyChangeListener(uiChangeListener)
+    }
+
+    private val uiChangeListener = PropertyChangeListener { event ->
+        if(event.propertyName == "lookAndFeel") {
+            val isDark = UIUtil.isUnderDarcula()
+            val className = if(isDark) {"vscode-dark"} else {"vscode-light"}
+            val script = """
+                    document.body.className = "$className";
+                """.trimIndent()
+            this.webView.cefBrowser.executeJavaScript(script, this.webView.cefBrowser.url, 0)
+        }
     }
 
     fun restoreWhenReady(id: String, messages: ChatMessages, model: String) {
@@ -357,7 +371,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         this.chatThreadToRestore = chatThread
     }
 
-    fun maybeRestore(id: String) {
+    private fun maybeRestore(id: String) {
         if(this.chatThreadToRestore != null) {
             val event = JsonObject()
             event.addProperty("type", EventNames.ToChat.RESTORE_CHAT.value)
@@ -409,9 +423,10 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     // TODO: figure out how to detect dark mode
-    fun getHtml(): String {
+    private fun getHtml(): String {
         val isDarkMode = UIUtil.isUnderDarcula()
         val mode = if (isDarkMode) {"dark" } else { "light" }
+        val bodyClass = if(isDarkMode) {"vscode-dark"} else {"vscode-light"}
         return """
         <!doctype html>
         <html lang="en" class="$mode">
@@ -448,7 +463,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                  
                </style>
            </head>
-           <body>
+           <body class=$bodyClass>
                <div id="refact-chat"></div>
            </body>
            <script type="module">
@@ -538,6 +553,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     override fun dispose() {
+        UIManager.removePropertyChangeListener(uiChangeListener)
         webView.dispose()
         Disposer.dispose(this)
     }

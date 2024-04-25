@@ -15,7 +15,11 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
     implementation("com.vladsch.flexmark:flexmark-all:0.64.8")
     implementation("io.github.kezhenxu94:cache-lite:0.2.0")
+
+    // test libraries
+    testImplementation(kotlin("test"))
 }
+
 
 
 group = "com.smallcloud"
@@ -64,6 +68,10 @@ tasks {
     publishPlugin {
         channels.set(listOf(System.getenv("PUBLISH_CHANNEL")))
         token.set(System.getenv("PUBLISH_TOKEN"))
+    }
+
+    test  {
+        useJUnitPlatform()
     }
 }
 

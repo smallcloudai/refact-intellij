@@ -1,4 +1,4 @@
-package com.smallcloud.refactai.panes.sharedchat.events
+package com.smallcloud.refactai.panes.sharedchat
 
 import com.google.gson.annotations.SerializedName
 import com.google.gson.*
@@ -39,7 +39,8 @@ data class AssistantMessage(override val content: String): ChatMessage<String>(C
 
 data class SystemMessage(override val content: String): ChatMessage<String>(ChatRole.SYSTEM.value, content)
 
-data class ContentFileMessage(override val content: Array<ChatContextFile>): ChatMessage<Array<ChatContextFile>>(ChatRole.CONTEXT_FILE.value, content) {
+data class ContentFileMessage(override val content: Array<ChatContextFile>): ChatMessage<Array<ChatContextFile>>(
+    ChatRole.CONTEXT_FILE.value, content) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -812,6 +813,7 @@ class Events {
             val json = JsonObject()
             val payload = Gson().toJsonTree(event).asJsonObject
             json.addProperty("type", event.type.value)
+            // will this have type added to the paylaod?
             json.add("payload", payload)
             return Gson().toJson(json)
         }

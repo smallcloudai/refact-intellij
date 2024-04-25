@@ -27,13 +27,10 @@ import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.lsp.LSPProcessHolder
-import com.smallcloud.refactai.panes.sharedchat.events.*
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import org.jetbrains.annotations.NotNull
-import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
-import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 

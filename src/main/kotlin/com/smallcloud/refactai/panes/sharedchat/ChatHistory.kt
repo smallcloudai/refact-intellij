@@ -1,6 +1,5 @@
 package com.smallcloud.refactai.panes.sharedchat
 
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.*
@@ -8,12 +7,6 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 
 import com.intellij.util.xmlb.annotations.MapAnnotation
 import com.intellij.util.xmlb.annotations.Property
-import com.intellij.util.xmlb.annotations.Transient
-import com.intellij.util.xmlb.annotations.XMap
-import com.smallcloud.refactai.panes.sharedchat.events.ChatMessage
-import com.smallcloud.refactai.panes.sharedchat.events.ChatMessageDeserializer
-import com.smallcloud.refactai.panes.sharedchat.events.ChatMessageSerializer
-import com.smallcloud.refactai.panes.sharedchat.events.ChatMessages
 
 
 // @Service

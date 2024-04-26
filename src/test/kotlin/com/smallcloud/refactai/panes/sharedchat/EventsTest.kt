@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import kotlin.test.Test
 import org.junit.jupiter.api.Assertions.*
@@ -37,16 +38,22 @@ class EventsTest {
 //    }
 
     @Test
-    fun responseContextTest() {
+    fun parseResponseContextTest() {
         val msg = """{"role":"context_file", "content":"[{\"file_name\":\"/main.py\",\"file_content\":\"foo\",\"line1\":1,\"line2\":15,\"symbol\":\"00000000-0000-0000-0000-000000000000\",\"gradient_type\":-1,\"usefulness\":0.0}]"}"""
-        val gson = GsonBuilder()
-            .registerTypeAdapter(Events.Chat.Response.ResponsePayload::class.java, Events.Chat.ResponseDeserializer())
-            .registerTypeAdapter(Delta::class.java, DeltaDeserializer())
-            .create()
-        val res = gson.fromJson(msg, Events.Chat.Response.ResponsePayload::class.java)
+        val result = Events.Chat.Response.parse(msg)
         val expected = Events.Chat.Response.UserMessage(Events.Chat.Response.Roles.CONTEXT_FILE,"""[{"file_name":"/main.py","file_content":"foo","line1":1,"line2":15,"symbol":"00000000-0000-0000-0000-000000000000","gradient_type":-1,"usefulness":0.0}]""")
 
-        assertEquals(res, expected)
+        assertEquals(result, expected)
+    }
 
+    @Test
+    fun formatResponseContextTest() {
+        val message = Events.Chat.Response.UserMessage(Events.Chat.Response.Roles.CONTEXT_FILE,"""[]""")
+        val id = "foo";
+        val toChat = Events.Chat.Response.formatToChat(message, id)
+        val result = Gson().toJson(toChat)
+        val expected = """{"type":"chat_response","payload":{"id":"foo","role":"context_file","content":"[]"}}"""
+
+        assertEquals(result, expected)
     }
 }

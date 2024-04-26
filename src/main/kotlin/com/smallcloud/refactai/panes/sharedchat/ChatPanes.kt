@@ -24,15 +24,6 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
         it.layout = BorderLayout()
     }
 
-    private val placeholder = JPanel().also { it ->
-        it.layout = BorderLayout()
-        it.add(JBLabel(RefactAIBundle.message("aiToolbox.panes.chat.placeholderSelfhosted")).also { label ->
-            label.verticalAlignment = JBLabel.CENTER
-            label.horizontalAlignment = JBLabel.CENTER
-            label.isEnabled = false
-        }, BorderLayout.CENTER)
-    }
-
     private fun setupPanes() {
         invokeLater {
             holder.removeAll()
@@ -145,6 +136,16 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
 
         panes.addTab(info)
         panes.select(info, true)
+
+//        val devToolsBrowser = JBCefBrowser.createBuilder()
+//            .setCefBrowser(newPane.webView.cefBrowser.devTools)
+//            .setClient(newPane.webView.jbCefClient)
+//            .build();
+//
+//        val devInfo = TabInfo(devToolsBrowser.component)
+//        devInfo.text = "DevTools"
+//        panes.addTab(devInfo)
+//        devToolsBrowser.openDevtools()
     }
 
     fun getComponent(): JComponent {

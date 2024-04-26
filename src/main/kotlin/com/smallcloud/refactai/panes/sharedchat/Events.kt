@@ -185,6 +185,7 @@ class EventNames {
     enum class ToChat(val value: String) {
         CLEAR_ERROR("chat_clear_error"),
         RESTORE_CHAT("restore_chat_from_history"),
+        @SerializedName("chat_response")
         CHAT_RESPONSE("chat_response"),
         BACKUP_MESSAGES("back_up_messages"),
         DONE_STREAMING("chat_done_streaming"),
@@ -216,6 +217,7 @@ class Events {
 
     open class Payload(
         @Transient
+        @SerializedName("id")
         open val id: String
     ): Serializable
 
@@ -272,7 +274,12 @@ class Events {
 
     }
 
-    abstract class ToChat(val type: EventNames.ToChat, open val payload: Payload): Serializable
+    abstract class ToChat(
+        @SerializedName("type")
+        val type: EventNames.ToChat,
+        @SerializedName("payload")
+        open val payload: Payload
+    ): Serializable
 
 
     data class Ready(val id: String): FromChat(EventNames.FromChat.READY, Payload(id))
@@ -480,7 +487,7 @@ class Events {
             }
 
             abstract class ResponsePayload()
-
+            // abstract class ChatPayload(id: String): Payload(id)
 //            data class UserMessage(
 //                override val id: String,
 //                val role: Roles,
@@ -488,17 +495,20 @@ class Events {
 //            ): Payload(id)
 
             data class UserMessage(
+                @SerializedName("role")
                 val role: Roles,
+                @SerializedName("content")
                 val content: String
             ): ResponsePayload()
 
+            class UserMessagePayload(
+                override val id: String,
+                val role: Roles,
+                val content: String,
+            ): Payload(id)
 
+            class UserMessageToChat(payload: UserMessagePayload): ToChat(EventNames.ToChat.CHAT_RESPONSE, payload)
 
-//            data class Question(
-//                val id: String,
-//                val role: Roles,
-//                val content: String,
-//            ): ToChat(EventNames.ToChat.CHAT_RESPONSE, UserMessage(id, role, content))
 
             enum class FinishReasons(value: String) {
                 STOP("stop"),
@@ -538,6 +548,9 @@ class Events {
                 }
             }
 
+            class ChoicesPayload(id: String, choices: Choices): Payload(id)
+            class ChoicesToChat(payload: ChoicesPayload): ToChat(EventNames.ToChat.CHAT_RESPONSE, payload)
+
 
 //            data class Assistant(
 //                val id: String,
@@ -551,6 +564,36 @@ class Events {
 //                finishReason
 //            ))
 
+            companion object {
+                private val gson = GsonBuilder()
+                    .registerTypeAdapter(ResponsePayload::class.java, ResponseDeserializer())
+                    .registerTypeAdapter(Delta::class.java, DeltaDeserializer())
+                    .create()
+
+                fun parse(str: String): ResponsePayload {
+                    return gson.fromJson(str, ResponsePayload::class.java)
+                }
+
+                fun stringify(response: ResponsePayload): String {
+                    return gson.toJson(response)
+                }
+
+                fun formatToChat(response: ResponsePayload, id: String): ToChat? {
+                    return when (response) {
+                        is Response.UserMessage -> {
+                            val payload = UserMessagePayload(id, response.role, response.content)
+                            return UserMessageToChat(payload)
+                        }
+
+                        is Response.Choices -> {
+                            val payload = ChoicesPayload(id, response)
+                            return ChoicesToChat(payload)
+                        }
+
+                        else -> null
+                    }
+                }
+            }
         }
 
         class ResponseDeserializer : JsonDeserializer<Response.ResponsePayload> {
@@ -560,7 +603,7 @@ class Events {
                 if (role == "user" || role == "context_file") {
                     return p2?.deserialize(p0, Response.UserMessage::class.java)
                 }
-                
+
                 val choices = p0?.asJsonObject?.get("choices")?.asJsonArray
 
                 if (choices !== null) {
@@ -572,6 +615,7 @@ class Events {
             }
 
         }
+
 
         data class BackupPayload(
             override val id: String,

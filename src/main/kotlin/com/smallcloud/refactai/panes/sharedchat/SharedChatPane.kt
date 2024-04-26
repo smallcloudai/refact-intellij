@@ -221,9 +221,10 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             messages,
             model,
             dataReceived = {str, requestId ->
-
-                val res = gson.fromJson(str, Events.Chat.Response.ResponsePayload::class.java)
-
+                println("\n### Chat Response String ###\n")
+                println(str)
+                // val res = gson.fromJson(str, Events.Chat.Response.ResponsePayload::class.java)
+                val res = Events.Chat.Response.parse(str)
                 when(res) {
                     is Events.Chat.Response.Choices -> {
                         val messageObj = JsonObject()
@@ -480,6 +481,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     val webView by lazy {
+        // TODO: handle JBCef not being available
         val browser = JBCefBrowser()
         browser.jbCefClient.setProperty(
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
@@ -491,8 +493,6 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
 
         myJSQueryOpenInBrowser.addHandler { msg ->
-            // println("myJSQueryOpenInBrowser: msg: $msg")
-            // error with save messages
             val event = Events.parse(msg)
             if(event != null) { this.handleEvent(event) }
             null

@@ -557,12 +557,10 @@ class Events {
             override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): Response.ResponsePayload? {
                 val role = p0?.asJsonObject?.get("role")?.asString
 
-                if (role == "user" || role === "context_file") {
+                if (role == "user" || role == "context_file") {
                     return p2?.deserialize(p0, Response.UserMessage::class.java)
                 }
-
-                // {"choices":[{"delta":{"content":" today","role":"assistant"},"finish_reason":null,"index":0}],"created":1712072101.203,"model":"gpt-3.5-turbo"}
-
+                
                 val choices = p0?.asJsonObject?.get("choices")?.asJsonArray
 
                 if (choices !== null) {

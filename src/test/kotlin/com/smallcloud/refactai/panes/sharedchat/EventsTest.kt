@@ -21,21 +21,6 @@ class EventsTest {
         assertEquals(result, expected)
     }
 
-//    @Test
-//    fun parseChatMessage() {
-//        val msg = """{
-//            "type":"chat_question",
-//            "payload": {
-//                "id":"f6de4753-f6dd-4964-9454-4b3132600f04",
-//                "messages": [
-//                    ["user","What's this?\n@workspace\n@symbols-at /Users/marc/PycharmProjects/pythonProject2/main.py:341\n@file /Users/marc/PycharmProjects/pythonProject2/main.py:341\n"]
-//                ],
-//                "title":"",
-//                "model":"",
-//                "attach_file":false
-//            }
-//        }""".trimMargin()
-//    }
 
     @Test
     fun parseResponseContextTest() {
@@ -55,5 +40,18 @@ class EventsTest {
         val expected = """{"type":"chat_response","payload":{"id":"foo","role":"context_file","content":"[]"}}"""
 
         assertEquals(result, expected)
+    }
+
+    @Test
+    fun parseResponseChoicesTest() {
+        val delta = AssistantDelta("hello")
+        val choice = Events.Chat.Response.Choice(delta, 0, null)
+        val choices = arrayOf(choice)
+        val message = Events.Chat.Response.Choices(choices, "0", "refact" )
+        val toChat = Events.Chat.Response.formatToChat(message, "foo")
+        val result = Gson().toJson(toChat)
+        val expected = """{"type":"chat_response","payload":{"choices":[{"delta":{"role":"assistant","content":"hello"},"index":0}],"created":"0","model":"refact"}}"""
+
+        assertEquals(expected, result)
     }
 }

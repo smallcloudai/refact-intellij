@@ -9,10 +9,10 @@ import java.lang.reflect.Type
 // Lsp responses
 
 enum class ChatRole(val value: String): Serializable {
-    USER("user"),
-    ASSISTANT("assistant"),
-    CONTEXT_FILE("context_file"),
-    SYSTEM("system"),
+    @SerializedName("user") USER("user"),
+    @SerializedName("assistant") ASSISTANT("assistant"),
+    @SerializedName("context_file") CONTEXT_FILE("context_file"),
+    @SerializedName("system") SYSTEM("system"),
 }
 
 data class ChatContextFile(
@@ -84,9 +84,9 @@ class ChatMessageSerializer: JsonSerializer<ChatMessage<*>> {
 }
 
 
-abstract class Delta<T>(val role: String, val content: T)
-class AssistantDelta(content: String): Delta<String>(ChatRole.ASSISTANT.value, content)
-class ContextFileDelta(content: ChatMessages): Delta<ChatMessages>(ChatRole.CONTEXT_FILE.value, content)
+abstract class Delta<T>(val role: ChatRole, val content: T)
+class AssistantDelta(content: String): Delta<String>(ChatRole.ASSISTANT, content)
+class ContextFileDelta(content: ChatMessages): Delta<ChatMessages>(ChatRole.CONTEXT_FILE, content)
 
 class DeltaDeserializer: JsonDeserializer<Delta<*>> {
     override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): Delta<*>? {
@@ -548,21 +548,15 @@ class Events {
                 }
             }
 
-            class ChoicesPayload(id: String, choices: Choices): Payload(id)
+            class ChoicesPayload(
+                id: String,
+                val choices: Array<Choice>,
+                val created: String,
+                val model: String,
+            ): Payload(id)
+
             class ChoicesToChat(payload: ChoicesPayload): ToChat(EventNames.ToChat.CHAT_RESPONSE, payload)
 
-
-//            data class Assistant(
-//                val id: String,
-//                val delta: Delta,
-//                val index: Int,
-//                val finishReason: FinishReasons? = null,
-//            ): ToChat(EventNames.ToChat.CHAT_RESPONSE, Choice(
-//                // id,
-//                delta,
-//                index,
-//                finishReason
-//            ))
 
             companion object {
                 private val gson = GsonBuilder()
@@ -586,7 +580,7 @@ class Events {
                         }
 
                         is Response.Choices -> {
-                            val payload = ChoicesPayload(id, response)
+                            val payload = ChoicesPayload(id, response.choices, response.created, response.model)
                             return ChoicesToChat(payload)
                         }
 

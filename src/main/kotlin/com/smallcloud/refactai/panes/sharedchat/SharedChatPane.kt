@@ -430,7 +430,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
            <head>
                <title>Refact.ai</title>
                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-               <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/refact-chat-js@0.2/dist/chat/style.css">
+               <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/refact-chat-js@alpha/dist/chat/style.css">
                <style>
                  html {
                     height: 100%;
@@ -448,26 +448,15 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                    height: 100%;
                  }
                  
-                 #refact-chat > div > div {
-                   /* TODO: dvh isn't supported in jbcef 
-                   *  needs at least chrome version 108 https://caniuse.com/viewport-unit-variants,
-                   * check with window.navigator.userAgent
-                   * tracked here https://youtrack.jetbrains.com/issue/JBR-6782/Update-CEF-to-version-122.1.9-jcef-242-dev
-                   */
-                   
-                   height: 100vh;
-                 }
-                 
                </style>
            </head>
            <body class=$bodyClass>
                <div id="refact-chat"></div>
            </body>
            <script type="module">
-               import * as refactChatJs from 'https://cdn.jsdelivr.net/npm/refact-chat-js@0.2/+esm'
+               import * as refactChatJs from 'https://cdn.jsdelivr.net/npm/refact-chat-js@alpha/dist/chat/index.js'
 
                window.onload = function() {
-                   console.log(refactChatJs);
                    const element = document.getElementById("refact-chat");
                    const options = {
                      host: "jetbrains",

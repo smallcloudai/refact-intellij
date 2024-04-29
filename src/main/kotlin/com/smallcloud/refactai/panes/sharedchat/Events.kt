@@ -194,7 +194,7 @@ class EventNames {
         RECEIVE_CAPS_ERROR("receive_caps_error"),
         SET_CHAT_MODEL("chat_set_chat_model"),
         SET_DISABLE_CHAT("set_disable_chat"),
-        ACTIVE_FILE_INFO("chat_active_file_info"),
+        @SerializedName("chat_active_file_info") ACTIVE_FILE_INFO("chat_active_file_info"),
         TOGGLE_ACTIVE_FILE("chat_toggle_active_file"),
         RECEIVE_AT_COMMAND_COMPLETION("chat_receive_at_command_completion"),
         RECEIVE_AT_COMMAND_PREVIEW("chat_receive_at_command_preview"),
@@ -778,9 +778,9 @@ class Events {
 
     class ActiveFile {
         data class FileInfo(
-            val name: String,
-            val path: String,
-            @SerializedName("can_paste") val canPaste: Boolean,
+            val name: String = "",
+            val path: String = "",
+            @SerializedName("can_paste") val canPaste: Boolean = false,
             val attach: Boolean = false,
             val line1: Int? = null,
             val line2: Int? = null,
@@ -794,10 +794,15 @@ class Events {
             val file: FileInfo,
         ) : Payload(id)
 
-        data class Send(
-            val id: String,
-            val file: FileInfo
-        ): ToChat(EventNames.ToChat.ACTIVE_FILE_INFO, FileInfoPayload(id, file))
+        class ActiveFileToChat(payload: FileInfoPayload): ToChat(EventNames.ToChat.ACTIVE_FILE_INFO, payload)
+
+        companion object {
+            fun formatActiveFileInfoToChat(id: String, file: FileInfo): String {
+                val payload = FileInfoPayload(id, file)
+                val message = ActiveFileToChat(payload)
+                return Gson().toJson(message)
+            }
+        }
 
     }
 

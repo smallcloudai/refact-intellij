@@ -102,5 +102,15 @@ class EventsTest {
         assertEquals(expected, result)
     }
 
+    @Test
+    fun formatActiveFileToChatTest() {
+        val file = Events.ActiveFile.FileInfo()
+        val id = "foo"
+        val result = Events.ActiveFile.formatActiveFileInfoToChat(id, file)
+        val expected = """{"type":"chat_active_file_info","payload":{"id":"foo","file":{"name":"","path":"","can_paste":false,"attach":false}}}"""
+
+        assertEquals(expected, result)
+    }
+
 
 }

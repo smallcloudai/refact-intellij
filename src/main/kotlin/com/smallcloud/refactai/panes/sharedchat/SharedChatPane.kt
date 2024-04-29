@@ -95,9 +95,9 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             }
         }
     }
-    private fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo?) -> Unit) {
+    private fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            if(project.isDisposed == false) {
+            if(!project.isDisposed) {
                 val fileEditorManager = FileEditorManager.getInstance(project)
                 val editor = fileEditorManager.selectedTextEditor
 
@@ -106,7 +106,6 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                 val virtualFile = fileEditorManager.selectedFiles[0]
                 val filePath = virtualFile.path
                 val fileName = virtualFile.name
-
 
                 val selection = editor?.caretModel?.currentCaret?.selectionRange
                 val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
@@ -125,39 +124,18 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                     content = code,
                 )
                 cb(fileInfo)
+            } else {
+                val fileInfo = Events.ActiveFile.FileInfo()
+                cb(fileInfo)
             }
         }
     }
 
     private fun sendActiveFileInfo(id: String) {
-
             this.getActiveFileInfo { file ->
-                // TODO: use the type system to make this json
-                val type = EventNames.ToChat.ACTIVE_FILE_INFO.value
-                val payload = JsonObject()
-                payload.addProperty("id", id)
-
-
-                if (file === null) {
-                    val fileJson = JsonObject()
-                    fileJson.addProperty("can_paste", false)
-                    payload.add("file", fileJson)
-                    val messageObj = JsonObject()
-                    messageObj.addProperty("type", type)
-                    messageObj.add("payload", payload)
-                    val message = Gson().toJson(messageObj)
-                    this.postMessage(message)
-                }
-
-                val fileJson = Gson().toJsonTree(file, Events.ActiveFile.FileInfo::class.java)
-                payload.add("file", fileJson)
-                val messageObj = JsonObject()
-                messageObj.addProperty("type", type)
-                messageObj.add("payload", payload)
-                val message = Gson().toJson(messageObj)
+                val message = Events.ActiveFile.formatActiveFileInfoToChat(id, file)
                 this.postMessage(message)
             }
-
     }
 
     private fun handleCaps(id: String) {

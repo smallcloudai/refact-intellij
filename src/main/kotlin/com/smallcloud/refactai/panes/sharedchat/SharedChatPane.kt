@@ -320,30 +320,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun maybeRestore(id: String) {
         if(this.chatThreadToRestore != null) {
-            val event = JsonObject()
-            event.addProperty("type", EventNames.ToChat.RESTORE_CHAT.value)
-            val payload = JsonObject()
-            payload.addProperty("id", id)
-            val chat = JsonObject()
-            chat.addProperty("id", this.chatThreadToRestore!!.id)
-            chat.addProperty("model", this.chatThreadToRestore!!.model)
-            chat.addProperty("title", this.chatThreadToRestore!!.title)
-            val messages = JsonArray()
-            ChatHistory.instance.gson.toJsonTree(this.chatThreadToRestore!!.messages).asJsonArray.forEach {
-                val message = it.asJsonObject
-                val role = message.get("role")
-                val content = message.get("content")
-                val arr = JsonArray()
-                arr.add(role)
-                arr.add(content)
-                messages.add(arr)
-            }
-            chat.add("messages", messages)
-            payload.add("chat", chat)
-            event.add("payload", payload)
-            val json = Gson().toJson(event)
+            val json = Events.Chat.formatRestoreToChat(id, this.chatThreadToRestore!!)
             this.postMessage(json)
-            this.id = this.chatThreadToRestore!!.id
             this.chatThreadToRestore = null
         }
     }

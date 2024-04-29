@@ -20,27 +20,27 @@ data class ChatContextFile(
     @SerializedName("file_content") val fileContent: String,
     val line1: Int,
     val line2: Int,
-    val usefulness: Int? = null
+    val usefulness: Double? = null
 )
 
 
 
 abstract class ChatMessage<T>(
     @SerializedName("role")
-    val role: String,
+    val role: ChatRole,
     @Transient
     @SerializedName("content")
     open val content: T
 ): Serializable {
 }
-data class UserMessage(override val content: String): ChatMessage<String>(ChatRole.USER.value, content)
+data class UserMessage(override val content: String): ChatMessage<String>(ChatRole.USER, content)
 
-data class AssistantMessage(override val content: String): ChatMessage<String>(ChatRole.ASSISTANT.value, content)
+data class AssistantMessage(override val content: String): ChatMessage<String>(ChatRole.ASSISTANT, content)
 
-data class SystemMessage(override val content: String): ChatMessage<String>(ChatRole.SYSTEM.value, content)
+data class SystemMessage(override val content: String): ChatMessage<String>(ChatRole.SYSTEM, content)
 
 data class ContentFileMessage(override val content: Array<ChatContextFile>): ChatMessage<Array<ChatContextFile>>(
-    ChatRole.CONTEXT_FILE.value, content) {
+    ChatRole.CONTEXT_FILE, content) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -184,7 +184,7 @@ class EventNames {
 
     enum class ToChat(val value: String) {
         CLEAR_ERROR("chat_clear_error"),
-        RESTORE_CHAT("restore_chat_from_history"),
+        @SerializedName("restore_chat_from_history") RESTORE_CHAT("restore_chat_from_history"),
         @SerializedName("chat_response") CHAT_RESPONSE("chat_response"),
         BACKUP_MESSAGES("back_up_messages"),
         @SerializedName("chat_done_streaming") DONE_STREAMING("chat_done_streaming"),
@@ -688,23 +688,6 @@ class Events {
             }
         }
 
-        // Error streaming
-
-        data class ErrorPayload(
-            override val id: String,
-            val message: String
-        ): Payload(id)
-
-        data class Error(
-            val id: String,
-            val error: String
-        ): ToChat(EventNames.ToChat.ERROR_STREAMING, ErrorPayload(id, error))
-
-        // Done streaming
-
-        data class Done (
-            val id: String,
-        ): ToChat(EventNames.ToChat.DONE_STREAMING, Payload(id))
 
         // last model used
         data class LastModelUsedPayload(
@@ -757,11 +740,9 @@ class Events {
             val snippet: Editor.Snippet? = null,
         ): Payload(id)
 
-        data class Restore(
-            val id: String,
-            val chat: Thread,
-            val snippet: Editor.Snippet? = null,
-        ): ToChat(EventNames.ToChat.RESTORE_CHAT, RestorePayload(id, chat, snippet))
+        class RestoreToChat(
+            payload: RestorePayload
+        ): ToChat(EventNames.ToChat.RESTORE_CHAT, payload)
 
         // new ?
         data class NewChatPayload(
@@ -774,6 +755,57 @@ class Events {
             val snippet: Editor.Snippet?,
         ): ToChat(EventNames.ToChat.NEW_CHAT, NewChatPayload(id, snippet))
 
+        companion object {
+            private class MessageSerializer: JsonSerializer<ChatMessage<*>> {
+                override fun serialize(src: ChatMessage<*>, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+
+                    return when(src) {
+                        is UserMessage -> {
+                            val role = context.serialize(src.role, ChatRole::class.java)
+                            val arr = JsonArray()
+                            arr.add(role)
+                            arr.add(src.content)
+                            return arr
+                        }
+                        is SystemMessage -> {
+                            val role = context.serialize(src.role, ChatRole::class.java)
+                            val arr = JsonArray()
+                            arr.add(role)
+                            arr.add(src.content)
+                            return arr
+                        }
+                        is AssistantMessage-> {
+                            val role = context.serialize(src.role, ChatRole::class.java)
+                            val arr = JsonArray()
+                            arr.add(role)
+                            arr.add(src.content)
+                            return arr
+                        }
+                        is ContentFileMessage -> {
+                            val role = context.serialize(src.role, ChatRole::class.java)
+                            val arr = JsonArray()
+                            arr.add(role)
+                            val fileArray = arrayOf(ChatContextFile("", "", 0, 0))
+                            val contextFile = context.serialize(src.content, fileArray::class.java)
+                            arr.add(contextFile)
+                            return arr
+                        }
+
+                        else -> JsonArray()
+                    }
+                }
+            }
+
+            private val gson = GsonBuilder()
+                .registerTypeAdapter(ChatMessage::class.java, MessageSerializer())
+                .create()
+
+            fun formatRestoreToChat(id: String, chat: Thread, snippet: Editor.Snippet? = null): String {
+                val payload = RestorePayload(id, chat, snippet)
+                val event = RestoreToChat(payload)
+                return gson.toJson(event)
+            }
+        }
     }
 
     class ActiveFile {

@@ -1,11 +1,9 @@
 package com.smallcloud.refactai.panes.sharedchat
 
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import kotlin.test.Test
 import org.junit.jupiter.api.Assertions.*
-import com.smallcloud.refactai.panes.sharedchat.Events
 
 class EventsTest {
     @Test
@@ -108,6 +106,25 @@ class EventsTest {
         val id = "foo"
         val result = Events.ActiveFile.formatActiveFileInfoToChat(id, file)
         val expected = """{"type":"chat_active_file_info","payload":{"id":"foo","file":{"name":"","path":"","can_paste":false,"attach":false}}}"""
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun formatRestoreChatToChat() {
+        val chatMessages: ChatMessages = arrayOf(
+            ContentFileMessage(arrayOf(
+                ChatContextFile("/main.py", "hello", 1, 15, 0.0)
+            )),
+            UserMessage("hello"),
+            AssistantMessage("hello")
+        )
+
+        val currentChatId = "foo"
+        val thread = Events.Chat.Thread("bar", chatMessages, "refact")
+        val result = Events.Chat.formatRestoreToChat(currentChatId, thread, null)
+
+        val expected = """{"type":"restore_chat_from_history","payload":{"id":"foo","chat":{"id":"bar","messages":[["context_file",[{"file_name":"/main.py","file_content":"hello","line1":1,"line2":15,"usefulness":0.0}]],["user","hello"],["assistant","hello"]],"model":"refact","attach_file":false}}}"""
 
         assertEquals(expected, result)
     }

@@ -818,10 +818,10 @@ class Events {
         ): FromChat(EventNames.FromChat.PASTE_DIFF, ContentPayload(id, content))
 
         data class Snippet(
-            val language: String,
-            val code: String,
-            val path: String,
-            val basename: String,
+            val language: String = "",
+            val code: String = "",
+            val path: String = "",
+            val basename: String = "",
         )
 
         data class SetSnippetPayload(
@@ -829,10 +829,15 @@ class Events {
             val snippet: Snippet
         ): Payload(id)
 
-        data class SetSelectedSnippet(
-            val id: String,
-            val snippet: Snippet
-        ): ToChat(EventNames.ToChat.SET_SELECTED_SNIPPET, SetSnippetPayload(id, snippet))
+        class SetSnippetToChat(payload: SetSnippetPayload): ToChat(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
+
+        companion object {
+            fun formatSnippetToChat(id: String, snippet: Snippet): String {
+                val payload = Editor.SetSnippetPayload(id, snippet)
+                val message = Editor.SetSnippetToChat(payload)
+                return Gson().toJson(message)
+            }
+        }
     }
 
     class Caps {

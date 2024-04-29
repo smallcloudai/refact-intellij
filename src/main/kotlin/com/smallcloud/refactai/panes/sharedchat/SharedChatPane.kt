@@ -66,21 +66,12 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun sendSelectedSnippet(id: String) {
         this.getSelectedSnippet { snippet ->
-            if(snippet != null) {
-                val type = EventNames.ToChat.SET_SELECTED_SNIPPET.value
-                val payload = JsonObject()
-                payload.addProperty("id", id)
-                payload.add("snippet", Gson().toJsonTree(snippet))
-                val messageObj = JsonObject()
-                messageObj.addProperty("type", type)
-                messageObj.add("payload", payload)
-                val message = Gson().toJson(messageObj)
-                this.postMessage(message)
-            }
+            val json = Events.Editor.formatSnippetToChat(id, snippet)
+            this.postMessage(json)
         }
     }
 
-    private fun getSelectedSnippet(cb: (Events.Editor.Snippet?) -> Unit) {
+    private fun getSelectedSnippet(cb: (Events.Editor.Snippet) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
             if(project.isDisposed == false) {
                 val fileEditorManager = FileEditorManager.getInstance(project)
@@ -96,7 +87,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
                 val code = editor?.document?.getText(range)
                 if (language == null || code == null) {
-                    cb(null)
+                    cb(Events.Editor.Snippet())
                 } else {
                     val snippet = Events.Editor.Snippet(language, code, path, name)
                     cb(snippet)
@@ -141,6 +132,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     private fun sendActiveFileInfo(id: String) {
 
             this.getActiveFileInfo { file ->
+                // TODO: use the type system to make this json
                 val type = EventNames.ToChat.ACTIVE_FILE_INFO.value
                 val payload = JsonObject()
                 payload.addProperty("id", id)
@@ -383,6 +375,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         when (event) {
             is Events.Ready -> {
                 this.sendActiveFileInfo(event.id)
+                this.sendSelectedSnippet(event.id)
                 this.addEventListener(event.id)
                 this.id = event.id
                 this.maybeRestore(event.id)

@@ -93,4 +93,14 @@ class EventsTest {
         assertEquals(expected, result)
     }
 
+    @Test
+    fun formatSnippetToChatTest() {
+        val id = "foo"
+        val snippet = Events.Editor.Snippet()
+        val result = Events.Editor.formatSnippetToChat(id, snippet)
+        val expected = """{"type":"chat_set_selected_snippet","payload":{"id":"foo","snippet":{"language":"","code":"","path":"","basename":""}}}"""
+        assertEquals(expected, result)
+    }
+
+
 }

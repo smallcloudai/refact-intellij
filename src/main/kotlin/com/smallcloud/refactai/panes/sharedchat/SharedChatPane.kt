@@ -211,74 +211,53 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private fun handleChat(id: String, messages: ChatMessages, model: String, title: String? = null) {
-        val gson = GsonBuilder()
-            .registerTypeAdapter(Events.Chat.Response.ResponsePayload::class.java, Events.Chat.ResponseDeserializer())
-            .registerTypeAdapter(Delta::class.java, DeltaDeserializer())
-            .create()
 
         val future = this.lsp.sendChat(
             id,
             messages,
             model,
             dataReceived = {str, requestId ->
-                println("\n### Chat Response String ###\n")
-                println(str)
-                // val res = gson.fromJson(str, Events.Chat.Response.ResponsePayload::class.java)
-                val res = Events.Chat.Response.parse(str)
-                when(res) {
+                when(val res = Events.Chat.Response.parse(str)) {
                     is Events.Chat.Response.Choices -> {
-                        val messageObj = JsonObject()
-                        messageObj.addProperty("type", EventNames.ToChat.CHAT_RESPONSE.value)
-                        val payloadObj = gson.toJsonTree(res, Events.Chat.Response.Choices::class.java)
-                        payloadObj.asJsonObject.addProperty("id", requestId)
-                        messageObj.add("payload", payloadObj)
-                        val message = gson.toJson(messageObj)
-                        this.postMessage(message)
+                        val message = Events.Chat.Response.formatToChat(res, requestId)
+                        if(message != null) {
+                            val json = Gson().toJson(message)
+                            this.postMessage(json)
+                        }
                     }
                     is Events.Chat.Response.UserMessage -> {
-                        val messageObj = JsonObject()
-                        messageObj.addProperty("type", EventNames.ToChat.CHAT_RESPONSE.value)
-                        val payloadObj = gson.toJsonTree(res, Events.Chat.Response.UserMessage::class.java)
-                        payloadObj.asJsonObject.addProperty("id", requestId)
-                        messageObj.add("payload", payloadObj)
-                        val message = gson.toJson(messageObj)
-                        println("Message For User")
-                        println(message)
-                        this.postMessage(message)
+                        val message = Events.Chat.Response.formatToChat(res, requestId)
+
+                        if(message !== null) {
+                            val json = Gson().toJson(message)
+                            this.postMessage(json)
+                        }
                     }
                 }
             },
             dataReceiveEnded = { str ->
-                println("chat_request_ended $str")
-                val messageObj = JsonObject()
-                messageObj.addProperty("type", EventNames.ToChat.DONE_STREAMING.value)
-                val payloadObj = JsonObject()
-                payloadObj.asJsonObject.addProperty("id", id)
-                messageObj.add("payload", payloadObj)
-                val message = gson.toJson(messageObj)
-                this.postMessage(message)
+                val res = Events.Chat.Response.ChatDone(str)
+                val message = Events.Chat.Response.formatToChat(res, id)
+                if(message != null) {
+                    val json = Gson().toJson(message)
+                    this.postMessage(json)
+                }
             },
             errorDataReceived = { json ->
-                val messageObj = JsonObject()
-                messageObj.addProperty("type", EventNames.ToChat.ERROR_STREAMING.value)
-                val payloadObj = JsonObject()
-                payloadObj.asJsonObject.addProperty("id", id)
-                // Maybe has detail property
-                payloadObj.asJsonObject.addProperty("message", json.toString())
-                messageObj.add("payload", payloadObj)
-                val message = gson.toJson(messageObj)
-                this.postMessage(message)
+                val res = Events.Chat.Response.ChatError(json)
+                val message = Events.Chat.Response.formatToChat(res, id)
+                if(message != null) {
+                    val jsonString = Gson().toJson(message)
+                    this.postMessage(jsonString)
+                }
             },
             failedDataReceiveEnded = {e ->
-                val messageObj = JsonObject()
-                messageObj.addProperty("type", EventNames.ToChat.ERROR_STREAMING.value)
-                val payloadObj = JsonObject()
-                payloadObj.asJsonObject.addProperty("id", id)
-                // Maybe has detail property
-                payloadObj.asJsonObject.addProperty("message", e.toString())
-                messageObj.add("payload", payloadObj)
-                val message = gson.toJson(messageObj)
-                this.postMessage(message)
+                val res = Events.Chat.Response.ChatFailedStream(e)
+                val message = Events.Chat.Response.formatToChat(res, id)
+                if(message != null) {
+                    val json = Gson().toJson(message)
+                    this.postMessage(json)
+                }
             }
         )
         

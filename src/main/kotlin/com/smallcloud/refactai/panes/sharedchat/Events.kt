@@ -185,11 +185,10 @@ class EventNames {
     enum class ToChat(val value: String) {
         CLEAR_ERROR("chat_clear_error"),
         RESTORE_CHAT("restore_chat_from_history"),
-        @SerializedName("chat_response")
-        CHAT_RESPONSE("chat_response"),
+        @SerializedName("chat_response") CHAT_RESPONSE("chat_response"),
         BACKUP_MESSAGES("back_up_messages"),
-        DONE_STREAMING("chat_done_streaming"),
-        ERROR_STREAMING("chat_error_streaming"),
+        @SerializedName("chat_done_streaming") DONE_STREAMING("chat_done_streaming"),
+        @SerializedName("chat_error_streaming") ERROR_STREAMING("chat_error_streaming"),
         NEW_CHAT("create_new_chat"),
         RECEIVE_CAPS("receive_caps"),
         RECEIVE_CAPS_ERROR("receive_caps_error"),
@@ -201,7 +200,8 @@ class EventNames {
         RECEIVE_AT_COMMAND_PREVIEW("chat_receive_at_command_preview"),
         SET_SELECTED_AT_COMMAND("chat_set_selected_command"),
         SET_LAST_MODEL_USED("chat_set_last_model_used"),
-        SET_SELECTED_SNIPPET("chat_set_selected_snippet"),
+
+        @SerializedName("chat_set_selected_snippet") SET_SELECTED_SNIPPET("chat_set_selected_snippet"),
         REMOVE_PREVIEW_FILE_BY_NAME("chat_remove_file_from_preview"),
         SET_PREVIOUS_MESSAGES_LENGTH("chat_set_previous_messages_length"),
         RECEIVE_TOKEN_COUNT("chat_set_tokens"),
@@ -487,12 +487,6 @@ class Events {
             }
 
             abstract class ResponsePayload()
-            // abstract class ChatPayload(id: String): Payload(id)
-//            data class UserMessage(
-//                override val id: String,
-//                val role: Roles,
-//                val content: String
-//            ): Payload(id)
 
             data class UserMessage(
                 @SerializedName("role")
@@ -509,18 +503,16 @@ class Events {
 
             class UserMessageToChat(payload: UserMessagePayload): ToChat(EventNames.ToChat.CHAT_RESPONSE, payload)
 
-
             enum class FinishReasons(value: String) {
                 STOP("stop"),
                 ABORT("abort"),
             }
 
             data class Choice(
-                // override val id: String,
                 val delta: AssistantDelta,
                 val index: Int,
                 @SerializedName("finish_reason") val finishReason: FinishReasons?,
-            ) // : Payload(id)
+            )
 
             data class Choices(
                 val choices: Array<Choice>,
@@ -549,13 +541,33 @@ class Events {
             }
 
             class ChoicesPayload(
-                id: String,
+                override val id: String,
                 val choices: Array<Choice>,
                 val created: String,
                 val model: String,
             ): Payload(id)
 
             class ChoicesToChat(payload: ChoicesPayload): ToChat(EventNames.ToChat.CHAT_RESPONSE, payload)
+
+            data class ChatDone(val message: String? = null): ResponsePayload()
+
+            class ChatDonePayload(
+                override val id: String,
+                val message: String?,
+            ): Payload(id)
+
+            class ChatDoneToChat(payload: ChatDonePayload): ToChat(EventNames.ToChat.DONE_STREAMING, payload)
+
+            data class ChatError(val message: JsonElement): ResponsePayload()
+
+            class ChatErrorPayload(
+                override val id: String,
+                val message: String,
+            ): Payload(id)
+
+            class ChatErrorStreamingToChat(payload: ChatErrorPayload): ToChat(EventNames.ToChat.ERROR_STREAMING, payload)
+
+            data class ChatFailedStream(val message: Throwable?): ResponsePayload()
 
 
             companion object {
@@ -582,6 +594,24 @@ class Events {
                         is Response.Choices -> {
                             val payload = ChoicesPayload(id, response.choices, response.created, response.model)
                             return ChoicesToChat(payload)
+                        }
+
+                        is Response.ChatDone -> {
+                            val payload = ChatDonePayload(id, response.message)
+                            return ChatDoneToChat(payload)
+                        }
+
+                        is Response.ChatError -> {
+                            val maybeDetail = response.message.asJsonObject.get("detail").asString
+                            val message = maybeDetail ?: response.message.toString()
+                            val payload = ChatErrorPayload(id, message)
+                            return ChatErrorStreamingToChat(payload)
+                        }
+
+                        is Response.ChatFailedStream -> {
+                            val message = "Failed during stream: ${response.message.toString()}"
+                            val payload = ChatErrorPayload(id, message)
+                            return ChatErrorStreamingToChat(payload)
                         }
 
                         else -> null

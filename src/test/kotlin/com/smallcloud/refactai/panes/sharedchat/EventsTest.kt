@@ -188,5 +188,16 @@ class EventsTest {
         assertEquals(expected, result)
     }
 
+    @Test
+    fun systemPromptsMessage() {
+        val prompts: SystemPromptMap = mapOf("default" to SystemPrompt(text="Use backquotes for code blocks.\nPay close attention to indent when editing code blocks: indent must be exactly the same as in the original code block.\n", description=""),)
+        val payload = Events.SystemPrompts.SystemPromptsPayload("foo", prompts)
+        val message: Events.SystemPrompts.Receive = Events.SystemPrompts.Receive(payload)
+        val result = Gson().toJson(message)
+        val expected = """{"type":"chat_receive_prompts","payload":{"id":"foo","prompts":{"default":{"text":"Use backquotes for code blocks.\nPay close attention to indent when editing code blocks: indent must be exactly the same as in the original code block.\n","description":""}}}}"""
+        assertEquals(expected, result)
+
+    }
+
 
 }

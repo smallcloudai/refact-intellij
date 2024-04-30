@@ -329,8 +329,8 @@ class LSPProcessHolder(val project: Project): Disposable {
         )
         val json = res.thenApply {
             val body = it.get() as String
-            val type: SystemPromptMap = HashMap<String, SystemPrompt>()
-            Gson().fromJson<SystemPromptMap>(body, type::class.java)
+            val prompts = Gson().fromJson<CustomPromptsResponse>(body, CustomPromptsResponse::class.java)
+            prompts.systemPrompts
         }
 
         return json

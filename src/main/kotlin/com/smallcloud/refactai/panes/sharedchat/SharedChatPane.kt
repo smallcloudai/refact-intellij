@@ -150,8 +150,10 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     private fun handleSystemPrompts(id: String) {
         this.lsp.fetchSystemPrompts().also { res ->
             val prompts: SystemPromptMap = res.get()
-            val message: Events.SystemPrompts.Receive = Events.SystemPrompts.Receive(id, prompts)
-            this.postMessage(message)
+            val payload = Events.SystemPrompts.SystemPromptsPayload(id, prompts)
+            val message: Events.SystemPrompts.Receive = Events.SystemPrompts.Receive(payload)
+            val json = Gson().toJson(message)
+            this.postMessage(json)
         }
     }
 

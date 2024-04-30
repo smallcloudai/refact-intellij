@@ -171,7 +171,7 @@ data class DetailMessage(
 
 
 data class SystemPrompt(
-    val test: String,
+    val text: String,
     val description: String,
 )
 
@@ -224,8 +224,8 @@ class EventNames {
         REMOVE_PREVIEW_FILE_BY_NAME("chat_remove_file_from_preview"),
         SET_PREVIOUS_MESSAGES_LENGTH("chat_set_previous_messages_length"),
         RECEIVE_TOKEN_COUNT("chat_set_tokens"),
-        RECEIVE_PROMPTS("chat_receive_prompts"),
-        RECEIVE_PROMPTS_ERROR("chat_receive_prompts_error"),
+        @SerializedName("chat_receive_prompts") RECEIVE_PROMPTS("chat_receive_prompts"),
+        @SerializedName("chat_receive_prompts_error") RECEIVE_PROMPTS_ERROR("chat_receive_prompts_error"),
         SET_SELECTED_SYSTEM_PROMPT("chat_set_selected_system_prompt")
     }
 }
@@ -307,7 +307,7 @@ class Events {
         data class Request(val id: String): FromChat(EventNames.FromChat.REQUEST_PROMPTS, Payload(id))
 
         data class SystemPromptsPayload(override val id: String, val prompts: SystemPromptMap): Payload(id)
-        data class Receive(val id: String, val prompts: SystemPromptMap): ToChat(EventNames.ToChat.RECEIVE_PROMPTS, SystemPromptsPayload(id, prompts))
+        class Receive(payload: SystemPromptsPayload): ToChat(EventNames.ToChat.RECEIVE_PROMPTS, payload)
 
         data class SystemPromptsErrorPayload(override val id: String, val error: String): Payload(id)
         data class Error(val id: String, val error: String): ToChat(EventNames.ToChat.RECEIVE_PROMPTS_ERROR, SystemPromptsErrorPayload(id, error))

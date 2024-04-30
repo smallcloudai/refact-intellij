@@ -338,11 +338,11 @@ class LSPProcessHolder(val project: Project): Disposable {
 
     fun fetchCommandCompletion(query: String, cursor: Int, count: Int, trigger: String?): Future<CommandCompletionResponse> {
         val queryOrTrigger = trigger ?: query
-        val place = trigger?.length ?: count
+        val place = trigger?.length ?: cursor
         val requestBody = Gson().toJson(mapOf("query" to queryOrTrigger, "cursor" to place, "top_n" to count))
 
         val res = InferenceGlobalContext.connection.post(
-            url.resolve("/v1/completion"),
+            url.resolve("/v1/at-command-completion"),
             requestBody,
         )
         // could have detail message
@@ -356,7 +356,7 @@ class LSPProcessHolder(val project: Project): Disposable {
         return json
     }
 
-    fun fetchCommandPreview(query: String): Future<Array<Events.AtCommands.Preview.PreviewContent>> {
+    fun fetchCommandPreview(query: String): Future<Events.AtCommands.Preview.Response> {
         val requestBody = Gson().toJson(mapOf("query" to query))
         val response = InferenceGlobalContext.connection.post(
             url.resolve("/v1/at-command-preview"),
@@ -366,12 +366,9 @@ class LSPProcessHolder(val project: Project): Disposable {
         val json = response.thenApply {
             val responseBody = it.get() as String
             if (responseBody.startsWith("detail")) {
-                Array(0) { Events.AtCommands.Preview.PreviewContent("") }
+                Events.AtCommands.Preview.Response(emptyArray())
             } else {
-                Gson().fromJson<Array<Events.AtCommands.Preview.PreviewContent>>(
-                    responseBody,
-                    Array<Events.AtCommands.Preview.PreviewContent>::class.java
-                )
+                Gson().fromJson<Events.AtCommands.Preview.Response>(responseBody, Events.AtCommands.Preview.Response::class.java)
             }
         }
 

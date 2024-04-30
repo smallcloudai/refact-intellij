@@ -139,11 +139,30 @@ data class CapsResponse(
 )
 
 data class CommandCompletionResponse(
-    @SerializedName("completions") val completions: List<String>,
-    // Might need to be a list
-    val replace: Pair<Int, Int>,
+    @SerializedName("completions") val completions: Array<String>,
+    val replace: Array<Int>,
     @SerializedName("is_cmd_executable") val isCmdExecutable: Boolean
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as CommandCompletionResponse
+
+        if (!completions.contentEquals(other.completions)) return false
+        if (!replace.contentEquals(other.replace)) return false
+        if (isCmdExecutable != other.isCmdExecutable) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = completions.contentHashCode()
+        result = 31 * result + replace.contentHashCode()
+        result = 31 * result + isCmdExecutable.hashCode()
+        return result
+    }
+}
 
 data class DetailMessage(
     val detail: String
@@ -196,8 +215,8 @@ class EventNames {
         SET_DISABLE_CHAT("set_disable_chat"),
         @SerializedName("chat_active_file_info") ACTIVE_FILE_INFO("chat_active_file_info"),
         TOGGLE_ACTIVE_FILE("chat_toggle_active_file"),
-        RECEIVE_AT_COMMAND_COMPLETION("chat_receive_at_command_completion"),
-        RECEIVE_AT_COMMAND_PREVIEW("chat_receive_at_command_preview"),
+        @SerializedName("chat_receive_at_command_completion") RECEIVE_AT_COMMAND_COMPLETION("chat_receive_at_command_completion"),
+        @SerializedName("chat_receive_at_command_preview") RECEIVE_AT_COMMAND_PREVIEW("chat_receive_at_command_preview"),
         SET_SELECTED_AT_COMMAND("chat_set_selected_command"),
         SET_LAST_MODEL_USED("chat_set_last_model_used"),
 
@@ -306,6 +325,7 @@ class Events {
                 val number: Int = 5,
                 val trigger: String? = null,
             ) : Payload(id)
+
             data class Request(
                 val id: String,
                 val query: String,
@@ -316,25 +336,57 @@ class Events {
 
             data class CompletionPayload(
                 override val id: String,
-                val completions: CommandCompletionResponse
-            ) : Payload(id)
+                val completions: Array<String>,
+                val replace: Array<Int>,
+                @SerializedName("is_cmd_executable")
+                val isCmdExecutable: Boolean = false
+            ) : Payload(id) {
+                override fun equals(other: Any?): Boolean {
+                    if (this === other) return true
+                    if (javaClass != other?.javaClass) return false
 
-            data class Receive(
-                val id: String,
-                val completions: CommandCompletionResponse
-            ) : ToChat(EventNames.ToChat.RECEIVE_AT_COMMAND_COMPLETION, CompletionPayload(id, completions))
+                    other as CompletionPayload
+
+                    if (id != other.id) return false
+                    if (!completions.contentEquals(other.completions)) return false
+                    if (!replace.contentEquals(other.replace)) return false
+                    if (isCmdExecutable != other.isCmdExecutable) return false
+
+                    return true
+                }
+
+                override fun hashCode(): Int {
+                    var result = id.hashCode()
+                    result = 31 * result + completions.contentHashCode()
+                    result = 31 * result + replace.contentHashCode()
+                    result = 31 * result + isCmdExecutable.hashCode()
+                    return result
+                }
+            }
+
+            class Receive( payload: CompletionPayload ) : ToChat(EventNames.ToChat.RECEIVE_AT_COMMAND_COMPLETION, payload)
         }
 
         class Preview {
-            data class PreviewContent(
-                val content: String,
-            ) {
-                val role = ChatRole.CONTEXT_FILE
+            data class Response(val messages: Array<ChatContextFile>) {
+                override fun equals(other: Any?): Boolean {
+                    if (this === other) return true
+                    if (javaClass != other?.javaClass) return false
+
+                    other as Response
+
+                    return messages.contentEquals(other.messages)
+                }
+
+                override fun hashCode(): Int {
+                    return messages.contentHashCode()
+                }
             }
+
 
             data class PreviewPayload(
                 override val id: String,
-                val preview: Array<PreviewContent>,
+                val preview: Array<ChatContextFile>,
             ): Payload(id) {
                 override fun equals(other: Any?): Boolean {
                     if (this === other) return true
@@ -355,28 +407,9 @@ class Events {
                 }
             }
 
-            data class Receive(
-                val id: String,
-                val preview: Array<PreviewContent>,
-            ) : ToChat(EventNames.ToChat.RECEIVE_AT_COMMAND_PREVIEW, PreviewPayload(id, preview)) {
-                override fun equals(other: Any?): Boolean {
-                    if (this === other) return true
-                    if (javaClass != other?.javaClass) return false
-
-                    other as Receive
-
-                    if (id != other.id) return false
-                    if (!preview.contentEquals(other.preview)) return false
-
-                    return true
-                }
-
-                override fun hashCode(): Int {
-                    var result = id.hashCode()
-                    result = 31 * result + preview.contentHashCode()
-                    return result
-                }
-            }
+            class Receive(
+                payload: PreviewPayload
+            ) : ToChat(EventNames.ToChat.RECEIVE_AT_COMMAND_PREVIEW, payload)
         }
     }
 

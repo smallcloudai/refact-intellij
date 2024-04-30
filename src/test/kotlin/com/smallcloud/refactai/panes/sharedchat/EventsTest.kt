@@ -42,7 +42,68 @@ class EventsTest {
     }
 
     @Test
-    fun foramtResponseChoicesTest() {
+    fun parseAtCommandCompletionMessageTest() {
+        val message = """{"type":"chat_request_at_command_completion","payload":{"id":"foo","query":"@","cursor":1,"trigger":"@","number":5}}"""
+        val result = Events.parse(message)
+        val expected = Events.AtCommands.Completion.Request("foo", "@", 1, 5, "@")
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun parseSaveChatMessage() {
+        val message = """{"type":"save_chat_to_history","payload":{"id":"foo","messages":[["context_file",[{"file_name":"/main.py","file_content":"hello\n","line1":1,"line2":1,"symbol":"00000000-0000-0000-0000-000000000000","gradient_type":-1,"usefulness":0}]],["user","hello"],["assistant","Hello there"]],"title":"","model":""}}"""
+        val result = Events.parse(message)
+        val messages: ChatMessages = arrayOf(
+            ContentFileMessage(arrayOf(ChatContextFile("/main.py","hello\n",1,1,0.0 ))),
+            UserMessage("hello"),
+            AssistantMessage("Hello there")
+        )
+        val expected = Events.Chat.Save("foo", messages, "", "")
+        assertEquals(expected, result)
+    }
+
+
+    @Test
+    fun parseCompletionsResponse() {
+        val input = """{"completions":["@file","@workspace","@symbols-at","@references","@definition"],"replace":[0,1],"is_cmd_executable":false}"""
+        val result = Gson().fromJson(input, CommandCompletionResponse::class.java)
+        val expected = CommandCompletionResponse(
+            arrayOf("@file", "@workspace", "@symbols-at","@references","@definition"),
+            arrayOf(0, 1),
+            false
+        )
+
+        assertEquals(expected, result)
+
+    }
+
+    @Test
+    fun stringifyCompletions() {
+        val payload = Events.AtCommands.Completion.CompletionPayload("foo", emptyArray(), arrayOf(0, 1), false)
+        val input = Events.AtCommands.Completion.Receive(payload)
+        val result = Gson().toJson(input)
+        val expected = """{"type":"chat_receive_at_command_completion","payload":{"id":"foo","completions":[],"replace":[0,1],"is_cmd_executable":false}}"""
+        assertEquals(expected, result)
+    }
+
+
+    @Test
+    fun stringifyCompletionPreview() {
+        val preview = ChatContextFile("test.py", "foo", 0, 1, 100.0)
+        val payload = Events.AtCommands.Preview.PreviewPayload("foo", arrayOf(preview))
+        val input = Events.AtCommands.Preview.Receive(payload)
+        val result = Gson().toJson(input)
+        val expected = """{"type":"chat_receive_at_command_preview","payload":{"id":"foo","preview":[{"file_name":"test.py","file_content":"foo","line1":0,"line2":1,"usefulness":100.0}]}}"""
+        assertEquals(expected, result)
+    }
+
+
+
+
+
+
+    @Test
+    fun formatResponseChoicesTest() {
         val delta = AssistantDelta("hello")
         val choice = Events.Chat.Response.Choice(delta, 0, null)
         val choices = arrayOf(choice)
@@ -58,9 +119,7 @@ class EventsTest {
     fun formatResponseDoneTest() {
         val msg = "data: [DONE]"
         val done = Events.Chat.Response.ChatDone(msg)
-        println("done: ${done.toString()}")
         val toChat = Events.Chat.Response.formatToChat(done, "foo")
-        println("toChat: ${toChat.toString()}")
         val result = Gson().toJson(toChat)
         val expected = """{"type":"chat_done_streaming","payload":{"id":"foo","message":"data: [DONE]"}}"""
 

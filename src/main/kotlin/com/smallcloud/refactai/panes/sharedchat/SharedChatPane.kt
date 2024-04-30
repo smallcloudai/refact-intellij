@@ -73,7 +73,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun getSelectedSnippet(cb: (Events.Editor.Snippet) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            if(project.isDisposed == false) {
+            if(!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty()) {
                 val fileEditorManager = FileEditorManager.getInstance(project)
                 val editor = fileEditorManager.selectedTextEditor
                 val file = fileEditorManager.selectedFiles[0]
@@ -97,7 +97,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
     private fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            if(!project.isDisposed) {
+            if(!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty() ) {
                 val fileEditorManager = FileEditorManager.getInstance(project)
                 val editor = fileEditorManager.selectedTextEditor
 
@@ -165,18 +165,28 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         try {
             this.lsp.fetchCommandCompletion(query, cursor, number, trigger).also { res ->
                 val completions = res.get()
-                val message = Events.AtCommands.Completion.Receive(id, completions)
-                this.postMessage(message)
+                val payload = Events.AtCommands.Completion.CompletionPayload(id, completions.completions,completions.replace,completions.isCmdExecutable)
+                val message = Events.AtCommands.Completion.Receive(payload)
+                val json = Gson().toJson(message)
+                this.postMessage(json)
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            println("Commands error")
+            println(e)
+        }
 
         try {
             this.lsp.fetchCommandPreview(query).also { res ->
                 val preview = res.get()
-                val message = Events.AtCommands.Preview.Receive(id, preview)
-                this.postMessage(message)
+                val payload = Events.AtCommands.Preview.PreviewPayload(id, preview.messages)
+                val message = Events.AtCommands.Preview.Receive(payload)
+                val json = Gson().toJson(message)
+                this.postMessage(json)
             }
-        } catch(_: Exception) {}
+        } catch(e: Exception) {
+            println("Command preview error")
+            println(e)
+        }
 
     }
 

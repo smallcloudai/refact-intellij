@@ -14,6 +14,8 @@ interface InferenceGlobalContextChangedNotifier {
     fun useMultipleFilesCompletionChanged(newValue: Boolean) {}
     fun developerModeEnabledChanged(newValue: Boolean) {}
     fun deploymentModeChanged(newMode: DeploymentMode) {}
+    fun astFlagChanged(newValue: Boolean) {}
+    fun vecdbFlagChanged(newValue: Boolean) {}
 
     companion object {
         val TOPIC = Topic.create(

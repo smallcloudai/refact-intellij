@@ -1,4 +1,4 @@
-package com.smallcloud.refactai.modes.completion.prompt
+package com.smallcloud.refactai.codecompletion
 
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.statistic.UsageStatistic
@@ -14,9 +14,6 @@ object RequestCreator {
         fileName: String, text: String,
         line: Int, column: Int,
         stat: UsageStatistic,
-        intent: String, functionName: String,
-        promptInfo: List<PromptInfo>,
-        model: String,
         stream: Boolean = true,
         multiline: Boolean = false
     ): SMCRequest? {

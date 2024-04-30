@@ -1,4 +1,4 @@
-package com.smallcloud.refactai.modes.completion
+package com.smallcloud.refactai.codecompletion
 
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.Key

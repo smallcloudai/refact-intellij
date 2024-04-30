@@ -33,6 +33,8 @@ class AppSettingsComponent {
                     myXDebugLSPPortLabel.isVisible = true
                     myStagingVersionText.isVisible = true
                     myStagingVersionLabel.isVisible = true
+                    astCheckbox.isVisible = true
+                    vecdbCheckbox.isVisible = true
                 }
             }
 
@@ -56,6 +58,13 @@ class AppSettingsComponent {
         isVisible = false
     }
     private val defaultSystemPromptTextArea = JBTextArea()
+
+    private val astCheckbox = JCheckBox("AST").apply {
+        isVisible = false
+    }
+    private val vecdbCheckbox = JCheckBox("VECDB").apply {
+        isVisible = false
+    }
 
 
     init {
@@ -94,6 +103,8 @@ class AppSettingsComponent {
             addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
             addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
             addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
+            addComponent(astCheckbox, UIUtil.LARGE_VGAP)
+            addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
             addComponentFillVertically(JPanel(), 0)
         }.panel
 
@@ -104,6 +115,7 @@ class AppSettingsComponent {
 
     val preferredFocusedComponent: JComponent
         get() = myTokenText
+
 
     var tokenText: String
         get() = myTokenText.text
@@ -136,6 +148,18 @@ class AppSettingsComponent {
         set(newVal) {
             developerModeCheckBox.isSelected = newVal
         }
+
+    var astIsEnabled: Boolean
+        get() = astCheckbox.isSelected
+        set(newVal) {
+            astCheckbox.isSelected = newVal
+        }
+    var vecdbIsEnabled: Boolean
+        get() = vecdbCheckbox.isSelected
+        set(newVal) {
+            vecdbCheckbox.isSelected = newVal
+        }
+
     var xDebugLSPPort: Int?
         get() =
             try {

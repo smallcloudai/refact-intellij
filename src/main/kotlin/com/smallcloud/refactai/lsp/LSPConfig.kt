@@ -8,7 +8,9 @@ data class LSPConfig(
         var apiKey: String? = null,
         var clientVersion: String? = null,
         var useTelemetry: Boolean = false,
-        var deployment: DeploymentMode = DeploymentMode.CLOUD
+        var deployment: DeploymentMode = DeploymentMode.CLOUD,
+        var ast: Boolean = false,
+        var vecdb: Boolean = false
 ) {
     fun toArgs(): List<String> {
         val params = mutableListOf<String>()
@@ -30,6 +32,12 @@ data class LSPConfig(
         }
         if (useTelemetry) {
             params.add("--basic-telemetry")
+        }
+        if (ast) {
+            params.add("--ast")
+        }
+        if (vecdb) {
+            params.add("--vecdb")
         }
         return params
     }

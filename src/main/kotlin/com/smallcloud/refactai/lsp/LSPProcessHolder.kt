@@ -345,7 +345,7 @@ class LSPProcessHolder(val project: Project): Disposable {
             url.resolve("/v1/at-command-completion"),
             requestBody,
         )
-        // could have detail message
+        // TODO: could this have a detail message?
         val json = res.thenApply {
             val body = it.get() as String
             // handle error
@@ -384,10 +384,14 @@ class LSPProcessHolder(val project: Project): Disposable {
         errorDataReceived: (JsonObject) -> Unit,
         failedDataReceiveEnded: (Throwable?) -> Unit,
     ): CompletableFuture<Future<*>> {
+
         val parameters = mapOf("max_new_tokens" to 1000)
-        // TODO: figure out why properties on the parent class are missing from json serialization
+
         val requestBody = Gson().toJson(mapOf(
-            "messages" to messages.map{ mapOf("role" to it.role, "content" to it.content) },
+            "messages" to messages.map {
+                val content = if(it.content is String) { it.content } else { Gson().toJson(it.content) }
+                mapOf("role" to it.role, "content" to content)
+            },
             "model" to model,
             "parameters" to parameters,
             "stream" to true

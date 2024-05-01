@@ -209,8 +209,8 @@ class EventNames {
         @SerializedName("chat_done_streaming") DONE_STREAMING("chat_done_streaming"),
         @SerializedName("chat_error_streaming") ERROR_STREAMING("chat_error_streaming"),
         NEW_CHAT("create_new_chat"),
-        RECEIVE_CAPS("receive_caps"),
-        RECEIVE_CAPS_ERROR("receive_caps_error"),
+        @SerializedName("receive_caps") RECEIVE_CAPS("receive_caps"),
+        @SerializedName("receive_caps_error") RECEIVE_CAPS_ERROR("receive_caps_error"),
         SET_CHAT_MODEL("chat_set_chat_model"),
         SET_DISABLE_CHAT("set_disable_chat"),
         @SerializedName("chat_active_file_info") ACTIVE_FILE_INFO("chat_active_file_info"),
@@ -922,9 +922,9 @@ class Events {
             val caps: LSPCapabilities
         ): Payload(id)
 
-        data class Receive(
-            val id: String,
-            val caps: LSPCapabilities
+        class Receive(
+            id: String,
+            caps: LSPCapabilities
         ): ToChat(EventNames.ToChat.RECEIVE_CAPS, CapsPayload(id, caps))
 
         data class ErrorPayload(

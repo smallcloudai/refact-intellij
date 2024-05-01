@@ -102,7 +102,6 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                 val editor = fileEditorManager.selectedTextEditor
 
                 val cursor = editor?.caretModel?.offset
-
                 val virtualFile = fileEditorManager.selectedFiles[0]
                 val filePath = virtualFile.path
                 val fileName = virtualFile.name
@@ -124,6 +123,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                     content = code,
                 )
                 cb(fileInfo)
+
             } else {
                 val fileInfo = Events.ActiveFile.FileInfo()
                 cb(fileInfo)
@@ -143,7 +143,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             val res = caps.get()
             val message: Events.Caps.Receive = Events.Caps.Receive(id, res)
             this.defaultChatModel = res.codeChatDefaultModel
-            this.postMessage(message)
+            val json = Gson().toJson(message)
+            this.postMessage(json)
         }
     }
 
@@ -339,7 +340,6 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private fun handleEvent(event: Events.FromChat) {
-
         when (event) {
             is Events.Ready -> {
                 this.sendActiveFileInfo(event.id)
@@ -360,7 +360,6 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         }
     }
 
-    // TODO: figure out how to detect dark mode
     private fun getHtml(): String {
         val isDarkMode = UIUtil.isUnderDarcula()
         val mode = if (isDarkMode) {"dark" } else { "light" }
@@ -433,8 +432,17 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
 
         myJSQueryOpenInBrowser.addHandler { msg ->
+            println("### post message from browser ###")
+            println(msg)
             val event = Events.parse(msg)
-            if(event != null) { this.handleEvent(event) }
+
+            if(event != null) {
+                this.handleEvent(event)
+            } else {
+                println("\n### NULL MESSAGE ###\"")
+                println(msg)
+                println("########################")
+            }
             null
         }
 
@@ -463,12 +471,15 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private fun postMessage(message: Events.ToChat) {
+        println("### post message ###")
+        println(message.toString())
         val json = Events.stringify(message)
+        println(json)
         this.postMessage(json)
     }
 
     private fun postMessage(message: String) {
-        // println("postMessage: $message")
+        println("\npostMessage: $message")
         val script = """window.postMessage($message, "*");"""
         webView.cefBrowser.executeJavaScript(script, webView.cefBrowser.url, 0)
     }

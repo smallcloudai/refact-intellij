@@ -2,6 +2,7 @@ package com.smallcloud.refactai.panes.sharedchat
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.smallcloud.refactai.lsp.LSPCapabilities
 import kotlin.test.Test
 import org.junit.jupiter.api.Assertions.*
 
@@ -195,6 +196,16 @@ class EventsTest {
         val message: Events.SystemPrompts.Receive = Events.SystemPrompts.Receive(payload)
         val result = Gson().toJson(message)
         val expected = """{"type":"chat_receive_prompts","payload":{"id":"foo","prompts":{"default":{"text":"Use backquotes for code blocks.\nPay close attention to indent when editing code blocks: indent must be exactly the same as in the original code block.\n","description":""}}}}"""
+        assertEquals(expected, result)
+
+    }
+
+    @Test
+    fun receiveCapsMessage() {
+        val caps = LSPCapabilities()
+        val message = Events.Caps.Receive("foo", caps)
+        val result = Gson().toJson(message)
+        val expected = """{"type":"receive_caps","payload":{"id":"foo","caps":{"cloud_name":"","code_chat_default_model":"","code_chat_models":{},"code_completion_default_model":"","code_completion_models":{},"endpoint_style":"","endpoint_template":"","running_models":[],"telemetry_basic_dest":"","tokenizer_path_template":"","tokenizer_rewrite_path":{}}}}"""
         assertEquals(expected, result)
 
     }

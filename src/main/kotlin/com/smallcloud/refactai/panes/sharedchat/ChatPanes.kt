@@ -45,7 +45,6 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
     }
 
     private fun restoreTab(item: ChatHistoryItem) {
-        // TODO: add this
         val newPane = SharedChatPane(project)
         val component:  JComponent = newPane.webView.component
         val info = TabInfo(component)

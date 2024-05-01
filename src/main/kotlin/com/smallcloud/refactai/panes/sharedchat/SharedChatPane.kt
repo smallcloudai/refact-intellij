@@ -27,6 +27,11 @@ import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.lsp.LSPProcessHolder
+import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
+import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.FileInfoPayload
+import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestorePayload
+import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestoreToChat
+import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import org.jetbrains.annotations.NotNull
@@ -66,8 +71,9 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun sendSelectedSnippet(id: String) {
         this.getSelectedSnippet { snippet ->
-            val json = Events.Editor.formatSnippetToChat(id, snippet)
-            this.postMessage(json)
+            val payload = Editor.SetSnippetPayload(id, snippet)
+            val message = Editor.SetSnippetToChat(payload)
+            this.postMessage(message)
         }
     }
 
@@ -133,7 +139,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun sendActiveFileInfo(id: String) {
             this.getActiveFileInfo { file ->
-                val message = Events.ActiveFile.formatActiveFileInfoToChat(id, file)
+                val payload = FileInfoPayload(id, file)
+                val message = ActiveFileToChat(payload)
                 this.postMessage(message)
             }
     }
@@ -203,44 +210,32 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                 when(val res = Events.Chat.Response.parse(str)) {
                     is Events.Chat.Response.Choices -> {
                         val message = Events.Chat.Response.formatToChat(res, requestId)
-                        if(message != null) {
-                            val json = Gson().toJson(message)
-                            this.postMessage(json)
-                        }
+                        this.postMessage(message)
                     }
                     is Events.Chat.Response.UserMessage -> {
                         val message = Events.Chat.Response.formatToChat(res, requestId)
-
-                        if(message !== null) {
-                            val json = Gson().toJson(message)
-                            this.postMessage(json)
-                        }
+                        this.postMessage(message)
+                    }
+                    is Events.Chat.Response.DetailMessage -> {
+                        val message = Events.Chat.Response.formatToChat(res, requestId)
+                        this.postMessage(message)
                     }
                 }
             },
             dataReceiveEnded = { str ->
                 val res = Events.Chat.Response.ChatDone(str)
                 val message = Events.Chat.Response.formatToChat(res, id)
-                if(message != null) {
-                    val json = Gson().toJson(message)
-                    this.postMessage(json)
-                }
+                this.postMessage(message)
             },
             errorDataReceived = { json ->
                 val res = Events.Chat.Response.ChatError(json)
                 val message = Events.Chat.Response.formatToChat(res, id)
-                if(message != null) {
-                    val jsonString = Gson().toJson(message)
-                    this.postMessage(jsonString)
-                }
+                this.postMessage(message)
             },
-            failedDataReceiveEnded = {e ->
+            failedDataReceiveEnded = { e ->
                 val res = Events.Chat.Response.ChatFailedStream(e)
                 val message = Events.Chat.Response.formatToChat(res, id)
-                if(message != null) {
-                    val json = Gson().toJson(message)
-                    this.postMessage(json)
-                }
+                this.postMessage(message)
             }
         )
         
@@ -333,8 +328,10 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun maybeRestore(id: String) {
         if(this.chatThreadToRestore != null) {
-            val json = Events.Chat.formatRestoreToChat(id, this.chatThreadToRestore!!)
-            this.postMessage(json)
+            val payload = RestorePayload(id, this.chatThreadToRestore!!)
+            val event = RestoreToChat(payload)
+            this.id = payload.id
+            this.postMessage(event)
             this.chatThreadToRestore = null
         }
     }
@@ -432,8 +429,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
 
         myJSQueryOpenInBrowser.addHandler { msg ->
-            println("### post message from browser ###")
-            println(msg)
+            println("myJSQueryOpenInBrowser: $msg")
             val event = Events.parse(msg)
 
             if(event != null) {
@@ -470,16 +466,14 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         browser
     }
 
-    private fun postMessage(message: Events.ToChat) {
-        println("### post message ###")
-        println(message.toString())
-        val json = Events.stringify(message)
-        println(json)
-        this.postMessage(json)
+    private fun postMessage(message: Events.ToChat?) {
+        if(message != null) {
+            val json = Events.stringify(message)
+            this.postMessage(json)
+        }
     }
 
     private fun postMessage(message: String) {
-        println("\npostMessage: $message")
         val script = """window.postMessage($message, "*");"""
         webView.cefBrowser.executeJavaScript(script, webView.cefBrowser.url, 0)
     }

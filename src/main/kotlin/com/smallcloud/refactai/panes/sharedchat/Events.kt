@@ -3,6 +3,8 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.google.gson.annotations.SerializedName
 import com.google.gson.*
 import com.smallcloud.refactai.lsp.LSPCapabilities
+import com.smallcloud.refactai.panes.sharedchat.Events.Chat.Response.ResponsePayload
+import com.smallcloud.refactai.panes.sharedchat.Events.Chat.ResponseDeserializer
 import java.io.Serializable
 import java.lang.reflect.Type
 
@@ -615,9 +617,6 @@ class Events {
                     return gson.fromJson(str, ResponsePayload::class.java)
                 }
 
-                fun stringify(response: ResponsePayload): String {
-                    return gson.toJson(response)
-                }
 
                 fun formatToChat(response: ResponsePayload, id: String): ToChat? {
                     return when (response) {
@@ -662,6 +661,7 @@ class Events {
 
         class ResponseDeserializer : JsonDeserializer<Response.ResponsePayload> {
             override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): Response.ResponsePayload? {
+
                 val role = p0?.asJsonObject?.get("role")?.asString
 
                 if (role == "user" || role == "context_file") {
@@ -800,57 +800,6 @@ class Events {
             val snippet: Editor.Snippet?,
         ): ToChat(EventNames.ToChat.NEW_CHAT, NewChatPayload(id, snippet))
 
-        companion object {
-            private class MessageSerializer: JsonSerializer<ChatMessage<*>> {
-                override fun serialize(src: ChatMessage<*>, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
-
-                    return when(src) {
-                        is UserMessage -> {
-                            val role = context.serialize(src.role, ChatRole::class.java)
-                            val arr = JsonArray()
-                            arr.add(role)
-                            arr.add(src.content)
-                            return arr
-                        }
-                        is SystemMessage -> {
-                            val role = context.serialize(src.role, ChatRole::class.java)
-                            val arr = JsonArray()
-                            arr.add(role)
-                            arr.add(src.content)
-                            return arr
-                        }
-                        is AssistantMessage-> {
-                            val role = context.serialize(src.role, ChatRole::class.java)
-                            val arr = JsonArray()
-                            arr.add(role)
-                            arr.add(src.content)
-                            return arr
-                        }
-                        is ContentFileMessage -> {
-                            val role = context.serialize(src.role, ChatRole::class.java)
-                            val arr = JsonArray()
-                            arr.add(role)
-                            val fileArray = arrayOf(ChatContextFile("", "", 0, 0))
-                            val contextFile = context.serialize(src.content, fileArray::class.java)
-                            arr.add(contextFile)
-                            return arr
-                        }
-
-                        else -> JsonArray()
-                    }
-                }
-            }
-
-            private val gson = GsonBuilder()
-                .registerTypeAdapter(ChatMessage::class.java, MessageSerializer())
-                .create()
-
-            fun formatRestoreToChat(id: String, chat: Thread, snippet: Editor.Snippet? = null): String {
-                val payload = RestorePayload(id, chat, snippet)
-                val event = RestoreToChat(payload)
-                return gson.toJson(event)
-            }
-        }
     }
 
     class ActiveFile {
@@ -872,14 +821,6 @@ class Events {
         ) : Payload(id)
 
         class ActiveFileToChat(payload: FileInfoPayload): ToChat(EventNames.ToChat.ACTIVE_FILE_INFO, payload)
-
-        companion object {
-            fun formatActiveFileInfoToChat(id: String, file: FileInfo): String {
-                val payload = FileInfoPayload(id, file)
-                val message = ActiveFileToChat(payload)
-                return Gson().toJson(message)
-            }
-        }
 
     }
 
@@ -913,13 +854,6 @@ class Events {
 
         class SetSnippetToChat(payload: SetSnippetPayload): ToChat(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
 
-        companion object {
-            fun formatSnippetToChat(id: String, snippet: Snippet): String {
-                val payload = Editor.SetSnippetPayload(id, snippet)
-                val message = Editor.SetSnippetToChat(payload)
-                return Gson().toJson(message)
-            }
-        }
     }
 
     class Caps {
@@ -951,24 +885,59 @@ class Events {
     }
 
     companion object {
-        fun parse(msg: String?): FromChat? {
-            // TODO: parse messages correctly
 
-            val gson = GsonBuilder()
-                .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
-                .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())
-                .create()
+        private class MessageSerializer: JsonSerializer<ChatMessage<*>> {
+            override fun serialize(src: ChatMessage<*>, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+
+                return when(src) {
+                    is UserMessage -> {
+                        val role = context.serialize(src.role, ChatRole::class.java)
+                        val arr = JsonArray()
+                        arr.add(role)
+                        arr.add(src.content)
+                        return arr
+                    }
+                    is SystemMessage -> {
+                        val role = context.serialize(src.role, ChatRole::class.java)
+                        val arr = JsonArray()
+                        arr.add(role)
+                        arr.add(src.content)
+                        return arr
+                    }
+                    is AssistantMessage-> {
+                        val role = context.serialize(src.role, ChatRole::class.java)
+                        val arr = JsonArray()
+                        arr.add(role)
+                        arr.add(src.content)
+                        return arr
+                    }
+                    is ContentFileMessage -> {
+                        val role = context.serialize(src.role, ChatRole::class.java)
+                        val arr = JsonArray()
+                        arr.add(role)
+                        val fileArray = arrayOf(ChatContextFile("", "", 0, 0))
+                        val contextFile = context.serialize(src.content, fileArray::class.java)
+                        arr.add(contextFile)
+                        return arr
+                    }
+
+                    else -> JsonArray()
+                }
+            }
+        }
+
+        private val gson = GsonBuilder()
+             .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
+             .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())
+             .registerTypeAdapter(ChatMessage::class.java, MessageSerializer())
+           .create()
+
+        fun parse(msg: String?): FromChat? {
             return gson.fromJson(msg, FromChat::class.java)
         }
 
         fun stringify(event: ToChat): String {
-            // TODO: figure out how to get the attributes from the parent class
-            val json = JsonObject()
-            val payload = Gson().toJsonTree(event).asJsonObject
-            json.addProperty("type", event.type.value)
-            // will this have type added to the paylaod?
-            json.add("payload", payload)
-            return Gson().toJson(json)
+            return gson.toJson(event)
         }
     }
 }

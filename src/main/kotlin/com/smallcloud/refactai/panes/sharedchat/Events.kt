@@ -602,6 +602,8 @@ class Events {
 
             data class ChatFailedStream(val message: Throwable?): ResponsePayload()
 
+            // detail
+            data class DetailMessage(val detail: String): ResponsePayload()
 
             companion object {
                 private val gson = GsonBuilder()
@@ -634,6 +636,11 @@ class Events {
                             return ChatDoneToChat(payload)
                         }
 
+                        is Response.DetailMessage -> {
+                            val payload = ChatErrorPayload(id, response.detail)
+                            return ChatErrorStreamingToChat(payload)
+                        }
+
                         is Response.ChatError -> {
                             val maybeDetail = response.message.asJsonObject.get("detail").asString
                             val message = maybeDetail ?: response.message.toString()
@@ -642,7 +649,7 @@ class Events {
                         }
 
                         is Response.ChatFailedStream -> {
-                            val message = "Failed during stream: ${response.message.toString()}"
+                            val message = "Failed during stream: ${response.message?.message}"
                             val payload = ChatErrorPayload(id, message)
                             return ChatErrorStreamingToChat(payload)
                         }
@@ -667,8 +674,13 @@ class Events {
                     return p2?.deserialize(p0, Response.Choices::class.java)
                 }
 
+                val detail = p0?.asJsonObject?.has("detail")
+                if(detail == true) {
+                    return p2?.deserialize<Response.DetailMessage>(p0, Response.DetailMessage::class.java)
+                }
+
                 return p2?.deserialize(p0, Response.ResponsePayload::class.java)
-                // TODO("Not yet implemented")
+
             }
 
         }

@@ -43,6 +43,16 @@ class EventsTest {
     }
 
     @Test
+    fun parseResponseDetail() {
+        val str = """{"detail":"JSON problem: invalid type: sequence, expected a string at line 1 column 46"}"""
+        val res = Events.Chat.Response.parse(str)
+        val toChat = Events.Chat.Response.formatToChat(res, "foo")
+        val result = Events.stringify(toChat!!)
+        val expected = """{"type":"chat_error_streaming","payload":{"id":"foo","message":"JSON problem: invalid type: sequence, expected a string at line 1 column 46"}}"""
+        assertEquals(expected, result)
+    }
+
+    @Test
     fun parseAtCommandCompletionMessageTest() {
         val message = """{"type":"chat_request_at_command_completion","payload":{"id":"foo","query":"@","cursor":1,"trigger":"@","number":5}}"""
         val result = Events.parse(message)

@@ -71,7 +71,7 @@ class ChatMessageDeserializer: JsonDeserializer<ChatMessage<*>> {
     }
 }
 
-class ChatMessageSerializer: JsonSerializer<ChatMessage<*>> {
+class ChatHistorySerializer: JsonSerializer<ChatMessage<*>> {
     override fun serialize(p0: ChatMessage<*>, p1: Type?, p2: JsonSerializationContext?): JsonElement? {
         return when (p0) {
             is UserMessage -> p2?.serialize(p0, UserMessage::class.java)

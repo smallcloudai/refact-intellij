@@ -60,7 +60,7 @@ class ChatHistory: PersistentStateComponent<ChatHistory> {
     var chatHistory: MutableMap<String, String> = emptyMap<String, String>().toMutableMap()
 
     var gson = GsonBuilder()
-        .registerTypeAdapter(ChatMessage::class.java, ChatMessageSerializer())
+        .registerTypeAdapter(ChatMessage::class.java, ChatHistorySerializer())
         .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())
         .create()
 

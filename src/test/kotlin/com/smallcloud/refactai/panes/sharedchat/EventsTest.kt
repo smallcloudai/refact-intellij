@@ -227,5 +227,14 @@ class EventsTest {
 
     }
 
+    @Test
+    fun configMessage() {
+        val ast = Events.Config.AstFeature(true)
+        val message = Events.Config.Update("chat-id", ast)
+        val result = Events.stringify(message)
+        val expected = """{"type":"receive_config_update","payload":{"id":"chat-id","features":{"ast":true}}}"""
+
+        assertEquals(expected, result)
+    }
 
 }

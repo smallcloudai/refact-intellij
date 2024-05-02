@@ -68,10 +68,10 @@ class AppSettingsComponent {
     }
 
     private val astCheckbox = JCheckBox("AST").apply {
-        isVisible = false
+        isVisible = true
     }
     private val vecdbCheckbox = JCheckBox("VECDB").apply {
-        isVisible = false
+        isVisible = true
     }
 
 

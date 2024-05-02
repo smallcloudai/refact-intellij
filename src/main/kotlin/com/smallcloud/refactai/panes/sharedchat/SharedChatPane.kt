@@ -26,12 +26,14 @@ import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.UIUtil
+import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.FileInfoPayload
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestorePayload
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestoreToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
+import com.smallcloud.refactai.settings.AppSettingsState
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import org.jetbrains.annotations.NotNull
@@ -101,6 +103,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             }
         }
     }
+
     private fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
             if(!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty() ) {
@@ -276,7 +279,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         }
     }
 
-    private fun addEventListener(id: String) {
+    private fun addEventListeners(id: String) {
         val listener: FileEditorManagerListener = object : FileEditorManagerListener {
             override fun fileOpened(@NotNull source: FileEditorManager, @NotNull file: VirtualFile) {
                 this@SharedChatPane.sendActiveFileInfo(id)
@@ -308,6 +311,25 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         ef.eventMulticaster.addSelectionListener(selectionListener)
 
         UIManager.addPropertyChangeListener(uiChangeListener)
+
+        // ast and vecdb settings change
+        project.messageBus.connect().subscribe(
+            InferenceGlobalContextChangedNotifier.TOPIC,
+            object : InferenceGlobalContextChangedNotifier {
+                override fun astFlagChanged(newValue: Boolean) {
+                    println("ast changed to: $newValue")
+                    val features = Events.Config.AstFeature(newValue)
+                    val message = Events.Config.Update(id, features)
+                    this@SharedChatPane.postMessage(message)
+                }
+                override fun vecdbFlagChanged(newValue: Boolean) {
+                    println("vecdb changed to: $newValue")
+                    val features = Events.Config.VecDBFeature(newValue)
+                    val message = Events.Config.Update(id, features)
+                    this@SharedChatPane.postMessage(message)
+                }
+            }
+        )
     }
 
     private val uiChangeListener = PropertyChangeListener { event ->
@@ -341,7 +363,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             is Events.Ready -> {
                 this.sendActiveFileInfo(event.id)
                 this.sendSelectedSnippet(event.id)
-                this.addEventListener(event.id)
+                this.addEventListeners(event.id)
                 this.id = event.id
                 this.maybeRestore(event.id)
             }
@@ -361,6 +383,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         val isDarkMode = UIUtil.isUnderDarcula()
         val mode = if (isDarkMode) {"dark" } else { "light" }
         val bodyClass = if(isDarkMode) {"vscode-dark"} else {"vscode-light"}
+        val hasAst = AppSettingsState.instance.astIsEnabled
+        val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
         return """
         <!doctype html>
         <html lang="en" class="$mode">
@@ -404,8 +428,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                      },
                      // TODO: set the following options to true if the features are enabled
                      features: {
-                       vecdb: true,
-                       ast: true,
+                       vecdb: $hasVecdb,
+                       ast: $hasAst,
                      }
                    };
                    refactChatJs.render(element, options);

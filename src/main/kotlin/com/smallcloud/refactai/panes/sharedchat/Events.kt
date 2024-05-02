@@ -228,7 +228,8 @@ class EventNames {
         RECEIVE_TOKEN_COUNT("chat_set_tokens"),
         @SerializedName("chat_receive_prompts") RECEIVE_PROMPTS("chat_receive_prompts"),
         @SerializedName("chat_receive_prompts_error") RECEIVE_PROMPTS_ERROR("chat_receive_prompts_error"),
-        SET_SELECTED_SYSTEM_PROMPT("chat_set_selected_system_prompt")
+        SET_SELECTED_SYSTEM_PROMPT("chat_set_selected_system_prompt"),
+        @SerializedName("receive_config_update") RECEIVE_CONFIG_UPDATE("chat_receive_config_update"),
     }
 }
 
@@ -884,6 +885,16 @@ class Events {
         ): ToChat(EventNames.ToChat.RECEIVE_CAPS_ERROR, ErrorPayload(id, error))
     }
 
+    class Config {
+        abstract class Features()
+        data class AstFeature(val ast: Boolean): Features()
+        data class VecDBFeature(val vecdb: Boolean): Features()
+
+        data class UpdatePayload(override val id: String, val features: Features): Payload(id)
+
+        class Update(id: String, features: Features): ToChat(EventNames.ToChat.RECEIVE_CONFIG_UPDATE, UpdatePayload(id, features))
+
+    }
     companion object {
 
         private class MessageSerializer: JsonSerializer<ChatMessage<*>> {

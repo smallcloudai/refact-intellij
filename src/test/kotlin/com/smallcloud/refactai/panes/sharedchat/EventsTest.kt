@@ -158,7 +158,7 @@ class EventsTest {
         val err = Events.Chat.Response.ChatFailedStream(e)
         val toChat = Events.Chat.Response.formatToChat(err, "foo")
         val result = Events.stringify(toChat!!)
-        val expected = """{"type":"chat_error_streaming","payload":{"id":"foo","message":"Failed during stream: java.lang.Throwable: test error"}}"""
+        val expected = """{"type":"chat_error_streaming","payload":{"id":"foo","message":"Failed during stream: test error"}}"""
         assertEquals(expected, result)
     }
 

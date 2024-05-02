@@ -58,6 +58,7 @@ class LSPProcessHolder(val project: Project): Disposable {
     )
     private var capsTask: Future<*>? = null
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
+    private var isWorking = false
 
 
     init {
@@ -149,7 +150,7 @@ class LSPProcessHolder(val project: Project): Disposable {
     }
 
     val lspIsWorking: Boolean
-        get() = InferenceGlobalContext.xDebugLSPPort != null || process?.isAlive == true
+        get() = InferenceGlobalContext.xDebugLSPPort != null || isWorking
 
     var capabilities: LSPCapabilities = LSPCapabilities()
         set(newValue) {
@@ -197,14 +198,21 @@ class LSPProcessHolder(val project: Project): Disposable {
             logger.warn("LSP bad_things_happened " +
                     process1.inputStream.bufferedReader().use { it.readText() })
         }
-        try {
-            InferenceGlobalContext.connection.ping(url)
-            buildInfo = getBuildInfo()
-            capabilities = getCaps()
-            lspProjectInitialize(project)
-        } catch (e: Exception) {
-            logger.warn("LSP bad_things_happened " + e.message)
+        attempt = 0
+        while (attempt < 5) {
+            try {
+                InferenceGlobalContext.connection.ping(url)
+                buildInfo = getBuildInfo()
+                capabilities = getCaps()
+                isWorking = true
+                break
+            } catch (e: Exception) {
+                logger.warn("LSP bad_things_happened " + e.message)
+            }
+            attempt++
+            Thread.sleep(1000)
         }
+        lspProjectInitialize(this, project)
     }
 
     private fun safeTerminate() {
@@ -215,6 +223,7 @@ class LSPProcessHolder(val project: Project): Disposable {
     private fun terminate() {
         process?.let {
             try {
+                isWorking = false
                 safeTerminate()
                 if (it.waitFor(3, TimeUnit.SECONDS)) {
                     logger.info("LSP SIGTERM")

@@ -4,7 +4,6 @@ import com.intellij.execution.ui.layout.impl.JBRunnerTabs
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -49,7 +48,7 @@ class ChatGPTPanes(private val project: Project, private val parent: Disposable)
 
     init {
         setupPanes(getLSPProcessHolder(project).capabilities.codeChatModels.isNotEmpty())
-        ApplicationManager.getApplication()
+        project
                 .messageBus
                 .connect(PluginState.instance)
                 .subscribe(LSPProcessHolderChangedNotifier.TOPIC,

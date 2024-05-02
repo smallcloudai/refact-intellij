@@ -6,9 +6,9 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
-fun lspProjectInitialize(project: Project) {
+fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
     val projectRoots = ProjectRootManager.getInstance(project).contentRoots.map { it.toString() }
-    val url = getLSPProcessHolder(project).url.resolve("/v1/lsp-initialize")
+    val url = lsp.url.resolve("/v1/lsp-initialize")
     val data = Gson().toJson(
         mapOf(
             "project_roots" to projectRoots,
@@ -16,6 +16,10 @@ fun lspProjectInitialize(project: Project) {
     )
 
     InferenceGlobalContext.connection.post(url, data)
+}
+
+fun lspProjectInitialize(project: Project) {
+    lspProjectInitialize(getLSPProcessHolder(project), project)
 }
 
 fun lspDocumentDidChanged(project: Project, docUrl: String, text: String) {

@@ -3,6 +3,7 @@ package com.smallcloud.refactai.lsp
 import com.google.gson.Gson
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
+import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
@@ -15,11 +16,11 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
         )
     )
 
-    InferenceGlobalContext.connection.post(url, data)
-}
-
-fun lspProjectInitialize(project: Project) {
-    lspProjectInitialize(getLSPProcessHolder(project), project)
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+        InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+    }, failedDataReceiveEnded = {
+        InferenceGlobalContext.status = ConnectionStatus.DISCONNECTED
+    })
 }
 
 fun lspDocumentDidChanged(project: Project, docUrl: String, text: String) {

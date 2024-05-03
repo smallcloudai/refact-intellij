@@ -154,6 +154,11 @@ class AppSettingsComponent {
         set(newVal) {
             vecdbCheckbox.isSelected = newVal
         }
+    var inferenceModel: String?
+        get() = myModelText.text
+        set(newVal) {
+            myModelText.text = newVal
+        }
 
     var xDebugLSPPort: Int?
         get() =

@@ -132,7 +132,10 @@ class LSPProcessHolder(val project: Project): Disposable {
     private fun settingsChanged() {
         synchronized(this) {
             terminate()
-            if (InferenceGlobalContext.xDebugLSPPort != null) return
+            if (InferenceGlobalContext.xDebugLSPPort != null) {
+                lspProjectInitialize(this, project)
+                return
+            }
             val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else
                 InferenceGlobalContext.inferenceUri
             val newConfig = LSPConfig(

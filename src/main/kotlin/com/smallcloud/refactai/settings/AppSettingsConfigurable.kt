@@ -72,6 +72,8 @@ class AppSettingsConfigurable : Configurable {
         modified = modified || mySettingsComponent!!.astIsEnabled != InferenceGlobalContext.astIsEnabled
         modified = modified || mySettingsComponent!!.vecdbIsEnabled != InferenceGlobalContext.vecdbIsEnabled
 
+        modified = modified || mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null } != InferenceGlobalContext.model
+
         return modified
     }
 
@@ -86,6 +88,7 @@ class AppSettingsConfigurable : Configurable {
         AppSettingsState.instance.defaultSystemPrompt = mySettingsComponent!!.defaultSystemPrompt
         InferenceGlobalContext.astIsEnabled = mySettingsComponent!!.astIsEnabled
         InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
+        InferenceGlobalContext.model = mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null }
     }
 
     override fun reset() {
@@ -97,6 +100,7 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.defaultSystemPrompt = AppSettingsState.instance.defaultSystemPrompt
         mySettingsComponent!!.astIsEnabled = InferenceGlobalContext.astIsEnabled
         mySettingsComponent!!.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
+        mySettingsComponent!!.inferenceModel = InferenceGlobalContext.model
     }
 
     override fun disposeUIResources() {

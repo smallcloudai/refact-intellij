@@ -15,25 +15,25 @@ private fun lookForCommonErrors(json: JsonObject, request: SMCRequest): String? 
     if (json.has("detail")) {
         val gson = Gson()
         val detail = gson.toJson(json.get("detail"))
-        UsageStats.addStatistic(false, request.stat, request.uri.toString(), detail)
+        UsageStats?.addStatistic(false, request.stat, request.uri.toString(), detail)
         return detail
     }
     if (json.has("retcode") && json.get("retcode").asString != "OK") {
-        UsageStats.addStatistic(
+        UsageStats?.addStatistic(
             false, request.stat,
             request.uri.toString(), json.get("human_readable_message").asString
         )
         return json.get("human_readable_message").asString
     }
     if (json.has("status") && json.get("status").asString == "error") {
-        UsageStats.addStatistic(
+        UsageStats?.addStatistic(
             false, request.stat,
             request.uri.toString(), json.get("human_readable_message").asString
         )
         return json.get("human_readable_message").asString
     }
     if (json.has("error")) {
-        UsageStats.addStatistic(
+        UsageStats?.addStatistic(
             false, request.stat,
             request.uri.toString(), json.get("error").asJsonObject.get("message").asString
         )
@@ -69,7 +69,7 @@ fun streamedInferenceFetch(
             val json = gson.fromJson(body, SMCStreamingPeace::class.java)
             InferenceGlobalContext.lastAutoModel = json.model
             json.requestId = reqId
-            UsageStats.addStatistic(true, request.stat, request.uri.toString(), "")
+            UsageStats?.addStatistic(true, request.stat, request.uri.toString(), "")
             dataReceived(json)
         },
         errorDataReceived = {

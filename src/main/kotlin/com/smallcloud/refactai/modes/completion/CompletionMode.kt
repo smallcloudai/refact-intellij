@@ -308,7 +308,7 @@ class CompletionMode(
         completionLayout?.apply {
             applyPreview(caret ?: editor.caretModel.currentCaret)
             lastCompletionData?.snippetTelemetryId?.let {
-                UsageStats.snippetAccepted(it)
+                UsageStats?.snippetAccepted(it)
             }
             dispose()
         }

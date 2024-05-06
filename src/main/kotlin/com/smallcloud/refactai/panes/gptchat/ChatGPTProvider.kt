@@ -164,7 +164,7 @@ class ChatGPTProvider(val project: Project) : ActionListener {
                         streamSchedulerTasks.add(streamScheduler.submit {
                             pane.sendingState = ChatGPTPane.SendingState.READY
                         })
-                        UsageStats.instance.addStatistic(true, stat, req.uri.toString(), "")
+                        UsageStats.instance?.addStatistic(true, stat, req.uri.toString(), "")
                     },
                     errorDataReceived = {
                         ApplicationManager.getApplication().invokeLater {

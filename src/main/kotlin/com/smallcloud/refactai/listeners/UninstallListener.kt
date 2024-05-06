@@ -22,7 +22,7 @@ class UninstallListener: PluginStateListener {
         if (Thread.currentThread().stackTrace.any { it.methodName == "uninstallAndUpdateUi" }
                 && SINGLE_TIME_UNINSTALL == 0) {
             SINGLE_TIME_UNINSTALL++
-            UsageStats.addStatistic(true, UsageStatistic("uninstall"), defaultCloudUrl.toString(), "")
+            UsageStats?.addStatistic(true, UsageStatistic("uninstall"), defaultCloudUrl.toString(), "")
             BrowserUtil.browse("https://refact.ai/feedback?ide=${Resources.client}&tenant=${AccountManager.user}")
         }
     }

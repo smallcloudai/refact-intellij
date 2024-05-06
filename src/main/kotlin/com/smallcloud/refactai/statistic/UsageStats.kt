@@ -6,11 +6,11 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources.defaultReportUrlSuffix
 import com.smallcloud.refactai.Resources.defaultSnippetAcceptedUrlSuffix
 import com.smallcloud.refactai.io.sendRequest
+import com.smallcloud.refactai.listeners.LastEditorGetterListener.Companion.LAST_EDITOR
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.acceptedCompletionCounter
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
@@ -96,9 +96,9 @@ class UsageStats(private val project: Project): Disposable {
 
     companion object {
         @JvmStatic
-        val instance: UsageStats
+        val instance: UsageStats?
             get() {
-                val project = ProjectManager.getInstance().openProjects.first()
+                val project = LAST_EDITOR?.project?: return null
                 return project.service()
             }
     }

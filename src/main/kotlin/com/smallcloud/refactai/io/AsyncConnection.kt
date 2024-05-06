@@ -215,7 +215,7 @@ class AsyncConnection : Disposable {
 
                     override fun failed(ex: java.lang.Exception?) {
                         if (ex !is SMCExceptions)
-                            UsageStats.addStatistic(false, stat, uri.toString(), ex.toString())
+                            UsageStats?.addStatistic(false, stat, uri.toString(), ex.toString())
                         if (ex is java.net.SocketException ||
                             ex is java.net.UnknownHostException) {
                             InferenceGlobalContext.status = ConnectionStatus.DISCONNECTED

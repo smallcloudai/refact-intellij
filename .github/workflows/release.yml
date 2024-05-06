@@ -45,12 +45,15 @@ jobs:
           GIT_BRANCH=${raw##*/}
           if [[ ${GIT_BRANCH} == "main" ]]; then 
               echo "PUBLISH_CHANNEL=default" >> "$GITHUB_ENV"
+              echo "slack_notification_channel=stable" >> "$GITHUB_OUTPUT"
               echo "PUBLISH_EAP=0" >> "$GITHUB_ENV"
           else
               echo "PUBLISH_CHANNEL=eap" >> "$GITHUB_ENV"
+              echo "slack_notification_channel=eap" >> "$GITHUB_OUTPUT"
               echo "PUBLISH_EAP=1" >> "$GITHUB_ENV"
           fi
           echo "GIT_BRANCH=${GIT_BRANCH}" >> "$GITHUB_ENV"
+          echo "plugin_version=$(./gradlew properties -q | awk '/^version:/ {print $2}')" >> $GITHUB_OUTPUT
           echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
 
       - uses: convictional/trigger-workflow-and-wait@v1.6.1
@@ -151,3 +154,30 @@ jobs:
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
         run: ./gradlew publishPlugin
 
+      - name: Post to a Slack channel
+        id: slack
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "JB plugin ${{ steps.setupvars.outputs.plugin_version }} is released in ${{ steps.setupvars.outputs.slack_notification_channel }} channel",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "by ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

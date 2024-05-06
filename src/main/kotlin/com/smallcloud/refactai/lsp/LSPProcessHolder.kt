@@ -9,7 +9,8 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.SystemInfo
-import com.intellij.openapi.util.io.FileUtil.*
+import com.intellij.openapi.util.io.FileUtil.getTempDirectory
+import com.intellij.openapi.util.io.FileUtil.setExecutable
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
 import com.intellij.util.messages.Topic
@@ -198,8 +199,10 @@ class LSPProcessHolder(val project: Project): Disposable {
             }
         }
         process!!.onExit().thenAcceptAsync { process1 ->
-            logger.warn("LSP bad_things_happened " +
+            if (process1.exitValue() != 0) {
+                logger.warn("LSP bad_things_happened " +
                     process1.inputStream.bufferedReader().use { it.readText() })
+            }
         }
         attempt = 0
         while (attempt < 5) {
@@ -249,7 +252,6 @@ class LSPProcessHolder(val project: Project): Disposable {
 
     override fun dispose() {
         terminate()
-        delete(Path(BIN_PATH))
         scheduler.shutdown()
         schedulerCaps.shutdown()
     }

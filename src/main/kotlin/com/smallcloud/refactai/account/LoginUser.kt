@@ -68,7 +68,7 @@ private fun tryTicketPass(): String? {
             AccountManager.apiKey = body.get("secret_key").asString
             AccountManager.ticket = null
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-            UsageStats.addStatistic(true, UsageStatistic("recall"), defaultRecallUrl.toString(), "")
+            UsageStats?.addStatistic(true, UsageStatistic("recall"), defaultRecallUrl.toString(), "")
             finishedGood()
             return null
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
@@ -76,14 +76,14 @@ private fun tryTicketPass(): String? {
             return "OK"
         } else {
             result.body?.let {
-                UsageStats.addStatistic(false, UsageStatistic("recall (1)"), defaultRecallUrl.toString(), it)
+                UsageStats?.addStatistic(false, UsageStatistic("recall (1)"), defaultRecallUrl.toString(), it)
                 logError("recall", it)
             }
             return ""
         }
 
     } catch (e: Exception) {
-        UsageStats.addStatistic(false, UsageStatistic("recall (2)"), defaultRecallUrl.toString(), e)
+        UsageStats?.addStatistic(false, UsageStatistic("recall (2)"), defaultRecallUrl.toString(), e)
         e.message?.let { logError("recall", it) }
         return ""
     }
@@ -143,29 +143,29 @@ private fun tryLoginWithApiKey(): String {
                 InferenceGlobalContext.isNewChatStyle = (body.get("chat-v1-style").asInt > 0)
             }
 
-            UsageStats.addStatistic(true, UsageStatistic("login"), url.toString(), "")
+            UsageStats?.addStatistic(true, UsageStatistic("login"), url.toString(), "")
             finishedGood()
             return "OK"
         } else if (retcode == "FAILED" && humanReadableMessage.contains("rate limit")) {
             logError("login-failed", humanReadableMessage, false)
-            UsageStats.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
+            UsageStats?.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
             return "OK"
         } else if (retcode == "FAILED") {
             AccountManager.user = null
             AccountManager.activePlan = null
             logError("login-failed", humanReadableMessage)
-            UsageStats.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
+            UsageStats?.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
             return ""
         } else {
             AccountManager.user = null
             AccountManager.activePlan = null
             logError("login-failed", "unrecognized response")
-            UsageStats.addStatistic(false, UsageStatistic("login (2)"), url.toString(), "unrecognized response")
+            UsageStats?.addStatistic(false, UsageStatistic("login (2)"), url.toString(), "unrecognized response")
             return ""
         }
     } catch (e: Exception) {
         e.message?.let { logError("login-fail", it) }
-        UsageStats.addStatistic(false, UsageStatistic("login (3)"), url.toString(), e)
+        UsageStats?.addStatistic(false, UsageStatistic("login (3)"), url.toString(), e)
         return ""
     }
 }

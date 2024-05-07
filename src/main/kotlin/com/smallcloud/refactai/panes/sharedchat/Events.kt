@@ -200,6 +200,7 @@ class EventNames {
         NEW_FILE("chat_create_new_file"),
         PASTE_DIFF("chat_paste_diff"),
         REQUEST_AT_COMMAND_COMPLETION("chat_request_at_command_completion"),
+        REQUEST_PREVIEW_FILES("chat_request_preview_files"),
         REQUEST_PROMPTS("chat_request_prompts")
     }
 
@@ -255,6 +256,7 @@ class Events {
                 EventNames.FromChat.READY.value -> p2?.deserialize(payload, Ready::class.java)
                 EventNames.FromChat.REQUEST_PROMPTS.value -> p2?.deserialize(payload, SystemPrompts.Request::class.java)
                 EventNames.FromChat.REQUEST_AT_COMMAND_COMPLETION.value -> p2?.deserialize(payload, AtCommands.Completion.Request::class.java)
+                EventNames.FromChat.REQUEST_PREVIEW_FILES.value -> p2?.deserialize(payload, AtCommands.Preview.Request::class.java)
                 EventNames.FromChat.SAVE_CHAT.value -> {
                     val messages = JsonArray()
                     payload.asJsonObject.get("messages").asJsonArray.forEach {
@@ -371,6 +373,9 @@ class Events {
         }
 
         class Preview {
+            data class RequestPayload(override val id: String, val query: String): Payload(id)
+            data class Request( val id: String, val query: String): FromChat(EventNames.FromChat.REQUEST_PREVIEW_FILES, RequestPayload(id, query))
+
             data class Response(val messages: Array<ChatContextFile>) {
                 override fun equals(other: Any?): Boolean {
                     if (this === other) return true

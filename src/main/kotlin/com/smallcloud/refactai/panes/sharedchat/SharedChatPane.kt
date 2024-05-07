@@ -188,18 +188,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             println(e)
         }
 
-        try {
-            this.lsp.fetchCommandPreview(query).also { res ->
-                val preview = res.get()
-                val payload = Events.AtCommands.Preview.PreviewPayload(id, preview.messages)
-                val message = Events.AtCommands.Preview.Receive(payload)
-                val json = Gson().toJson(message)
-                this.postMessage(json)
-            }
-        } catch(e: Exception) {
-            println("Command preview error")
-            println(e)
-        }
+        this.handlePreviewFileRequest(id, query)
 
     }
 
@@ -358,6 +347,20 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         }
     }
 
+    private fun handlePreviewFileRequest(id: String, query: String) {
+        try {
+            this.lsp.fetchCommandPreview(query).also { res ->
+                val preview = res.get()
+                val payload = Events.AtCommands.Preview.PreviewPayload(id, preview.messages)
+                val message = Events.AtCommands.Preview.Receive(payload)
+                val json = Gson().toJson(message)
+                this.postMessage(json)
+            }
+        } catch(e: Exception) {
+            println("Command preview error")
+            println(e)
+        }
+    }
     private fun handleEvent(event: Events.FromChat) {
         when (event) {
             is Events.Ready -> {
@@ -370,6 +373,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             is Events.Caps.Request -> this.handleCaps(event.id)
             is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
             is Events.AtCommands.Completion.Request -> this.handleCompletion(event.id, event.query, event.cursor, event.number, event.trigger)
+            is Events.AtCommands.Preview.Request -> this.handlePreviewFileRequest(event.id, event.query)
             is Events.Chat.AskQuestion -> this.handleChat(event.id, event.messages, event.model, event.title)
             is Events.Chat.Save -> this.handleChatSave(event.id, event.messages, event.model)
             is Events.Chat.Stop -> this.handleChatStop(event.id)

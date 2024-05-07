@@ -66,6 +66,14 @@ class EventsTest {
     }
 
     @Test
+    fun parsePreviewFileRequest() {
+        val message = """{"type":"chat_request_preview_files","payload":{"id":"foo","query": "hello"}}"""
+        val result = Events.parse(message)
+        val expected = Events.AtCommands.Preview.Request("foo", "hello")
+        assertEquals(expected, result)
+    }
+
+    @Test
     fun parseSaveChatMessage() {
         val message = """{"type":"save_chat_to_history","payload":{"id":"foo","messages":[["context_file",[{"file_name":"/main.py","file_content":"hello\n","line1":1,"line2":1,"symbol":"00000000-0000-0000-0000-000000000000","gradient_type":-1,"usefulness":0}]],["user","hello"],["assistant","Hello there"]],"title":"","model":""}}"""
         val result = Events.parse(message)

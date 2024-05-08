@@ -390,7 +390,6 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         val hasAst = AppSettingsState.instance.astIsEnabled
         val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
         val backgroundColour = UIUtil.getPanelBackground()
-        println("### backgroundColour: $backgroundColour")
         return """
         <!doctype html>
         <html lang="en" class="$mode">
@@ -401,7 +400,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                <style>
                  html {
                     height: 100%;
-                    background-color: rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue})
+                    background-color: rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue});
                  }
                   
                  body {
@@ -410,11 +409,12 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                     height: 100%;
                     padding: 0px;
                     margin: 0px;
-                    background-color: rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue})
+                    background-color: rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue});
                  }
 
                  #refact-chat {
                    height: 100%;
+                   background: transparent;
                  }
                  
                </style>

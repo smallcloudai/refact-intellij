@@ -49,7 +49,7 @@ import javax.swing.UIManager
 class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private val jsPoolSize = "200"
-    private val lsp: LSPProcessHolder = LSPProcessHolder()
+    private val lsp: LSPProcessHolder = LSPProcessHolder(project)
 
     var id: String? = null;
     var defaultChatModel: String? = null
@@ -389,6 +389,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         val bodyClass = if(isDarkMode) {"vscode-dark"} else {"vscode-light"}
         val hasAst = AppSettingsState.instance.astIsEnabled
         val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
+        val backgroundColour = UIUtil.getPanelBackground()
+        println("### backgroundColour: $backgroundColour")
         return """
         <!doctype html>
         <html lang="en" class="$mode">
@@ -399,6 +401,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                <style>
                  html {
                     height: 100%;
+                    background-color: rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue})
                  }
                   
                  body {
@@ -407,6 +410,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                     height: 100%;
                     padding: 0px;
                     margin: 0px;
+                    background-color: rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue})
                  }
 
                  #refact-chat {
@@ -415,7 +419,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                  
                </style>
            </head>
-           <body class=$bodyClass>
+           <body class="$bodyClass">
                <div id="refact-chat"></div>
            </body>
            <script type="module">
@@ -427,8 +431,10 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                      host: "jetbrains",
                      tabbed: false,
                      themeProps: {
+                       appearance: "$mode",
                        accentColor: "gray",
                        scaling: "90%",
+                       hasBackground: false
                      },
                      // TODO: set the following options to true if the features are enabled
                      features: {

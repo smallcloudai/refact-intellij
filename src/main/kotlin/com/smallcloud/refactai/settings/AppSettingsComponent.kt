@@ -59,17 +59,7 @@ class AppSettingsComponent {
         isVisible = false
     }
     private val defaultSystemPromptTextArea = JBTextArea()
-    private val vecdbCheckbox = JCheckBox("VECDB").apply {
-        isVisible = false
-    }
 
-    private val astCheckbox = JCheckBox("AST").apply {
-        isVisible = false
-    }
-
-    private val astCheckbox = JCheckBox("AST").apply {
-        isVisible = true
-    }
     private val vecdbCheckbox = JCheckBox("VECDB").apply {
         isVisible = true
     }

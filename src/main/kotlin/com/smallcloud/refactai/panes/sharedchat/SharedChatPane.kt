@@ -452,7 +452,12 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     val webView by lazy {
         // TODO: handle JBCef not being available
-        val browser = JBCefBrowser()
+        val browser = JBCefBrowser();
+        // happens after the flash :/
+        // val backgroundColour = UIUtil.getPanelBackground()
+        // val cssString = "rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue})"
+        // browser.setPageBackgroundColor(cssString);
+
         browser.jbCefClient.setProperty(
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
             jsPoolSize,

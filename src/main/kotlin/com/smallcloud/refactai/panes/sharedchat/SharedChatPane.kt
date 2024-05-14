@@ -187,9 +187,6 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             println("Commands error")
             println(e)
         }
-
-        this.handlePreviewFileRequest(id, query)
-
     }
 
     private fun handleChat(id: String, messages: ChatMessages, model: String, title: String? = null) {

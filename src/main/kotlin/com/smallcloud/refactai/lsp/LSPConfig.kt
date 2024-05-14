@@ -3,14 +3,14 @@ package com.smallcloud.refactai.lsp
 import com.smallcloud.refactai.struct.DeploymentMode
 
 data class LSPConfig(
-        val address: String? = null,
-        val port: Int? = null,
-        var apiKey: String? = null,
-        var clientVersion: String? = null,
-        var useTelemetry: Boolean = false,
-        var deployment: DeploymentMode = DeploymentMode.CLOUD,
-        var ast: Boolean = false,
-        var vecdb: Boolean = false
+    val address: String? = null,
+    var port: Int? = null,
+    var apiKey: String? = null,
+    var clientVersion: String? = null,
+    var useTelemetry: Boolean = false,
+    var deployment: DeploymentMode = DeploymentMode.CLOUD,
+    var ast: Boolean = false,
+    var vecdb: Boolean = false
 ) {
     fun toArgs(): List<String> {
         val params = mutableListOf<String>()
@@ -40,6 +40,23 @@ data class LSPConfig(
             params.add("--vecdb")
         }
         return params
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as LSPConfig
+
+        if (address != other.address) return false
+        if (apiKey != other.apiKey) return false
+        if (clientVersion != other.clientVersion) return false
+        if (useTelemetry != other.useTelemetry) return false
+        if (deployment != other.deployment) return false
+        if (ast != other.ast) return false
+        if (vecdb != other.vecdb) return false
+
+        return true
     }
 
     val isValid: Boolean

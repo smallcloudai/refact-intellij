@@ -14,7 +14,6 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
 import com.intellij.util.xmlb.annotations.Transient
 import com.jetbrains.rd.util.getOrCreate
-import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.listeners.GlobalCaretListener
@@ -41,7 +40,6 @@ class ModeProvider(
         ModeType.Completion to CompletionMode(),
     ),
     private var activeMode: Mode? = null,
-    private val pluginState: PluginState = PluginState.instance,
 ) : Disposable, InferenceGlobalContextChangedNotifier {
 
     @Transient
@@ -51,8 +49,10 @@ class ModeProvider(
     private val eventDebounceScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "SMCEventDebounceScheduler", 1
     )
-    private val stats: UsageStats
-        get() = ApplicationManager.getApplication().getService(UsageStats::class.java)
+    private val stats: UsageStats?
+        get() {
+            return editor.project?.getService(UsageStats::class.java)
+        }
 
     init {
         activeMode = modes[ModeType.Completion]
@@ -89,7 +89,7 @@ class ModeProvider(
             afterEvent?.let { activeMode?.onTextChange(it) }
         } catch (e: Exception) { InferenceGlobalContext.status = ConnectionStatus.ERROR
             InferenceGlobalContext.lastErrorMsg = e.message
-            stats.addStatistic(
+            stats?.addStatistic(
                 false, UsageStatistic("uncaught exceptions"), "none",
                 e.toString()
             )
@@ -101,12 +101,6 @@ class ModeProvider(
     fun isInCompletionMode(): Boolean =
         activeMode === modes[ModeType.Completion]
     fun getCompletionMode(): Mode = modes[ModeType.Completion]!!
-
-    fun switchMode(newMode: ModeType = ModeType.Completion) {
-        if (activeMode == modes[newMode]) return
-        activeMode?.cleanup(editor)
-        activeMode = modes[newMode]
-    }
 
     fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {
         if (event?.newFragment.toString() == DUMMY_IDENTIFIER) return

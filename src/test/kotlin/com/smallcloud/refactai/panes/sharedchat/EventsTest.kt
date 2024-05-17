@@ -1,7 +1,7 @@
 package com.smallcloud.refactai.panes.sharedchat
 
-import com.google.gson.Gson
-import com.google.gson.JsonObject
+import com.google.gson.*
+import com.intellij.util.containers.toArray
 import com.smallcloud.refactai.lsp.LSPCapabilities
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.FileInfoPayload
@@ -10,6 +10,7 @@ import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestoreToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import kotlin.test.Test
 import org.junit.jupiter.api.Assertions.*
+import java.lang.reflect.Type
 
 class EventsTest {
     @Test
@@ -74,13 +75,16 @@ class EventsTest {
     }
 
     @Test
-    fun  parsePreviewResponse() {
-        val messages = """[{"content":"[]","role":"context_file"}]"""
-        val input = """{"highlight":[{"kind":"cmd","ok":true,"pos1":0,"pos2":5,"reason":""},{"kind":"arg","ok":true,"pos1":6,"pos2":104,"reason":""}],"messages": $messages,"model":"deepseek-coder/6.7b/instruct-finetune"}"""
-        val result = Gson().fromJson(input, Events.AtCommands.Preview.Response::class.java)
-        val expectedMessage = Events.Chat.Response.UserMessage(Events.Chat.Response.Roles.CONTEXT_FILE, "[]")
-        val expected = Events.AtCommands.Preview.Response(arrayOf(expectedMessage))
+    fun parsePreviewResponse() {
+        val response = """{"highlight":[],"messages":[{"content":"[]","role":"context_file"}],"model":"deepseek-coder/6.7b/instruct-finetune"}"""
+        val result = Events.gson.fromJson(response, Events.AtCommands.Preview.Response::class.java)
+        val expected = Events.AtCommands.Preview.Response(arrayOf(ContentFileMessage(emptyArray())))
         assertEquals(expected, result)
+
+        val payload = Events.AtCommands.Preview.PreviewPayload("foo", result.messages)
+        val message = Events.stringify(Events.AtCommands.Preview.Receive(payload))
+        val json = """{"type":"chat_receive_at_command_preview","payload":{"id":"foo","preview":[["context_file",[]]]}}"""
+        assertEquals(json, message)
     }
 
     @Test
@@ -132,10 +136,10 @@ class EventsTest {
     @Test
     fun stringifyCompletionPreview() {
         val preview = ChatContextFile("test.py", "foo", 0, 1, 100.0)
-        val payload = Events.AtCommands.Preview.PreviewPayload("foo", arrayOf(preview))
+        val payload = Events.AtCommands.Preview.PreviewPayload("foo", arrayOf(ContentFileMessage(arrayOf(preview))))
         val input = Events.AtCommands.Preview.Receive(payload)
         val result = Events.stringify(input)
-        val expected = """{"type":"chat_receive_at_command_preview","payload":{"id":"foo","preview":[{"file_name":"test.py","file_content":"foo","line1":0,"line2":1,"usefulness":100.0}]}}"""
+        val expected = """{"type":"chat_receive_at_command_preview","payload":{"id":"foo","preview":[["context_file",[{"file_name":"test.py","file_content":"foo","line1":0,"line2":1,"usefulness":100.0}]]]}}"""
         assertEquals(expected, result)
     }
 

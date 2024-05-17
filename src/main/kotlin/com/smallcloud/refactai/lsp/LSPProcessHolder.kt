@@ -360,6 +360,7 @@ class LSPProcessHolder(val project: Project): Disposable {
 
     fun fetchCommandPreview(query: String): Future<Events.AtCommands.Preview.Response> {
         val requestBody = Gson().toJson(mapOf("query" to query))
+
         val response = InferenceGlobalContext.connection.post(
             url.resolve("/v1/at-command-preview"),
             requestBody
@@ -368,10 +369,9 @@ class LSPProcessHolder(val project: Project): Disposable {
         val json: Future<Events.AtCommands.Preview.Response> = response.thenApply {
             val responseBody = it.get() as String
             if (responseBody.startsWith("detail")) {
-                val message = Events.Chat.Response.UserMessage(Events.Chat.Response.Roles.CONTEXT_FILE, "[]")
-                Events.AtCommands.Preview.Response(arrayOf(message))
+                Events.AtCommands.Preview.Response(emptyArray())
             } else {
-                Gson().fromJson<Events.AtCommands.Preview.Response>(responseBody, Events.AtCommands.Preview.Response::class.java)
+                Events.gson.fromJson(responseBody, Events.AtCommands.Preview.Response::class.java)
             }
         }
 

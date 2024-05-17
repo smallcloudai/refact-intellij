@@ -377,7 +377,7 @@ class Events {
             data class Request( val id: String, val query: String): FromChat(EventNames.FromChat.REQUEST_PREVIEW_FILES, RequestPayload(id, query))
 
             data class Response(
-                val messages: Array<Events.Chat.Response.UserMessage>,
+                val messages: Array<ContentFileMessage>,
             ) {
                 override fun equals(other: Any?): Boolean {
                     if (this === other) return true
@@ -393,10 +393,30 @@ class Events {
                 }
             }
 
+            class ResponseDeserializer: JsonDeserializer<Events.AtCommands.Preview.Response> {
+                override fun deserialize(
+                    p0: JsonElement?,
+                    p1: Type?,
+                    p2: JsonDeserializationContext?
+                ): Events.AtCommands.Preview.Response? {
+                    val messages = p0?.asJsonObject?.get("messages")?.asJsonArray
+                    val arr = JsonArray()
+                    messages?.forEach {
+                        val contentAsString = it.asJsonObject.get("content").asString
+                        val a = Gson().fromJson(contentAsString, JsonArray::class.java)
+                        it.asJsonObject.add("content", a)
+                        arr.add(it)
+                    }
+
+                    p0?.asJsonObject?.add("messages", arr)
+                    return Gson().fromJson(p0, Events.AtCommands.Preview.Response::class.java)
+                }
+            }
+
 
             data class PreviewPayload(
                 override val id: String,
-                val preview: Array<ChatContextFile>,
+                val preview: Array<ContentFileMessage>,
             ): Payload(id) {
                 override fun equals(other: Any?): Boolean {
                     if (this === other) return true
@@ -944,10 +964,11 @@ class Events {
             }
         }
 
-        private val gson = GsonBuilder()
+        val gson = GsonBuilder()
              .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
+            .registerTypeAdapter(AtCommands.Preview.Response::class.java, AtCommands.Preview.ResponseDeserializer())
              .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())
-             .registerTypeAdapter(ChatMessage::class.java, MessageSerializer())
+             .registerTypeHierarchyAdapter(ChatMessage::class.java, MessageSerializer())
            .create()
 
         fun parse(msg: String?): FromChat? {

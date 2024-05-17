@@ -365,10 +365,11 @@ class LSPProcessHolder(val project: Project): Disposable {
             requestBody
         )
 
-        val json = response.thenApply {
+        val json: Future<Events.AtCommands.Preview.Response> = response.thenApply {
             val responseBody = it.get() as String
             if (responseBody.startsWith("detail")) {
-                Events.AtCommands.Preview.Response(emptyArray())
+                val message = Events.Chat.Response.UserMessage(Events.Chat.Response.Roles.CONTEXT_FILE, "[]")
+                Events.AtCommands.Preview.Response(arrayOf(message))
             } else {
                 Gson().fromJson<Events.AtCommands.Preview.Response>(responseBody, Events.AtCommands.Preview.Response::class.java)
             }

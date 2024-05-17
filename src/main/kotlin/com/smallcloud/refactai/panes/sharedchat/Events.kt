@@ -376,7 +376,9 @@ class Events {
             data class RequestPayload(override val id: String, val query: String): Payload(id)
             data class Request( val id: String, val query: String): FromChat(EventNames.FromChat.REQUEST_PREVIEW_FILES, RequestPayload(id, query))
 
-            data class Response(val messages: Array<ChatContextFile>) {
+            data class Response(
+                val messages: Array<Events.Chat.Response.UserMessage>,
+            ) {
                 override fun equals(other: Any?): Boolean {
                     if (this === other) return true
                     if (javaClass != other?.javaClass) return false

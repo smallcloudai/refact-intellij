@@ -74,6 +74,16 @@ class EventsTest {
     }
 
     @Test
+    fun  parsePreviewResponse() {
+        val messages = """[{"content":"[]","role":"context_file"}]"""
+        val input = """{"highlight":[{"kind":"cmd","ok":true,"pos1":0,"pos2":5,"reason":""},{"kind":"arg","ok":true,"pos1":6,"pos2":104,"reason":""}],"messages": $messages,"model":"deepseek-coder/6.7b/instruct-finetune"}"""
+        val result = Gson().fromJson(input, Events.AtCommands.Preview.Response::class.java)
+        val expectedMessage = Events.Chat.Response.UserMessage(Events.Chat.Response.Roles.CONTEXT_FILE, "[]")
+        val expected = Events.AtCommands.Preview.Response(arrayOf(expectedMessage))
+        assertEquals(expected, result)
+    }
+
+    @Test
     fun parseSaveChatMessage() {
         val message = """{"type":"save_chat_to_history","payload":{"id":"foo","messages":[["context_file",[{"file_name":"/main.py","file_content":"hello\n","line1":1,"line2":1,"symbol":"00000000-0000-0000-0000-000000000000","gradient_type":-1,"usefulness":0}]],["user","hello"],["assistant","Hello there"]],"title":"","model":""}}"""
         val result = Events.parse(message)

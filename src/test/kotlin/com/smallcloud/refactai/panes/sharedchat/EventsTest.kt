@@ -102,6 +102,14 @@ class EventsTest {
     }
 
     @Test
+    fun parseCapsRequest() {
+        val input = """{"type":"chat_request_caps","payload":{"id":"foo"}}"""
+        val result = Events.parse(input)
+        val expected = Events.Caps.Request("foo")
+        assertEquals(expected, result)
+    }
+
+    @Test
     fun stringifyCompletions() {
         val payload = Events.AtCommands.Completion.CompletionPayload("foo", emptyArray(), arrayOf(0, 1), false)
         val input = Events.AtCommands.Completion.Receive(payload)

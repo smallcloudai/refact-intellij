@@ -304,9 +304,11 @@ class LSPProcessHolder(val project: Project): Disposable {
     }
 
     fun fetchCaps(): Future<LSPCapabilities> {
-        if(this.capabilities.codeChatModels.isNotEmpty()) {
-            return FutureTask { this.capabilities }
-        }
+//        // This causes the ide to crash :/
+//        if(this.capabilities.codeChatModels.isNotEmpty()) {
+//            println("caps_cached")
+//            return FutureTask { this.capabilities }
+//        }
 
          val res = InferenceGlobalContext.connection.get(
             url.resolve("/v1/caps"),

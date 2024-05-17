@@ -153,8 +153,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             val res = caps.get()
             val message: Events.Caps.Receive = Events.Caps.Receive(id, res)
             this.defaultChatModel = res.codeChatDefaultModel
-            val json = Gson().toJson(message)
-            this.postMessage(json)
+            this.postMessage(message)
         }
     }
 
@@ -227,7 +226,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                 this.postMessage(message)
             }
         )
-        
+
         this.lastProcess = future
 
     }
@@ -350,8 +349,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                 val preview = res.get()
                 val payload = Events.AtCommands.Preview.PreviewPayload(id, preview.messages)
                 val message = Events.AtCommands.Preview.Receive(payload)
-                val json = Gson().toJson(message)
-                this.postMessage(json)
+                this.postMessage(message)
             }
         } catch(e: Exception) {
             println("Command preview error")
@@ -449,7 +447,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     val webView by lazy {
         // TODO: handle JBCef not being available
-        val browser = JBCefBrowser();
+        val browser = JBCefBrowser()
         // happens after the flash :/
         // val backgroundColour = UIUtil.getPanelBackground()
         // val cssString = "rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue})"

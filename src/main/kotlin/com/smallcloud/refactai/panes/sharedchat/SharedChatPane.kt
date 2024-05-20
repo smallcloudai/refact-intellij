@@ -49,7 +49,7 @@ import javax.swing.UIManager
 class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private val jsPoolSize = "200"
-    private val lsp: LSPProcessHolder = LSPProcessHolder(project)
+    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
 
     var id: String? = null;
     var defaultChatModel: String? = null

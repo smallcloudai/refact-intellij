@@ -1,9 +1,6 @@
 package com.smallcloud.refactai.panes.sharedchat
 
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -21,10 +18,6 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.LightVirtualFile
-import com.intellij.ui.jcef.JBCefBrowser
-import com.intellij.ui.jcef.JBCefBrowserBase
-import com.intellij.ui.jcef.JBCefClient
-import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
@@ -33,22 +26,19 @@ import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.FileInfoPayloa
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestorePayload
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestoreToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
+import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsState
-import org.cef.browser.CefBrowser
-import org.cef.handler.CefLoadHandlerAdapter
 import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
-import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.UIManager
 
 
 class SharedChatPane (val project: Project): JPanel(), Disposable {
 
-    private val jsPoolSize = "200"
     private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
 
     var id: String? = null;
@@ -58,9 +48,6 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private var lastProcess: CompletableFuture<Future<*>>? = null;
 
-    init {
-        System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
-    }
 
     private fun getLanguage(fm: FileEditorManager): Language? {
         val editor = fm.selectedTextEditor
@@ -77,6 +64,17 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             val message = Editor.SetSnippetToChat(payload)
             this.postMessage(message)
         }
+    }
+
+    private fun sendUserConfig(id: String) {
+        val hasAst = AppSettingsState.instance.astIsEnabled
+        val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
+        val features = Events.Config.Features(hasAst, hasVecdb)
+        val isDarkMode = UIUtil.isUnderDarcula()
+        val mode = if(isDarkMode)  "dark" else "light"
+        val themeProps = Events.Config.ThemeProps(mode)
+        val message = Events.Config.Update(id, features, themeProps)
+        this.postMessage(message)
     }
 
     private fun getSelectedSnippet(cb: (Events.Editor.Snippet) -> Unit) {
@@ -162,8 +160,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             val prompts: SystemPromptMap = res.get()
             val payload = Events.SystemPrompts.SystemPromptsPayload(id, prompts)
             val message: Events.SystemPrompts.Receive = Events.SystemPrompts.Receive(payload)
-            val json = Gson().toJson(message)
-            this.postMessage(json)
+            this.postMessage(message)
         }
     }
 
@@ -171,16 +168,14 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         id: String,
         query: String,
         cursor: Int,
-        number: Int,
-        trigger: String?
+        number: Int = 5,
     ) {
         try {
-            this.lsp.fetchCommandCompletion(query, cursor, number, trigger).also { res ->
+            this.lsp.fetchCommandCompletion(query, cursor, number).also { res ->
                 val completions = res.get()
                 val payload = Events.AtCommands.Completion.CompletionPayload(id, completions.completions,completions.replace,completions.isCmdExecutable)
                 val message = Events.AtCommands.Completion.Receive(payload)
-                val json = Gson().toJson(message)
-                this.postMessage(json)
+                this.postMessage(message)
             }
         } catch (e: Exception) {
             println("Commands error")
@@ -265,6 +260,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private fun addEventListeners(id: String) {
+        println("Adding ide event listeners")
         val listener: FileEditorManagerListener = object : FileEditorManagerListener {
             override fun fileOpened(@NotNull source: FileEditorManager, @NotNull file: VirtualFile) {
                 this@SharedChatPane.sendActiveFileInfo(id)
@@ -291,9 +287,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
         project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, listener)
 
-        // TODO: this is marked as to be depricated
         val ef = EditorFactory.getInstance()
-        ef.eventMulticaster.addSelectionListener(selectionListener)
+        ef.eventMulticaster.addSelectionListener(selectionListener, this)
 
         UIManager.addPropertyChangeListener(uiChangeListener)
 
@@ -303,28 +298,26 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             object : InferenceGlobalContextChangedNotifier {
                 override fun astFlagChanged(newValue: Boolean) {
                     println("ast changed to: $newValue")
-                    val features = Events.Config.AstFeature(newValue)
-                    val message = Events.Config.Update(id, features)
-                    this@SharedChatPane.postMessage(message)
+                    this@SharedChatPane.sendUserConfig(id)
                 }
                 override fun vecdbFlagChanged(newValue: Boolean) {
                     println("vecdb changed to: $newValue")
-                    val features = Events.Config.VecDBFeature(newValue)
-                    val message = Events.Config.Update(id, features)
-                    this@SharedChatPane.postMessage(message)
+                    this@SharedChatPane.sendUserConfig(id)
                 }
             }
         )
     }
 
+    private fun setLookAndFeel() {
+        this.browser.setStyle()
+        if(this.id != null) {
+            this.sendUserConfig(this.id!!)
+        }
+    }
+
     private val uiChangeListener = PropertyChangeListener { event ->
         if(event.propertyName == "lookAndFeel") {
-            val isDark = UIUtil.isUnderDarcula()
-            val className = if(isDark) {"vscode-dark"} else {"vscode-light"}
-            val script = """
-                    document.body.className = "$className";
-                """.trimIndent()
-            this.webView.cefBrowser.executeJavaScript(script, this.webView.cefBrowser.url, 0)
+            this.setLookAndFeel()
         }
     }
 
@@ -356,18 +349,22 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             println(e)
         }
     }
+
+    private fun handleReadyMessage(id: String) {
+        this.id = id;
+        this.sendActiveFileInfo(id)
+        this.sendSelectedSnippet(id)
+        this.addEventListeners(id)
+        this.sendUserConfig(id)
+        this.maybeRestore(id)
+    }
     private fun handleEvent(event: Events.FromChat) {
+        // println("Event received: ${event}")
         when (event) {
-            is Events.Ready -> {
-                this.sendActiveFileInfo(event.id)
-                this.sendSelectedSnippet(event.id)
-                this.addEventListeners(event.id)
-                this.id = event.id
-                this.maybeRestore(event.id)
-            }
+            is Events.Ready -> this.handleReadyMessage(event.id)
             is Events.Caps.Request -> this.handleCaps(event.id)
             is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
-            is Events.AtCommands.Completion.Request -> this.handleCompletion(event.id, event.query, event.cursor, event.number, event.trigger)
+            is Events.AtCommands.Completion.Request -> this.handleCompletion(event.id, event.query, event.cursor, event.number)
             is Events.AtCommands.Preview.Request -> this.handlePreviewFileRequest(event.id, event.query)
             is Events.Chat.AskQuestion -> this.handleChat(event.id, event.messages, event.model, event.title)
             is Events.Chat.Save -> this.handleChatSave(event.id, event.messages, event.model)
@@ -378,144 +375,20 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         }
     }
 
-    private fun getHtml(): String {
-        val isDarkMode = UIUtil.isUnderDarcula()
-        val mode = if (isDarkMode) {"dark" } else { "light" }
-        val bodyClass = if(isDarkMode) {"vscode-dark"} else {"vscode-light"}
-        val hasAst = AppSettingsState.instance.astIsEnabled
-        val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
-        val backgroundColour = UIUtil.getPanelBackground()
-        return """
-        <!doctype html>
-        <html lang="en" class="$mode">
-           <head>
-               <title>Refact.ai</title>
-               <meta name="viewport" content="width=device-width, initial-scale=1.0">
-               <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/refact-chat-js@alpha/dist/chat/style.css">
-               <style>
-                 html {
-                    height: 100%;
-                    background-color: rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue});
-                 }
-                  
-                 body {
-                    margin: 0;
-                    min-height: 100%;
-                    height: 100%;
-                    padding: 0px;
-                    margin: 0px;
-                    background-color: rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue});
-                 }
-
-                 #refact-chat {
-                   height: 100%;
-                   background: transparent;
-                 }
-                 
-               </style>
-           </head>
-           <body class="$bodyClass">
-               <div id="refact-chat"></div>
-           </body>
-           <script type="module">
-               import * as refactChatJs from 'https://cdn.jsdelivr.net/npm/refact-chat-js@alpha/dist/chat/index.js'
-
-               window.onload = function() {
-                   const element = document.getElementById("refact-chat");
-                   const options = {
-                     host: "jetbrains",
-                     tabbed: false,
-                     themeProps: {
-                       appearance: "$mode",
-                       accentColor: "gray",
-                       scaling: "90%",
-                       hasBackground: false
-                     },
-                     // TODO: set the following options to true if the features are enabled
-                     features: {
-                       vecdb: $hasVecdb,
-                       ast: $hasAst,
-                     }
-                   };
-                   refactChatJs.render(element, options);
-               };
-
-           </script>
-        </html>
-    """.trimIndent()
+    private val browser by lazy {
+        ChatWebView {
+            event -> this.handleEvent(event)
+        }
     }
 
     val webView by lazy {
-        // TODO: handle JBCef not being available
-        val browser = JBCefBrowser()
-        // happens after the flash :/
-        // val backgroundColour = UIUtil.getPanelBackground()
-        // val cssString = "rgb(${backgroundColour.red}, ${backgroundColour.green}, ${backgroundColour.blue})"
-        // browser.setPageBackgroundColor(cssString);
-
-        browser.jbCefClient.setProperty(
-            JBCefClient.Properties.JS_QUERY_POOL_SIZE,
-            jsPoolSize,
-        )
-        val html = this.getHtml()
-        browser.loadHTML(html)
-
-        val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
-
-        myJSQueryOpenInBrowser.addHandler { msg ->
-            println("myJSQueryOpenInBrowser: $msg")
-            val event = Events.parse(msg)
-
-            if(event != null) {
-                this.handleEvent(event)
-            } else {
-                println("\n### NULL MESSAGE ###\"")
-                println(msg)
-                println("########################")
-            }
-            null
-        }
-
-        var scriptAdded = false;
-
-        browser.jbCefClient.addLoadHandler(object: CefLoadHandlerAdapter() {
-            override fun onLoadingStateChange(
-                browser: CefBrowser,
-                isLoading: Boolean,
-                canGoBack: Boolean,
-                canGoForward: Boolean
-            ) {
-                if(!scriptAdded) {
-                    println("adding script to  browser")
-                    val script = """window.postIntellijMessage = function(event) {
-                        const msg = JSON.stringify(event);
-                        ${myJSQueryOpenInBrowser.inject("msg")}
-                    }""".trimIndent()
-                    browser.executeJavaScript(script, browser.url, 0);
-                    scriptAdded = true;
-                }
-            }
-        }, browser.cefBrowser)
-
-        browser
+        browser.webView
     }
 
     private fun postMessage(message: Events.ToChat?) {
-        if(message != null) {
-            val json = Events.stringify(message)
-            this.postMessage(json)
-        }
+        this.browser.postMessage(message)
     }
 
-    private fun postMessage(message: String) {
-        val script = """window.postMessage($message, "*");"""
-        webView.cefBrowser.executeJavaScript(script, webView.cefBrowser.url, 0)
-    }
-
-    fun getComponent(): JComponent {
-
-        return webView.component
-    }
 
     override fun dispose() {
         UIManager.removePropertyChangeListener(uiChangeListener)

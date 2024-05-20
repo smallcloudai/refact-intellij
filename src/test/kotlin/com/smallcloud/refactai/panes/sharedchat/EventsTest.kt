@@ -259,10 +259,13 @@ class EventsTest {
 
     @Test
     fun configMessage() {
-        val ast = Events.Config.AstFeature(true)
-        val message = Events.Config.Update("chat-id", ast)
+        val message = Events.Config.Update(
+            "chat-id",
+            Events.Config.Features(true, false),
+            Events.Config.ThemeProps("light")
+        )
         val result = Events.stringify(message)
-        val expected = """{"type":"receive_config_update","payload":{"id":"chat-id","features":{"ast":true}}}"""
+        val expected = """{"type":"receive_config_update","payload":{"id":"chat-id","features":{"ast":true,"vecdb":false},"themeProps":{"mode":"light","hasBackground":false,"scale":"90%","accentColor":"grey"}}}"""
 
         assertEquals(expected, result)
     }

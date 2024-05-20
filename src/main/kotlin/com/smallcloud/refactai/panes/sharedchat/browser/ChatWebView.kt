@@ -1,0 +1,114 @@
+package com.smallcloud.refactai.panes.sharedchat.browser
+
+import com.intellij.openapi.Disposable
+import com.intellij.ui.jcef.*
+import com.intellij.util.ui.UIUtil
+import com.smallcloud.refactai.panes.sharedchat.Events
+import com.smallcloud.refactai.settings.AppSettingsState
+import org.cef.CefApp
+import org.cef.browser.CefBrowser
+import org.cef.handler.CefLoadHandlerAdapter
+import javax.swing.JComponent
+
+class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Disposable {
+    private val jsPoolSize = "200"
+
+    init {
+        System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
+    }
+
+    fun setStyle() {
+        val isDarkMode = UIUtil.isUnderDarcula()
+        val mode = if (isDarkMode) {"dark" } else { "light" }
+        val bodyClass = if(isDarkMode) {"vscode-dark"} else {"vscode-light"}
+        val backgroundColour = UIUtil.getPanelBackground()
+        val red = backgroundColour.red
+        val green = backgroundColour.green
+        val blue = backgroundColour.blue
+        this.webView.executeJavaScriptAsync("""document.body.style.setProperty("background-color", "rgb($red, $green, $blue");""")
+        this.webView.executeJavaScriptAsync("""document.body.class = "$bodyClass";""")
+        this.webView.executeJavaScriptAsync("""document.documentElement.className = "$mode";""")
+
+    }
+
+    val webView by lazy {
+        // TODO: handle JBCef not being available
+        val browser = JBCefBrowser()
+
+        browser.jbCefClient.setProperty(
+            JBCefClient.Properties.JS_QUERY_POOL_SIZE,
+            jsPoolSize,
+        )
+
+        CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
+
+        browser.loadURL("http://refactai/index.html")
+
+        val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
+        myJSQueryOpenInBrowser.addHandler { msg ->
+            val event = Events.parse(msg)
+            if(event != null) {
+                this.messageHandler(event)
+            }
+            null
+        }
+
+        var installedScript = false
+
+        browser.jbCefClient.addLoadHandler(object: CefLoadHandlerAdapter() {
+            override fun onLoadingStateChange(
+                browser: CefBrowser,
+                isLoading: Boolean,
+                canGoBack: Boolean,
+                canGoForward: Boolean
+            ) {
+
+                if(!installedScript) {
+                    installedScript = setUpJavaScriptMessageBus(browser, myJSQueryOpenInBrowser)
+                }
+                if(!isLoading) {
+                   setStyle()
+                }
+            }
+
+        }, browser.cefBrowser)
+
+        browser
+    }
+
+    fun setUpJavaScriptMessageBus(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery): Boolean {
+
+        val script = """window.postIntellijMessage = function(event) {
+             const msg = JSON.stringify(event);
+             ${myJSQueryOpenInBrowser.inject("msg")}
+        }""".trimIndent()
+        if(browser != null) {
+            browser.executeJavaScript(script, browser.url, 0);
+            return true
+        }
+        return false
+    }
+
+    fun postMessage(message: Events.ToChat?) {
+        if(message != null) {
+            val json = Events.stringify(message)
+            this.postMessage(json)
+        }
+    }
+
+    fun postMessage(message: String) {
+        // println("postMessage: $message")
+        val script = """window.postMessage($message, "*");"""
+        webView.cefBrowser.executeJavaScript(script, webView.cefBrowser.url, 0)
+    }
+
+    fun getComponent(): JComponent {
+        return webView.component
+    }
+
+    override fun dispose() {
+        this.webView.dispose()
+    }
+
+
+}

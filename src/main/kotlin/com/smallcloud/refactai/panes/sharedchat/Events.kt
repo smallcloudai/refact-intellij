@@ -502,7 +502,7 @@ class Events {
                 var result = id.hashCode()
                 result = 31 * result + messages.contentHashCode()
                 result = 31 * result + model.hashCode()
-                result = 31 * result + (title?.hashCode() ?: 0)
+                result = 31 * result + title.hashCode()
                 result = 31 * result + attachFile.hashCode()
                 return result
             }
@@ -913,20 +913,21 @@ class Events {
     }
 
     class Config {
-        abstract class Features()
-        data class AstFeature(val ast: Boolean): Features()
-        data class VecDBFeature(val vecdb: Boolean): Features()
+        abstract class BaseFeatures()
 
-        data class UpdatePayload(override val id: String, val features: Features): Payload(id)
+        data class Features(val ast: Boolean, val vecdb: Boolean): BaseFeatures()
 
-        class Update(id: String, features: Features): ToChat(EventNames.ToChat.RECEIVE_CONFIG_UPDATE, UpdatePayload(id, features))
+        data class ThemeProps(val mode: String, val hasBackground: Boolean = false, val scale: String = "90%",  val accentColor: String ="grey")
+
+        data class UpdatePayload(override val id: String, val features: BaseFeatures, val themeProps: ThemeProps?): Payload(id)
+
+        class Update(id: String, features: BaseFeatures, themeProps: ThemeProps?): ToChat(EventNames.ToChat.RECEIVE_CONFIG_UPDATE, UpdatePayload(id, features, themeProps))
 
     }
     companion object {
 
         private class MessageSerializer: JsonSerializer<ChatMessage<*>> {
             override fun serialize(src: ChatMessage<*>, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
-
                 return when(src) {
                     is UserMessage -> {
                         val role = context.serialize(src.role, ChatRole::class.java)

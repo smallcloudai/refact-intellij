@@ -292,7 +292,7 @@ class LSPProcessHolder(val project: Project): Disposable {
             try {
                 requestFuture = it.get() as ComplexFuture
                 val out = requestFuture.get()
-                logger.warn("LSP caps_received " + out)
+                // logger.warn("LSP caps_received " + out)
                 val gson = Gson()
                 res = gson.fromJson(out as String, LSPCapabilities::class.java)
                 logger.debug("caps_received request finished")
@@ -338,10 +338,9 @@ class LSPProcessHolder(val project: Project): Disposable {
         return json
     }
 
-    fun fetchCommandCompletion(query: String, cursor: Int, count: Int, trigger: String?): Future<CommandCompletionResponse> {
-        val queryOrTrigger = trigger ?: query
-        val place = trigger?.length ?: cursor
-        val requestBody = Gson().toJson(mapOf("query" to queryOrTrigger, "cursor" to place, "top_n" to count))
+    fun fetchCommandCompletion(query: String, cursor: Int, count: Int = 5): Future<CommandCompletionResponse> {
+
+        val requestBody = Gson().toJson(mapOf("query" to query, "cursor" to cursor, "top_n" to count))
 
         val res = InferenceGlobalContext.connection.post(
             url.resolve("/v1/at-command-completion"),

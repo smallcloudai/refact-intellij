@@ -44,6 +44,19 @@ jobs:
           github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           ref: ${{ steps.setupvars.outputs.lsp_version }}
 
+      - name: Download refact-chat-js
+        id: download-refact-chat-js
+        run: |
+          mkdir -p ./src/main/resources/webview/dist
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: Node.js.yml
+          repo: smallcloudai/refact-chat-js
+          # change branch to main
+          branch: "alpha"
+          path: ./src/main/resources/webview/dist
+
       - name: Download artifact
         id: download-artifact
         uses: dawidd6/action-download-artifact@v3
@@ -54,16 +67,6 @@ jobs:
           branch: ${{ steps.setupvars.outputs.lsp_version }}
           path: ./src/main/resources/bin
 
-      - name: Download refact-chat-js
-        id: download-refact-chat-js
-        uses: dawidd6/action-download-artifact@v3
-        with:
-          github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: Node.js.yml
-          repo: smallcloudai/refact-chat-js
-          # change branch to main
-          branch: "alpha"
-          path: ./src/main/resources/webview/dist
 
       # Validate wrapper
       - name: Gradle Wrapper Validation

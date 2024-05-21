@@ -44,6 +44,7 @@ jobs:
           repo: smallcloudai/refact-chat-js
           # change branch to main
           branch: alpha
+          name: refact-chat-js-latest
           path: ./src/main/resources/webview/dist
 
       - uses: convictional/trigger-workflow-and-wait@v1.6.1

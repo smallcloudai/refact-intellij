@@ -35,10 +35,6 @@ jobs:
         run: |
           echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
 
-      - name: Make Direcotry for refact-chat-js'
-        run: |
-          mkdir -p ./src/main/resources/webview/dist
-
       - name: Download refact-chat-js
         id: download-refact-chat-js
         uses: dawidd6/action-download-artifact@v3

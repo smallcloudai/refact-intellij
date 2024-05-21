@@ -40,7 +40,8 @@ jobs:
         uses: dawidd6/action-download-artifact@v3
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: Node.js.yml
+          workflow: node.js.yml
+          workflow_search: true
           repo: smallcloudai/refact-chat-js
           # change branch to main
           branch: alpha

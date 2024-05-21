@@ -44,10 +44,12 @@ jobs:
           github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           ref: ${{ steps.setupvars.outputs.lsp_version }}
 
-      - name: Download refact-chat-js
-        id: download-refact-chat-js
+      - name: Make Direcotry for refact-chat-js'
         run: |
           mkdir -p ./src/main/resources/webview/dist
+          
+      - name: Download refact-chat-js
+        id: download-refact-chat-js
         uses: dawidd6/action-download-artifact@v3
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}

@@ -917,7 +917,7 @@ class Events {
 
         data class Features(val ast: Boolean, val vecdb: Boolean): BaseFeatures()
 
-        data class ThemeProps(val mode: String, val hasBackground: Boolean = false, val scale: String = "90%",  val accentColor: String ="grey")
+        data class ThemeProps(val mode: String, val hasBackground: Boolean = false, val scale: String = "90%",  val accentColor: String ="gray")
 
         data class UpdatePayload(override val id: String, val features: BaseFeatures, val themeProps: ThemeProps?): Payload(id)
 

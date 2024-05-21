@@ -54,6 +54,17 @@ jobs:
           branch: ${{ steps.setupvars.outputs.lsp_version }}
           path: ./src/main/resources/bin
 
+      - name: Download refact-chat-js
+        id: download-refact-chat-js
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: Node.js.yaml
+          repo: smallcloudai/refact-chat-js
+          # change branch to main
+          branch: "alpha"
+          path: ./src/main/resources/webview/dist
+
       # Validate wrapper
       - name: Gradle Wrapper Validation
         uses: gradle/wrapper-validation-action@v3

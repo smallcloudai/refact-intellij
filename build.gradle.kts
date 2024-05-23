@@ -31,7 +31,7 @@ repositories {
 
 
 // Configure Gradle IntelliJ Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
+// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#intellij-extension-type
 intellij {
 //    version.set("LATEST-EAP-SNAPSHOT")
     version.set("2022.3.1")

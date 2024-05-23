@@ -1,6 +1,5 @@
 package com.smallcloud.refactai.panes.sharedchat
 
-import com.google.gson.Gson
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -18,6 +17,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
@@ -32,12 +32,11 @@ import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
-
 import javax.swing.JPanel
 import javax.swing.UIManager
 
 
-class SharedChatPane (val project: Project): JPanel(), Disposable {
+class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
 
@@ -71,7 +70,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
         val features = Events.Config.Features(hasAst, hasVecdb)
         val isDarkMode = UIUtil.isUnderDarcula()
-        val mode = if(isDarkMode)  "dark" else "light"
+        val mode = if (isDarkMode) "dark" else "light"
         val themeProps = Events.Config.ThemeProps(mode)
         val message = Events.Config.Update(id, features, themeProps)
         this.postMessage(message)
@@ -79,7 +78,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun getSelectedSnippet(cb: (Events.Editor.Snippet) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            if(!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty()) {
+            if (!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty()) {
                 val fileEditorManager = FileEditorManager.getInstance(project)
                 val editor = fileEditorManager.selectedTextEditor
                 val file = fileEditorManager.selectedFiles[0]
@@ -104,7 +103,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            if(!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty() ) {
+            if (!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty()) {
                 val fileEditorManager = FileEditorManager.getInstance(project)
                 val editor = fileEditorManager.selectedTextEditor
 
@@ -139,11 +138,11 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private fun sendActiveFileInfo(id: String) {
-            this.getActiveFileInfo { file ->
-                val payload = FileInfoPayload(id, file)
-                val message = ActiveFileToChat(payload)
-                this.postMessage(message)
-            }
+        this.getActiveFileInfo { file ->
+            val payload = FileInfoPayload(id, file)
+            val message = ActiveFileToChat(payload)
+            this.postMessage(message)
+        }
     }
 
     private fun handleCaps(id: String) {
@@ -170,16 +169,23 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         cursor: Int,
         number: Int = 5,
     ) {
-        try {
-            this.lsp.fetchCommandCompletion(query, cursor, number).also { res ->
-                val completions = res.get()
-                val payload = Events.AtCommands.Completion.CompletionPayload(id, completions.completions,completions.replace,completions.isCmdExecutable)
-                val message = Events.AtCommands.Completion.Receive(payload)
-                this.postMessage(message)
+        AppExecutorUtil.getAppExecutorService().submit {
+            try {
+                this.lsp.fetchCommandCompletion(query, cursor, number).also { res ->
+                    val completions = res.get()
+                    val payload = Events.AtCommands.Completion.CompletionPayload(
+                        id,
+                        completions.completions,
+                        completions.replace,
+                        completions.isCmdExecutable
+                    )
+                    val message = Events.AtCommands.Completion.Receive(payload)
+                    this.postMessage(message)
+                }
+            } catch (e: Exception) {
+                println("Commands error")
+                println(e)
             }
-        } catch (e: Exception) {
-            println("Commands error")
-            println(e)
         }
     }
 
@@ -189,16 +195,18 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
             id,
             messages,
             model,
-            dataReceived = {str, requestId ->
-                when(val res = Events.Chat.Response.parse(str)) {
+            dataReceived = { str, requestId ->
+                when (val res = Events.Chat.Response.parse(str)) {
                     is Events.Chat.Response.Choices -> {
                         val message = Events.Chat.Response.formatToChat(res, requestId)
                         this.postMessage(message)
                     }
+
                     is Events.Chat.Response.UserMessage -> {
                         val message = Events.Chat.Response.formatToChat(res, requestId)
                         this.postMessage(message)
                     }
+
                     is Events.Chat.Response.DetailMessage -> {
                         val message = Events.Chat.Response.formatToChat(res, requestId)
                         this.postMessage(message)
@@ -227,7 +235,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private fun handleChatSave(id: String, messages: ChatMessages, maybeModel: String) {
-        val model = maybeModel.ifEmpty {this.defaultChatModel ?: ""}
+        val model = maybeModel.ifEmpty { this.defaultChatModel ?: "" }
         ChatHistory.instance.state.save(id, messages, model)
     }
 
@@ -300,6 +308,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                     println("ast changed to: $newValue")
                     this@SharedChatPane.sendUserConfig(id)
                 }
+
                 override fun vecdbFlagChanged(newValue: Boolean) {
                     println("vecdb changed to: $newValue")
                     this@SharedChatPane.sendUserConfig(id)
@@ -310,13 +319,13 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
 
     private fun setLookAndFeel() {
         this.browser.setStyle()
-        if(this.id != null) {
+        if (this.id != null) {
             this.sendUserConfig(this.id!!)
         }
     }
 
     private val uiChangeListener = PropertyChangeListener { event ->
-        if(event.propertyName == "lookAndFeel") {
+        if (event.propertyName == "lookAndFeel") {
             this.setLookAndFeel()
         }
     }
@@ -327,7 +336,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private fun maybeRestore(id: String) {
-        if(this.chatThreadToRestore != null) {
+        if (this.chatThreadToRestore != null) {
             val payload = RestorePayload(id, this.chatThreadToRestore!!)
             val event = RestoreToChat(payload)
             this.id = payload.id
@@ -344,7 +353,7 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
                 val message = Events.AtCommands.Preview.Receive(payload)
                 this.postMessage(message)
             }
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             println("Command preview error")
             println(e)
         }
@@ -358,13 +367,20 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
         this.sendUserConfig(id)
         this.maybeRestore(id)
     }
+
     private fun handleEvent(event: Events.FromChat) {
         // println("Event received: ${event}")
         when (event) {
             is Events.Ready -> this.handleReadyMessage(event.id)
             is Events.Caps.Request -> this.handleCaps(event.id)
             is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
-            is Events.AtCommands.Completion.Request -> this.handleCompletion(event.id, event.query, event.cursor, event.number)
+            is Events.AtCommands.Completion.Request -> this.handleCompletion(
+                event.id,
+                event.query,
+                event.cursor,
+                event.number
+            )
+
             is Events.AtCommands.Preview.Request -> this.handlePreviewFileRequest(event.id, event.query)
             is Events.Chat.AskQuestion -> this.handleChat(event.id, event.messages, event.model, event.title)
             is Events.Chat.Save -> this.handleChatSave(event.id, event.messages, event.model)
@@ -376,8 +392,8 @@ class SharedChatPane (val project: Project): JPanel(), Disposable {
     }
 
     private val browser by lazy {
-        ChatWebView {
-            event -> this.handleEvent(event)
+        ChatWebView { event ->
+            this.handleEvent(event)
         }
     }
 

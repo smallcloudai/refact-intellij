@@ -1,10 +1,10 @@
 package com.smallcloud.refactai.panes.sharedchat.browser
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.ui.jcef.*
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.panes.sharedchat.Events
-import com.smallcloud.refactai.settings.AppSettingsState
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
@@ -19,8 +19,8 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
 
     fun setStyle() {
         val isDarkMode = UIUtil.isUnderDarcula()
-        val mode = if (isDarkMode) {"dark" } else { "light" }
-        val bodyClass = if(isDarkMode) {"vscode-dark"} else {"vscode-light"}
+        val mode = if (isDarkMode) { "dark" } else { "light" }
+        val bodyClass = if (isDarkMode) { "vscode-dark" } else { "vscode-light" }
         val backgroundColour = UIUtil.getPanelBackground()
         val red = backgroundColour.red
         val green = backgroundColour.green
@@ -34,11 +34,11 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
     val webView by lazy {
         // TODO: handle JBCef not being available
         val browser = JBCefBrowser()
-
         browser.jbCefClient.setProperty(
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
             jsPoolSize,
         )
+        browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 
@@ -53,6 +53,12 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
             null
         }
 
+        val myJSQueryOpenInBrowserRedirectHyperlink = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
+        myJSQueryOpenInBrowserRedirectHyperlink.addHandler { href ->
+            BrowserUtil.browse(href)
+            null
+        }
+
         var installedScript = false
 
         browser.jbCefClient.addLoadHandler(object: CefLoadHandlerAdapter() {
@@ -62,18 +68,31 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
                 canGoBack: Boolean,
                 canGoForward: Boolean
             ) {
-
                 if(!installedScript) {
                     installedScript = setUpJavaScriptMessageBus(browser, myJSQueryOpenInBrowser)
                 }
                 if(!isLoading) {
-                   setStyle()
+                    setUpJavaScriptMessageBusRedirectHyperlink(browser, myJSQueryOpenInBrowserRedirectHyperlink)
+                    setStyle()
                 }
             }
 
         }, browser.cefBrowser)
 
         browser
+    }
+
+    fun setUpJavaScriptMessageBusRedirectHyperlink(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery) {
+        val script = """window.openLink = function(href) {
+             ${myJSQueryOpenInBrowser.inject("href")}
+        }
+        document.addEventListener('click', function(event) { 
+            if (event.target.tagName.toLowerCase() === 'a') { 
+                event.preventDefault(); 
+                window.openLink(event.target.href); 
+            } 
+        });""".trimIndent()
+        browser?.executeJavaScript(script, browser?.url, 0)
     }
 
     fun setUpJavaScriptMessageBus(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery): Boolean {

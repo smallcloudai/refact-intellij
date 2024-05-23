@@ -41,10 +41,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
 
     var id: String? = null;
-    var defaultChatModel: String? = null
-
-    var chatThreadToRestore: Events.Chat.Thread? = null
-
+    private var defaultChatModel: String? = null
+    private var chatThreadToRestore: Events.Chat.Thread? = null
     private var lastProcess: CompletableFuture<Future<*>>? = null;
 
 
@@ -174,10 +172,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 this.lsp.fetchCommandCompletion(query, cursor, number).also { res ->
                     val completions = res.get()
                     val payload = Events.AtCommands.Completion.CompletionPayload(
-                        id,
-                        completions.completions,
-                        completions.replace,
-                        completions.isCmdExecutable
+                        id, completions.completions, completions.replace, completions.isCmdExecutable
                     )
                     val message = Events.AtCommands.Completion.Receive(payload)
                     this.postMessage(message)
@@ -191,44 +186,36 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun handleChat(id: String, messages: ChatMessages, model: String, title: String? = null) {
 
-        val future = this.lsp.sendChat(
-            id,
-            messages,
-            model,
-            dataReceived = { str, requestId ->
-                when (val res = Events.Chat.Response.parse(str)) {
-                    is Events.Chat.Response.Choices -> {
-                        val message = Events.Chat.Response.formatToChat(res, requestId)
-                        this.postMessage(message)
-                    }
-
-                    is Events.Chat.Response.UserMessage -> {
-                        val message = Events.Chat.Response.formatToChat(res, requestId)
-                        this.postMessage(message)
-                    }
-
-                    is Events.Chat.Response.DetailMessage -> {
-                        val message = Events.Chat.Response.formatToChat(res, requestId)
-                        this.postMessage(message)
-                    }
+        val future = this.lsp.sendChat(id, messages, model, dataReceived = { str, requestId ->
+            when (val res = Events.Chat.Response.parse(str)) {
+                is Events.Chat.Response.Choices -> {
+                    val message = Events.Chat.Response.formatToChat(res, requestId)
+                    this.postMessage(message)
                 }
-            },
-            dataReceiveEnded = { str ->
-                val res = Events.Chat.Response.ChatDone(str)
-                val message = Events.Chat.Response.formatToChat(res, id)
-                this.postMessage(message)
-            },
-            errorDataReceived = { json ->
-                val res = Events.Chat.Response.ChatError(json)
-                val message = Events.Chat.Response.formatToChat(res, id)
-                this.postMessage(message)
-            },
-            failedDataReceiveEnded = { e ->
-                val res = Events.Chat.Response.ChatFailedStream(e)
-                val message = Events.Chat.Response.formatToChat(res, id)
-                this.postMessage(message)
+
+                is Events.Chat.Response.UserMessage -> {
+                    val message = Events.Chat.Response.formatToChat(res, requestId)
+                    this.postMessage(message)
+                }
+
+                is Events.Chat.Response.DetailMessage -> {
+                    val message = Events.Chat.Response.formatToChat(res, requestId)
+                    this.postMessage(message)
+                }
             }
-        )
+        }, dataReceiveEnded = { str ->
+            val res = Events.Chat.Response.ChatDone(str)
+            val message = Events.Chat.Response.formatToChat(res, id)
+            this.postMessage(message)
+        }, errorDataReceived = { json ->
+            val res = Events.Chat.Response.ChatError(json)
+            val message = Events.Chat.Response.formatToChat(res, id)
+            this.postMessage(message)
+        }, failedDataReceiveEnded = { e ->
+            val res = Events.Chat.Response.ChatFailedStream(e)
+            val message = Events.Chat.Response.formatToChat(res, id)
+            this.postMessage(message)
+        })
 
         this.lastProcess = future
 
@@ -301,9 +288,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         UIManager.addPropertyChangeListener(uiChangeListener)
 
         // ast and vecdb settings change
-        project.messageBus.connect().subscribe(
-            InferenceGlobalContextChangedNotifier.TOPIC,
-            object : InferenceGlobalContextChangedNotifier {
+        project.messageBus.connect()
+            .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                 override fun astFlagChanged(newValue: Boolean) {
                     println("ast changed to: $newValue")
                     this@SharedChatPane.sendUserConfig(id)
@@ -313,8 +299,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     println("vecdb changed to: $newValue")
                     this@SharedChatPane.sendUserConfig(id)
                 }
-            }
-        )
+            })
     }
 
     private fun setLookAndFeel() {
@@ -375,10 +360,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.Caps.Request -> this.handleCaps(event.id)
             is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
             is Events.AtCommands.Completion.Request -> this.handleCompletion(
-                event.id,
-                event.query,
-                event.cursor,
-                event.number
+                event.id, event.query, event.cursor, event.number
             )
 
             is Events.AtCommands.Preview.Request -> this.handlePreviewFileRequest(event.id, event.query)

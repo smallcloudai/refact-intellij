@@ -17,6 +17,7 @@ import com.intellij.util.messages.MessageBus
 import com.intellij.util.messages.Topic
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.binPrefix
+import com.smallcloud.refactai.account.AccountManager.Companion.instance
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitError
@@ -32,7 +33,6 @@ import java.util.concurrent.Future
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
-import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
@@ -142,19 +142,7 @@ class LSPProcessHolder(val project: Project): Disposable {
                 lspProjectInitialize(this, project)
                 return
             }
-            val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else
-                InferenceGlobalContext.inferenceUri
-            val newConfig = LSPConfig(
-                address = address,
-                apiKey = AccountManager.apiKey,
-                port = (32000..32199).random(),
-                clientVersion = "${Resources.client}-${Resources.version}/${Resources.jbBuildVersion}",
-                useTelemetry = true,
-                deployment = InferenceGlobalContext.deploymentMode,
-                ast = InferenceGlobalContext.astIsEnabled,
-                vecdb = InferenceGlobalContext.vecdbIsEnabled,
-            )
-            startProcess(newConfig)
+            startProcess()
         }
     }
 
@@ -171,21 +159,35 @@ class LSPProcessHolder(val project: Project): Disposable {
                 .capabilitiesChanged(field)
         }
 
-    private fun startProcess(config: LSPConfig) {
-        if (config == lastConfig) return
+    private fun startProcess() {
+        val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else
+            InferenceGlobalContext.inferenceUri
+        val newConfig = LSPConfig(
+            address = address,
+            apiKey = instance.apiKey,
+            port = 0,
+            clientVersion = "${Resources.client}-${Resources.version}/${Resources.jbBuildVersion}",
+            useTelemetry = true,
+            deployment = InferenceGlobalContext.deploymentMode,
+            ast = InferenceGlobalContext.astIsEnabled,
+            vecdb = InferenceGlobalContext.vecdbIsEnabled,
+        )
 
-        lastConfig = config
+        if (newConfig == lastConfig) return
+
         capabilities = LSPCapabilities()
         terminate()
-        if (lastConfig == null || !lastConfig!!.isValid) return
-        logger.warn("LSP start_process " + BIN_PATH + " " + lastConfig!!.toArgs())
+        if (!newConfig.isValid) return
+        logger.warn("LSP start_process " + BIN_PATH + " " + newConfig.toArgs())
         var attempt = 0
         while (attempt < 5) {
             try {
-                process = GeneralCommandLine(listOf(BIN_PATH) + lastConfig!!.toArgs())
+                newConfig.port = (32000..32199).random()
+                process = GeneralCommandLine(listOf(BIN_PATH) + newConfig.toArgs())
                     .withRedirectErrorStream(true)
                     .createProcess()
-                process!!.waitFor(3, TimeUnit.SECONDS)
+                process!!.waitFor(5, TimeUnit.SECONDS)
+                lastConfig = newConfig
                 break
             } catch (e: Exception) {
                 attempt++
@@ -221,7 +223,7 @@ class LSPProcessHolder(val project: Project): Disposable {
                 logger.warn("LSP bad_things_happened " + e.message)
             }
             attempt++
-            Thread.sleep(1000)
+            Thread.sleep(3000)
         }
         lspProjectInitialize(this, project)
     }

@@ -15,11 +15,15 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
     implementation("com.vladsch.flexmark:flexmark-all:0.64.8")
     implementation("io.github.kezhenxu94:cache-lite:0.2.0")
+
+    // test libraries
+    testImplementation(kotlin("test"))
 }
 
 
+
 group = "com.smallcloud"
-version = getVersionString("1.2.25")
+version = getVersionString("1.3.0")
 
 repositories {
     mavenCentral()
@@ -27,7 +31,7 @@ repositories {
 
 
 // Configure Gradle IntelliJ Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
+// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#intellij-extension-type
 intellij {
 //    version.set("LATEST-EAP-SNAPSHOT")
     version.set("2022.3.1")
@@ -64,6 +68,10 @@ tasks {
     publishPlugin {
         channels.set(listOf(System.getenv("PUBLISH_CHANNEL")))
         token.set(System.getenv("PUBLISH_TOKEN"))
+    }
+
+    test  {
+        useJUnitPlatform()
     }
 }
 

@@ -35,6 +35,18 @@ jobs:
         run: |
           echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
 
+      - name: Download refact-chat-js
+        id: download-refact-chat-js
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: node.js.yml
+          workflow_search: true
+          repo: smallcloudai/refact-chat-js
+          branch: alpha
+          name: refact-chat-js-latest
+          path: ./src/main/resources/webview/dist
+
       - uses: convictional/trigger-workflow-and-wait@v1.6.1
         name: "Build refact-lsp"
         with:
@@ -53,6 +65,7 @@ jobs:
           repo: smallcloudai/refact-lsp
           branch: ${{ steps.setupvars.outputs.lsp_version }}
           path: ./src/main/resources/bin
+
 
       # Validate wrapper
       - name: Gradle Wrapper Validation

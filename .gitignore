@@ -39,3 +39,4 @@ bin/
 .DS_Store
 
 src/main/resources/bin/
+src/main/resources/webview/dist

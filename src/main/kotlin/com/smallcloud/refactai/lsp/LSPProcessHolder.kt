@@ -17,12 +17,10 @@ import com.intellij.util.messages.MessageBus
 import com.intellij.util.messages.Topic
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.binPrefix
-import com.smallcloud.refactai.account.AccountManager.Companion.instance
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitError
 import com.smallcloud.refactai.panes.sharedchat.*
-import com.smallcloud.refactai.settings.AppSettingsState
 import org.apache.hc.core5.concurrent.ComplexFuture
 import java.net.URI
 import java.nio.file.Files
@@ -30,9 +28,9 @@ import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
-import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
+import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
@@ -164,7 +162,7 @@ class LSPProcessHolder(val project: Project): Disposable {
             InferenceGlobalContext.inferenceUri
         val newConfig = LSPConfig(
             address = address,
-            apiKey = instance.apiKey,
+            apiKey = AccountManager.apiKey,
             port = 0,
             clientVersion = "${Resources.client}-${Resources.version}/${Resources.jbBuildVersion}",
             useTelemetry = true,

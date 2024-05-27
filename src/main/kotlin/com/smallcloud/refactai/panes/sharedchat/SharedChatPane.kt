@@ -237,7 +237,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             val selection = editor?.caretModel?.currentCaret?.selectionRange
             if (selection != null) {
                 WriteCommandAction.runWriteCommandAction(project) {
-                    editor.document.insertString(selection.startOffset, content)
+                    editor.document.replaceString(selection.startOffset, selection.endOffset, content)
                 }
             }
         }

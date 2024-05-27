@@ -38,7 +38,7 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
             jsPoolSize,
         )
-//        browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
+        browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 

@@ -56,6 +56,18 @@ jobs:
           echo "plugin_version=$(./gradlew properties -q | awk '/^version:/ {print $2}')" >> $GITHUB_OUTPUT
           echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
 
+      - name: Download refact-chat-js
+        id: download-refact-chat-js
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: node.js.yml
+          workflow_search: true
+          repo: smallcloudai/refact-chat-js
+          branch: alpha
+          name: refact-chat-js-latest
+          path: ./src/main/resources/webview/dist
+
       - uses: convictional/trigger-workflow-and-wait@v1.6.1
         name: "Build refact-lsp"
         with:

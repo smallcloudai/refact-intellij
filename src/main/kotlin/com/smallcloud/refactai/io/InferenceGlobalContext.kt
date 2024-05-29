@@ -193,6 +193,11 @@ class InferenceGlobalContext : Disposable {
                 .vecdbFlagChanged(newValue)
         }
 
+    val canUseAstVecDB: Boolean
+        get() {
+            return (isCloud && AccountManager.isLoggedIn && listOf("PRO", "TEAMS").contains(AccountManager.activePlan)) || isSelfHosted
+        }
+
     var xDebugLSPPort: Int?
         get() { return AppSettingsState.xDebugLSPPort }
         set(newValue) {

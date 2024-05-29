@@ -2,7 +2,6 @@ package com.smallcloud.refactai.settings
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
-import com.intellij.openapi.project.ProjectManager
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import org.jetbrains.annotations.Nls
@@ -21,10 +20,25 @@ class AppSettingsConfigurable : Configurable {
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun apiKeyChanged(newApiKey: String?) {
                     mySettingsComponent?.myTokenText?.let { it.text = newApiKey }
+                    mySettingsComponent?.astCheckbox?.isEnabled = InferenceGlobalContext.canUseAstVecDB
+                    mySettingsComponent?.vecdbCheckbox?.isEnabled = InferenceGlobalContext.canUseAstVecDB
+                    mySettingsComponent?.astIsEnabled =
+                        InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.astIsEnabled
+                    mySettingsComponent?.vecdbIsEnabled =
+                        InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.vecdbIsEnabled
+                    mySettingsComponent?.splitter?.revalidate()
+                }
+
+                override fun planStatusChanged(newPlan: String?) {
+                    mySettingsComponent?.astCheckbox?.isEnabled = InferenceGlobalContext.canUseAstVecDB
+                    mySettingsComponent?.vecdbCheckbox?.isEnabled = InferenceGlobalContext.canUseAstVecDB
+                    mySettingsComponent?.astIsEnabled =
+                        InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.astIsEnabled
+                    mySettingsComponent?.vecdbIsEnabled =
+                        InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.vecdbIsEnabled
                     mySettingsComponent?.splitter?.revalidate()
                 }
             })
-        val project = ProjectManager.getInstance().openProjects.first()
     }
 
     // A default constructor with no arguments is required because this implementation
@@ -53,12 +67,12 @@ class AppSettingsConfigurable : Configurable {
     override fun isModified(): Boolean {
         var modified =
             (mySettingsComponent!!.tokenText.isNotEmpty() && (AccountManager.apiKey == null ||
-                    mySettingsComponent!!.tokenText.trim() != AccountManager.apiKey))
+                mySettingsComponent!!.tokenText.trim() != AccountManager.apiKey))
         modified = modified || (mySettingsComponent!!.tokenText.isEmpty() && AccountManager.apiKey != null)
 
         modified =
             modified || (mySettingsComponent!!.contrastUrlText.isNotEmpty() &&
-                    mySettingsComponent!!.contrastUrlText != InferenceGlobalContext.inferenceUri)
+                mySettingsComponent!!.contrastUrlText != InferenceGlobalContext.inferenceUri)
         modified =
             modified || (mySettingsComponent!!.contrastUrlText.isEmpty() && !InferenceGlobalContext.isCloud)
 
@@ -67,12 +81,16 @@ class AppSettingsConfigurable : Configurable {
         modified = modified || mySettingsComponent!!.xDebugLSPPort != InferenceGlobalContext.xDebugLSPPort
 
         modified = modified || mySettingsComponent!!.stagingVersion != InferenceGlobalContext.stagingVersion
-        modified = modified || mySettingsComponent!!.defaultSystemPrompt != AppSettingsState.instance.defaultSystemPrompt
+        modified =
+            modified || mySettingsComponent!!.defaultSystemPrompt != AppSettingsState.instance.defaultSystemPrompt
 
-        modified = modified || mySettingsComponent!!.astIsEnabled != InferenceGlobalContext.astIsEnabled
-        modified = modified || mySettingsComponent!!.vecdbIsEnabled != InferenceGlobalContext.vecdbIsEnabled
+        if (InferenceGlobalContext.canUseAstVecDB) {
+            modified = modified || mySettingsComponent!!.astIsEnabled != InferenceGlobalContext.astIsEnabled
+            modified = modified || mySettingsComponent!!.vecdbIsEnabled != InferenceGlobalContext.vecdbIsEnabled
+        }
 
-        modified = modified || mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null } != InferenceGlobalContext.model
+        modified =
+            modified || mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null } != InferenceGlobalContext.model
 
         return modified
     }
@@ -86,8 +104,10 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
         InferenceGlobalContext.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
         AppSettingsState.instance.defaultSystemPrompt = mySettingsComponent!!.defaultSystemPrompt
-        InferenceGlobalContext.astIsEnabled = mySettingsComponent!!.astIsEnabled
-        InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
+        if (InferenceGlobalContext.canUseAstVecDB) {
+            InferenceGlobalContext.astIsEnabled = mySettingsComponent!!.astIsEnabled
+            InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
+        }
         InferenceGlobalContext.model = mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null }
     }
 
@@ -98,8 +118,10 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
         mySettingsComponent!!.xDebugLSPPort = InferenceGlobalContext.xDebugLSPPort
         mySettingsComponent!!.defaultSystemPrompt = AppSettingsState.instance.defaultSystemPrompt
-        mySettingsComponent!!.astIsEnabled = InferenceGlobalContext.astIsEnabled
-        mySettingsComponent!!.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
+        mySettingsComponent!!.astIsEnabled =
+            InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.astIsEnabled
+        mySettingsComponent!!.vecdbIsEnabled =
+            InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.vecdbIsEnabled
         mySettingsComponent!!.inferenceModel = InferenceGlobalContext.model
     }
 

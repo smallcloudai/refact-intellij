@@ -44,8 +44,8 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var stagingVersion: String = ""
     var rateUsNotification: Boolean = false
     var defaultSystemPrompt: String = ""
-    var astIsEnabled: Boolean = false
-    var vecdbIsEnabled: Boolean = false
+    var astIsEnabled: Boolean = true
+    var vecdbIsEnabled: Boolean = true
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus

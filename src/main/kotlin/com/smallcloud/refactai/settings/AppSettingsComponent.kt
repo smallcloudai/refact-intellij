@@ -16,6 +16,7 @@ import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
+import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 class AppSettingsComponent {
@@ -42,7 +43,10 @@ class AppSettingsComponent {
     }
     private val myContrastUrlText = JBTextField()
     private val myModelText = JBTextField()
-    private val astCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion"))
+    val astCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion")).apply {
+        isVisible = true
+        isEnabled = InferenceGlobalContext.canUseAstVecDB
+    }
     private val developerModeCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.developerMode")).apply {
         isVisible = false
     }
@@ -60,8 +64,9 @@ class AppSettingsComponent {
     }
     private val defaultSystemPromptTextArea = JBTextArea()
 
-    private val vecdbCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useVecDB")).apply {
+    val vecdbCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useVecDB")).apply {
         isVisible = true
+        isEnabled = InferenceGlobalContext.canUseAstVecDB
     }
 
 
@@ -152,12 +157,12 @@ class AppSettingsComponent {
         }
 
     var astIsEnabled: Boolean
-        get() = astCheckbox.isSelected
+        get() = InferenceGlobalContext.canUseAstVecDB && astCheckbox.isSelected
         set(newVal) {
             astCheckbox.isSelected = newVal
         }
     var vecdbIsEnabled: Boolean
-        get() = vecdbCheckbox.isSelected
+        get() = InferenceGlobalContext.canUseAstVecDB && vecdbCheckbox.isSelected
         set(newVal) {
             vecdbCheckbox.isSelected = newVal
         }

@@ -114,6 +114,8 @@ private fun tryLoginWithApiKey(): String {
         val body = gson.fromJson(result.body, JsonObject::class.java)
         val retcode = body.get("retcode").asString
         val humanReadableMessage = if (body.has("human_readable_message")) body.get("human_readable_message").asString else ""
+        AccountManager.activePlan = null
+        AccountManager.user = null
         if (retcode == "OK") {
             if (body.has("account")) {
                 AccountManager.user = body.get("account").asString
@@ -151,14 +153,10 @@ private fun tryLoginWithApiKey(): String {
             UsageStats?.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
             return "OK"
         } else if (retcode == "FAILED") {
-            AccountManager.user = null
-            AccountManager.activePlan = null
             logError("login-failed", humanReadableMessage)
             UsageStats?.addStatistic(false, UsageStatistic("login-failed"), url.toString(), humanReadableMessage)
             return ""
         } else {
-            AccountManager.user = null
-            AccountManager.activePlan = null
             logError("login-failed", "unrecognized response")
             UsageStats?.addStatistic(false, UsageStatistic("login (2)"), url.toString(), "unrecognized response")
             return ""

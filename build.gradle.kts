@@ -34,8 +34,8 @@ repositories {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#intellij-extension-type
 intellij {
 //    version.set("LATEST-EAP-SNAPSHOT")
-    version.set("2024.1.2")
-    type.set("RD") // Target IDE Platform
+    version.set("2022.3.1")
+    type.set("PC") // Target IDE Platform
 
     plugins.set(listOf(
         "Git4Idea",

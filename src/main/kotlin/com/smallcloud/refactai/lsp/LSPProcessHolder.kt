@@ -66,14 +66,18 @@ class LSPProcessHolder(val project: Project): Disposable {
     private val healthCheckerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "SMCLSHealthCheckerScheduler", 1
     )
-    private var healthCheckerTask: Future<*>? = null
-
 
     init {
         messageBus
                 .connect(this)
                 .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                     override fun apiKeyChanged(newApiKey: String?) {
+                        AppExecutorUtil.getAppScheduledExecutorService().submit {
+                            settingsChanged()
+                        }
+                    }
+
+                    override fun planStatusChanged(newPlan: String?) {
                         AppExecutorUtil.getAppScheduledExecutorService().submit {
                             settingsChanged()
                         }
@@ -179,8 +183,8 @@ class LSPProcessHolder(val project: Project): Disposable {
             clientVersion = "${Resources.client}-${Resources.version}/${Resources.jbBuildVersion}",
             useTelemetry = true,
             deployment = InferenceGlobalContext.deploymentMode,
-            ast = InferenceGlobalContext.astIsEnabled,
-            vecdb = InferenceGlobalContext.vecdbIsEnabled,
+            ast = InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.astIsEnabled,
+            vecdb = InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.vecdbIsEnabled,
         )
 
         val processIsAlive = process?.isAlive == true

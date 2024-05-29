@@ -60,7 +60,7 @@ class AppSettingsComponent {
     }
     private val defaultSystemPromptTextArea = JBTextArea()
 
-    private val vecdbCheckbox = JCheckBox("VECDB").apply {
+    private val vecdbCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useVecDB")).apply {
         isVisible = true
     }
 
@@ -89,6 +89,13 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
+            addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.useVecDBDescription"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.codeCompletionModel")}: "),
                 myModelText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
             addComponent(
@@ -109,8 +116,6 @@ class AppSettingsComponent {
             addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
             addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
             addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
-            addComponent(astCheckbox, UIUtil.LARGE_VGAP)
-            addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
             addComponentFillVertically(JPanel(), 0)
         }.panel
 

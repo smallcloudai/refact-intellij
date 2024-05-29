@@ -143,12 +143,9 @@ class CompletionMode(
             completionData: Completion,
             animation: Boolean
     ) {
-        var modificationStamp: Long = state.modificationStamp
-        var offset: Int = state.offset
-        app.invokeAndWait {
-            modificationStamp = editor.document.modificationStamp
-            offset = editor.caretModel.offset
-        }
+        val modificationStamp = editor.document.modificationStamp
+        val offset = editor.caretModel.offset
+
         val invalidStamp = state.modificationStamp != modificationStamp
         val invalidOffset = state.offset != offset
         if (invalidStamp || invalidOffset) {
@@ -264,10 +261,12 @@ class CompletionMode(
                 return@streamedInferenceFetch
             }
             completion.updateCompletion(choice.delta)
-            synchronized(this) {
-                renderCompletion(
-                    editorState.editor, editorState, completion, !prediction.cached
-                )
+            app.invokeLater {
+                synchronized(this) {
+                    renderCompletion(
+                        editorState.editor, editorState, completion, !prediction.cached
+                    )
+                }
             }
         }?.also {
             try {

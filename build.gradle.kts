@@ -23,7 +23,7 @@ dependencies {
 
 
 group = "com.smallcloud"
-version = getVersionString("1.3.0")
+version = getVersionString("1.3.1")
 
 repositories {
     mavenCentral()
@@ -34,8 +34,8 @@ repositories {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#intellij-extension-type
 intellij {
 //    version.set("LATEST-EAP-SNAPSHOT")
-    version.set("2022.3.1")
-    type.set("PC") // Target IDE Platform
+    version.set("2024.1.2")
+    type.set("RD") // Target IDE Platform
 
     plugins.set(listOf(
         "Git4Idea",

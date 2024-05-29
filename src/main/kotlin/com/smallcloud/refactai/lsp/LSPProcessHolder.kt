@@ -53,7 +53,7 @@ class LSPProcessHolder(val project: Project): Disposable {
     private var process: Process? = null
     private var lastConfig: LSPConfig? = null
     private val logger = Logger.getInstance("LSPProcessHolder")
-    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
+    private val loggerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
             "SMCLSPLoggerScheduler", 1
     )
     private var loggerTask: Future<*>? = null
@@ -63,6 +63,10 @@ class LSPProcessHolder(val project: Project): Disposable {
     private var capsTask: Future<*>? = null
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
     private var isWorking = false
+    private val healthCheckerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
+        "SMCLSHealthCheckerScheduler", 1
+    )
+    private var healthCheckerTask: Future<*>? = null
 
 
     init {
@@ -121,6 +125,14 @@ class LSPProcessHolder(val project: Project): Disposable {
         }
         settingsChanged()
 
+        healthCheckerScheduler.scheduleWithFixedDelay({
+            if (lastConfig == null) return@scheduleWithFixedDelay
+            if (InferenceGlobalContext.xDebugLSPPort != null) return@scheduleWithFixedDelay
+            if (process?.isAlive == false) {
+                startProcess()
+            }
+        }, 1, 1, TimeUnit.SECONDS)
+
         capsTask = schedulerCaps.scheduleWithFixedDelay({
             capabilities = getCaps()
             if (capabilities.cloudName.isNotEmpty()) {
@@ -171,16 +183,18 @@ class LSPProcessHolder(val project: Project): Disposable {
             vecdb = InferenceGlobalContext.vecdbIsEnabled,
         )
 
-        if (newConfig == lastConfig) return
+        val processIsAlive = process?.isAlive == true
+
+        if (newConfig == lastConfig && processIsAlive) return
 
         capabilities = LSPCapabilities()
         terminate()
         if (!newConfig.isValid) return
-        logger.warn("LSP start_process " + BIN_PATH + " " + newConfig.toArgs())
         var attempt = 0
         while (attempt < 5) {
             try {
                 newConfig.port = (32000..32199).random()
+                logger.warn("LSP start_process " + BIN_PATH + " " + newConfig.toArgs())
                 process = GeneralCommandLine(listOf(BIN_PATH) + newConfig.toArgs())
                     .withRedirectErrorStream(true)
                     .createProcess()
@@ -195,7 +209,7 @@ class LSPProcessHolder(val project: Project): Disposable {
                 }
             }
         }
-        loggerTask = scheduler.submit {
+        loggerTask = loggerScheduler.submit {
             val reader = process!!.inputStream.bufferedReader()
             var line = reader.readLine()
             while (line != null) {
@@ -258,8 +272,9 @@ class LSPProcessHolder(val project: Project): Disposable {
 
     override fun dispose() {
         terminate()
-        scheduler.shutdown()
+        loggerScheduler.shutdown()
         schedulerCaps.shutdown()
+        healthCheckerScheduler.shutdown()
     }
 
     private fun getBuildInfo(): String {

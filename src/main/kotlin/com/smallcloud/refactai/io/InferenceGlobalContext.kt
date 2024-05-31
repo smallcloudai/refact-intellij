@@ -184,6 +184,15 @@ class InferenceGlobalContext : Disposable {
                    .astFlagChanged(newValue)
         }
 
+    var astFileLimit: Int
+        get() { return AppSettingsState.astFileLimit }
+        set(newValue) {
+            if (newValue == astFileLimit) return
+            messageBus
+                  .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                  .astFileLimitChanged(newValue)
+        }
+
     var vecdbIsEnabled: Boolean
         get() = AppSettingsState.vecdbIsEnabled
         set(newValue) {
@@ -191,11 +200,6 @@ class InferenceGlobalContext : Disposable {
             messageBus
                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                 .vecdbFlagChanged(newValue)
-        }
-
-    val canUseAstVecDB: Boolean
-        get() {
-            return (isCloud && AccountManager.isLoggedIn && listOf("PRO", "TEAMS").contains(AccountManager.activePlan)) || isSelfHosted
         }
 
     var xDebugLSPPort: Int?

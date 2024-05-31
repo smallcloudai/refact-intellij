@@ -16,7 +16,6 @@ import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
-import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
 class AppSettingsComponent {
@@ -43,9 +42,9 @@ class AppSettingsComponent {
     }
     private val myContrastUrlText = JBTextField()
     private val myModelText = JBTextField()
+    private val myAstFileLimitText = JBTextField()
     val astCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion")).apply {
         isVisible = true
-        isEnabled = InferenceGlobalContext.canUseAstVecDB
     }
     private val developerModeCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.developerMode")).apply {
         isVisible = false
@@ -66,7 +65,6 @@ class AppSettingsComponent {
 
     val vecdbCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useVecDB")).apply {
         isVisible = true
-        isEnabled = InferenceGlobalContext.canUseAstVecDB
     }
 
 
@@ -98,6 +96,14 @@ class AppSettingsComponent {
             addComponent(
                 JBLabel(
                     RefactAIBundle.message("advancedSettings.useVecDBDescription"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
+            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.astFileLimit")}: "), myAstFileLimitText,
+                (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.astFileLimitDescription"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
@@ -157,12 +163,17 @@ class AppSettingsComponent {
         }
 
     var astIsEnabled: Boolean
-        get() = InferenceGlobalContext.canUseAstVecDB && astCheckbox.isSelected
+        get() = astCheckbox.isSelected
         set(newVal) {
             astCheckbox.isSelected = newVal
         }
+    var astFileLimit: Int
+        get() = myAstFileLimitText.text.toIntOrNull() ?: 15000
+        set(newVal) {
+            myAstFileLimitText.text = newVal.toString()
+        }
     var vecdbIsEnabled: Boolean
-        get() = InferenceGlobalContext.canUseAstVecDB && vecdbCheckbox.isSelected
+        get() = vecdbCheckbox.isSelected
         set(newVal) {
             vecdbCheckbox.isSelected = newVal
         }

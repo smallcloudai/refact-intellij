@@ -14,6 +14,7 @@ interface InferenceGlobalContextChangedNotifier {
     fun developerModeEnabledChanged(newValue: Boolean) {}
     fun deploymentModeChanged(newMode: DeploymentMode) {}
     fun astFlagChanged(newValue: Boolean) {}
+    fun astFileLimitChanged(newValue: Int) {}
     fun vecdbFlagChanged(newValue: Boolean) {}
     fun xDebugLSPPortChanged(newPort: Int?) {}
 

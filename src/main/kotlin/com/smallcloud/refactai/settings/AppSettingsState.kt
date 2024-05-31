@@ -45,7 +45,10 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var rateUsNotification: Boolean = false
     var defaultSystemPrompt: String = ""
     var astIsEnabled: Boolean = true
-    var vecdbIsEnabled: Boolean = true
+    var astIsEnabledDefaultChanged: Boolean = false
+    var vecdbIsEnabled: Boolean = false
+    var vecdbIsEnabledDefaultChanged: Boolean = false
+    var astFileLimit: Int = 15000
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -96,9 +99,14 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
 
                     override fun astFlagChanged(newValue: Boolean) {
                         instance.astIsEnabled = newValue
+                        instance.astIsEnabledDefaultChanged = true
+                    }
+                    override fun astFileLimitChanged(newValue: Int) {
+                        instance.astFileLimit = newValue
                     }
                     override fun vecdbFlagChanged(newValue: Boolean) {
                         instance.vecdbIsEnabled = newValue
+                        instance.vecdbIsEnabledDefaultChanged = true
                     }
                     override fun xDebugLSPPortChanged(newPort: Int?) {
                         instance.xDebugLSPPort = newPort

@@ -20,22 +20,8 @@ class AppSettingsConfigurable : Configurable {
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun apiKeyChanged(newApiKey: String?) {
                     mySettingsComponent?.myTokenText?.let { it.text = newApiKey }
-                    mySettingsComponent?.astCheckbox?.isEnabled = InferenceGlobalContext.canUseAstVecDB
-                    mySettingsComponent?.vecdbCheckbox?.isEnabled = InferenceGlobalContext.canUseAstVecDB
-                    mySettingsComponent?.astIsEnabled =
-                        InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.astIsEnabled
-                    mySettingsComponent?.vecdbIsEnabled =
-                        InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.vecdbIsEnabled
-                    mySettingsComponent?.splitter?.revalidate()
-                }
-
-                override fun planStatusChanged(newPlan: String?) {
-                    mySettingsComponent?.astCheckbox?.isEnabled = InferenceGlobalContext.canUseAstVecDB
-                    mySettingsComponent?.vecdbCheckbox?.isEnabled = InferenceGlobalContext.canUseAstVecDB
-                    mySettingsComponent?.astIsEnabled =
-                        InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.astIsEnabled
-                    mySettingsComponent?.vecdbIsEnabled =
-                        InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.vecdbIsEnabled
+                    mySettingsComponent?.astIsEnabled = InferenceGlobalContext.astIsEnabled
+                    mySettingsComponent?.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
                     mySettingsComponent?.splitter?.revalidate()
                 }
             })
@@ -84,10 +70,9 @@ class AppSettingsConfigurable : Configurable {
         modified =
             modified || mySettingsComponent!!.defaultSystemPrompt != AppSettingsState.instance.defaultSystemPrompt
 
-        if (InferenceGlobalContext.canUseAstVecDB) {
-            modified = modified || mySettingsComponent!!.astIsEnabled != InferenceGlobalContext.astIsEnabled
-            modified = modified || mySettingsComponent!!.vecdbIsEnabled != InferenceGlobalContext.vecdbIsEnabled
-        }
+        modified = modified || mySettingsComponent!!.astIsEnabled != InferenceGlobalContext.astIsEnabled
+        modified = modified || mySettingsComponent!!.astFileLimit != InferenceGlobalContext.astFileLimit
+        modified = modified || mySettingsComponent!!.vecdbIsEnabled != InferenceGlobalContext.vecdbIsEnabled
 
         modified =
             modified || mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null } != InferenceGlobalContext.model
@@ -104,10 +89,9 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
         InferenceGlobalContext.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
         AppSettingsState.instance.defaultSystemPrompt = mySettingsComponent!!.defaultSystemPrompt
-        if (InferenceGlobalContext.canUseAstVecDB) {
-            InferenceGlobalContext.astIsEnabled = mySettingsComponent!!.astIsEnabled
-            InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
-        }
+        InferenceGlobalContext.astIsEnabled = mySettingsComponent!!.astIsEnabled
+        InferenceGlobalContext.astFileLimit = mySettingsComponent!!.astFileLimit
+        InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
         InferenceGlobalContext.model = mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null }
     }
 
@@ -118,10 +102,9 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
         mySettingsComponent!!.xDebugLSPPort = InferenceGlobalContext.xDebugLSPPort
         mySettingsComponent!!.defaultSystemPrompt = AppSettingsState.instance.defaultSystemPrompt
-        mySettingsComponent!!.astIsEnabled =
-            InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.astIsEnabled
-        mySettingsComponent!!.vecdbIsEnabled =
-            InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.vecdbIsEnabled
+        mySettingsComponent!!.astIsEnabled = InferenceGlobalContext.astIsEnabled
+        mySettingsComponent!!.astFileLimit = InferenceGlobalContext.astFileLimit
+        mySettingsComponent!!.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
         mySettingsComponent!!.inferenceModel = InferenceGlobalContext.model
     }
 

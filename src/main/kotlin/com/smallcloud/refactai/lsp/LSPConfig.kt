@@ -10,6 +10,7 @@ data class LSPConfig(
     var useTelemetry: Boolean = false,
     var deployment: DeploymentMode = DeploymentMode.CLOUD,
     var ast: Boolean = false,
+    var astFileLimit: Int? = null,
     var vecdb: Boolean = false
 ) {
     fun toArgs(): List<String> {
@@ -36,6 +37,10 @@ data class LSPConfig(
         if (ast) {
             params.add("--ast")
         }
+        if (astFileLimit != null) {
+            params.add("--ast-index-max-files")
+            params.add("$astFileLimit")
+        }
         if (vecdb) {
             params.add("--vecdb")
         }
@@ -55,6 +60,7 @@ data class LSPConfig(
         if (deployment != other.deployment) return false
         if (ast != other.ast) return false
         if (vecdb != other.vecdb) return false
+        if (astFileLimit != other.astFileLimit) return false
 
         return true
     }
@@ -64,6 +70,7 @@ data class LSPConfig(
             return address != null
                 && port != null
                 && clientVersion != null
+                && (astFileLimit != null && astFileLimit!! > 0)
                 // token must be if we are not selfhosted
                 && (deployment == DeploymentMode.SELF_HOSTED ||
                 (apiKey != null && (deployment == DeploymentMode.CLOUD || deployment == DeploymentMode.HF)))

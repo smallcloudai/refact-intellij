@@ -96,6 +96,11 @@ class LSPProcessHolder(val project: Project): Disposable {
                             settingsChanged()
                         }
                     }
+                    override fun astFileLimitChanged(newValue: Int) {
+                        AppExecutorUtil.getAppScheduledExecutorService().submit {
+                            settingsChanged()
+                        }
+                    }
                     override fun vecdbFlagChanged(newValue: Boolean) {
                         AppExecutorUtil.getAppScheduledExecutorService().submit {
                             settingsChanged()
@@ -183,8 +188,9 @@ class LSPProcessHolder(val project: Project): Disposable {
             clientVersion = "${Resources.client}-${Resources.version}/${Resources.jbBuildVersion}",
             useTelemetry = true,
             deployment = InferenceGlobalContext.deploymentMode,
-            ast = InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.astIsEnabled,
-            vecdb = InferenceGlobalContext.canUseAstVecDB && InferenceGlobalContext.vecdbIsEnabled,
+            ast = InferenceGlobalContext.astIsEnabled,
+            astFileLimit = InferenceGlobalContext.astFileLimit,
+            vecdb = InferenceGlobalContext.vecdbIsEnabled,
         )
 
         val processIsAlive = process?.isAlive == true

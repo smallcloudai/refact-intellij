@@ -90,14 +90,18 @@ class AppSettingsComponent {
                 JBLabel(
                     RefactAIBundle.message("advancedSettings.useMultipleFilesCompletionDescription"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ), 0
+                ).apply {
+                    setCopyable(true)
+                }, 0
             )
             addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
             addComponent(
                 JBLabel(
                     RefactAIBundle.message("advancedSettings.useVecDBDescription"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ), 0
+                ).apply {
+                    setCopyable(true)
+                }, 0
             )
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.astFileLimit")}: "), myAstFileLimitText,
                 (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)

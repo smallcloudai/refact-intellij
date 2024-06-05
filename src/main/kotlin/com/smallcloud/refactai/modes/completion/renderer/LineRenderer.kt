@@ -27,7 +27,7 @@ class AsyncLineRenderer(
     override fun calcWidthInPixels(inlay: Inlay<*>): Int {
         synchronized(this) {
             val width = editor.contentComponent
-                .getFontMetrics(RenderHelper.getFont(editor, deprecated)).stringWidth(text)
+                .getFontMetrics(RenderHelper.getFont(editor, deprecated, text)).stringWidth(text)
 
             return maxOf(width, 1)
         }
@@ -42,7 +42,7 @@ class AsyncLineRenderer(
         synchronized(this) {
             color = color ?: RenderHelper.color
             g.color = color
-            g.font = RenderHelper.getFont(editor, deprecated)
+            g.font = RenderHelper.getFont(editor, deprecated, text)
             g.drawString(text, targetRegion.x, targetRegion.y + editor.ascent)
         }
     }

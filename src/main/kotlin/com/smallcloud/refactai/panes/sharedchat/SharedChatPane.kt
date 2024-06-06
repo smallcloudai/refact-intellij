@@ -331,16 +331,18 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handlePreviewFileRequest(id: String, query: String) {
-        try {
-            this.lsp.fetchCommandPreview(query).also { res ->
-                val preview = res.get()
-                val payload = Events.AtCommands.Preview.PreviewPayload(id, preview.messages)
-                val message = Events.AtCommands.Preview.Receive(payload)
-                this.postMessage(message)
+        AppExecutorUtil.getAppExecutorService().submit {
+            try {
+                this.lsp.fetchCommandPreview(query).also { res ->
+                    val preview = res.get()
+                    val payload = Events.AtCommands.Preview.PreviewPayload(id, preview.messages)
+                    val message = Events.AtCommands.Preview.Receive(payload)
+                    this.postMessage(message)
+                }
+            } catch (e: Exception) {
+                println("Command preview error")
+                println(e)
             }
-        } catch (e: Exception) {
-            println("Command preview error")
-            println(e)
         }
     }
 

@@ -85,19 +85,21 @@ class AppSettingsComponent {
 
         experimentalPanel = FormBuilder.createFormBuilder().run {
             addComponent(TitledSeparator(RefactAIBundle.message("advancedSettings.experimentalFeatures")))
-            addComponent(astCheckbox, UIUtil.LARGE_VGAP)
+
+            addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
             addComponent(
                 JBLabel(
-                    RefactAIBundle.message("advancedSettings.useMultipleFilesCompletionDescription"),
+                    RefactAIBundle.message("advancedSettings.useVecDBDescription"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ).apply {
                     setCopyable(true)
                 }, 0
             )
-            addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
+
+            addComponent(astCheckbox, UIUtil.LARGE_VGAP)
             addComponent(
                 JBLabel(
-                    RefactAIBundle.message("advancedSettings.useVecDBDescription"),
+                    RefactAIBundle.message("advancedSettings.useMultipleFilesCompletionDescription"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ).apply {
                     setCopyable(true)

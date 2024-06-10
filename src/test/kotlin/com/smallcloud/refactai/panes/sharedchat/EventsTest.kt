@@ -49,6 +49,17 @@ class EventsTest {
     }
 
     @Test
+    fun parseToolCallDeltaTest() {
+        val str = """{"choices":[{"delta":{"tool_calls":[{"function":{"arguments":"","name":"definition"},"id":"call_au5VQgF49buKCRBfyTRyPghf","index":0,"type":"function"}]},"finish_reason":null,"index":0,"logprobs":null}],"created":1718027772.963,"id":"chatcmpl-9YZnJdCnhGL92896rXsyPngi7kB3N","model":"gpt-3.5-turbo-1106","object":"chat.completion.chunk","system_fingerprint":"fp_482d920018"}"""
+
+        val res = Events.Chat.Response.parse(str)
+        val toChat = Events.Chat.Response.formatToChat(res, "foo")
+        val expected = """{"type":"chat_response","payload":{"id":"foo","choices":[{"delta":{"tool_calls":[{"function":{"arguments":"","name":"definition"},"index":0,"type":"function","id":"call_au5VQgF49buKCRBfyTRyPghf"}]},"index":0}],"created":"1718027772.963","model":"gpt-3.5-turbo-1106"}}"""
+        val result = Events.stringify(toChat!!)
+        assertEquals(expected, result)
+    }
+
+    @Test
     fun parseResponseDetail() {
         val str = """{"detail":"JSON problem: invalid type: sequence, expected a string at line 1 column 46"}"""
         val res = Events.Chat.Response.parse(str)
@@ -146,7 +157,7 @@ class EventsTest {
 
     @Test
     fun formatResponseChoicesTest() {
-        val delta = AssistantDelta("hello")
+        val delta = AssistantDelta(ChatRole.ASSISTANT,"hello")
         val choice = Events.Chat.Response.Choice(delta, 0, null)
         val choices = arrayOf(choice)
         val message = Events.Chat.Response.Choices(choices, "0", "refact" )
@@ -156,6 +167,16 @@ class EventsTest {
 
         assertEquals(expected, result)
     }
+
+//    @Test
+//    fun formatResponseToolCallsMessageTest() {
+//
+//    }
+//
+//    @Test
+//    fun formatResponseToolMessageTest(){
+//
+//    }
 
     @Test
     fun formatResponseDoneTest() {

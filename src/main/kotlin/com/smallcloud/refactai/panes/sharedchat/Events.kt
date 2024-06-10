@@ -86,17 +86,43 @@ class ChatHistorySerializer: JsonSerializer<ChatMessage<*>> {
 }
 
 
-abstract class Delta<T>(val role: ChatRole, val content: T)
-class AssistantDelta(content: String): Delta<String>(ChatRole.ASSISTANT, content)
+abstract class Delta<T>(
+    val role: ChatRole?,
+    val content: T,
+    @SerializedName("tool_calls")
+    val toolCalls: Array<ToolCall>? = null
+)
+class AssistantDelta(
+    role: ChatRole?,
+    content: String?,
+    toolCalls: Array<ToolCall>? = null
+): Delta<String?>(role, content, toolCalls)
+
+class ToolCallDelta(content: String?, toolCalls: Array<ToolCall>): Delta<String?>(null, content, toolCalls)
+
 class ContextFileDelta(content: ChatMessages): Delta<ChatMessages>(ChatRole.CONTEXT_FILE, content)
+
+data class TooCallFunction(val arguments: String, val name: String?)
+class ToolCall(val function: TooCallFunction, val index: Int, val type: String?, val id: String?)
 
 class DeltaDeserializer: JsonDeserializer<Delta<*>> {
     override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): Delta<*>? {
+        // role can be undefined is assistant messages
         val role = p0?.asJsonObject?.get("role")?.asString
+        val content = p0?.asJsonObject?.get("content")?.asString
+        val hasToolCalls = p0?.asJsonObject?.has("tool_calls")
+
+        if(role == null && content is String) {
+            return p2?.deserialize(p0, AssistantDelta::class.java)
+        }
+
+        if(hasToolCalls == true) { // Tool calss
+            return p2?.deserialize(p0, AssistantDelta::class.java)
+        }
         return when(role) {
             ChatRole.ASSISTANT.value -> p2?.deserialize(p0, AssistantDelta::class.java)
             ChatRole.CONTEXT_FILE.value -> p2?.deserialize(p0, ContextFileDelta::class.java)
-            else -> null
+             else -> null
         }
     }
 }
@@ -546,7 +572,8 @@ class Events {
         class Response {
             enum class Roles(value: String) {
                 @SerializedName("user") USER("user"),
-                @SerializedName("context_file") CONTEXT_FILE("context_file")
+                @SerializedName("context_file") CONTEXT_FILE("context_file"),
+                @SerializedName("tool") TOOL("tool")
             }
 
             abstract class ResponsePayload()
@@ -556,6 +583,20 @@ class Events {
                 val role: Roles,
                 @SerializedName("content")
                 val content: String
+            ): ResponsePayload()
+
+            //    "content": "`frog` (defined in jump_to_conclusions.py and other files)",
+            //    "role": "tool",
+            //    "tool_call_id": "call_au5VQgF49buKCRBfyTRyPghf",
+            //    "tool_calls": null
+
+            data class ToolMessage(
+                val role: Roles,
+                val content: String,
+                @SerializedName("tool_call_id")
+                val toolCallId: String,
+                @SerializedName("tool_calls")
+                val toolCalls: Array<String>?,
             ): ResponsePayload()
 
             class UserMessagePayload(
@@ -572,7 +613,7 @@ class Events {
             }
 
             data class Choice(
-                val delta: AssistantDelta,
+                val delta: AssistantDelta, // tool_calls deleta
                 val index: Int,
                 @SerializedName("finish_reason") val finishReason: FinishReasons?,
             )
@@ -639,6 +680,7 @@ class Events {
                 private val gson = GsonBuilder()
                     .registerTypeAdapter(ResponsePayload::class.java, ResponseDeserializer())
                     .registerTypeAdapter(Delta::class.java, DeltaDeserializer())
+                    // .serializeNulls()
                     .create()
 
                 fun parse(str: String): ResponsePayload {
@@ -695,6 +737,7 @@ class Events {
                 if (role == "user" || role == "context_file") {
                     return p2?.deserialize(p0, Response.UserMessage::class.java)
                 }
+                // TODO role == "tool"
 
                 val choices = p0?.asJsonObject?.get("choices")?.asJsonArray
 
@@ -924,6 +967,7 @@ class Events {
         class Update(id: String, features: BaseFeatures, themeProps: ThemeProps?): ToChat(EventNames.ToChat.RECEIVE_CONFIG_UPDATE, UpdatePayload(id, features, themeProps))
 
     }
+
     companion object {
 
         private class MessageSerializer: JsonSerializer<ChatMessage<*>> {
@@ -970,6 +1014,7 @@ class Events {
             .registerTypeAdapter(AtCommands.Preview.Response::class.java, AtCommands.Preview.ResponseDeserializer())
              .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())
              .registerTypeHierarchyAdapter(ChatMessage::class.java, MessageSerializer())
+            // .serializeNulls()
            .create()
 
         fun parse(msg: String?): FromChat? {

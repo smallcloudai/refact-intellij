@@ -427,6 +427,8 @@ class LSPProcessHolder(val project: Project) : Disposable {
         id: String,
         messages: ChatMessages,
         model: String,
+        onlyDeterministicMessages: Boolean = false,
+        takeNote: Boolean = false,
         dataReceived: (String, String) -> Unit,
         dataReceiveEnded: (String) -> Unit,
         errorDataReceived: (JsonObject) -> Unit,
@@ -435,21 +437,20 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
         val parameters = mapOf("max_new_tokens" to 1000)
 
-        val requestBody = Gson().toJson(
-            mapOf(
-                "messages" to messages.map {
-                    val content = if (it.content is String) {
-                        it.content
-                    } else {
-                        Gson().toJson(it.content)
-                    }
-                    mapOf("role" to it.role, "content" to content)
-                },
-                "model" to model,
-                "parameters" to parameters,
-                "stream" to true
-            )
-        )
+        val tools = getTools(takeNote)
+
+        val requestBody = Gson().toJson(mapOf(
+            "messages" to messages.map {
+                val content = if(it.content is String) { it.content } else { Gson().toJson(it.content) }
+                mapOf("role" to it.role, "content" to content)
+            },
+            "model" to model,
+            "parameters" to parameters,
+            "stream" to true,
+            "tools" to tools,
+            "only_deterministic_messages" to onlyDeterministicMessages,
+            "chat_id" to id,
+        ))
 
         val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")
         val request = InferenceGlobalContext.connection.post(
@@ -465,5 +466,36 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
         return request
 
+    }
+
+
+
+    private fun getAvailableTools(): Future<Array<Tool>> {
+        val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")
+
+        val request = InferenceGlobalContext.connection.get(
+            url.resolve("/v1/at-tools-available"),
+            headers=headers,
+            dataReceiveEnded = {},
+            errorDataReceived = {}
+        )
+
+        val json = request.thenApply {
+            val res = it.get() as String
+            Gson().fromJson(res, Array<Tool>::class.java)
+        }
+
+        return json
+
+    }
+
+    private fun getTools(takeNote: Boolean = false): List<Tool> {
+        return getAvailableTools().get().filter { tool ->
+            if(takeNote) {
+                tool.function.name == "remember_how_to_use_tools"
+            } else {
+                tool.function.name != "remember_how_to_use_tools"
+            }
+        }
     }
 }

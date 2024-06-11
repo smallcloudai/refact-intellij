@@ -3,6 +3,7 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.google.gson.annotations.SerializedName
 import com.google.gson.*
 import com.smallcloud.refactai.lsp.LSPCapabilities
+import com.smallcloud.refactai.lsp.Tool
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.Response.ResponsePayload
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.ResponseDeserializer
 import java.io.Serializable
@@ -15,6 +16,7 @@ enum class ChatRole(val value: String): Serializable {
     @SerializedName("assistant") ASSISTANT("assistant"),
     @SerializedName("context_file") CONTEXT_FILE("context_file"),
     @SerializedName("system") SYSTEM("system"),
+    @SerializedName("tool") TOOL("tool"),
 }
 
 data class ChatContextFile(
@@ -32,14 +34,57 @@ abstract class ChatMessage<T>(
     val role: ChatRole,
     @Transient
     @SerializedName("content")
-    open val content: T
+    open val content: T,
+    @Transient
+    @SerializedName("tool_calls")
+    open val toolCalls: Array<ToolCall>? = null,
 ): Serializable {
 }
 data class UserMessage(override val content: String): ChatMessage<String>(ChatRole.USER, content)
 
-data class AssistantMessage(override val content: String): ChatMessage<String>(ChatRole.ASSISTANT, content)
+data class AssistantMessage(
+    override val content: String?,
+    @SerializedName("tool_calls")
+    override val toolCalls: Array<ToolCall>? = null
+): ChatMessage<String?>(ChatRole.ASSISTANT, content, toolCalls) {
+
+    override fun hashCode(): Int {
+        var result = content.hashCode()
+        result = 31 * result + (toolCalls?.contentHashCode() ?: 0)
+        return result
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as AssistantMessage
+
+        if (content != other.content) return false
+        if (toolCalls != null) {
+            if (other.toolCalls == null) return false
+            if (!toolCalls.contentEquals(other.toolCalls)) return false
+        } else if (other.toolCalls != null) return false
+
+        return true
+    }
+}
 
 data class SystemMessage(override val content: String): ChatMessage<String>(ChatRole.SYSTEM, content)
+
+data class ToolMessageContent(
+    @SerializedName("tool_call_id")
+    val toolCallId: String,
+    val content: String,
+    @SerializedName("finish_reason")
+    val finishReason: String?
+)
+
+
+data class ToolMessage(
+    override val content: ToolMessageContent
+): ChatMessage<ToolMessageContent>(ChatRole.TOOL, content = content)
+
 
 data class ContentFileMessage(override val content: Array<ChatContextFile>): ChatMessage<Array<ChatContextFile>>(
     ChatRole.CONTEXT_FILE, content) {
@@ -68,6 +113,7 @@ class ChatMessageDeserializer: JsonDeserializer<ChatMessage<*>> {
             ChatRole.ASSISTANT.value -> p2?.deserialize<AssistantMessage>(p0, AssistantMessage::class.java)
             ChatRole.CONTEXT_FILE.value -> p2?.deserialize<ContentFileMessage>(p0, ContentFileMessage::class.java)
             ChatRole.SYSTEM.value -> p2?.deserialize<SystemMessage>(p0, SystemMessage::class.java)
+            ChatRole.TOOL.value -> p2?.deserialize(p0, ToolMessage::class.java)
             else -> null
         }
     }
@@ -88,9 +134,14 @@ class ChatHistorySerializer: JsonSerializer<ChatMessage<*>> {
 
 abstract class Delta<T>(
     val role: ChatRole?,
-    val content: T,
+    open val content: T,
     @SerializedName("tool_calls")
-    val toolCalls: Array<ToolCall>? = null
+    val toolCalls: Array<ToolCall>? = null,
+    val id: String? = null,
+    @SerializedName("tool_call_id")
+    val toolCallId: String? = null,
+    @SerializedName("finish_reason")
+    val finishReason: String? = null,
 )
 class AssistantDelta(
     role: ChatRole?,
@@ -98,16 +149,42 @@ class AssistantDelta(
     toolCalls: Array<ToolCall>? = null
 ): Delta<String?>(role, content, toolCalls)
 
-class ToolCallDelta(content: String?, toolCalls: Array<ToolCall>): Delta<String?>(null, content, toolCalls)
-
 class ContextFileDelta(content: ChatMessages): Delta<ChatMessages>(ChatRole.CONTEXT_FILE, content)
 
 data class TooCallFunction(val arguments: String, val name: String?)
-class ToolCall(val function: TooCallFunction, val index: Int, val type: String?, val id: String?)
+class ToolCall(val function: TooCallFunction, val index: Int, val type: String?, val id: String?) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ToolCall
+
+        if (function != other.function) return false
+        if (index != other.index) return false
+        if (type != other.type) return false
+        if (id != other.id) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = function.hashCode()
+        result = 31 * result + index
+        result = 31 * result + (type?.hashCode() ?: 0)
+        result = 31 * result + (id?.hashCode() ?: 0)
+        return result
+    }
+}
+
+class ToolResult(
+    id: String,
+    toolCallId: String,
+    content: String,
+    toolCalls: Array<ToolCall>?
+): Delta<String>(ChatRole.TOOL, content, id=id, toolCallId = toolCallId, toolCalls = toolCalls )
 
 class DeltaDeserializer: JsonDeserializer<Delta<*>> {
     override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): Delta<*>? {
-        // role can be undefined is assistant messages
         val role = p0?.asJsonObject?.get("role")?.asString
         val content = p0?.asJsonObject?.get("content")?.asString
         val hasToolCalls = p0?.asJsonObject?.has("tool_calls")
@@ -116,12 +193,13 @@ class DeltaDeserializer: JsonDeserializer<Delta<*>> {
             return p2?.deserialize(p0, AssistantDelta::class.java)
         }
 
-        if(hasToolCalls == true) { // Tool calss
+        if(hasToolCalls == true) {
             return p2?.deserialize(p0, AssistantDelta::class.java)
         }
         return when(role) {
             ChatRole.ASSISTANT.value -> p2?.deserialize(p0, AssistantDelta::class.java)
             ChatRole.CONTEXT_FILE.value -> p2?.deserialize(p0, ContextFileDelta::class.java)
+            ChatRole.TOOL.value -> p2?.deserialize(p0, ToolResult::class.java)
              else -> null
         }
     }
@@ -292,6 +370,9 @@ class Events {
                         val obj = JsonObject()
                         obj.add("role", role)
                         obj.add("content", content)
+                        if (role.asString == "assistant" && pair.size() == 3) {
+                            obj.add("tool_calls", pair.get(2))
+                        }
                         messages.add(obj)
                     }
 
@@ -308,11 +389,14 @@ class Events {
                         val obj = JsonObject()
                         obj.add("role", role)
                         obj.add("content", content)
+                        if (role.asString == "assistant" && pair.size() == 3) {
+                            obj.add("tool_calls", pair.get(2))
+                        }
                         messages.add(obj)
                     }
 
                     payload.asJsonObject.add("messages", messages)
-                    return p2?.deserialize(payload, Chat.AskQuestion::class.java)
+                    return p2?.deserialize<Chat.AskQuestion>(payload, Chat.AskQuestion::class.java)
                 }
                 EventNames.FromChat.STOP_STREAMING.value -> p2?.deserialize(payload, Chat.Stop::class.java)
                 EventNames.FromChat.NEW_FILE.value -> p2?.deserialize(payload, Editor.NewFile::class.java)
@@ -585,19 +669,6 @@ class Events {
                 val content: String
             ): ResponsePayload()
 
-            //    "content": "`frog` (defined in jump_to_conclusions.py and other files)",
-            //    "role": "tool",
-            //    "tool_call_id": "call_au5VQgF49buKCRBfyTRyPghf",
-            //    "tool_calls": null
-
-            data class ToolMessage(
-                val role: Roles,
-                val content: String,
-                @SerializedName("tool_call_id")
-                val toolCallId: String,
-                @SerializedName("tool_calls")
-                val toolCalls: Array<String>?,
-            ): ResponsePayload()
 
             class UserMessagePayload(
                 override val id: String,
@@ -606,6 +677,28 @@ class Events {
             ): Payload(id)
 
             class UserMessageToChat(payload: UserMessagePayload): ToChat(EventNames.ToChat.CHAT_RESPONSE, payload)
+
+            class ToolMessage(
+                val role: Roles,
+                val content: String,
+                @SerializedName("tool_call_id")
+                val toolCallId: String,
+                @SerializedName("tool_calls")
+                val toolCalls: Array<ToolCall>? = null,
+            ): ResponsePayload()
+
+            class ToolMessagePayload(
+                override val id: String,
+                val role: Roles,
+                val content: String, // maybe this ?
+                @SerializedName("tool_call_id")
+                val toolCallId: String
+            ): Payload(id)
+
+            class ToolMessageToChat(
+                payload: ToolMessagePayload,
+            ): ToChat(EventNames.ToChat.CHAT_RESPONSE, payload)
+
 
             enum class FinishReasons(value: String) {
                 STOP("stop"),
@@ -705,6 +798,11 @@ class Events {
                             return ChatDoneToChat(payload)
                         }
 
+                        is Response.ToolMessage -> {
+                            val payload = ToolMessagePayload(id, response.role, response.content, response.toolCallId)
+                            return ToolMessageToChat(payload)
+                        }
+
                         is Response.DetailMessage -> {
                             val payload = ChatErrorPayload(id, response.detail)
                             return ChatErrorStreamingToChat(payload)
@@ -737,7 +835,10 @@ class Events {
                 if (role == "user" || role == "context_file") {
                     return p2?.deserialize(p0, Response.UserMessage::class.java)
                 }
-                // TODO role == "tool"
+
+                if(role == "tool") {
+                    return p2?.deserialize(p0, Response.ToolMessage::class.java)
+                }
 
                 val choices = p0?.asJsonObject?.get("choices")?.asJsonArray
 
@@ -992,7 +1093,16 @@ class Events {
                         val arr = JsonArray()
                         arr.add(role)
                         arr.add(src.content)
+                        arr.add(Gson().toJson(src.toolCalls))
                         return arr
+                    }
+
+                    is ToolMessage -> {
+                        val role = context.serialize(src.role, ChatRole::class.java)
+                        val arr = JsonArray()
+                        arr.add(role)
+                        arr.add(Gson().toJson(src.content))
+                        return arr;
                     }
                     is ContentFileMessage -> {
                         val role = context.serialize(src.role, ChatRole::class.java)

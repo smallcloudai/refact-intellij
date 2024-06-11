@@ -37,6 +37,8 @@ class EventsTest {
         assertEquals(expected, result)
     }
 
+
+
     @Test
     fun formatResponseContextTest() {
         val message = Events.Chat.Response.UserMessage(Events.Chat.Response.Roles.CONTEXT_FILE,"""[]""")
@@ -99,13 +101,27 @@ class EventsTest {
     }
 
     @Test
+    fun parseAssitantMessage() {
+        val str = """{"role":"assistant","content":"Hello there","tool_calls":[]}"""
+        val gson = GsonBuilder().registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer()).create()
+        val result = gson.fromJson<AssistantMessage>(str, AssistantMessage::class.java)
+        // val result = Gson().fromJson<AssistantMessage>(str, AssistantMessage::class.java)
+        val expected = AssistantMessage("Hello there", emptyArray())
+        assertEquals(expected, result)
+    }
+
+
+    @Test
     fun parseSaveChatMessage() {
-        val message = """{"type":"save_chat_to_history","payload":{"id":"foo","messages":[["context_file",[{"file_name":"/main.py","file_content":"hello\n","line1":1,"line2":1,"symbol":"00000000-0000-0000-0000-000000000000","gradient_type":-1,"usefulness":0}]],["user","hello"],["assistant","Hello there"]],"title":"","model":""}}"""
+        val toolStr = """[{"function": {"arguments": "{\"symbol\": \"frog\"}","name": "definition"}, "id": "call", "index": 0,"type": "function"}]"""
+
+        val message = """{"type":"save_chat_to_history","payload":{"id":"foo","messages":[["context_file",[{"file_name":"/main.py","file_content":"hello\n","line1":1,"line2":1,"symbol":"00000000-0000-0000-0000-000000000000","gradient_type":-1,"usefulness":0}]],["user","hello"],["assistant","Hello there", $toolStr]],"title":"","model":""}}"""
         val result = Events.parse(message)
+        println("result: $result")
         val messages: ChatMessages = arrayOf(
             ContentFileMessage(arrayOf(ChatContextFile("/main.py","hello\n",1,1,0.0 ))),
             UserMessage("hello"),
-            AssistantMessage("Hello there")
+            AssistantMessage("Hello there", arrayOf(ToolCall(function = TooCallFunction(arguments = "{\"symbol\": \"frog\"}", name= "definition"), id="call", index = 0, type = "function")))
         )
         val expected = Events.Chat.Save("foo", messages, "", "")
         assertEquals(expected, result)
@@ -167,16 +183,6 @@ class EventsTest {
 
         assertEquals(expected, result)
     }
-
-//    @Test
-//    fun formatResponseToolCallsMessageTest() {
-//
-//    }
-//
-//    @Test
-//    fun formatResponseToolMessageTest(){
-//
-//    }
 
     @Test
     fun formatResponseDoneTest() {

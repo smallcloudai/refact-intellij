@@ -1093,7 +1093,9 @@ class Events {
                         val arr = JsonArray()
                         arr.add(role)
                         arr.add(src.content)
-                        arr.add(Gson().toJson(src.toolCalls))
+                        if(src.toolCalls != null) {
+                            arr.add(Gson().toJson(src.toolCalls))
+                        }
                         return arr
                     }
 
@@ -1124,7 +1126,6 @@ class Events {
             .registerTypeAdapter(AtCommands.Preview.Response::class.java, AtCommands.Preview.ResponseDeserializer())
              .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())
              .registerTypeHierarchyAdapter(ChatMessage::class.java, MessageSerializer())
-            // .serializeNulls()
            .create()
 
         fun parse(msg: String?): FromChat? {

@@ -188,13 +188,18 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
         val future = this.lsp.sendChat(id, messages, model, dataReceived = { str, requestId ->
             when (val res = Events.Chat.Response.parse(str)) {
-                // tools and tool calls
+
                 is Events.Chat.Response.Choices -> {
                     val message = Events.Chat.Response.formatToChat(res, requestId)
                     this.postMessage(message)
                 }
 
                 is Events.Chat.Response.UserMessage -> {
+                    val message = Events.Chat.Response.formatToChat(res, requestId)
+                    this.postMessage(message)
+                }
+
+                is Events.Chat.Response.ToolMessage -> {
                     val message = Events.Chat.Response.formatToChat(res, requestId)
                     this.postMessage(message)
                 }

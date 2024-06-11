@@ -435,14 +435,14 @@ class LSPProcessHolder(val project: Project) : Disposable {
         failedDataReceiveEnded: (Throwable?) -> Unit,
     ): CompletableFuture<Future<*>> {
 
-        val parameters = mapOf("max_new_tokens" to 1000)
+        val parameters = mapOf("max_new_tokens" to 2048)
 
         val tools = getTools(takeNote)
 
         val requestBody = Gson().toJson(mapOf(
             "messages" to messages.map {
                 val content = if(it.content is String) { it.content } else { Gson().toJson(it.content) }
-                mapOf("role" to it.role, "content" to content)
+                mapOf("role" to it.role, "content" to content, "tool_calls" to it.toolCalls)
             },
             "model" to model,
             "parameters" to parameters,
@@ -450,6 +450,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             "tools" to tools,
             "only_deterministic_messages" to onlyDeterministicMessages,
             "chat_id" to id,
+            "max_tokens" to 2048
         ))
 
         val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")

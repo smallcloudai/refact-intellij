@@ -438,6 +438,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         val parameters = mapOf("max_new_tokens" to 2048)
 
         val tools = getTools(takeNote)
+        val maybeTools = if (tools.size > 0) tools else { null}
 
         val requestBody = Gson().toJson(mapOf(
             "messages" to messages.map {
@@ -447,7 +448,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             "model" to model,
             "parameters" to parameters,
             "stream" to true,
-            "tools" to tools,
+            "tools" to maybeTools,
             "only_deterministic_messages" to onlyDeterministicMessages,
             "chat_id" to id,
             "max_tokens" to 2048

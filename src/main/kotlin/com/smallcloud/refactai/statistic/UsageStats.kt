@@ -98,8 +98,12 @@ class UsageStats(private val project: Project): Disposable {
         @JvmStatic
         val instance: UsageStats?
             get() {
-                val project = LAST_EDITOR?.project?: return null
-                return project.service()
+                try {
+                    val project = LAST_EDITOR?.project ?: return null
+                    return project.service()
+                } catch (e: Exception) {
+                    return null
+                }
             }
     }
 

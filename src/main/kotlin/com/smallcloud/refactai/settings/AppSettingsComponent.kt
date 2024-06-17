@@ -3,19 +3,15 @@ package com.smallcloud.refactai.settings
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.RefactAIBundle
-import java.awt.Dimension
 import java.awt.event.KeyEvent
 import java.awt.event.KeyListener
 import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.ScrollPaneConstants
 
 
 class AppSettingsComponent {
@@ -61,7 +57,6 @@ class AppSettingsComponent {
     private val myStagingVersionLabel = JBLabel("Staging version:").apply {
         isVisible = false
     }
-    private val defaultSystemPromptTextArea = JBTextArea()
 
     val vecdbCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useVecDB")).apply {
         isVisible = true
@@ -121,15 +116,6 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
-            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.defaultSystemPrompt")}: "),
-                JBScrollPane(defaultSystemPromptTextArea,
-                    ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                    ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED)
-                    .apply {
-                        maximumSize = Dimension(0, 60)
-                        preferredSize = Dimension(0, 60)
-                    },
-                (UIUtil.DEFAULT_VGAP * 1.5).toInt(), true)
             addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
             addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
             addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
@@ -154,12 +140,6 @@ class AppSettingsComponent {
         get() = myContrastUrlText.text
         set(newText) {
             myContrastUrlText.text = newText
-        }
-
-    var defaultSystemPrompt: String
-        get() = defaultSystemPromptTextArea.text
-        set(newText) {
-            defaultSystemPromptTextArea.text = newText
         }
 
     var useDeveloperMode: Boolean

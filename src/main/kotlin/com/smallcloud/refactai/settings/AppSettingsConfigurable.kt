@@ -67,8 +67,6 @@ class AppSettingsConfigurable : Configurable {
         modified = modified || mySettingsComponent!!.xDebugLSPPort != InferenceGlobalContext.xDebugLSPPort
 
         modified = modified || mySettingsComponent!!.stagingVersion != InferenceGlobalContext.stagingVersion
-        modified =
-            modified || mySettingsComponent!!.defaultSystemPrompt != AppSettingsState.instance.defaultSystemPrompt
 
         modified = modified || mySettingsComponent!!.astIsEnabled != InferenceGlobalContext.astIsEnabled
         modified = modified || mySettingsComponent!!.astFileLimit != InferenceGlobalContext.astFileLimit
@@ -88,7 +86,6 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
         InferenceGlobalContext.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
-        AppSettingsState.instance.defaultSystemPrompt = mySettingsComponent!!.defaultSystemPrompt
         InferenceGlobalContext.astIsEnabled = mySettingsComponent!!.astIsEnabled
         InferenceGlobalContext.astFileLimit = mySettingsComponent!!.astFileLimit
         InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
@@ -101,7 +98,6 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled
         mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
         mySettingsComponent!!.xDebugLSPPort = InferenceGlobalContext.xDebugLSPPort
-        mySettingsComponent!!.defaultSystemPrompt = AppSettingsState.instance.defaultSystemPrompt
         mySettingsComponent!!.astIsEnabled = InferenceGlobalContext.astIsEnabled
         mySettingsComponent!!.astFileLimit = InferenceGlobalContext.astFileLimit
         mySettingsComponent!!.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled

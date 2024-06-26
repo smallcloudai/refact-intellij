@@ -32,15 +32,7 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
     }
 
     val webView by lazy {
-        val osName = System.getProperty("os.name").lowercase()
-        val useOsr = when {
-            osName.contains("mac") || osName.contains("darwin") -> false
-            osName.contains("win") -> false
-            osName.contains("nix") || osName.contains("nux") || osName.contains("aix") -> true
-            else -> true
-        }
-        // TODO: handle JBCef not being available
-        val browser = JBCefBrowser.createBuilder().setOffScreenRendering(useOsr).build()
+        val browser = JBCefBrowser.createBuilder().setOffScreenRendering(false).build()
         browser.jbCefClient.setProperty(
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
             jsPoolSize,

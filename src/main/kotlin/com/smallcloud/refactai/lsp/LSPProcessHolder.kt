@@ -41,6 +41,7 @@ private fun getExeSuffix(): String {
 
 interface LSPProcessHolderChangedNotifier {
     fun capabilitiesChanged(newCaps: LSPCapabilities) {}
+
     companion object {
         val TOPIC = Topic.create(
             "Connection Changed Notifier",
@@ -49,12 +50,12 @@ interface LSPProcessHolderChangedNotifier {
     }
 }
 
-class LSPProcessHolder(val project: Project): Disposable {
+class LSPProcessHolder(val project: Project) : Disposable {
     private var process: Process? = null
     private var lastConfig: LSPConfig? = null
     private val logger = Logger.getInstance("LSPProcessHolder")
     private val loggerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
-            "SMCLSPLoggerScheduler", 1
+        "SMCLSPLoggerScheduler", 1
     )
     private var loggerTask: Future<*>? = null
     private val schedulerCaps = AppExecutorUtil.createBoundedScheduledExecutorService(
@@ -69,53 +70,57 @@ class LSPProcessHolder(val project: Project): Disposable {
 
     init {
         messageBus
-                .connect(this)
-                .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                    override fun apiKeyChanged(newApiKey: String?) {
-                        AppExecutorUtil.getAppScheduledExecutorService().submit {
-                            settingsChanged()
-                        }
+            .connect(this)
+            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+                override fun apiKeyChanged(newApiKey: String?) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
                     }
+                }
 
-                    override fun planStatusChanged(newPlan: String?) {
-                        AppExecutorUtil.getAppScheduledExecutorService().submit {
-                            settingsChanged()
-                        }
+                override fun planStatusChanged(newPlan: String?) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
                     }
-                })
+                }
+            })
         messageBus
-                .connect(this)
-                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun userInferenceUriChanged(newUrl: String?) {
-                        AppExecutorUtil.getAppScheduledExecutorService().submit {
-                            settingsChanged()
-                        }
+            .connect(this)
+            .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
+                override fun userInferenceUriChanged(newUrl: String?) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
                     }
-                    override fun astFlagChanged(newValue: Boolean) {
-                        AppExecutorUtil.getAppScheduledExecutorService().submit {
-                            settingsChanged()
-                        }
-                    }
-                    override fun astFileLimitChanged(newValue: Int) {
-                        AppExecutorUtil.getAppScheduledExecutorService().submit {
-                            settingsChanged()
-                        }
-                    }
-                    override fun vecdbFlagChanged(newValue: Boolean) {
-                        AppExecutorUtil.getAppScheduledExecutorService().submit {
-                            settingsChanged()
-                        }
-                    }
+                }
 
-                    override fun xDebugLSPPortChanged(newPort: Int?) {
-                        AppExecutorUtil.getAppScheduledExecutorService().submit {
-                            settingsChanged()
-                        }
+                override fun astFlagChanged(newValue: Boolean) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
                     }
-                })
+                }
+
+                override fun astFileLimitChanged(newValue: Int) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
+                    }
+                }
+
+                override fun vecdbFlagChanged(newValue: Boolean) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
+                    }
+                }
+
+                override fun xDebugLSPPortChanged(newPort: Int?) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
+                    }
+                }
+            })
 
         Companion::class.java.getResourceAsStream(
-                "/bin/${binPrefix}/refact-lsp${getExeSuffix()}").use { input ->
+            "/bin/${binPrefix}/refact-lsp${getExeSuffix()}"
+        ).use { input ->
             if (input == null) {
                 emitError("LSP server is not found for host operating system, please contact support")
             } else {
@@ -239,6 +244,7 @@ class LSPProcessHolder(val project: Project): Disposable {
                 InferenceGlobalContext.connection.ping(url)
                 buildInfo = getBuildInfo()
                 capabilities = getCaps()
+                fetchToolboxConfig()
                 isWorking = true
                 break
             } catch (e: Exception) {
@@ -250,9 +256,19 @@ class LSPProcessHolder(val project: Project): Disposable {
         lspProjectInitialize(this, project)
     }
 
+    private fun fetchToolboxConfig(): String {
+        val config = InferenceGlobalContext.connection.get(url.resolve("/v1/customization"),
+            dataReceiveEnded = {},
+            errorDataReceived = {}).join().get()
+        return config as String
+    }
+
     private fun safeTerminate() {
-        InferenceGlobalContext.connection.get(URI(
-            "http://127.0.0.1:${lastConfig!!.port}/v1/graceful-shutdown")).get().get()
+        InferenceGlobalContext.connection.get(
+            URI(
+                "http://127.0.0.1:${lastConfig!!.port}/v1/graceful-shutdown"
+            )
+        ).get().get()
     }
 
     private fun terminate() {
@@ -265,14 +281,18 @@ class LSPProcessHolder(val project: Project): Disposable {
                     it.destroy()
                 }
                 process = null
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
     companion object {
-        private val BIN_PATH = Path(getTempDirectory(),
+        private val BIN_PATH = Path(
+            getTempDirectory(),
             ApplicationInfo.getInstance().build.toString().replace(Regex("[^A-Za-z0-9 ]"), "_") +
-            "_refact_lsp${getExeSuffix()}").toString()
+                "_refact_lsp${getExeSuffix()}"
+        ).toString()
+
         // here ?
         @JvmStatic
         fun getInstance(project: Project): LSPProcessHolder = project.service()
@@ -304,20 +324,21 @@ class LSPProcessHolder(val project: Project): Disposable {
 
     val url: URI
         get() {
-            val port = InferenceGlobalContext.xDebugLSPPort?: lastConfig?.port ?: return URI("")
+            val port = InferenceGlobalContext.xDebugLSPPort ?: lastConfig?.port ?: return URI("")
 
             return URI("http://127.0.0.1:${port}/")
         }
+
     private fun getCaps(): LSPCapabilities {
         var res = LSPCapabilities()
         InferenceGlobalContext.connection.get(url.resolve("/v1/caps"),
-                dataReceiveEnded = {},
-                errorDataReceived = {}).also {
+            dataReceiveEnded = {},
+            errorDataReceived = {}).also {
             var requestFuture: ComplexFuture<*>?
             try {
                 requestFuture = it.get() as ComplexFuture
                 val out = requestFuture.get()
-                // logger.warn("LSP caps_received " + out)
+                logger.warn("LSP caps_received $out")
                 val gson = Gson()
                 res = gson.fromJson(out as String, LSPCapabilities::class.java)
                 logger.debug("caps_received request finished")
@@ -335,7 +356,7 @@ class LSPProcessHolder(val project: Project): Disposable {
 //            return FutureTask { this.capabilities }
 //        }
 
-         val res = InferenceGlobalContext.connection.get(
+        val res = InferenceGlobalContext.connection.get(
             url.resolve("/v1/caps"),
             dataReceiveEnded = {},
             errorDataReceived = {}
@@ -414,15 +435,21 @@ class LSPProcessHolder(val project: Project): Disposable {
 
         val parameters = mapOf("max_new_tokens" to 1000)
 
-        val requestBody = Gson().toJson(mapOf(
-            "messages" to messages.map {
-                val content = if(it.content is String) { it.content } else { Gson().toJson(it.content) }
-                mapOf("role" to it.role, "content" to content)
-            },
-            "model" to model,
-            "parameters" to parameters,
-            "stream" to true
-        ))
+        val requestBody = Gson().toJson(
+            mapOf(
+                "messages" to messages.map {
+                    val content = if (it.content is String) {
+                        it.content
+                    } else {
+                        Gson().toJson(it.content)
+                    }
+                    mapOf("role" to it.role, "content" to content)
+                },
+                "model" to model,
+                "parameters" to parameters,
+                "stream" to true
+            )
+        )
 
         val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")
         val request = InferenceGlobalContext.connection.post(
@@ -436,7 +463,7 @@ class LSPProcessHolder(val project: Project): Disposable {
             requestId = id,
         )
 
-         return request
+        return request
 
     }
 }

@@ -43,7 +43,7 @@ jobs:
           workflow: node.js.yml
           workflow_search: true
           repo: smallcloudai/refact-chat-js
-          branch: alpha
+          branch: main
           name: refact-chat-js-latest
           path: ./src/main/resources/webview/dist
 

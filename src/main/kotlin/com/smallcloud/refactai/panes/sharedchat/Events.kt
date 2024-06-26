@@ -305,7 +305,9 @@ class EventNames {
         PASTE_DIFF("chat_paste_diff"),
         REQUEST_AT_COMMAND_COMPLETION("chat_request_at_command_completion"),
         REQUEST_PREVIEW_FILES("chat_request_preview_files"),
-        REQUEST_PROMPTS("chat_request_prompts")
+        REQUEST_PROMPTS("chat_request_prompts"),
+        REQUEST_TOOLS("chat_request_has_tool_check"),
+
     }
 
     enum class ToChat(val value: String) {
@@ -334,7 +336,9 @@ class EventNames {
         @SerializedName("chat_receive_prompts") RECEIVE_PROMPTS("chat_receive_prompts"),
         @SerializedName("chat_receive_prompts_error") RECEIVE_PROMPTS_ERROR("chat_receive_prompts_error"),
         SET_SELECTED_SYSTEM_PROMPT("chat_set_selected_system_prompt"),
-        @SerializedName("receive_config_update") RECEIVE_CONFIG_UPDATE("chat_receive_config_update"),
+        @SerializedName("receive_config_update") RECEIVE_CONFIG_UPDATE("receive_config_update"),
+        @SerializedName("chat_receive_tools_chat") RECEIVE_TOOLS("chat_receive_tools_chat"),
+
     }
 }
 
@@ -402,6 +406,7 @@ class Events {
                 EventNames.FromChat.NEW_FILE.value -> p2?.deserialize(payload, Editor.NewFile::class.java)
                 EventNames.FromChat.PASTE_DIFF.value -> p2?.deserialize(payload, Editor.Paste::class.java)
                 EventNames.FromChat.REQUEST_CAPS.value -> p2?.deserialize(payload, Caps.Request::class.java)
+                EventNames.FromChat.REQUEST_TOOLS.value -> p2?.deserialize(payload, Tools.Request::class.java)
                 else -> null
             }
         }
@@ -427,6 +432,31 @@ class Events {
         data class SystemPromptsErrorPayload(override val id: String, val error: String): Payload(id)
         data class Error(val id: String, val error: String): ToChat(EventNames.ToChat.RECEIVE_PROMPTS_ERROR, SystemPromptsErrorPayload(id, error))
         // set?
+    }
+
+    class Tools {
+        data class Request(val id: String): FromChat(EventNames.FromChat.REQUEST_TOOLS, Payload(id))
+        data class ResponsePayload(override val id: String, val tools: Array<Tool>): Payload(id) {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (javaClass != other?.javaClass) return false
+
+                other as ResponsePayload
+
+                if (id != other.id) return false
+                if (!tools.contentEquals(other.tools)) return false
+
+                return true
+            }
+
+            override fun hashCode(): Int {
+                var result = id.hashCode()
+                result = 31 * result + tools.contentHashCode()
+                return result
+            }
+        }
+
+        class Resppnse(payload: ResponsePayload): ToChat(EventNames.ToChat.RECEIVE_TOOLS, payload)
     }
 
     class AtCommands {
@@ -622,6 +652,7 @@ class Events {
             val id: String,
             val messages: ChatMessages,
             val model: String,
+            val tools: Array<Tool> = emptyArray(),
             val title: String? = null,
             val attachFile: Boolean = false,
         ): FromChat(EventNames.FromChat.ASK_QUESTION, ThreadPayload(id, messages, model, title, attachFile)) {
@@ -634,6 +665,7 @@ class Events {
                 if (id != other.id) return false
                 if (!messages.contentEquals(other.messages)) return false
                 if (model != other.model) return false
+                if (!tools.contentEquals(other.tools)) return false
                 if (title != other.title) return false
                 if (attachFile != other.attachFile) return false
 
@@ -644,6 +676,7 @@ class Events {
                 var result = id.hashCode()
                 result = 31 * result + messages.contentHashCode()
                 result = 31 * result + model.hashCode()
+                result = 31 * result + tools.contentHashCode()
                 result = 31 * result + (title?.hashCode() ?: 0)
                 result = 31 * result + attachFile.hashCode()
                 return result

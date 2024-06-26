@@ -11,7 +11,8 @@ data class LSPModelInfo(
         @SerializedName("n_ctx") var nCtx: Int,
         @SerializedName("similar_models") var similarModels: List<String>,
         @SerializedName("supports_scratchpads") var supportsScratchpads: Map<String, LSPScratchpadInfo?>,
-        @SerializedName("supports_stop") var supportsStop: Boolean
+        @SerializedName("supports_stop") var supportsStop: Boolean,
+        @SerializedName("supports_tools") var supportsTools: Boolean?,
 )
 
 data class LSPCapabilities(

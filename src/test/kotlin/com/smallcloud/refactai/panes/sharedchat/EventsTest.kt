@@ -3,6 +3,9 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.google.gson.*
 import com.intellij.util.containers.toArray
 import com.smallcloud.refactai.lsp.LSPCapabilities
+import com.smallcloud.refactai.lsp.Tool
+import com.smallcloud.refactai.lsp.ToolFunction
+import com.smallcloud.refactai.lsp.ToolFunctionParameters
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.FileInfoPayload
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestorePayload
@@ -11,6 +14,7 @@ import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import kotlin.test.Test
 import org.junit.jupiter.api.Assertions.*
 import java.lang.reflect.Type
+import kotlin.test.expect
 
 class EventsTest {
     @Test
@@ -295,6 +299,28 @@ class EventsTest {
         val expected = """{"type":"receive_config_update","payload":{"id":"chat-id","features":{"ast":true,"vecdb":false},"themeProps":{"mode":"light","hasBackground":false,"scale":"90%","accentColor":"gray"}}}"""
 
         assertEquals(expected, result)
+    }
+
+    @Test
+    fun formatToolsResponse() {
+        val parameters = ToolFunctionParameters(
+            properties = mapOf("query" to mapOf("description" to "Single line, paragraph or code sample.", "type" to "string")),
+            type = "object",
+            required = arrayOf("query")
+        )
+
+        val function = ToolFunction(
+            description = "Find similar pieces of code using vector database",
+            name = "workspace",
+            parameters = parameters
+        )
+        val tool = Tool(function = function, type="function")
+
+        val payload = Events.Tools.ResponsePayload("foo", arrayOf(tool))
+        val message = Events.Tools.Resppnse(payload)
+        val results = Events.stringify(message)
+        val expected = """{"type":"chat_receive_tools_chat","payload":{"id":"foo","tools":[{"function":{"description":"Find similar pieces of code using vector database","name":"workspace","parameters":{"properties":{"query":{"description":"Single line, paragraph or code sample.","type":"string"}},"type":"object","required":["query"]}},"type":"function"}]}}"""
+        assertEquals(expected, results)
     }
 
 }

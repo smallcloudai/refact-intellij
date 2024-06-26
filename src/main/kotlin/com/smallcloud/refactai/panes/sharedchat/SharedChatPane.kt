@@ -21,6 +21,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
+import com.smallcloud.refactai.lsp.Tool
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.FileInfoPayload
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestorePayload
@@ -184,44 +185,58 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun handleChat(id: String, messages: ChatMessages, model: String, title: String? = null) {
+    private fun handleChat(
+        id: String,
+        messages: ChatMessages,
+        model: String,
+        tools: Array<Tool> = emptyArray(),
+        title: String? = null) {
 
-        val future = this.lsp.sendChat(id, messages, model, dataReceived = { str, requestId ->
-            when (val res = Events.Chat.Response.parse(str)) {
+        val future = this.lsp.sendChat(
+            id = id,
+            messages = messages,
+            model = model,
+            takeNote = false,
+            tools = tools,
+            dataReceived = { str, requestId ->
+                when (val res = Events.Chat.Response.parse(str)) {
 
-                is Events.Chat.Response.Choices -> {
-                    val message = Events.Chat.Response.formatToChat(res, requestId)
-                    this.postMessage(message)
+                    is Events.Chat.Response.Choices -> {
+                        val message = Events.Chat.Response.formatToChat(res, requestId)
+                        this.postMessage(message)
+                    }
+
+                    is Events.Chat.Response.UserMessage -> {
+                        val message = Events.Chat.Response.formatToChat(res, requestId)
+                        this.postMessage(message)
+                    }
+
+                    is Events.Chat.Response.ToolMessage -> {
+                        val message = Events.Chat.Response.formatToChat(res, requestId)
+                        this.postMessage(message)
+                    }
+
+                    is Events.Chat.Response.DetailMessage -> {
+                        val message = Events.Chat.Response.formatToChat(res, requestId)
+                        this.postMessage(message)
+                    }
                 }
-
-                is Events.Chat.Response.UserMessage -> {
-                    val message = Events.Chat.Response.formatToChat(res, requestId)
-                    this.postMessage(message)
-                }
-
-                is Events.Chat.Response.ToolMessage -> {
-                    val message = Events.Chat.Response.formatToChat(res, requestId)
-                    this.postMessage(message)
-                }
-
-                is Events.Chat.Response.DetailMessage -> {
-                    val message = Events.Chat.Response.formatToChat(res, requestId)
-                    this.postMessage(message)
-                }
-            }
-        }, dataReceiveEnded = { str ->
-            val res = Events.Chat.Response.ChatDone(str)
-            val message = Events.Chat.Response.formatToChat(res, id)
-            this.postMessage(message)
-        }, errorDataReceived = { json ->
-            val res = Events.Chat.Response.ChatError(json)
-            val message = Events.Chat.Response.formatToChat(res, id)
-            this.postMessage(message)
-        }, failedDataReceiveEnded = { e ->
-            val res = Events.Chat.Response.ChatFailedStream(e)
-            val message = Events.Chat.Response.formatToChat(res, id)
-            this.postMessage(message)
-        })
+            },
+            dataReceiveEnded = { str ->
+                val res = Events.Chat.Response.ChatDone(str)
+                val message = Events.Chat.Response.formatToChat(res, id)
+                this.postMessage(message)
+            },
+            errorDataReceived = { json ->
+                val res = Events.Chat.Response.ChatError(json)
+                val message = Events.Chat.Response.formatToChat(res, id)
+                this.postMessage(message)
+            },
+            failedDataReceiveEnded = { e ->
+                val res = Events.Chat.Response.ChatFailedStream(e)
+                val message = Events.Chat.Response.formatToChat(res, id)
+                this.postMessage(message)
+            })
 
         this.lastProcess = future
 
@@ -259,6 +274,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             val e = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
         }
     }
+
 
     private fun addEventListeners(id: String) {
         println("Adding ide event listeners")
@@ -361,6 +377,15 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         this.maybeRestore(id)
     }
 
+    private fun handleToolsRequest(id: String) {
+         this.lsp.getAvailableTools().also {
+             val tool = it.get()
+             val payload = Events.Tools.ResponsePayload(id, tool)
+             val message = Events.Tools.Resppnse(payload)
+             this.postMessage(message)
+        }
+    }
+
     private fun handleEvent(event: Events.FromChat) {
         // println("Event received: ${event}")
         when (event) {
@@ -372,11 +397,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             )
 
             is Events.AtCommands.Preview.Request -> this.handlePreviewFileRequest(event.id, event.query)
-            is Events.Chat.AskQuestion -> this.handleChat(event.id, event.messages, event.model, event.title)
+            is Events.Chat.AskQuestion -> this.handleChat(event.id, event.messages, event.model, event.tools, event.title)
             is Events.Chat.Save -> this.handleChatSave(event.id, event.messages, event.model)
             is Events.Chat.Stop -> this.handleChatStop(event.id)
             is Events.Editor.Paste -> this.handlePaste(event.id, event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.id, event.content)
+            is Events.Tools.Request -> this.handleToolsRequest(event.id)
             else -> Unit
         }
     }

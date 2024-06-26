@@ -429,6 +429,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         model: String,
         onlyDeterministicMessages: Boolean = false,
         takeNote: Boolean = false,
+        tools: Array<Tool> = emptyArray(),
         dataReceived: (String, String) -> Unit,
         dataReceiveEnded: (String) -> Unit,
         errorDataReceived: (JsonObject) -> Unit,
@@ -437,8 +438,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
         val parameters = mapOf("max_new_tokens" to 2048)
 
-        val tools = getTools(takeNote)
-        val maybeTools = if (tools.size > 0) tools else { null}
+        val maybeTools = if (tools.isNotEmpty()) tools else { null }
 
         val requestBody = Gson().toJson(mapOf(
             "messages" to messages.map {
@@ -472,11 +472,11 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
 
 
-    private fun getAvailableTools(): Future<Array<Tool>> {
+    fun getAvailableTools(): Future<Array<Tool>> {
         val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")
 
         val request = InferenceGlobalContext.connection.get(
-            url.resolve("/v1/at-tools-available"),
+            url.resolve("/v1/tools"),
             headers=headers,
             dataReceiveEnded = {},
             errorDataReceived = {}
@@ -489,15 +489,5 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
         return json
 
-    }
-
-    private fun getTools(takeNote: Boolean = false): List<Tool> {
-        return getAvailableTools().get().filter { tool ->
-            if(takeNote) {
-                tool.function.name == "remember_how_to_use_tools"
-            } else {
-                tool.function.name != "remember_how_to_use_tools"
-            }
-        }
     }
 }

@@ -132,23 +132,16 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
         panes.addTab(info)
         panes.select(info, true)
 
-//        val devTools = newPane.webView.cefBrowser.devTools
-//        val devToolsBroswer = JBCefBrowser.createBuilder()
-//            .setCefBrowser(devTools)
+
+//        val devToolsBrowser = JBCefBrowser.createBuilder()
+//            .setCefBrowser(newPane.webView.cefBrowser.devTools)
 //            .setClient(newPane.webView.jbCefClient)
 //            .build();
 //
-//        devToolsBroswer.openDevtools()
-
-        val devToolsBrowser = JBCefBrowser.createBuilder()
-            .setCefBrowser(newPane.webView.cefBrowser.devTools)
-            .setClient(newPane.webView.jbCefClient)
-            .build();
-
-        val devInfo = TabInfo(devToolsBrowser.component)
-        devInfo.text = "DevTools"
-        panes.addTab(devInfo)
-        devToolsBrowser.openDevtools()
+//        val devInfo = TabInfo(devToolsBrowser.component)
+//        devInfo.text = "DevTools"
+//        panes.addTab(devInfo)
+//        devToolsBrowser.openDevtools()
     }
 
     fun getComponent(): JComponent {

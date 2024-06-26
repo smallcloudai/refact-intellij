@@ -23,7 +23,7 @@ dependencies {
 
 
 group = "com.smallcloud"
-version = getVersionString("1.3.2")
+version = getVersionString("1.3.3")
 
 repositories {
     mavenCentral()
@@ -34,7 +34,7 @@ repositories {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#intellij-extension-type
 intellij {
 //    version.set("LATEST-EAP-SNAPSHOT")
-    version.set("2022.3.1")
+    version.set("2023.1.6")
     type.set("PC") // Target IDE Platform
 
     plugins.set(listOf(
@@ -55,7 +55,7 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("223")
+        sinceBuild.set("231")
         untilBuild.set("241.*")
     }
 

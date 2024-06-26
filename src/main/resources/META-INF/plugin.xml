@@ -176,7 +176,7 @@ integrated into a single package that follows your privacy settings.</p>
 <!--        For display shortcut on the pane, action must be with mask "Activate${id.filterNot { it.isWhitespace() }}ToolWindow"-->
         <action id="ActivateRefactChatToolWindow"
                 text="Open Refact Toolbox"
-                class="com.smallcloud.refactai.panes.gptchat.ChatGPTPaneInvokeAction">
+                class="com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeAction">
             <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
         </action>
 

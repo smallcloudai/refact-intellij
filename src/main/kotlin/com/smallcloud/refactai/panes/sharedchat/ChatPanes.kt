@@ -1,21 +1,17 @@
 package com.smallcloud.refactai.panes.sharedchat
 
-import com.google.gson.GsonBuilder
 import com.intellij.execution.ui.layout.impl.JBRunnerTabs
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.invokeLater
-import java.awt.BorderLayout
-import javax.swing.JPanel
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.containers.ContainerUtil
-import com.smallcloud.refactai.RefactAIBundle
+import java.awt.BorderLayout
 import javax.swing.JComponent
+import javax.swing.JPanel
 
 class ChatPanes(val project: Project, private val parent: Disposable) {
     private val paneBaseName = "Chat"
@@ -149,6 +145,10 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
 
     fun getComponent(): JComponent {
         return holder
+    }
+
+    fun requestFocus() {
+        panes.requestFocus()
     }
 
     fun getVisibleTabs(): List<TabInfo?> {

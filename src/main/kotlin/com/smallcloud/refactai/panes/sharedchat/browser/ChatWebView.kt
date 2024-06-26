@@ -91,7 +91,7 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
                 window.openLink(event.target.href); 
             } 
         });""".trimIndent()
-        browser?.executeJavaScript(script, browser?.url, 0)
+        browser?.executeJavaScript(script, browser.url, 0)
     }
 
     fun setUpJavaScriptMessageBus(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery): Boolean {

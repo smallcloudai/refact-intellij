@@ -1,17 +1,30 @@
 package com.smallcloud.refactai.settings
 
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.options.newEditor.SettingsDialog
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
+import com.intellij.util.SystemProperties
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.RefactAIBundle
+import java.awt.event.ActionEvent
+import java.awt.event.ActionListener
 import java.awt.event.KeyEvent
 import java.awt.event.KeyListener
+import javax.swing.JButton
 import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JPanel
+import kotlin.io.path.Path
 
 
 class AppSettingsComponent {
@@ -60,6 +73,27 @@ class AppSettingsComponent {
 
     val vecdbCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useVecDB")).apply {
         isVisible = true
+    }
+
+    val openCustomizationButton = JButton("Open Customization").apply {
+        val project = CommonDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext(preferredFocusedComponent))
+            ?: ProjectManager.getInstance().openProjects.firstOrNull()
+            ?: ProjectManager.getInstance().defaultProject
+
+        isVisible = project != ProjectManager.getInstance().defaultProject
+        addActionListener(object : ActionListener {
+            override fun actionPerformed(e: ActionEvent?) {
+                val file = Path(SystemProperties.getUserHome(), ".cache", "refact", "customization.yaml")
+                VirtualFileManager.getInstance().findFileByNioPath(file)?.let { vf ->
+                    val fileDescriptor = OpenFileDescriptor(project, vf)
+                    SettingsDialog.findInstance(preferredFocusedComponent)?.doCancelAction()
+                    ApplicationManager.getApplication().invokeLater {
+                        FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+                    }
+                }
+            }
+
+        })
     }
 
 
@@ -116,6 +150,9 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
+            addLabeledComponent(JBLabel("Customization").apply {
+                isVisible = openCustomizationButton.isVisible
+            }, openCustomizationButton, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
             addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
             addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
             addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)

@@ -17,6 +17,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.ui.components.JBLayeredPane
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
@@ -30,10 +31,13 @@ import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsState
 import org.jetbrains.annotations.NotNull
+import java.awt.GridLayout
 import java.beans.PropertyChangeListener
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
+import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JTextPane
 import javax.swing.UIManager
 
 
@@ -412,6 +416,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             this.handleEvent(event)
         }
     }
+
 
     val webView by lazy {
         browser.webView

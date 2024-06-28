@@ -42,6 +42,7 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
 
     private fun restoreTab(item: ChatHistoryItem) {
         val newPane = SharedChatPane(project)
+
         val component:  JComponent = newPane.webView.component
         val info = TabInfo(component)
         info.text = item.title ?: "Chat"
@@ -131,6 +132,7 @@ class ChatPanes(val project: Project, private val parent: Disposable) {
 
         panes.addTab(info)
         panes.select(info, true)
+
 
 
 //        val devToolsBrowser = JBCefBrowser.createBuilder()

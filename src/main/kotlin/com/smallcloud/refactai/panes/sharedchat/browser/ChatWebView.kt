@@ -13,9 +13,9 @@ import javax.swing.JComponent
 class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Disposable {
     private val jsPoolSize = "200"
 
-    init {
-        System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
-    }
+//    init {
+//        System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
+//    }
 
     fun setStyle() {
         val isDarkMode = UIUtil.isUnderDarcula()
@@ -32,7 +32,20 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
     }
 
     val webView by lazy {
-        val browser = JBCefBrowser.createBuilder().setOffScreenRendering(false).build()
+        val osName = System.getProperty("os.name").lowercase()
+        val useOsr = when {
+            osName.contains("mac") || osName.contains("darwin") -> false
+            osName.contains("win") -> false
+            osName.contains("nix") || osName.contains("nux") || osName.contains("aix") -> true
+            else -> true
+        }
+
+        val browser = JBCefBrowser
+            .createBuilder()
+            .setUrl("http://refactai/index.html")
+            .setOffScreenRendering(useOsr)
+            .build()
+
         browser.jbCefClient.setProperty(
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
             jsPoolSize,
@@ -41,7 +54,7 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 
-        browser.loadURL("http://refactai/index.html")
+
 
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowser.addHandler { msg ->
@@ -77,6 +90,8 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
             }
 
         }, browser.cefBrowser)
+
+        browser.createImmediately()
 
         browser
     }

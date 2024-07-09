@@ -275,7 +275,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         val fileDescriptor = OpenFileDescriptor(project, vf)
 
         ApplicationManager.getApplication().invokeLater {
-            val e = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+            FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
         }
     }
 

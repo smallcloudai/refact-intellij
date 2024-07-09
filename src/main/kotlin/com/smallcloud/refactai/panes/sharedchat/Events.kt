@@ -38,6 +38,9 @@ abstract class ChatMessage<T>(
     @Transient
     @SerializedName("tool_calls")
     open val toolCalls: Array<ToolCall>? = null,
+    @Transient
+    @SerializedName("tool_call_id")
+    open val toolCallId: String? = null,
 ): Serializable {
 }
 data class UserMessage(override val content: String): ChatMessage<String>(ChatRole.USER, content)
@@ -72,18 +75,12 @@ data class AssistantMessage(
 
 data class SystemMessage(override val content: String): ChatMessage<String>(ChatRole.SYSTEM, content)
 
-data class ToolMessageContent(
-    @SerializedName("tool_call_id")
-    val toolCallId: String,
-    val content: String,
-    @SerializedName("finish_reason")
-    val finishReason: String?
-)
-
-
 data class ToolMessage(
-    override val content: ToolMessageContent
-): ChatMessage<ToolMessageContent>(ChatRole.TOOL, content = content)
+    @SerializedName("tool_call_id")
+    override val toolCallId: String,
+    @SerializedName("content")
+    override val content: String,
+): ChatMessage<String>(ChatRole.TOOL, content = content, toolCallId = toolCallId)
 
 
 data class ContentFileMessage(override val content: Array<ChatContextFile>): ChatMessage<Array<ChatContextFile>>(
@@ -373,7 +370,13 @@ class Events {
                         val content = pair.get(1)
                         val obj = JsonObject()
                         obj.add("role", role)
-                        obj.add("content", content)
+
+                        if(role.asString == "tool") {
+                            obj.add("tool_call_id", content.asJsonObject.get("tool_call_id"))
+                            obj.add("content", content.asJsonObject.get("content"))
+                        } else {
+                            obj.add("content", content)
+                        }
                         if (role.asString == "assistant" && pair.size() == 3) {
                             obj.add("tool_calls", pair.get(2))
                         }
@@ -392,7 +395,12 @@ class Events {
                         val content = pair.get(1)
                         val obj = JsonObject()
                         obj.add("role", role)
-                        obj.add("content", content)
+                        if(role.asString == "tool") {
+                            obj.add("tool_call_id", content.asJsonObject.get("tool_call_id"))
+                            obj.add("content", content.asJsonObject.get("content"))
+                        } else {
+                            obj.add("content", content)
+                        }
                         if (role.asString == "assistant" && pair.size() == 3) {
                             obj.add("tool_calls", pair.get(2))
                         }
@@ -1136,7 +1144,10 @@ class Events {
                         val role = context.serialize(src.role, ChatRole::class.java)
                         val arr = JsonArray()
                         arr.add(role)
-                        arr.add(Gson().toJson(src.content))
+                        val obj = JsonObject()
+                        obj.addProperty("tool_call_id", src.toolCallId)
+                        obj.addProperty("content", src.content)
+                        arr.add(obj)
                         return arr;
                     }
                     is ContentFileMessage -> {

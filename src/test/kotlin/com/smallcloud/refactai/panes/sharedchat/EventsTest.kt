@@ -323,4 +323,16 @@ class EventsTest {
         assertEquals(expected, results)
     }
 
+    @Test
+    fun toolCallMessages() {
+        val msg = """{"type":"chat_question","payload":{"id":"490d985c-2bbe-4cb1-84b1-d8153a6fb99a","messages":[["user","In this project what is frog for?\n"],["assistant","",[{"function":{"arguments":"{\"query\": \"frog\"}","name":"search_workspace"},"index":0,"type":"function","id":"call_XRzVBmX0vVtuK1Xi34FMmu2m"},{"function":{"arguments":"{\"symbol\": \"frog\"}","name":"definition"},"index":1,"type":"function","id":"call_EO4S6qEuYPiaqJdAZz6Dou15"}]],["tool",{"tool_call_id":"call_XRzVBmX0vVtuK1Xi34FMmu2m","content":"performed vecdb search, results below"}],["tool",{"tool_call_id":"call_EO4S6qEuYPiaqJdAZz6Dou15","content":"Definition of `frog` haven't found by exact name, but found the close result`Frog`. You can call again with one of these other names:\nFrog\nbring_your_own_frog_to_work_day\ndraw_hello_frog\nfont\n"}],["context_file",[{"file_content":"", file_name":"tests/emergency_frog_situation/set_as_avatar.py","line1":1,"line2":32,"usefulness":0},{"file_content":"#","file_name":"/tests/emergency_frog_situation/jump_to_conclusions.py","line1":1,"line2":58,"usefulness":0}]],["assistant","frog",null],["user","Add a new frog\n"]],"title":"","model":"","attach_file":false,"tools":[{"function":{"description":"Find similar pieces of code or text using vector database","name":"search_workspace","parameters":{"properties":{"query":{"description":"Single line, paragraph or code sample.","type":"string"}},"type":"object","required":["query"]}},"type":"function"},{"function":{"description":"Find similar pieces of code using vector database, search scope limited to a single source file.","name":"search_file","parameters":{"properties":{"file_path":{"description":"Path to the file to search.","type":"string"},"query":{"description":"Single line, paragraph or code sample.","type":"string"}},"type":"object","required":["query","file_path"]}},"type":"function"},{"function":{"description":"Read the file, the same as cat shell command, but skeletonizes files that are too large.","name":"file","parameters":{"properties":{"path":{"description":"Either absolute path or preceeding_dirs/file.ext","type":"string"}},"type":"object","required":["path"]}},"type":"function"},{"function":{"description":"Read definition of a symbol in the project using AST","name":"definition","parameters":{"properties":{"symbol":{"description":"The exact name of a function, method, class, type alias. No spaces allowed.","type":"string"}},"type":"object","required":["symbol"]}},"type":"function"},{"function":{"description":"Find usages of a symbol within a project using AST","name":"references","parameters":{"properties":{"symbol":{"description":"The exact name of a function, method, class, type alias. No spaces allowed.","type":"string"}},"type":"object","required":["symbol"]}},"type":"function"}]}}"""
+
+        val result: Events.Chat.AskQuestion = Events.parse(msg) as Events.Chat.AskQuestion
+        val tool = result.messages[2]
+        println(tool)
+        assertEquals(ChatRole.TOOL, tool.role)
+        assertEquals("call_XRzVBmX0vVtuK1Xi34FMmu2m", tool.toolCallId)
+        assertEquals( "performed vecdb search, results below", tool.content)
+    }
+
 }

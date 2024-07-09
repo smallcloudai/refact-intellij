@@ -443,7 +443,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         val requestBody = Gson().toJson(mapOf(
             "messages" to messages.map {
                 val content = if(it.content is String) { it.content } else { Gson().toJson(it.content) }
-                mapOf("role" to it.role, "content" to content, "tool_calls" to it.toolCalls)
+                mapOf("role" to it.role, "content" to content, "tool_calls" to it.toolCalls, "tool_call_id" to it.toolCallId)
             },
             "model" to model,
             "parameters" to parameters,

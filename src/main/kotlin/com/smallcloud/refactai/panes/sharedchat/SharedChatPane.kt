@@ -11,6 +11,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.TextRange
@@ -30,6 +31,7 @@ import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestoreToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsState
+import com.smallcloud.refactai.settings.AppSettingsConfigurable
 import org.jetbrains.annotations.NotNull
 import java.awt.GridLayout
 import java.beans.PropertyChangeListener
@@ -390,6 +392,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+    private fun handleOpenSettings(id: String) {
+        ApplicationManager.getApplication().invokeLater {
+            ShowSettingsUtil.getInstance().showSettingsDialog(project, AppSettingsConfigurable::class.java)
+        }
+    }
+
     private fun handleEvent(event: Events.FromChat) {
         // println("Event received: ${event}")
         when (event) {
@@ -407,6 +415,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.Editor.Paste -> this.handlePaste(event.id, event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.id, event.content)
             is Events.Tools.Request -> this.handleToolsRequest(event.id)
+            is Events.OpenSettings -> this.handleOpenSettings(event.id)
             else -> Unit
         }
     }

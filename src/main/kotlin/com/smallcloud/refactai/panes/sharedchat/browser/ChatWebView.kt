@@ -59,6 +59,7 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowser.addHandler { msg ->
             val event = Events.parse(msg)
+
             if(event != null) {
                 this.messageHandler(event)
             }
@@ -67,7 +68,9 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
 
         val myJSQueryOpenInBrowserRedirectHyperlink = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowserRedirectHyperlink.addHandler { href ->
-            BrowserUtil.browse(href)
+            if(href.isNotEmpty()) {
+                BrowserUtil.browse(href)
+            }
             null
         }
 

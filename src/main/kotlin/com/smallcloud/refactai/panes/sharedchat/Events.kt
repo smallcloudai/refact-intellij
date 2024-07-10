@@ -304,6 +304,7 @@ class EventNames {
         REQUEST_PREVIEW_FILES("chat_request_preview_files"),
         REQUEST_PROMPTS("chat_request_prompts"),
         REQUEST_TOOLS("chat_request_has_tool_check"),
+        OPEN_SETTINGS("chat_open_settings")
 
     }
 
@@ -415,6 +416,7 @@ class Events {
                 EventNames.FromChat.PASTE_DIFF.value -> p2?.deserialize(payload, Editor.Paste::class.java)
                 EventNames.FromChat.REQUEST_CAPS.value -> p2?.deserialize(payload, Caps.Request::class.java)
                 EventNames.FromChat.REQUEST_TOOLS.value -> p2?.deserialize(payload, Tools.Request::class.java)
+                EventNames.FromChat.OPEN_SETTINGS.value -> p2?.deserialize(payload, OpenSettings::class.java)
                 else -> null
             }
         }
@@ -428,6 +430,7 @@ class Events {
         open val payload: Payload
     ): Serializable
 
+    data class OpenSettings(val id: String): FromChat(EventNames.FromChat.OPEN_SETTINGS, Payload(id))
 
     data class Ready(val id: String): FromChat(EventNames.FromChat.READY, Payload(id))
 

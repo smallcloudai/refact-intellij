@@ -13,9 +13,9 @@ import javax.swing.JComponent
 class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Disposable {
     private val jsPoolSize = "200"
 
-//    init {
-//        System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
-//    }
+    init {
+        System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
+    }
 
     fun setStyle() {
         val isDarkMode = UIUtil.isUnderDarcula()
@@ -53,8 +53,6 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
         browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
-
-
 
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowser.addHandler { msg ->

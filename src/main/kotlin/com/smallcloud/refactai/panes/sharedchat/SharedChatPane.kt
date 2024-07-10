@@ -387,7 +387,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
          this.lsp.getAvailableTools().also {
              val tool = it.get()
              val payload = Events.Tools.ResponsePayload(id, tool)
-             val message = Events.Tools.Resppnse(payload)
+             val message = Events.Tools.Response(payload)
              this.postMessage(message)
         }
     }

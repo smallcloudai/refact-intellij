@@ -317,7 +317,7 @@ class EventsTest {
         val tool = Tool(function = function, type="function")
 
         val payload = Events.Tools.ResponsePayload("foo", arrayOf(tool))
-        val message = Events.Tools.Resppnse(payload)
+        val message = Events.Tools.Response(payload)
         val results = Events.stringify(message)
         val expected = """{"type":"chat_receive_tools_chat","payload":{"id":"foo","tools":[{"function":{"description":"Find similar pieces of code using vector database","name":"workspace","parameters":{"properties":{"query":{"description":"Single line, paragraph or code sample.","type":"string"}},"type":"object","required":["query"]}},"type":"function"}]}}"""
         assertEquals(expected, results)

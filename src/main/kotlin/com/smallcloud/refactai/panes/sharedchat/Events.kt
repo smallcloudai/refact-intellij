@@ -123,6 +123,7 @@ class ChatHistorySerializer: JsonSerializer<ChatMessage<*>> {
             is AssistantMessage -> p2?.serialize(p0, AssistantMessage::class.java)
             is ContentFileMessage -> p2?.serialize(p0, ContentFileMessage::class.java)
             is SystemMessage -> p2?.serialize(p0, SystemMessage::class.java)
+            is ToolMessage -> p2?.serialize(p0, ToolMessage::class.java)
             else -> JsonNull.INSTANCE
         }
     }
@@ -467,7 +468,7 @@ class Events {
             }
         }
 
-        class Resppnse(payload: ResponsePayload): ToChat(EventNames.ToChat.RECEIVE_TOOLS, payload)
+        class Response(payload: ResponsePayload): ToChat(EventNames.ToChat.RECEIVE_TOOLS, payload)
     }
 
     class AtCommands {
@@ -1138,7 +1139,8 @@ class Events {
                         arr.add(role)
                         arr.add(src.content)
                         if(src.toolCalls != null) {
-                            arr.add(Gson().toJson(src.toolCalls))
+                            val toolCallsJson = context.serialize(src.toolCalls, Array<ToolCall>::class.java)
+                            arr.add(toolCallsJson)
                         }
                         return arr
                     }

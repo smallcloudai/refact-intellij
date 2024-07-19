@@ -195,7 +195,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         id: String,
         messages: ChatMessages,
         model: String,
-        tools: Array<Tool> = emptyArray(),
+        tools: Array<Tool>? = emptyArray(),
         title: String? = null) {
 
         val future = this.lsp.sendChat(

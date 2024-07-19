@@ -664,7 +664,7 @@ class Events {
             val id: String,
             val messages: ChatMessages,
             val model: String,
-            val tools: Array<Tool> = emptyArray(),
+            val tools: Array<Tool>? = emptyArray(),
             val title: String? = null,
             val attachFile: Boolean = false,
         ): FromChat(EventNames.FromChat.ASK_QUESTION, ThreadPayload(id, messages, model, title, attachFile)) {

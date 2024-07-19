@@ -429,7 +429,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         model: String,
         onlyDeterministicMessages: Boolean = false,
         takeNote: Boolean = false,
-        tools: Array<Tool> = emptyArray(),
+        tools: Array<Tool>? = emptyArray(),
         dataReceived: (String, String) -> Unit,
         dataReceiveEnded: (String) -> Unit,
         errorDataReceived: (JsonObject) -> Unit,
@@ -438,7 +438,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
         val parameters = mapOf("max_new_tokens" to 2048)
 
-        val maybeTools = if (tools.isNotEmpty()) tools else { null }
+        val maybeTools = if (!tools.isNullOrEmpty()) tools else { null }
 
         val requestBody = Gson().toJson(mapOf(
             "messages" to messages.map {

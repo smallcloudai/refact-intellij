@@ -38,7 +38,7 @@ data class LSPConfig(
             params.add("--ast")
         }
         if (astFileLimit != null) {
-            params.add("--ast-index-max-files")
+            params.add("--ast-max-files")
             params.add("$astFileLimit")
         }
         if (vecdb) {

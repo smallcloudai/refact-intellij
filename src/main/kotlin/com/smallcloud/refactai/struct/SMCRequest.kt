@@ -53,29 +53,3 @@ data class SMCRequest(
     var id: String = uuid(),
     var stat: UsageStatistic = UsageStatistic(),
 )
-
-@Deprecated("Will be removed in next release")
-data class SMCRequestBodyOld(
-    var sources: Map<String, String>,
-    var intent: String,
-    @SerializedName("function") var functionName: String,
-    @SerializedName("cursor_file") var cursorFile: String,
-    var cursor0: Int,
-    var cursor1: Int,
-    @SerializedName("max_tokens") var maxTokens: Int,
-    @SerializedName("max_edits") var maxEdits: Int,
-    @SerializedName("stop") var stopTokens: List<String>,
-    var temperature: Float = 0.8f,
-    var client: String = "",
-    var model: String = "",
-    var poi: List<POI>,
-    var stream: Boolean = true
-)
-
-@Deprecated("Will be removed in next release")
-data class SMCRequestOld(
-    var uri: URI,
-    var body: SMCRequestBodyOld,
-    var token: String,
-    var stat: UsageStatistic = UsageStatistic(),
-)

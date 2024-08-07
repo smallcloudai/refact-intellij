@@ -425,6 +425,10 @@ class Events {
                     val host = p2?.deserialize<Host>(payload, Host::class.java) ?: return null
                     Setup.SetupHost(host)
                 }
+                EventNames.FromChat.OPEN_EXTERNAL_URL.value -> {
+                    val url = payload.asJsonObject?.get("url")?.asString ?: return null
+                    Setup.OpenExternalUrl(url)
+                }
                 else -> null
             }
         }
@@ -1055,6 +1059,8 @@ class Events {
         ): Payload(id)
 
         data class SetupHost(val host: Host): FromChat(EventNames.FromChat.SETUP_HOST, SetupHostPayload("", host))
+
+        data class OpenExternalUrl(val url: String): FromChat(EventNames.FromChat.OPEN_EXTERNAL_URL, Payload(""))
     }
 
     class Editor {

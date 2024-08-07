@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -183,6 +184,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 settings.userInferenceUri = host.endpointAddress
             }
         }
+    }
+
+    private fun openExternalUrl(url: String) {
+        BrowserUtil.browse(url)
     }
 
     private fun handleCompletion(
@@ -434,6 +439,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.Tools.Request -> this.handleToolsRequest(event.id)
             is Events.OpenSettings -> this.handleOpenSettings(event.id)
             is Events.Setup.SetupHost -> this.handleSetupHost(event.host)
+            is Events.Setup.OpenExternalUrl -> this.openExternalUrl(event.url)
             else -> Unit
         }
     }

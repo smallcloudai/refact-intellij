@@ -2,8 +2,12 @@ package com.smallcloud.refactai.panes.sharedchat.browser
 
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.jcef.*
+import com.intellij.util.messages.MessageBus
 import com.intellij.util.ui.UIUtil
+import com.smallcloud.refactai.PluginState
+import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.panes.sharedchat.Events
 import com.smallcloud.refactai.settings.AppSettingsState
 import org.cef.CefApp
@@ -56,14 +60,7 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
-        myJSQueryOpenInBrowser.addHandler { msg ->
-            val event = Events.parse(msg)
-
-            if(event != null) {
-                this.messageHandler(event)
-            }
-            null
-        }
+        addMessageHandler(myJSQueryOpenInBrowser)
 
         val myJSQueryOpenInBrowserRedirectHyperlink = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowserRedirectHyperlink.addHandler { href ->
@@ -83,32 +80,57 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
                 canGoBack: Boolean,
                 canGoForward: Boolean
             ) {
-                if (!setupReact) {
-                    setupReact = true
-                    setUpReact(browser)
+                if(isLoading) {
+                    return;
                 }
 
                 if(!installedScript) {
                     installedScript = setUpJavaScriptMessageBus(browser, myJSQueryOpenInBrowser)
                 }
 
-                if(!isLoading) {
-                    setUpJavaScriptMessageBusRedirectHyperlink(browser, myJSQueryOpenInBrowserRedirectHyperlink)
-                    setStyle()
+                if (!setupReact) {
+                    setupReact = true
+                    setUpReact(browser)
                 }
+
+                setUpJavaScriptMessageBusRedirectHyperlink(browser, myJSQueryOpenInBrowserRedirectHyperlink)
+                setStyle()
             }
 
         }, browser.cefBrowser)
+
+        val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
+        messageBus
+            .connect(PluginState.instance)
+            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+                override fun apiKeyChanged(newApiKey: String?) {
+                    setupReact = false
+                    installedScript = false
+                    browser.cefBrowser.reload()
+                    addMessageHandler(myJSQueryOpenInBrowser)
+                }
+            })
 
         browser.createImmediately()
 
         browser
     }
 
+    fun addMessageHandler(myJSQueryOpenInBrowser: JBCefJSQuery) {
+        myJSQueryOpenInBrowser.addHandler { msg ->
+            val event = Events.parse(msg)
+
+            if(event != null) {
+                messageHandler(event)
+            }
+            null
+        }
+    }
+
     fun setUpReact(browser: CefBrowser) {
         val settings = AppSettingsState.instance
         val script = """
-        window.onload = function() {
+        function loadChatJs() {
             const element = document.getElementById("refact-chat");
             const options = {
               host: "jetbrains",
@@ -126,7 +148,9 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
               addressURL: "${if (settings.userInferenceUri == null) "" else "${settings.userInferenceUri}" }"
             };
             RefactChat.renderApp(element, options);
-        };""".trimIndent()
+        };
+        loadChatJs();
+        """.trimIndent()
         browser.executeJavaScript(script, browser.url, 0)
     }
 

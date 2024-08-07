@@ -29,25 +29,4 @@
         <div id="refact-chat"></div>
     </body>
     <script type="application/javascript" src="http://refactai/dist/chat/index.umd.cjs"></script>
-    <script>
-        window.onload = function() {
-            const element = document.getElementById("refact-chat");
-            const options = {
-              host: "jetbrains",
-              tabbed: false,
-              themeProps: {
-                accentColor: "gray",
-                scaling: "90%",
-                hasBackground: false
-              },
-              // TODO: set the following options to true if the features are enabled
-              features: {
-                vecdb: false,
-                ast: true,
-              }
-            };
-            RefactChat.renderApp(element, options);
-        };
-
-    </script>
 </html>

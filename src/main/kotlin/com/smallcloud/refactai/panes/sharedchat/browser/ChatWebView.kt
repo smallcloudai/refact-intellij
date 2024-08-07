@@ -5,6 +5,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.ui.jcef.*
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.panes.sharedchat.Events
+import com.smallcloud.refactai.settings.AppSettingsState
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
@@ -73,6 +74,7 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
         }
 
         var installedScript = false
+        var setupReact = false
 
         browser.jbCefClient.addLoadHandler(object: CefLoadHandlerAdapter() {
             override fun onLoadingStateChange(
@@ -81,9 +83,15 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
                 canGoBack: Boolean,
                 canGoForward: Boolean
             ) {
+                if (!setupReact) {
+                    setupReact = true
+                    setUpReact(browser)
+                }
+
                 if(!installedScript) {
                     installedScript = setUpJavaScriptMessageBus(browser, myJSQueryOpenInBrowser)
                 }
+
                 if(!isLoading) {
                     setUpJavaScriptMessageBusRedirectHyperlink(browser, myJSQueryOpenInBrowserRedirectHyperlink)
                     setStyle()
@@ -95,6 +103,31 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
         browser.createImmediately()
 
         browser
+    }
+
+    fun setUpReact(browser: CefBrowser) {
+        val settings = AppSettingsState.instance
+        val script = """
+        window.onload = function() {
+            const element = document.getElementById("refact-chat");
+            const options = {
+              host: "jetbrains",
+              tabbed: false,
+              themeProps: {
+                accentColor: "gray",
+                scaling: "90%",
+                hasBackground: false
+              },
+              features: {
+                vecdb: ${settings.vecdbIsEnabled},
+                ast: ${settings.astIsEnabled},
+              },
+              apiKey: "${if (settings.apiKey == null) "" else "${settings.apiKey}" }",
+              addressURL: "${if (settings.userInferenceUri == null) "" else "${settings.userInferenceUri}" }"
+            };
+            RefactChat.renderApp(element, options);
+        };""".trimIndent()
+        browser.executeJavaScript(script, browser.url, 0)
     }
 
     fun setUpJavaScriptMessageBusRedirectHyperlink(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery) {

@@ -18,9 +18,9 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.LightVirtualFile
-import com.intellij.ui.components.JBLayeredPane
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.UIUtil
+import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.lsp.Tool
@@ -32,14 +32,12 @@ import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
+import com.smallcloud.refactai.settings.Host
 import org.jetbrains.annotations.NotNull
-import java.awt.GridLayout
 import java.beans.PropertyChangeListener
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
-import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.JTextPane
 import javax.swing.UIManager
 
 
@@ -165,6 +163,25 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             val payload = Events.SystemPrompts.SystemPromptsPayload(id, prompts)
             val message: Events.SystemPrompts.Receive = Events.SystemPrompts.Receive(payload)
             this.postMessage(message)
+        }
+    }
+
+    private fun handleSetupHost(host: Host) {
+        val accountManager = AccountManager.instance;
+        val settings = AppSettingsState.instance
+        when (host) {
+            is Host.CloudHost -> {
+                accountManager.apiKey = host.apiKey;
+                settings.userInferenceUri = "refact";
+            }
+            is Host.Enterprise -> {
+                accountManager.apiKey = host.apiKey
+                settings.userInferenceUri = host.endpointAddress
+            }
+            is Host.SelfHost -> {
+                accountManager.apiKey = "any-key-will-work"
+                settings.userInferenceUri = host.endpointAddress
+            }
         }
     }
 
@@ -416,6 +433,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.Editor.NewFile -> this.handleNewFile(event.id, event.content)
             is Events.Tools.Request -> this.handleToolsRequest(event.id)
             is Events.OpenSettings -> this.handleOpenSettings(event.id)
+            is Events.Setup.SetupHost -> this.handleSetupHost(event.host)
             else -> Unit
         }
     }

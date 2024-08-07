@@ -6,6 +6,8 @@ import com.smallcloud.refactai.lsp.LSPCapabilities
 import com.smallcloud.refactai.lsp.Tool
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.Response.ResponsePayload
 import com.smallcloud.refactai.panes.sharedchat.Events.Chat.ResponseDeserializer
+import com.smallcloud.refactai.settings.Host
+import com.smallcloud.refactai.settings.HostDeserializer
 import java.io.Serializable
 import java.lang.reflect.Type
 
@@ -305,8 +307,9 @@ class EventNames {
         REQUEST_PREVIEW_FILES("chat_request_preview_files"),
         REQUEST_PROMPTS("chat_request_prompts"),
         REQUEST_TOOLS("chat_request_has_tool_check"),
-        OPEN_SETTINGS("chat_open_settings")
-
+        OPEN_SETTINGS("chat_open_settings"),
+        SETUP_HOST("setup_host"),
+        OPEN_EXTERNAL_URL("open_external_url")
     }
 
     enum class ToChat(val value: String) {
@@ -418,6 +421,10 @@ class Events {
                 EventNames.FromChat.REQUEST_CAPS.value -> p2?.deserialize(payload, Caps.Request::class.java)
                 EventNames.FromChat.REQUEST_TOOLS.value -> p2?.deserialize(payload, Tools.Request::class.java)
                 EventNames.FromChat.OPEN_SETTINGS.value -> p2?.deserialize(payload, OpenSettings::class.java)
+                EventNames.FromChat.SETUP_HOST.value -> {
+                    val host = p2?.deserialize<Host>(payload, Host::class.java) ?: return null
+                    Setup.SetupHost(host)
+                }
                 else -> null
             }
         }
@@ -1041,6 +1048,15 @@ class Events {
 
     }
 
+    class Setup {
+        data class SetupHostPayload(
+            override val id: String,
+            val host: Host
+        ): Payload(id)
+
+        data class SetupHost(val host: Host): FromChat(EventNames.FromChat.SETUP_HOST, SetupHostPayload("", host))
+    }
+
     class Editor {
         data class ContentPayload(
             override val id: String,
@@ -1172,10 +1188,11 @@ class Events {
 
         val gson = GsonBuilder()
              .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
-            .registerTypeAdapter(AtCommands.Preview.Response::class.java, AtCommands.Preview.ResponseDeserializer())
+             .registerTypeAdapter(AtCommands.Preview.Response::class.java, AtCommands.Preview.ResponseDeserializer())
              .registerTypeAdapter(ChatMessage::class.java, ChatMessageDeserializer())
              .registerTypeHierarchyAdapter(ChatMessage::class.java, MessageSerializer())
-           .create()
+             .registerTypeAdapter(Host::class.java, HostDeserializer())
+             .create()
 
         fun parse(msg: String?): FromChat? {
             return gson.fromJson(msg, FromChat::class.java)

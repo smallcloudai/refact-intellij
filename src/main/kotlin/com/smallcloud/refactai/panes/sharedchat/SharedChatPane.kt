@@ -22,6 +22,7 @@ import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.account.AccountManager
+import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.lsp.Tool
@@ -174,6 +175,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Host.CloudHost -> {
                 accountManager.apiKey = host.apiKey;
                 settings.userInferenceUri = "refact";
+                ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
             }
             is Host.Enterprise -> {
                 accountManager.apiKey = host.apiKey

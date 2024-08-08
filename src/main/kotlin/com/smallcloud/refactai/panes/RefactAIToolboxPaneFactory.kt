@@ -31,7 +31,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()
-        val chatPanes = ChatPanes(project, toolWindow.disposable)
+        val chatPanes = ChatPanes(project)
         val content: Content = contentFactory.createContent(chatPanes.getComponent(), "Chat", false)
         content.isCloseable = false
         content.putUserData(panesKey, chatPanes)

@@ -130,26 +130,32 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
     fun setUpReact(browser: CefBrowser) {
         val settings = AppSettingsState.instance
         val script = """
+        const options = {
+          host: "jetbrains",
+          tabbed: false,
+          themeProps: {
+            accentColor: "gray",
+            scaling: "90%",
+            hasBackground: false
+          },
+          features: {
+            vecdb: ${settings.vecdbIsEnabled},
+            ast: ${settings.astIsEnabled},
+          },
+          apiKey: "${if (settings.apiKey == null) "" else "${settings.apiKey}" }",
+          addressURL: "${if (settings.userInferenceUri == null) "" else "${settings.userInferenceUri}" }"
+        };
+        window.__INITIAL_STATE = options;
+        
         function loadChatJs() {
             const element = document.getElementById("refact-chat");
-            const options = {
-              host: "jetbrains",
-              tabbed: false,
-              themeProps: {
-                accentColor: "gray",
-                scaling: "90%",
-                hasBackground: false
-              },
-              features: {
-                vecdb: ${settings.vecdbIsEnabled},
-                ast: ${settings.astIsEnabled},
-              },
-              apiKey: "${if (settings.apiKey == null) "" else "${settings.apiKey}" }",
-              addressURL: "${if (settings.userInferenceUri == null) "" else "${settings.userInferenceUri}" }"
-            };
-            RefactChat.renderApp(element, options);
+            RefactChat.render(element, options);
         };
-        loadChatJs();
+        
+        const script = document.createElement("script");
+        script.onload = loadChatJs;
+        script.src = "http://refactai/dist/chat/index.umd.cjs";
+        document.head.appendChild(script);
         """.trimIndent()
         browser.executeJavaScript(script, browser.url, 0)
     }

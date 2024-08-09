@@ -192,6 +192,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         BrowserUtil.browse(url)
     }
 
+    private fun logOut() {
+        AccountManager.instance.logout()
+    }
+
     private fun handleCompletion(
         id: String,
         query: String,
@@ -423,7 +427,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handleEvent(event: Events.FromChat) {
-        // println("Event received: ${event}")
+        // println("Event received: $event")
         when (event) {
             is Events.Ready -> this.handleReadyMessage(event.id)
             is Events.Caps.Request -> this.handleCaps(event.id)
@@ -442,6 +446,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.OpenSettings -> this.handleOpenSettings(event.id)
             is Events.Setup.SetupHost -> this.handleSetupHost(event.host)
             is Events.Setup.OpenExternalUrl -> this.openExternalUrl(event.url)
+            is Events.Setup.LogOut -> this.logOut()
             else -> Unit
         }
     }

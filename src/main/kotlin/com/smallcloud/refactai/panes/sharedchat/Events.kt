@@ -309,7 +309,8 @@ class EventNames {
         REQUEST_TOOLS("chat_request_has_tool_check"),
         OPEN_SETTINGS("chat_open_settings"),
         SETUP_HOST("setup_host"),
-        OPEN_EXTERNAL_URL("open_external_url")
+        OPEN_EXTERNAL_URL("open_external_url"),
+        LOG_OUT("log_out")
     }
 
     enum class ToChat(val value: String) {
@@ -359,6 +360,12 @@ class Events {
     private class FromChatDeserializer : JsonDeserializer<FromChat> {
         override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): FromChat? {
             val type = p0?.asJsonObject?.get("type")?.asString
+
+            // events without payload
+            if (type == EventNames.FromChat.LOG_OUT.value) {
+                return Setup.LogOut()
+            }
+
             val payload = p0?.asJsonObject?.get("payload")
             if(type == null || payload == null) return null
 
@@ -1061,6 +1068,8 @@ class Events {
         data class SetupHost(val host: Host): FromChat(EventNames.FromChat.SETUP_HOST, SetupHostPayload("", host))
 
         data class OpenExternalUrl(val url: String): FromChat(EventNames.FromChat.OPEN_EXTERNAL_URL, Payload(""))
+
+        class LogOut: FromChat(EventNames.FromChat.LOG_OUT, Payload(""))
     }
 
     class Editor {

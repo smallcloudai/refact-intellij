@@ -3,6 +3,8 @@ package com.smallcloud.refactai.panes.sharedchat.browser
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.keymap.Keymap
+import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.ui.jcef.*
 import com.intellij.util.messages.MessageBus
 import com.intellij.util.ui.UIUtil
@@ -14,6 +16,21 @@ import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import javax.swing.JComponent
+import com.intellij.openapi.keymap.KeymapUtil
+
+
+fun getActionKeybinding(actionId: String): String {
+    // Get the KeymapManager instance
+    val keymapManager: KeymapManager = KeymapManager.getInstance()
+
+    // Get the active keymap
+    val activeKeymap: Keymap = keymapManager.activeKeymap
+
+    // Find the shortcuts for the given action ID
+    val shortcuts = activeKeymap.getShortcuts(actionId).toList()
+
+    return KeymapUtil.getShortcutText(shortcuts[0])
+}
 
 class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Disposable {
     private val jsPoolSize = "200"
@@ -128,9 +145,11 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
     }
 
     fun setUpReact(browser: CefBrowser) {
+        val completeManual = getActionKeybinding("ForceCompletionAction")
+
         val settings = AppSettingsState.instance
         val script = """
-        const options = {
+        const config = {
           host: "jetbrains",
           tabbed: false,
           themeProps: {
@@ -142,14 +161,17 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
             vecdb: ${settings.vecdbIsEnabled},
             ast: ${settings.astIsEnabled},
           },
+          keyBindings: {
+            completeManual: "$completeManual",
+          },
           apiKey: "${if (settings.apiKey == null) "" else "${settings.apiKey}" }",
           addressURL: "${if (settings.userInferenceUri == null) "" else "${settings.userInferenceUri}" }"
         };
-        window.__INITIAL_STATE = options;
+        window.__INITIAL_STATE__ = { config };
         
         function loadChatJs() {
             const element = document.getElementById("refact-chat");
-            RefactChat.render(element, options);
+            RefactChat.render(element, config);
         };
         
         const script = document.createElement("script");

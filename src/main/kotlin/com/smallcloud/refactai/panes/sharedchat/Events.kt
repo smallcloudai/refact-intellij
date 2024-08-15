@@ -285,7 +285,7 @@ class Events {
             val themeProps: Config.ThemeProps?,
             val lspPort: Int,
             val apiKey: String?,
-            val addressUrl: String?,
+            val addressURL: String?,
             val keyBindings: Config.KeyBindings,
             val tabbed: Boolean? = false,
             val host: String? = "jetbrains"

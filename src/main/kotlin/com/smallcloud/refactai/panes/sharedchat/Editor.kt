@@ -58,10 +58,10 @@ class Editor (val project: Project) {
         val themeProps = Events.Config.ThemeProps(mode)
         val apiKey = instance.apiKey
         val lspPort = lsp.url.port
-        val addressUrl = AppSettingsState.instance.userInferenceUri;
+        val addressURL = AppSettingsState.instance.userInferenceUri;
         val keyBindings = Events.Config.KeyBindings(getActionKeybinding("ForceCompletionAction"))
 
-        return Events.Config.UpdatePayload(features, themeProps, lspPort, apiKey, addressUrl, keyBindings)
+        return Events.Config.UpdatePayload(features, themeProps, lspPort, apiKey, addressURL, keyBindings)
     }
 
     fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo) -> Unit) {

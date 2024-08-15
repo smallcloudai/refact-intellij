@@ -45,8 +45,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun sendSelectedSnippet() {
         this.editor.getSelectedSnippet { snippet ->
-            val payload = Editor.SetSnippetPayload(snippet)
-            val message = Editor.SetSnippetToChat(payload)
+            val message = Editor.SetSnippetToChat(snippet)
             this.postMessage(message)
         }
     }
@@ -176,19 +175,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
 
-    // TODO: add the event listeners without waiting for ready message
-    private fun handleReadyMessage() {
-
-        //TODO:  active file info and selected snippet can be added in the initial state.
-//        this.sendActiveFileInfo()
-    //        this.sendSelectedSnippet()
-        // TODO: add this somewhere else
-       //  this.addEventListeners()
-        // this.sendUserConfig()
-        // this.maybeRestore(id)
-    }
-
-
     private fun handleOpenSettings() {
         ApplicationManager.getApplication().invokeLater {
             ShowSettingsUtil.getInstance().showSettingsDialog(project, AppSettingsConfigurable::class.java)
@@ -242,6 +228,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun postMessage(message: Events.ToChat<*>?) {
+//        println("\n#### SharedChatPane.postMessage ####")
+//        println(message)
         this.browser.postMessage(message)
     }
 

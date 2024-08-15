@@ -261,13 +261,13 @@ class Events {
             val code: String = "",
             val path: String = "",
             val basename: String = "",
-        )
+        ): Payload()
 
         data class SetSnippetPayload(
             val snippet: Snippet
         ): Payload()
 
-        class SetSnippetToChat(payload: SetSnippetPayload): ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
+        class SetSnippetToChat(payload: Snippet): ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
 
     }
 

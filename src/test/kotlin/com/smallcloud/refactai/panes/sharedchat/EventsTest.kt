@@ -10,10 +10,9 @@ class EventsTest {
     @Test
     fun formatSnippetToChatTest() {
         val snippet = Events.Editor.Snippet()
-        val payload = Editor.SetSnippetPayload(snippet)
-        val message = Editor.SetSnippetToChat(payload)
+        val message = Editor.SetSnippetToChat(snippet)
         val result = Events.stringify(message)
-        val expected = """{"type":"selected_snippet/set","payload":{"snippet":{"language":"","code":"","path":"","basename":""}}}"""
+        val expected = """{"type":"selected_snippet/set","payload":{"language":"","code":"","path":"","basename":""}}"""
         assertEquals(expected, result)
     }
 
@@ -35,7 +34,7 @@ class EventsTest {
             Events.Config.ThemeProps("light"),
             8001,
             "apiKey",
-            addressUrl = "http://127.0.0.1;8001",
+            addressURL = "http://127.0.0.1;8001",
             Events.Config.KeyBindings("foo"))
         val message = Events.Config.Update(payload)
         val result = Events.stringify(message)

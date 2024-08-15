@@ -144,8 +144,6 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
 
     fun addMessageHandler(myJSQueryOpenInBrowser: JBCefJSQuery) {
         myJSQueryOpenInBrowser.addHandler { msg ->
-//            println("\n### Event ###")
-//            println(msg);
             val event = Events.parse(msg)
 
             if(event != null) {
@@ -158,22 +156,30 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
     fun setUpReact(browser: CefBrowser) {
         val config = this.editor.getUserConfig()
         val configJson = Gson().toJson(config)
-        val script = """
-        const config = ${configJson};
-        window.__INITIAL_STATE__ = { config };
-        
-        function loadChatJs() {
-            const element = document.getElementById("refact-chat");
-            RefactChat.render(element, config);
-        };
-        
-        const script = document.createElement("script");
-        script.onload = loadChatJs;
-        script.src = "http://refactai/dist/chat/index.umd.cjs";
-        document.head.appendChild(script);
-        """.trimIndent()
-        println(script)
-        browser.executeJavaScript(script, browser.url, 0)
+        this.editor.getActiveFileInfo { file ->
+            val fileJson = Gson().toJson(file)
+            this.editor.getSelectedSnippet { snippet ->
+                val snippetJson = Gson().toJson(snippet)
+                val script = """
+                    const config = ${configJson};
+                    const active_file = ${fileJson};
+                    const selected_snippet = ${snippetJson};
+                    window.__INITIAL_STATE__ = { config, active_file, selected_snippet };
+                    
+                    function loadChatJs() {
+                        const element = document.getElementById("refact-chat");
+                        RefactChat.render(element, config);
+                    };
+                    
+                    const script = document.createElement("script");
+                    script.onload = loadChatJs;
+                    script.src = "http://refactai/dist/chat/index.umd.cjs";
+                    document.head.appendChild(script);
+                    """.trimIndent()
+                println(script)
+                browser.executeJavaScript(script, browser.url, 0)
+            }
+        }
     }
 
     fun setUpJavaScriptMessageBusRedirectHyperlink(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery) {

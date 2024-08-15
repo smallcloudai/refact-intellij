@@ -147,6 +147,8 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
     fun setUpReact(browser: CefBrowser) {
         val completeManual = getActionKeybinding("ForceCompletionAction")
 
+        // TODO: Add lspPort to the initial state.
+        // TODO: Add appearance: "light" or "dark" to themeProps
         val settings = AppSettingsState.instance
         val script = """
         const config = {
@@ -208,9 +210,10 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
         return false
     }
 
-    fun postMessage(message: Events.ToChat?) {
+    fun postMessage(message: Events.ToChat<*>?) {
         if(message != null) {
             val json = Events.stringify(message)
+            println("post message json: $json")
             this.postMessage(json)
         }
     }

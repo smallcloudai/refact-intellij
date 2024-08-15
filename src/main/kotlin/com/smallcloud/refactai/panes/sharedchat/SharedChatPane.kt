@@ -25,11 +25,8 @@ import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
-import com.smallcloud.refactai.lsp.Tool
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.FileInfoPayload
-import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestorePayload
-import com.smallcloud.refactai.panes.sharedchat.Events.Chat.RestoreToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsState
@@ -45,13 +42,7 @@ import javax.swing.UIManager
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
-    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
-
     var id: String? = null;
-    private var defaultChatModel: String? = null
-    private var chatThreadToRestore: Events.Chat.Thread? = null
-    private var lastProcess: CompletableFuture<Future<*>>? = null;
-
 
     private fun getLanguage(fm: FileEditorManager): Language? {
         val editor = fm.selectedTextEditor
@@ -62,6 +53,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         return language
     }
 
+    // TODO: id isn't part of the payload
     private fun sendSelectedSnippet(id: String) {
         this.getSelectedSnippet { snippet ->
             val payload = Editor.SetSnippetPayload(id, snippet)
@@ -70,6 +62,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+    // TODO: id isn't needed anymore
     private fun sendUserConfig(id: String) {
         val hasAst = AppSettingsState.instance.astIsEnabled
         val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
@@ -142,28 +135,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+
+    // TODO: id isn't part of the payload
     private fun sendActiveFileInfo(id: String) {
         this.getActiveFileInfo { file ->
             val payload = FileInfoPayload(id, file)
             val message = ActiveFileToChat(payload)
-            this.postMessage(message)
-        }
-    }
-
-    private fun handleCaps(id: String) {
-        this.lsp.fetchCaps().also { caps ->
-            val res = caps.get()
-            val message: Events.Caps.Receive = Events.Caps.Receive(id, res)
-            this.defaultChatModel = res.codeChatDefaultModel
-            this.postMessage(message)
-        }
-    }
-
-    private fun handleSystemPrompts(id: String) {
-        this.lsp.fetchSystemPrompts().also { res ->
-            val prompts: SystemPromptMap = res.get()
-            val payload = Events.SystemPrompts.SystemPromptsPayload(id, prompts)
-            val message: Events.SystemPrompts.Receive = Events.SystemPrompts.Receive(payload)
             this.postMessage(message)
         }
     }
@@ -194,96 +171,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun logOut() {
         AccountManager.instance.logout()
-    }
-
-    private fun handleCompletion(
-        id: String,
-        query: String,
-        cursor: Int,
-        number: Int = 5,
-    ) {
-        AppExecutorUtil.getAppExecutorService().submit {
-            try {
-                this.lsp.fetchCommandCompletion(query, cursor, number).also { res ->
-                    val completions = res.get()
-                    val payload = Events.AtCommands.Completion.CompletionPayload(
-                        id, completions.completions, completions.replace, completions.isCmdExecutable
-                    )
-                    val message = Events.AtCommands.Completion.Receive(payload)
-                    this.postMessage(message)
-                }
-            } catch (e: Exception) {
-                println("Commands error")
-                println(e)
-            }
-        }
-    }
-
-    private fun handleChat(
-        id: String,
-        messages: ChatMessages,
-        model: String,
-        tools: Array<Tool>? = emptyArray(),
-        title: String? = null) {
-
-        val future = this.lsp.sendChat(
-            id = id,
-            messages = messages,
-            model = model,
-            takeNote = false,
-            tools = tools,
-            dataReceived = { str, requestId ->
-                when (val res = Events.Chat.Response.parse(str)) {
-
-                    is Events.Chat.Response.Choices -> {
-                        val message = Events.Chat.Response.formatToChat(res, requestId)
-                        this.postMessage(message)
-                    }
-
-                    is Events.Chat.Response.UserMessage -> {
-                        val message = Events.Chat.Response.formatToChat(res, requestId)
-                        this.postMessage(message)
-                    }
-
-                    is Events.Chat.Response.ToolMessage -> {
-                        val message = Events.Chat.Response.formatToChat(res, requestId)
-                        this.postMessage(message)
-                    }
-
-                    is Events.Chat.Response.DetailMessage -> {
-                        val message = Events.Chat.Response.formatToChat(res, requestId)
-                        this.postMessage(message)
-                    }
-                }
-            },
-            dataReceiveEnded = { str ->
-                val res = Events.Chat.Response.ChatDone(str)
-                val message = Events.Chat.Response.formatToChat(res, id)
-                this.postMessage(message)
-            },
-            errorDataReceived = { json ->
-                val res = Events.Chat.Response.ChatError(json)
-                val message = Events.Chat.Response.formatToChat(res, id)
-                this.postMessage(message)
-            },
-            failedDataReceiveEnded = { e ->
-                val res = Events.Chat.Response.ChatFailedStream(e)
-                val message = Events.Chat.Response.formatToChat(res, id)
-                this.postMessage(message)
-            })
-
-        this.lastProcess = future
-
-    }
-
-    private fun handleChatSave(id: String, messages: ChatMessages, maybeModel: String) {
-        val model = maybeModel.ifEmpty { this.defaultChatModel ?: "" }
-        ChatHistory.instance.state.save(id, messages, model)
-    }
-
-    fun handleChatStop(id: String) {
-        // TODO: stop the stream from the lsp
-        this.lastProcess?.get()?.cancel(true)
     }
 
     private fun handlePaste(id: String, content: String) {
@@ -371,54 +258,18 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    fun restoreWhenReady(id: String, messages: ChatMessages, model: String) {
-        val chatThread = Events.Chat.Thread(id, messages, model)
-        this.chatThreadToRestore = chatThread
-    }
 
-    private fun maybeRestore(id: String) {
-        if (this.chatThreadToRestore != null) {
-            val payload = RestorePayload(id, this.chatThreadToRestore!!)
-            val event = RestoreToChat(payload)
-            this.id = payload.id
-            this.postMessage(event)
-            this.chatThreadToRestore = null
-        }
-    }
-
-    private fun handlePreviewFileRequest(id: String, query: String) {
-        AppExecutorUtil.getAppExecutorService().submit {
-            try {
-                this.lsp.fetchCommandPreview(query).also { res ->
-                    val preview = res.get()
-                    val payload = Events.AtCommands.Preview.PreviewPayload(id, preview.messages)
-                    val message = Events.AtCommands.Preview.Receive(payload)
-                    this.postMessage(message)
-                }
-            } catch (e: Exception) {
-                println("Command preview error")
-                println(e)
-            }
-        }
-    }
-
+    // TODO: add the event listeners without waiting for ready message
     private fun handleReadyMessage(id: String) {
         this.id = id;
+        // active file info can bee added in the intaial state
         this.sendActiveFileInfo(id)
         this.sendSelectedSnippet(id)
         this.addEventListeners(id)
         this.sendUserConfig(id)
-        this.maybeRestore(id)
+        // this.maybeRestore(id)
     }
 
-    private fun handleToolsRequest(id: String) {
-         this.lsp.getAvailableTools().also {
-             val tool = it.get()
-             val payload = Events.Tools.ResponsePayload(id, tool)
-             val message = Events.Tools.Response(payload)
-             this.postMessage(message)
-        }
-    }
 
     private fun handleOpenSettings(id: String) {
         ApplicationManager.getApplication().invokeLater {
@@ -426,27 +277,35 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun handleEvent(event: Events.FromChat) {
-        // println("Event received: $event")
-        when (event) {
-            is Events.Ready -> this.handleReadyMessage(event.id)
-            is Events.Caps.Request -> this.handleCaps(event.id)
-            is Events.SystemPrompts.Request -> this.handleSystemPrompts(event.id)
-            is Events.AtCommands.Completion.Request -> this.handleCompletion(
-                event.id, event.query, event.cursor, event.number
-            )
+    private fun handleFimRequest() {
+        // TODO: get fill in the middle data from last completion.
+        val message = Events.Fim.Error("not setup yet")
+        postMessage(message)
+    }
 
-            is Events.AtCommands.Preview.Request -> this.handlePreviewFileRequest(event.id, event.query)
-            is Events.Chat.AskQuestion -> this.handleChat(event.id, event.messages, event.model, event.tools, event.title)
-            is Events.Chat.Save -> this.handleChatSave(event.id, event.messages, event.model)
-            is Events.Chat.Stop -> this.handleChatStop(event.id)
+    // TODO: handleOpenHotKeys
+
+    private fun handleOpenHotKeys() {
+        // TODO: handle open hotkey
+    }
+
+    private fun handleOpenFile(fileName: String, line: Int?) {
+        // TODO: handle opening file
+    }
+
+    private fun handleEvent(event: Events.FromChat) {
+        println("Event received: $event")
+        when (event) {
             is Events.Editor.Paste -> this.handlePaste(event.id, event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.id, event.content)
-            is Events.Tools.Request -> this.handleToolsRequest(event.id)
             is Events.OpenSettings -> this.handleOpenSettings(event.id)
             is Events.Setup.SetupHost -> this.handleSetupHost(event.host)
             is Events.Setup.OpenExternalUrl -> this.openExternalUrl(event.url)
             is Events.Setup.LogOut -> this.logOut()
+            is Events.Fim.Request -> this.handleFimRequest()
+            is Events.OpenHotKeys -> this.handleOpenHotKeys()
+            is Events.OpenFile -> this.handleOpenFile(event.payload.fileName, event.payload.line)
+
             else -> Unit
         }
     }
@@ -462,7 +321,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         browser.webView
     }
 
-    private fun postMessage(message: Events.ToChat?) {
+    private fun postMessage(message: Events.ToChat<*>?) {
         this.browser.postMessage(message)
     }
 

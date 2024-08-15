@@ -19,9 +19,9 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.LightVirtualFile
-import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.account.AccountManager
+import com.smallcloud.refactai.account.AccountManager.Companion.instance
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
@@ -33,14 +33,13 @@ import com.smallcloud.refactai.settings.AppSettingsConfigurable
 import com.smallcloud.refactai.settings.Host
 import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 import javax.swing.JPanel
 import javax.swing.UIManager
 
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
+    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
     var id: String? = null;
 
     private fun getLanguage(fm: FileEditorManager): Language? {
@@ -60,15 +59,23 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun sendUserConfig() {
+    // TODO: move this else where so it can be used before building the html
+    private fun getUserConfig(): Events.Config.UpdatePayload {
         val hasAst = AppSettingsState.instance.astIsEnabled
         val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
         val features = Events.Config.Features(hasAst, hasVecdb)
         val isDarkMode = UIUtil.isUnderDarcula()
         val mode = if (isDarkMode) "dark" else "light"
         val themeProps = Events.Config.ThemeProps(mode)
-        // TODO: add lspPort and apiKey
-        val message = Events.Config.Update(features, themeProps)
+        val apiKey = instance.apiKey
+        val lspPort = lsp.url.port
+
+        return Events.Config.UpdatePayload(features, themeProps, lspPort, apiKey)
+    }
+
+    private fun sendUserConfig() {
+        val config = getUserConfig()
+        val message = Events.Config.Update(config)
         this.postMessage(message)
     }
 

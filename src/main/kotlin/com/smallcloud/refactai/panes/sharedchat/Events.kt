@@ -278,9 +278,9 @@ class Events {
 
         // TODO: lspPort
         // TODO: apiKey
-        data class UpdatePayload(val features: BaseFeatures, val themeProps: ThemeProps?): Payload()
+        data class UpdatePayload(val features: BaseFeatures, val themeProps: ThemeProps?, val lspPort: Int, val apiKey: String?): Payload()
 
-        class Update(features: BaseFeatures, themeProps: ThemeProps?, lspPort: Int? = 8001, apiKey: String? = null): ToChat<Payload>(EventNames.ToChat.UPDATE_CONFIG, UpdatePayload(features, themeProps))
+        class Update(payload: UpdatePayload): ToChat<Payload>(EventNames.ToChat.UPDATE_CONFIG, payload)
 
     }
 

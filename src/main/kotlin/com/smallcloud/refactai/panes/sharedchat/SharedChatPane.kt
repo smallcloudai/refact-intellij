@@ -26,7 +26,6 @@ import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
-import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.FileInfoPayload
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsState
@@ -53,24 +52,23 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         return language
     }
 
-    // TODO: id isn't part of the payload
-    private fun sendSelectedSnippet(id: String) {
+    private fun sendSelectedSnippet() {
         this.getSelectedSnippet { snippet ->
-            val payload = Editor.SetSnippetPayload(id, snippet)
+            val payload = Editor.SetSnippetPayload(snippet)
             val message = Editor.SetSnippetToChat(payload)
             this.postMessage(message)
         }
     }
 
-    // TODO: id isn't needed anymore
-    private fun sendUserConfig(id: String) {
+    private fun sendUserConfig() {
         val hasAst = AppSettingsState.instance.astIsEnabled
         val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
         val features = Events.Config.Features(hasAst, hasVecdb)
         val isDarkMode = UIUtil.isUnderDarcula()
         val mode = if (isDarkMode) "dark" else "light"
         val themeProps = Events.Config.ThemeProps(mode)
-        val message = Events.Config.Update(id, features, themeProps)
+        // TODO: add lspPort and apiKey
+        val message = Events.Config.Update(features, themeProps)
         this.postMessage(message)
     }
 
@@ -136,11 +134,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
 
-    // TODO: id isn't part of the payload
-    private fun sendActiveFileInfo(id: String) {
+    private fun sendActiveFileInfo() {
         this.getActiveFileInfo { file ->
-            val payload = FileInfoPayload(id, file)
-            val message = ActiveFileToChat(payload)
+            val message = ActiveFileToChat(file)
             this.postMessage(message)
         }
     }
@@ -173,7 +169,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         AccountManager.instance.logout()
     }
 
-    private fun handlePaste(id: String, content: String) {
+    private fun handlePaste(content: String) {
         ApplicationManager.getApplication().invokeLater {
             val editor = FileEditorManager.getInstance(project).selectedTextEditor
             val selection = editor?.caretModel?.currentCaret?.selectionRange
@@ -185,7 +181,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun handleNewFile(id: String, content: String) {
+    private fun handleNewFile(content: String) {
         // TODO: file type?
         val vf = LightVirtualFile("Untitled", content)
 
@@ -197,28 +193,28 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
 
-    private fun addEventListeners(id: String) {
+    private fun addEventListeners() {
         println("Adding ide event listeners")
         val listener: FileEditorManagerListener = object : FileEditorManagerListener {
             override fun fileOpened(@NotNull source: FileEditorManager, @NotNull file: VirtualFile) {
-                this@SharedChatPane.sendActiveFileInfo(id)
+                this@SharedChatPane.sendActiveFileInfo()
             }
 
             override fun fileClosed(@NotNull source: FileEditorManager, @NotNull file: VirtualFile) {
-                this@SharedChatPane.sendActiveFileInfo(id)
+                this@SharedChatPane.sendActiveFileInfo()
             }
 
             override fun selectionChanged(@NotNull event: FileEditorManagerEvent) {
-                this@SharedChatPane.sendActiveFileInfo(id)
-                this@SharedChatPane.sendSelectedSnippet(id)
+                this@SharedChatPane.sendActiveFileInfo()
+                this@SharedChatPane.sendSelectedSnippet()
             }
 
         }
 
         val selectionListener = object : SelectionListener {
             override fun selectionChanged(event: SelectionEvent) {
-                this@SharedChatPane.sendActiveFileInfo(id)
-                this@SharedChatPane.sendSelectedSnippet(id)
+                this@SharedChatPane.sendActiveFileInfo()
+                this@SharedChatPane.sendSelectedSnippet()
             }
 
         }
@@ -235,21 +231,19 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                 override fun astFlagChanged(newValue: Boolean) {
                     println("ast changed to: $newValue")
-                    this@SharedChatPane.sendUserConfig(id)
+                    this@SharedChatPane.sendUserConfig()
                 }
 
                 override fun vecdbFlagChanged(newValue: Boolean) {
                     println("vecdb changed to: $newValue")
-                    this@SharedChatPane.sendUserConfig(id)
+                    this@SharedChatPane.sendUserConfig()
                 }
             })
     }
 
     private fun setLookAndFeel() {
         this.browser.setStyle()
-        if (this.id != null) {
-            this.sendUserConfig(this.id!!)
-        }
+        this.sendUserConfig()
     }
 
     private val uiChangeListener = PropertyChangeListener { event ->
@@ -260,18 +254,19 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
 
     // TODO: add the event listeners without waiting for ready message
-    private fun handleReadyMessage(id: String) {
-        this.id = id;
-        // active file info can bee added in the intaial state
-        this.sendActiveFileInfo(id)
-        this.sendSelectedSnippet(id)
-        this.addEventListeners(id)
-        this.sendUserConfig(id)
+    private fun handleReadyMessage() {
+
+        //TODO:  active file info and selected snippet can be added in the initial state.
+        this.sendActiveFileInfo()
+        this.sendSelectedSnippet()
+        // TODO: add this somewhere else
+        this.addEventListeners()
+        this.sendUserConfig()
         // this.maybeRestore(id)
     }
 
 
-    private fun handleOpenSettings(id: String) {
+    private fun handleOpenSettings() {
         ApplicationManager.getApplication().invokeLater {
             ShowSettingsUtil.getInstance().showSettingsDialog(project, AppSettingsConfigurable::class.java)
         }
@@ -296,9 +291,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handleEvent(event: Events.FromChat) {
         println("Event received: $event")
         when (event) {
-            is Events.Editor.Paste -> this.handlePaste(event.id, event.content)
-            is Events.Editor.NewFile -> this.handleNewFile(event.id, event.content)
-            is Events.OpenSettings -> this.handleOpenSettings(event.id)
+            is Events.Editor.Paste -> this.handlePaste(event.content)
+            is Events.Editor.NewFile -> this.handleNewFile(event.content)
+            is Events.OpenSettings -> this.handleOpenSettings()
             is Events.Setup.SetupHost -> this.handleSetupHost(event.host)
             is Events.Setup.OpenExternalUrl -> this.openExternalUrl(event.url)
             is Events.Setup.LogOut -> this.logOut()

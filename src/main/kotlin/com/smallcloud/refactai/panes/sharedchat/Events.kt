@@ -38,11 +38,7 @@ class EventNames {
 
 class Events {
 
-    open class Payload(
-        @Transient
-        @SerializedName("id")
-        open val id: String?
-    ): Serializable
+    open class Payload: Serializable
 
     abstract class FromChat(val type: EventNames.FromChat, open val payload: Payload?): Serializable
 
@@ -191,7 +187,7 @@ class Events {
             val created: Number?,
             val elapsed: Number?,
             val cached: Boolean?,
-        ): Payload(null)
+        ): Payload()
 
         class Receive(payload: FimDebugPayload): ToChat<Payload>(EventNames.ToChat.FIM_RECEIVE, payload)
 
@@ -205,16 +201,16 @@ class Events {
         open val payload: T
     ): Serializable
 
-    data class OpenSettings(val id: String): FromChat(EventNames.FromChat.OPEN_SETTINGS, Payload(id))
+    class OpenSettings: FromChat(EventNames.FromChat.OPEN_SETTINGS, null)
 
-    class OpenHotKeys: FromChat(EventNames.FromChat.OPEN_HOTKEYS, Payload(null))
+    class OpenHotKeys: FromChat(EventNames.FromChat.OPEN_HOTKEYS, null)
 
     data class OpenFilePayload(
         @SerializedName("file_name")
         val fileName: String,
-        val line: Int?): Payload(null)
+        val line: Int?): Payload()
 
-    data class OpenFile(override val payload: OpenFilePayload): FromChat(EventNames.FromChat.OPEN_FILE, payload)
+    class OpenFile(override val payload: OpenFilePayload): FromChat(EventNames.FromChat.OPEN_FILE, payload)
 
     class ActiveFile {
         data class FileInfo(
@@ -228,43 +224,35 @@ class Events {
             val usefulness: Int? = null,
         )
 
-        data class FileInfoPayload(
-            override val id: String,
-            val file: FileInfo,
-        ) : Payload(id)
-
-        class ActiveFileToChat(payload: FileInfoPayload): ToChat<Payload>(EventNames.ToChat.SET_ACTIVE_FILE_INFO, payload)
+        class ActiveFileToChat(payload: FileInfo): ToChat<FileInfo>(EventNames.ToChat.SET_ACTIVE_FILE_INFO, payload)
 
     }
 
     class Setup {
         data class SetupHostPayload(
-            override val id: String,
             val host: Host
-        ): Payload(id)
+        ): Payload()
 
-        data class SetupHost(val host: Host): FromChat(EventNames.FromChat.SETUP_HOST, SetupHostPayload("", host))
+        data class SetupHost(val host: Host): FromChat(EventNames.FromChat.SETUP_HOST, SetupHostPayload(host))
 
-        data class OpenExternalUrl(val url: String): FromChat(EventNames.FromChat.OPEN_EXTERNAL_URL, Payload(""))
+        data class UrlPayload(val url: String): Payload()
+        data class OpenExternalUrl(val url: String): FromChat(EventNames.FromChat.OPEN_EXTERNAL_URL, UrlPayload(url))
 
-        class LogOut: FromChat(EventNames.FromChat.LOG_OUT, Payload(""))
+        class LogOut: FromChat(EventNames.FromChat.LOG_OUT, null)
     }
 
     class Editor {
         data class ContentPayload(
-            override val id: String,
             val content: String
-        ): Payload(id)
+        ): Payload()
 
         data class NewFile(
-            val id: String,
             val content: String,
-        ): FromChat(EventNames.FromChat.NEW_FILE, ContentPayload(id, content))
+        ): FromChat(EventNames.FromChat.NEW_FILE, ContentPayload(content))
 
         data class Paste(
-            val id: String,
             val content: String
-        ): FromChat(EventNames.FromChat.PASTE_DIFF, ContentPayload(id, content))
+        ): FromChat(EventNames.FromChat.PASTE_DIFF, ContentPayload(content))
 
         data class Snippet(
             val language: String = "",
@@ -274,10 +262,8 @@ class Events {
         )
 
         data class SetSnippetPayload(
-            // TODO: snippet no longer needs id.
-            override val id: String?,
             val snippet: Snippet
-        ): Payload(id)
+        ): Payload()
 
         class SetSnippetToChat(payload: SetSnippetPayload): ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
 
@@ -292,9 +278,9 @@ class Events {
 
         // TODO: lspPort
         // TODO: apiKey
-        data class UpdatePayload(override val id: String, val features: BaseFeatures, val themeProps: ThemeProps?): Payload(id)
+        data class UpdatePayload(val features: BaseFeatures, val themeProps: ThemeProps?): Payload()
 
-        class Update(id: String, features: BaseFeatures, themeProps: ThemeProps?): ToChat<Payload>(EventNames.ToChat.UPDATE_CONFIG, UpdatePayload(id, features, themeProps))
+        class Update(features: BaseFeatures, themeProps: ThemeProps?, lspPort: Int? = 8001, apiKey: String? = null): ToChat<Payload>(EventNames.ToChat.UPDATE_CONFIG, UpdatePayload(features, themeProps))
 
     }
 

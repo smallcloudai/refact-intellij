@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.panes.sharedchat.browser
 
+import com.google.gson.Gson
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -17,6 +18,9 @@ import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import javax.swing.JComponent
 import com.intellij.openapi.keymap.KeymapUtil
+import com.smallcloud.refactai.panes.sharedchat.Editor
+import javax.swing.JFrame
+import javax.swing.JWindow
 
 
 fun getActionKeybinding(actionId: String): String {
@@ -32,7 +36,7 @@ fun getActionKeybinding(actionId: String): String {
     return KeymapUtil.getShortcutText(shortcuts[0])
 }
 
-class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Disposable {
+class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromChat) -> Unit): Disposable {
     private val jsPoolSize = "200"
 
     init {
@@ -130,11 +134,18 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
 
         browser.createImmediately()
 
+
+//        val dev = JBCefBrowser.createBuilder().setCefBrowser(browser.cefBrowser).setClient(browser.jbCefClient).build()
+//        JFrame().add(dev.component)
+//        dev.openDevtools()
+
         browser
     }
 
     fun addMessageHandler(myJSQueryOpenInBrowser: JBCefJSQuery) {
         myJSQueryOpenInBrowser.addHandler { msg ->
+//            println("\n### Event ###")
+//            println(msg);
             val event = Events.parse(msg)
 
             if(event != null) {
@@ -145,30 +156,10 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
     }
 
     fun setUpReact(browser: CefBrowser) {
-        val completeManual = getActionKeybinding("ForceCompletionAction")
-
-        // TODO: Add lspPort to the initial state.
-        // TODO: Add appearance: "light" or "dark" to themeProps
-        val settings = AppSettingsState.instance
+        val config = this.editor.getUserConfig()
+        val configJson = Gson().toJson(config)
         val script = """
-        const config = {
-          host: "jetbrains",
-          tabbed: false,
-          themeProps: {
-            accentColor: "gray",
-            scaling: "90%",
-            hasBackground: false
-          },
-          features: {
-            vecdb: ${settings.vecdbIsEnabled},
-            ast: ${settings.astIsEnabled},
-          },
-          keyBindings: {
-            completeManual: "$completeManual",
-          },
-          apiKey: "${if (settings.apiKey == null) "" else "${settings.apiKey}" }",
-          addressURL: "${if (settings.userInferenceUri == null) "" else "${settings.userInferenceUri}" }"
-        };
+        const config = ${configJson};
         window.__INITIAL_STATE__ = { config };
         
         function loadChatJs() {
@@ -181,6 +172,7 @@ class ChatWebView(val messageHandler:  (event: Events.FromChat) -> Unit): Dispos
         script.src = "http://refactai/dist/chat/index.umd.cjs";
         document.head.appendChild(script);
         """.trimIndent()
+        println(script)
         browser.executeJavaScript(script, browser.url, 0)
     }
 

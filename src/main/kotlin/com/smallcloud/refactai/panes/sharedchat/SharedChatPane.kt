@@ -39,110 +39,26 @@ import javax.swing.UIManager
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
-    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
+    private val editor = Editor(project)
     var id: String? = null;
 
-    private fun getLanguage(fm: FileEditorManager): Language? {
-        val editor = fm.selectedTextEditor
-        val language = editor?.document?.let {
-            PsiDocumentManager.getInstance(project).getPsiFile(it)?.language
-        }
-
-        return language
-    }
 
     private fun sendSelectedSnippet() {
-        this.getSelectedSnippet { snippet ->
+        this.editor.getSelectedSnippet { snippet ->
             val payload = Editor.SetSnippetPayload(snippet)
             val message = Editor.SetSnippetToChat(payload)
             this.postMessage(message)
         }
     }
 
-    // TODO: move this else where so it can be used before building the html
-    private fun getUserConfig(): Events.Config.UpdatePayload {
-        val hasAst = AppSettingsState.instance.astIsEnabled
-        val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
-        val features = Events.Config.Features(hasAst, hasVecdb)
-        val isDarkMode = UIUtil.isUnderDarcula()
-        val mode = if (isDarkMode) "dark" else "light"
-        val themeProps = Events.Config.ThemeProps(mode)
-        val apiKey = instance.apiKey
-        val lspPort = lsp.url.port
-
-        return Events.Config.UpdatePayload(features, themeProps, lspPort, apiKey)
-    }
-
     private fun sendUserConfig() {
-        val config = getUserConfig()
+        val config = this.editor.getUserConfig()
         val message = Events.Config.Update(config)
         this.postMessage(message)
     }
 
-    private fun getSelectedSnippet(cb: (Events.Editor.Snippet) -> Unit) {
-        ApplicationManager.getApplication().invokeLater {
-            if (!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty()) {
-                val fileEditorManager = FileEditorManager.getInstance(project)
-                val editor = fileEditorManager.selectedTextEditor
-                val file = fileEditorManager.selectedFiles[0]
-                val path = file.path
-                val name = file.name
-                val language = this.getLanguage(fileEditorManager)?.id
-                val caretModel = editor?.caretModel
-
-                val selection = caretModel?.currentCaret?.selectionRange
-                val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
-
-                val code = editor?.document?.getText(range)
-                if (language == null || code == null) {
-                    cb(Events.Editor.Snippet())
-                } else {
-                    val snippet = Events.Editor.Snippet(language, code, path, name)
-                    cb(snippet)
-                }
-            }
-        }
-    }
-
-    private fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo) -> Unit) {
-        ApplicationManager.getApplication().invokeLater {
-            if (!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty()) {
-                val fileEditorManager = FileEditorManager.getInstance(project)
-                val editor = fileEditorManager.selectedTextEditor
-
-                val cursor = editor?.caretModel?.offset
-                val virtualFile = fileEditorManager.selectedFiles[0]
-                val filePath = virtualFile.path
-                val fileName = virtualFile.name
-
-                val selection = editor?.caretModel?.currentCaret?.selectionRange
-                val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
-
-                val code = editor?.document?.getText(range)
-
-                val canPaste = selection != null && !selection.isEmpty
-
-                val fileInfo = Events.ActiveFile.FileInfo(
-                    fileName,
-                    filePath,
-                    canPaste,
-                    cursor = cursor,
-                    line1 = selection?.startOffset,
-                    line2 = selection?.endOffset,
-                    content = code,
-                )
-                cb(fileInfo)
-
-            } else {
-                val fileInfo = Events.ActiveFile.FileInfo()
-                cb(fileInfo)
-            }
-        }
-    }
-
-
     private fun sendActiveFileInfo() {
-        this.getActiveFileInfo { file ->
+        this.editor.getActiveFileInfo { file ->
             val message = ActiveFileToChat(file)
             this.postMessage(message)
         }
@@ -264,11 +180,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handleReadyMessage() {
 
         //TODO:  active file info and selected snippet can be added in the initial state.
-        this.sendActiveFileInfo()
-        this.sendSelectedSnippet()
+//        this.sendActiveFileInfo()
+    //        this.sendSelectedSnippet()
         // TODO: add this somewhere else
-        this.addEventListeners()
-        this.sendUserConfig()
+       //  this.addEventListeners()
+        // this.sendUserConfig()
         // this.maybeRestore(id)
     }
 
@@ -313,7 +229,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private val browser by lazy {
-        ChatWebView { event ->
+        ChatWebView(
+            this.editor
+        ) { event ->
             this.handleEvent(event)
         }
     }
@@ -332,6 +250,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         UIManager.removePropertyChangeListener(uiChangeListener)
         webView.dispose()
         Disposer.dispose(this)
+    }
+
+    init {
+        this.addEventListeners()
     }
 }
 

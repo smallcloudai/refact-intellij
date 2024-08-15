@@ -2,6 +2,8 @@ package com.smallcloud.refactai.panes.sharedchat
 
 import com.google.gson.annotations.SerializedName
 import com.google.gson.*
+import com.smallcloud.refactai.panes.sharedchat.browser.getActionKeybinding
+import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.Host
 import com.smallcloud.refactai.settings.HostDeserializer
 import java.io.Serializable
@@ -276,9 +278,18 @@ class Events {
 
         data class ThemeProps(val mode: String, val hasBackground: Boolean = false, val scale: String = "90%",  val accentColor: String ="gray")
 
-        // TODO: lspPort
-        // TODO: apiKey
-        data class UpdatePayload(val features: BaseFeatures, val themeProps: ThemeProps?, val lspPort: Int, val apiKey: String?): Payload()
+        data class KeyBindings(val completeManual: String)
+
+        data class UpdatePayload(
+            val features: Config.Features,
+            val themeProps: Config.ThemeProps?,
+            val lspPort: Int,
+            val apiKey: String?,
+            val addressUrl: String?,
+            val keyBindings: Config.KeyBindings,
+            val tabbed: Boolean? = false,
+            val host: String? = "jetbrains"
+        ): Payload()
 
         class Update(payload: UpdatePayload): ToChat<Payload>(EventNames.ToChat.UPDATE_CONFIG, payload)
 

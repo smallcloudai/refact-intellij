@@ -30,14 +30,16 @@ class EventsTest {
 
     @Test
     fun configMessage() {
-        val payload = Events.Config.UpdatePayload(            Events.Config.Features(true, false),
+        val payload = Events.Config.UpdatePayload(
+            Events.Config.Features(true, false),
             Events.Config.ThemeProps("light"),
             8001,
-            "apiKey")
+            "apiKey",
+            addressUrl = "http://127.0.0.1;8001",
+            Events.Config.KeyBindings("foo"))
         val message = Events.Config.Update(payload)
         val result = Events.stringify(message)
-        val expected = """{"type":"config/update","payload":{"features":{"ast":true,"vecdb":false},"themeProps":{"mode":"light","hasBackground":false,"scale":"90%","accentColor":"gray"},"lspPort":8001,"apiKey":"apiKey"}}"""
-
+        val expected = """{"type":"config/update","payload":{"features":{"ast":true,"vecdb":false},"themeProps":{"mode":"light","hasBackground":false,"scale":"90%","accentColor":"gray"},"lspPort":8001,"apiKey":"apiKey","addressUrl":"http://127.0.0.1;8001","keyBindings":{"completeManual":"foo"},"tabbed":false,"host":"jetbrains"}}"""
         assertEquals(expected, result)
     }
 

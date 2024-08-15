@@ -30,12 +30,11 @@ class EventsTest {
 
     @Test
     fun configMessage() {
-        val message = Events.Config.Update(
-            Events.Config.Features(true, false),
+        val payload = Events.Config.UpdatePayload(            Events.Config.Features(true, false),
             Events.Config.ThemeProps("light"),
             8001,
-            "apiKey"
-        )
+            "apiKey")
+        val message = Events.Config.Update(payload)
         val result = Events.stringify(message)
         val expected = """{"type":"config/update","payload":{"features":{"ast":true,"vecdb":false},"themeProps":{"mode":"light","hasBackground":false,"scale":"90%","accentColor":"gray"},"lspPort":8001,"apiKey":"apiKey"}}"""
 

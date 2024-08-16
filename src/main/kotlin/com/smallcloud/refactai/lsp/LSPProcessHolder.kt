@@ -1,7 +1,6 @@
 package com.smallcloud.refactai.lsp
 
 import com.google.gson.Gson
-import com.google.gson.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationInfo
@@ -20,13 +19,11 @@ import com.smallcloud.refactai.Resources.binPrefix
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitError
-import com.smallcloud.refactai.panes.sharedchat.*
 import org.apache.hc.core5.concurrent.ComplexFuture
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
@@ -348,146 +345,4 @@ class LSPProcessHolder(val project: Project) : Disposable {
             return res
         }
     }
-
-//    fun fetchCaps(): Future<LSPCapabilities> {
-////        // This causes the ide to crash :/
-////        if(this.capabilities.codeChatModels.isNotEmpty()) {
-////            println("caps_cached")
-////            return FutureTask { this.capabilities }
-////        }
-//
-//        val res = InferenceGlobalContext.connection.get(
-//            url.resolve("/v1/caps"),
-//            dataReceiveEnded = {},
-//            errorDataReceived = {}
-//        )
-//
-//        return res.thenApply {
-//            val body = it.get() as String
-//            val caps = Gson().fromJson(body, LSPCapabilities::class.java)
-//            caps
-//        }
-//    }
-
-//    fun fetchSystemPrompts(): Future<SystemPromptMap> {
-//        val res = InferenceGlobalContext.connection.get(
-//            url.resolve("/v1/customization"),
-//            dataReceiveEnded = {},
-//            errorDataReceived = {}
-//        )
-//        val json = res.thenApply {
-//            val body = it.get() as String
-//            val prompts = Gson().fromJson<CustomPromptsResponse>(body, CustomPromptsResponse::class.java)
-//            prompts.systemPrompts
-//        }
-//
-//        return json
-//    }
-
-//    fun fetchCommandCompletion(query: String, cursor: Int, count: Int = 5): Future<CommandCompletionResponse> {
-//
-//        val requestBody = Gson().toJson(mapOf("query" to query, "cursor" to cursor, "top_n" to count))
-//
-//        val res = InferenceGlobalContext.connection.post(
-//            url.resolve("/v1/at-command-completion"),
-//            requestBody,
-//        )
-//        // TODO: could this have a detail message?
-//        val json = res.thenApply {
-//            val body = it.get() as String
-//            // handle error
-//            // if(body.startsWith("detail"))
-//            Gson().fromJson<CommandCompletionResponse>(body, CommandCompletionResponse::class.java)
-//        }
-//
-//        return json
-//    }
-
-//    fun fetchCommandPreview(query: String): Future<Events.AtCommands.Preview.Response> {
-//        val requestBody = Gson().toJson(mapOf("query" to query))
-//
-//        val response = InferenceGlobalContext.connection.post(
-//            url.resolve("/v1/at-command-preview"),
-//            requestBody
-//        )
-//
-//        val json: Future<Events.AtCommands.Preview.Response> = response.thenApply {
-//            val responseBody = it.get() as String
-//            if (responseBody.startsWith("detail")) {
-//                Events.AtCommands.Preview.Response(emptyArray())
-//            } else {
-//                Events.gson.fromJson(responseBody, Events.AtCommands.Preview.Response::class.java)
-//            }
-//        }
-//
-//        return json
-//    }
-
-//    fun sendChat(
-//        id: String,
-//        messages: ChatMessages,
-//        model: String,
-//        onlyDeterministicMessages: Boolean = false,
-//        takeNote: Boolean = false,
-//        tools: Array<Tool>? = emptyArray(),
-//        dataReceived: (String, String) -> Unit,
-//        dataReceiveEnded: (String) -> Unit,
-//        errorDataReceived: (JsonObject) -> Unit,
-//        failedDataReceiveEnded: (Throwable?) -> Unit,
-//    ): CompletableFuture<Future<*>> {
-//
-//        val parameters = mapOf("max_new_tokens" to 2048)
-//
-//        val maybeTools = if (!tools.isNullOrEmpty()) tools else { null }
-//
-//        val requestBody = Gson().toJson(mapOf(
-//            "messages" to messages.map {
-//                val content = if(it.content is String) { it.content } else { Gson().toJson(it.content) }
-//                mapOf("role" to it.role, "content" to content, "tool_calls" to it.toolCalls, "tool_call_id" to it.toolCallId)
-//            },
-//            "model" to model,
-//            "parameters" to parameters,
-//            "stream" to true,
-//            "tools" to maybeTools,
-//            "only_deterministic_messages" to onlyDeterministicMessages,
-//            "chat_id" to id,
-//            "max_tokens" to 2048
-//        ))
-//
-//        val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")
-//        val request = InferenceGlobalContext.connection.post(
-//            url.resolve("/v1/chat"),
-//            requestBody,
-//            headers = headers,
-//            dataReceived = dataReceived,
-//            dataReceiveEnded = dataReceiveEnded,
-//            errorDataReceived = errorDataReceived,
-//            failedDataReceiveEnded = failedDataReceiveEnded,
-//            requestId = id,
-//        )
-//
-//        return request
-//
-//    }
-
-
-
-//    fun getAvailableTools(): Future<Array<Tool>> {
-//        val headers = mapOf("Authorization" to "Bearer ${AccountManager.apiKey}")
-//
-//        val request = InferenceGlobalContext.connection.get(
-//            url.resolve("/v1/tools"),
-//            headers=headers,
-//            dataReceiveEnded = {},
-//            errorDataReceived = {}
-//        )
-//
-//        val json = request.thenApply {
-//            val res = it.get() as String
-//            Gson().fromJson(res, Array<Tool>::class.java)
-//        }
-//
-//        return json
-//
-//    }
 }

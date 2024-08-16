@@ -1,9 +1,10 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
-import com.google.gson.*
-import com.smallcloud.refactai.panes.sharedchat.browser.getActionKeybinding
-import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.Host
 import com.smallcloud.refactai.settings.HostDeserializer
 import java.io.Serializable
@@ -73,9 +74,9 @@ class Events {
 
                 // EventNames.FromChat.FIM_READY.value -> p2?.deserialize(payload, Fim.Ready::class.java)
                 EventNames.FromChat.FIM_REQUEST.value -> Fim.Request()
-                EventNames.FromChat.OPEN_EXTERNAL_URL.value -> OpenHotKeys()
+                EventNames.FromChat.OPEN_HOTKEYS.value -> OpenHotKeys()
                 EventNames.FromChat.OPEN_FILE.value -> p2?.deserialize(payload, OpenFile::class.java)
-                else -> null
+                    else -> null
             }
         }
 

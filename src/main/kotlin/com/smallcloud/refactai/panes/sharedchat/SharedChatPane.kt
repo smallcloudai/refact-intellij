@@ -1,44 +1,43 @@
 package com.smallcloud.refactai.panes.sharedchat
 
 import com.intellij.ide.BrowserUtil
-import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.LightVirtualFile
-import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.account.AccountManager
-import com.smallcloud.refactai.account.AccountManager.Companion.instance
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
-import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
-import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
+import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.Host
 import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
+import java.io.File
 import javax.swing.JPanel
 import javax.swing.UIManager
 
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
-
+    private val logger = Logger.getInstance(SharedChatPane::class.java)
     private val editor = Editor(project)
     var id: String? = null;
 
@@ -75,6 +74,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Host.Enterprise -> {
                 accountManager.apiKey = host.apiKey
                 settings.userInferenceUri = host.endpointAddress
+                ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
             }
             is Host.SelfHost -> {
                 accountManager.apiKey = "any-key-will-work"
@@ -104,9 +104,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handleNewFile(content: String) {
-        // TODO: file type?
         val vf = LightVirtualFile("Untitled", content)
-
         val fileDescriptor = OpenFileDescriptor(project, vf)
 
         ApplicationManager.getApplication().invokeLater {
@@ -116,7 +114,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
 
     private fun addEventListeners() {
-        println("Adding ide event listeners")
+        logger.info("Adding ide event listeners")
         val listener: FileEditorManagerListener = object : FileEditorManagerListener {
             override fun fileOpened(@NotNull source: FileEditorManager, @NotNull file: VirtualFile) {
                 this@SharedChatPane.sendActiveFileInfo()
@@ -152,12 +150,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         project.messageBus.connect()
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                 override fun astFlagChanged(newValue: Boolean) {
-                    println("ast changed to: $newValue")
+                    logger.info("ast changed to: $newValue")
                     this@SharedChatPane.sendUserConfig()
                 }
 
                 override fun vecdbFlagChanged(newValue: Boolean) {
-                    println("vecdb changed to: $newValue")
+                    logger.info("vecdb changed to: $newValue")
                     this@SharedChatPane.sendUserConfig()
                 }
             })
@@ -187,18 +185,31 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         postMessage(message)
     }
 
-    // TODO: handleOpenHotKeys
-
     private fun handleOpenHotKeys() {
-        // TODO: handle open hotkey
+        ApplicationManager.getApplication().invokeLater {
+            ShowSettingsUtil.getInstance().showSettingsDialog(project, KeymapPanel::class.java) {
+                it.enableSearch("Refact.ai")
+            }
+        }
     }
 
     private fun handleOpenFile(fileName: String, line: Int?) {
-        // TODO: handle opening file
+        val file = File(fileName)
+        val vf = VfsUtil.findFileByIoFile(file, true) ?: return
+
+        val fileDescriptor = OpenFileDescriptor(project, vf)
+
+        ApplicationManager.getApplication().invokeLater {
+            val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+            line?.let {
+                editor?.caretModel?.moveToLogicalPosition(LogicalPosition(line, 0))
+            }
+        }
+
     }
 
     private fun handleEvent(event: Events.FromChat) {
-        println("Event received: $event")
+        logger.info("Event received: $event")
         when (event) {
             is Events.Editor.Paste -> this.handlePaste(event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.content)

@@ -9,9 +9,11 @@ data class LSPConfig(
     var clientVersion: String? = null,
     var useTelemetry: Boolean = false,
     var deployment: DeploymentMode = DeploymentMode.CLOUD,
-    var ast: Boolean = false,
+    var ast: Boolean = true,
     var astFileLimit: Int? = null,
-    var vecdb: Boolean = false
+    var astLightMode: Boolean = false,
+    var vecdb: Boolean = true,
+    var vecdbFileLimit: Int? = null,
 ) {
     fun toArgs(): List<String> {
         val params = mutableListOf<String>()
@@ -37,12 +39,19 @@ data class LSPConfig(
         if (ast) {
             params.add("--ast")
         }
-        if (astFileLimit != null) {
+        if (ast && astFileLimit != null) {
             params.add("--ast-max-files")
             params.add("$astFileLimit")
         }
+        if (ast && astLightMode) {
+            params.add("--ast-light-mode")
+        }
         if (vecdb) {
             params.add("--vecdb")
+        }
+        if (vecdb && vecdbFileLimit != null) {
+            params.add("--vecdb-max-files")
+            params.add("$vecdbFileLimit")
         }
         return params
     }
@@ -59,8 +68,10 @@ data class LSPConfig(
         if (useTelemetry != other.useTelemetry) return false
         if (deployment != other.deployment) return false
         if (ast != other.ast) return false
+        if (astLightMode != other.astLightMode) return false
         if (vecdb != other.vecdb) return false
         if (astFileLimit != other.astFileLimit) return false
+        if (vecdbFileLimit != other.vecdbFileLimit) return false
 
         return true
     }
@@ -71,6 +82,7 @@ data class LSPConfig(
                 && port != null
                 && clientVersion != null
                 && (astFileLimit != null && astFileLimit!! > 0)
+                && (vecdbFileLimit != null && vecdbFileLimit!! > 0)
                 // token must be if we are not selfhosted
                 && (deployment == DeploymentMode.SELF_HOSTED ||
                 (apiKey != null && (deployment == DeploymentMode.CLOUD || deployment == DeploymentMode.HF)))

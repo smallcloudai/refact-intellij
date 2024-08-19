@@ -102,7 +102,19 @@ class LSPProcessHolder(val project: Project) : Disposable {
                     }
                 }
 
+                override fun astLightModeChanged(newValue: Boolean) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
+                    }
+                }
+
                 override fun vecdbFlagChanged(newValue: Boolean) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
+                    }
+                }
+
+                override fun vecdbFileLimitChanged(newValue: Int) {
                     AppExecutorUtil.getAppScheduledExecutorService().submit {
                         settingsChanged()
                     }
@@ -192,7 +204,9 @@ class LSPProcessHolder(val project: Project) : Disposable {
             deployment = InferenceGlobalContext.deploymentMode,
             ast = InferenceGlobalContext.astIsEnabled,
             astFileLimit = InferenceGlobalContext.astFileLimit,
+            astLightMode = InferenceGlobalContext.astLightMode,
             vecdb = InferenceGlobalContext.vecdbIsEnabled,
+            vecdbFileLimit = InferenceGlobalContext.vecdbFileLimit,
         )
 
         val processIsAlive = process?.isAlive == true

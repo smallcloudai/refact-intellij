@@ -42,8 +42,6 @@ class AppSettingsComponent {
                     myXDebugLSPPortLabel.isVisible = true
                     myStagingVersionText.isVisible = true
                     myStagingVersionLabel.isVisible = true
-                    astCheckbox.isVisible = true
-                    vecdbCheckbox.isVisible = true
                 }
             }
 
@@ -52,6 +50,8 @@ class AppSettingsComponent {
     private val myContrastUrlText = JBTextField()
     private val myModelText = JBTextField()
     private val myAstFileLimitText = JBTextField()
+    private val myAstLightMode = JCheckBox(RefactAIBundle.message("advancedSettings.useASTLightMode"))
+    private val myVecdbFileLimitText = JBTextField()
     val astCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion")).apply {
         isVisible = true
     }
@@ -115,16 +115,6 @@ class AppSettingsComponent {
         experimentalPanel = FormBuilder.createFormBuilder().run {
             addComponent(TitledSeparator(RefactAIBundle.message("advancedSettings.experimentalFeatures")))
 
-            addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
-            addComponent(
-                JBLabel(
-                    RefactAIBundle.message("advancedSettings.useVecDBDescription"),
-                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ).apply {
-                    setCopyable(true)
-                }, 0
-            )
-
             addComponent(astCheckbox, UIUtil.LARGE_VGAP)
             addComponent(
                 JBLabel(
@@ -134,6 +124,7 @@ class AppSettingsComponent {
                     setCopyable(true)
                 }, 0
             )
+
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.astFileLimit")}: "), myAstFileLimitText,
                 (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
             addComponent(
@@ -142,6 +133,35 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
+            addComponent(myAstLightMode, UIUtil.LARGE_VGAP)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.useASTLightModeDescription"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ).apply {
+                    setCopyable(true)
+                }, 0
+            )
+
+            addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.useVecDBDescription"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ).apply {
+                    setCopyable(true)
+                }, 0
+            )
+            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.vecDBFileLimit")}: "), myVecdbFileLimitText)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.vecDBFileLimitDescription"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ).apply {
+                    setCopyable(true)
+                }, 0
+            )
+
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.codeCompletionModel")}: "),
                 myModelText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
             addComponent(
@@ -195,10 +215,20 @@ class AppSettingsComponent {
         set(newVal) {
             myAstFileLimitText.text = newVal.toString()
         }
+    var astLightMode: Boolean
+        get() = myAstLightMode.isSelected
+        set(newVal) {
+            myAstLightMode.isSelected = newVal
+        }
     var vecdbIsEnabled: Boolean
         get() = vecdbCheckbox.isSelected
         set(newVal) {
             vecdbCheckbox.isSelected = newVal
+        }
+    var vecdbFileLimit: Int
+        get() = myVecdbFileLimitText.text.toIntOrNull() ?: 15000
+        set(newVal) {
+            myVecdbFileLimitText.text = newVal.toString()
         }
     var inferenceModel: String?
         get() = myModelText.text

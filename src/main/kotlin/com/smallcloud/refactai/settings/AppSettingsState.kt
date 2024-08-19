@@ -43,12 +43,13 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var xDebugLSPPort: Int? = null
     var stagingVersion: String = ""
     var rateUsNotification: Boolean = false
-    var defaultSystemPrompt: String = ""
     var astIsEnabled: Boolean = true
     var astIsEnabledDefaultChanged: Boolean = false
     var vecdbIsEnabled: Boolean = false
     var vecdbIsEnabledDefaultChanged: Boolean = false
     var astFileLimit: Int = 15000
+    var vecdbFileLimit: Int = 15000
+    var astLightMode: Boolean = false
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -103,6 +104,12 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     }
                     override fun astFileLimitChanged(newValue: Int) {
                         instance.astFileLimit = newValue
+                    }
+                    override fun astLightModeChanged(newValue: Boolean) {
+                        instance.astLightMode = newValue
+                    }
+                    override fun vecdbFileLimitChanged(newValue: Int) {
+                        instance.vecdbFileLimit = newValue
                     }
                     override fun vecdbFlagChanged(newValue: Boolean) {
                         instance.vecdbIsEnabled = newValue

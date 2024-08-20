@@ -18,8 +18,12 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
 
     InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+        InferenceGlobalContext.lastErrorMsg = null
     }, failedDataReceiveEnded = {
-        InferenceGlobalContext.status = ConnectionStatus.DISCONNECTED
+        InferenceGlobalContext.status = ConnectionStatus.ERROR
+        if (it != null) {
+            InferenceGlobalContext.lastErrorMsg = it.message
+        }
     })
 }
 
@@ -32,5 +36,13 @@ fun lspDocumentDidChanged(project: Project, docUrl: String, text: String) {
         )
     )
 
-    InferenceGlobalContext.connection.post(url, data)
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+        InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+        InferenceGlobalContext.lastErrorMsg = null
+    }, failedDataReceiveEnded = {
+        InferenceGlobalContext.status = ConnectionStatus.ERROR
+        if (it != null) {
+            InferenceGlobalContext.lastErrorMsg = it.message
+        }
+    })
 }

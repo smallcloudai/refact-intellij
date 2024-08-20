@@ -8,7 +8,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.account.login
-import com.smallcloud.refactai.io.ConnectivityManager
 import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.listeners.UninstallListener
 import com.smallcloud.refactai.notifications.notificationStartup
@@ -25,7 +24,6 @@ class Initializer : StartupActivity, Disposable {
         val shouldInitialize = !(initialized.getAndSet(true) || ApplicationManager.getApplication().isUnitTestMode)
         if (shouldInitialize) {
             Logger.getInstance("SMCInitializer").info("Bin prefix = ${Resources.binPrefix}")
-            ConnectivityManager.instance.startup()
 
             if (InferenceGlobalContext.instance.canRequest()) {
                 when (InferenceGlobalContext.instance.deploymentMode) {

@@ -61,7 +61,6 @@ class CompletionMode(
         val fileName = getActiveFile(event.editor.document, event.editor.project) ?: return
         if (PrivacyService.getPrivacy(FileDocumentManager.getInstance().getFile(event.editor.document))
             == Privacy.DISABLED && !InferenceGlobalContext.isSelfHosted) return
-        if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
         var maybeState: EditorTextState? = null
         val debounceMs: Long
         val editor = event.editor
@@ -359,9 +358,6 @@ class CompletionMode(
             processTask?.get()
         } catch (_: CancellationException) {
         } finally {
-            if (InferenceGlobalContext.status != ConnectionStatus.DISCONNECTED) {
-                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-            }
             completionInProgress = false
             processTask = null
             completionLayout?.dispose()

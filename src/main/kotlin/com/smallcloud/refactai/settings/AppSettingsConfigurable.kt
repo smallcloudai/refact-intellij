@@ -42,14 +42,6 @@ class AppSettingsConfigurable : Configurable {
         return mySettingsComponent!!.splitter
     }
 
-    private fun makeRightUrl(url: String?): String? {
-        var res = url
-        if (res != null && !res.startsWith("http")) {
-            res = "http://${res}"
-        }
-        return res
-    }
-
     override fun isModified(): Boolean {
         var modified =
             (mySettingsComponent!!.tokenText.isNotEmpty() && (AccountManager.apiKey == null ||
@@ -82,8 +74,7 @@ class AppSettingsConfigurable : Configurable {
 
     override fun apply() {
         AccountManager.apiKey = mySettingsComponent!!.tokenText.trim().ifEmpty { null }
-        InferenceGlobalContext.inferenceUri =
-            makeRightUrl(mySettingsComponent!!.contrastUrlText.ifEmpty { null })
+        InferenceGlobalContext.inferenceUri = mySettingsComponent!!.contrastUrlText.ifEmpty { null }
         mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion

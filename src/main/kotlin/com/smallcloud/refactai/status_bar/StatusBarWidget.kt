@@ -3,6 +3,7 @@ package com.smallcloud.refactai.status_bar
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
@@ -11,41 +12,109 @@ import com.intellij.openapi.wm.CustomStatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidget.WidgetPresentation
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.openapi.wm.impl.status.EditorBasedWidget
-import com.intellij.openapi.wm.impl.status.TextPanel.WithIconAndArrows
 import com.intellij.ui.AnimatedIcon
+import com.intellij.ui.JBColor
 import com.intellij.util.Consumer
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.ExtraInfoChangedNotifier
-import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources.Icons.HAND_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_12x12
-import com.smallcloud.refactai.Resources.Icons.LOGO_RED_12x12
-import com.smallcloud.refactai.Resources.defaultTemperature
+import com.smallcloud.refactai.Resources.Icons.LOGO_RED_16x16
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
-import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.ConnectionChangedNotifier
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.listeners.SelectionChangedNotifier
+import com.smallcloud.refactai.lsp.LSPProcessHolder
+import com.smallcloud.refactai.lsp.RagStatus
 import com.smallcloud.refactai.notifications.emitLogin
 import com.smallcloud.refactai.notifications.emitRegular
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
 import com.smallcloud.refactai.privacy.PrivacyService
+import java.awt.Color
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.net.URI
 import java.util.*
+import java.util.concurrent.TimeUnit
 import javax.swing.Icon
 import javax.swing.JComponent
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
-class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomStatusBarWidget, WidgetPresentation {
-    private var component: WithIconAndArrows? = null
+class StatusBarState {
+    var astLimitHit: Boolean = false
+    var vecdbLimitHit: Boolean = false
+    var vecdbWarning: String = ""
+    var lastRagStatus: RagStatus? = null
+}
 
-    private fun getVirtualFile(editor: Editor) : VirtualFile? {
+class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomStatusBarWidget, WidgetPresentation {
+    private var component: StatusBarComponent? = null
+    private var logger: Logger = Logger.getInstance(javaClass)
+    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
+    private val spinIcon = AnimatedIcon.Default.INSTANCE
+
+    private fun getVirtualFile(editor: Editor): VirtualFile? {
         return FileDocumentManager.getInstance().getFile(editor.document)
+    }
+
+    private var statusbarState: StatusBarState = StatusBarState()
+
+    private fun lspSync() {
+        try {
+            val ragStatus = lsp.getRagStatus()
+            synchronized(this) {
+                statusbarState.lastRagStatus = ragStatus
+            }
+            if (ragStatus == null) {
+                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+                return
+            }
+            if (ragStatus.ast != null && ragStatus.ast.astMaxFilesHit) {
+                synchronized(this) {
+                    statusbarState.astLimitHit = true
+                }
+                update(null)
+                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+                return
+            }
+            if (ragStatus.vecdb != null && ragStatus.vecdb.vecdbMaxFilesHit) {
+                synchronized(this) {
+                    statusbarState.vecdbLimitHit = true
+                }
+                update(null)
+                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+                return
+            }
+
+            synchronized(this) {
+                statusbarState.astLimitHit = false
+                statusbarState.vecdbLimitHit = false
+            }
+
+            if (ragStatus.vecDbError.isNotEmpty()) {
+                synchronized(this) {
+                    statusbarState.vecdbWarning = ragStatus.vecDbError
+                }
+            }
+
+            if ((ragStatus.ast != null && listOf("starting", "parsing", "indexing").contains(ragStatus.ast.state))
+                || (ragStatus.vecdb != null && listOf("starting", "parsing").contains(ragStatus.vecdb.state))
+            ) {
+                logger.info("ast or vecdb is still indexing")
+                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 700, TimeUnit.MILLISECONDS)
+            } else {
+                logger.info("ast and vecdb status complete, slowdown poll")
+                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+            }
+
+            update(null)
+        } catch (e: Exception) {
+            AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+        }
     }
 
     init {
@@ -114,14 +183,17 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 }
             })
         ApplicationManager.getApplication()
-                .messageBus
-                .connect(this)
-                .subscribe(SelectionChangedNotifier.TOPIC, object : SelectionChangedNotifier {
-                    override fun isEditorChanged(editor: Editor?) {
-                        update(null)
-                    }
+            .messageBus
+            .connect(this)
+            .subscribe(SelectionChangedNotifier.TOPIC, object : SelectionChangedNotifier {
+                override fun isEditorChanged(editor: Editor?) {
+                    update(null)
+                }
 
-                })
+            })
+
+
+        lspSync()
     }
 
     override fun ID(): String {
@@ -130,10 +202,11 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
 
     // Compatability implementation. DO NOT ADD @Override.
     override fun getComponent(): JComponent {
-        val component = WithIconAndArrows()
+        val component = StatusBarComponent()
         component.icon = getIcon()
-        component.text = "Refact.ai"
+        component.text = getText()
         component.toolTipText = getTooltipText()
+        component.bottomLineColor = getBackgroundColor()
         component.addMouseListener(
             object : MouseAdapter() {
                 override fun mousePressed(e: MouseEvent) {
@@ -144,26 +217,31 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         return component
     }
 
-    private fun getLastStatus(): String {
-        val websiteStat =
-            ApplicationManager.getApplication().getService(LoginStateService::class.java).getLastWebsiteLoginStatus()
-        val infStat =
-            ApplicationManager.getApplication().getService(LoginStateService::class.java).getLastInferenceLoginStatus()
-        if (infStat == "OK" && websiteStat == "OK") return "OK"
-        return ""
-    }
-
     private fun getIcon(): Icon {
         if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud) {
             return LOGO_12x12
         }
+
+        var lastRagStatus: RagStatus? = null
+        synchronized(this) {
+            lastRagStatus = statusbarState.lastRagStatus?.copy()
+        }
+        if (lastRagStatus != null) {
+            val lastRagStatus = lastRagStatus!!
+            if ((lastRagStatus.vecdb != null && !listOf("done", "idle").contains(lastRagStatus.vecdb.state))
+                || lastRagStatus.ast != null && !listOf("done", "idle").contains(lastRagStatus.ast.state)
+            ) {
+                return spinIcon
+            }
+        }
+
         return when (InferenceGlobalContext.status) {
             ConnectionStatus.DISCONNECTED -> AllIcons.Debugger.ThreadStates.Socket
-            ConnectionStatus.ERROR -> AllIcons.Debugger.Db_exception_breakpoint
-            ConnectionStatus.CONNECTED -> if (isPrivacyEnabled() || !InferenceGlobalContext.isCloud)
-                LOGO_RED_12x12 else HAND_12x12
-            ConnectionStatus.PENDING -> AnimatedIcon.Default()
+            ConnectionStatus.ERROR -> AllIcons.Debugger.ThreadStates.Socket
+            ConnectionStatus.CONNECTED -> if (isPrivacyEnabled()) LOGO_RED_16x16 else HAND_12x12
+            ConnectionStatus.PENDING -> spinIcon
         }
+        return LOGO_RED_16x16
     }
 
     private fun isPrivacyEnabled(): Boolean {
@@ -180,37 +258,62 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return RefactAIBundle.message("statusBar.clickToLogin")
         }
 
-        when (InferenceGlobalContext.status) {
-            ConnectionStatus.DISCONNECTED -> {
-                return InferenceGlobalContext.lastErrorMsg
-            }
-            ConnectionStatus.ERROR -> {
-                return InferenceGlobalContext.lastErrorMsg
-            }
-            ConnectionStatus.CONNECTED -> {
-                if (isPrivacyEnabled() || InferenceGlobalContext.isSelfHosted) {
-                    var tooltipStr = "<html>"
-                    if (InferenceGlobalContext.inferenceUri != null) {
-                        tooltipStr += "⚡ ${InferenceGlobalContext.inferenceUri}"
-                    }
-                    val model = if (InferenceGlobalContext.model != null) InferenceGlobalContext.model else
-                        if (InferenceGlobalContext.lastAutoModel != null) InferenceGlobalContext.lastAutoModel else null
-                    val temp =
-                            if (InferenceGlobalContext.temperature != null) InferenceGlobalContext.temperature else defaultTemperature
-                    if (model != null)
-                        tooltipStr += "<br>\uD83D\uDDD2 $model"
-                    tooltipStr += "<br>\uD83C\uDF21️ $temp"
-                    if (PluginState.instance.tooltipMessage != null)
-                        tooltipStr += "<br>${PluginState.instance.tooltipMessage}"
-                    tooltipStr += "</html>"
-
-                    return tooltipStr
-                } else {
-                    return RefactAIBundle.message("statusBar.tooltipIfPrivacyDisabled")
-                }
-            }
-            else -> return "Refact.ai"
+        if (!isPrivacyEnabled()) {
+            return RefactAIBundle.message("statusBar.tooltipIfPrivacyDisabled")
         }
+
+        if (statusbarState.vecdbWarning.isNotEmpty()) {
+            return statusbarState.vecdbWarning
+        }
+
+        if (statusbarState.astLimitHit) {
+            return RefactAIBundle.message("statusBar.tooltipIfAstLimitHit")
+        }
+        if (statusbarState.vecdbLimitHit) {
+            return RefactAIBundle.message("statusBar.tooltipIfVecdbLimitHit")
+        }
+
+        if (InferenceGlobalContext.status == ConnectionStatus.ERROR && InferenceGlobalContext.lastErrorMsg != null) {
+            return if (InferenceGlobalContext.lastErrorMsg!!.indexOf("no model") != -1) {
+                RefactAIBundle.message("statusBar.noModelWarning", InferenceGlobalContext.lastErrorMsg!!)
+            } else {
+                RefactAIBundle.message("statusBar.errorWarning", InferenceGlobalContext.lastErrorMsg!!)
+            }
+        }
+
+        var msg = RefactAIBundle.message("statusBar.communicatingWith", lsp.attempingToReach())
+        if (InferenceGlobalContext.lastAutoModel != null) {
+            msg += "<br><br>${RefactAIBundle.message("statusBar.lastUsedModel", InferenceGlobalContext.lastAutoModel!!)}"
+        }
+
+        var lastRagStatus: RagStatus? = null
+        synchronized(this) {
+            lastRagStatus = statusbarState.lastRagStatus?.copy()
+        }
+        var ragStatusMsg = ""
+        if (lastRagStatus != null) {
+            val lastRagStatus = lastRagStatus!!
+            ragStatusMsg += if (lastRagStatus.ast != null) {
+                "${RefactAIBundle.message("statusBar.astStatus", lastRagStatus.ast.astIndexFilesTotal, 
+                    lastRagStatus.ast.astIndexSymbolsTotal)}<br><br>"
+
+            } else {
+                "${RefactAIBundle.message("statusBar.astTurnedOff")}<br><br>"
+            }
+            ragStatusMsg += if (lastRagStatus.vecdb != null) {
+                RefactAIBundle.message("statusBar.vecDBStatus",
+                    lastRagStatus.vecdb.dbSize, lastRagStatus.vecdb.dbCacheSize,
+                    lastRagStatus.vecdb.requestsMadeSinceStart, lastRagStatus.vecdb.requestsMadeSinceStart)
+            } else {
+                RefactAIBundle.message("statusBar.vecDBTurnedOff")
+            }
+            ragStatusMsg = ragStatusMsg.trim()
+        }
+        if (ragStatusMsg.isNotEmpty()) {
+            msg += "<br><br>$ragStatusMsg"
+        }
+
+        return msg
     }
 
     override fun getClickConsumer(): Consumer<MouseEvent> {
@@ -224,6 +327,47 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         }
     }
 
+    fun getBackgroundColor(): Color {
+        if (statusbarState.vecdbWarning.isNotEmpty()
+            || statusbarState.astLimitHit
+            || statusbarState.vecdbLimitHit
+            || InferenceGlobalContext.status == ConnectionStatus.ERROR
+        ) {
+            return JBColor.YELLOW
+        }
+
+        return JBColor.background()
+    }
+
+    private fun getText(): String {
+        var lastRagStatus: RagStatus? = null
+        synchronized(this) {
+            lastRagStatus = statusbarState.lastRagStatus?.copy()
+        }
+        if (lastRagStatus != null) {
+            val lastRagStatus = lastRagStatus!!
+            if (lastRagStatus.vecdb != null && !listOf("done", "idle").contains(lastRagStatus.vecdb.state)) {
+                val vecdbParsedQty = lastRagStatus.vecdb.filesTotal - lastRagStatus.vecdb.filesUnprocessed
+                return RefactAIBundle.message("statusBar.vecDBProgress", vecdbParsedQty, lastRagStatus.vecdb.filesTotal)
+            }
+            if (lastRagStatus.ast != null && !listOf("done", "idle").contains(lastRagStatus.ast.state)) {
+                when (lastRagStatus.ast.state) {
+                    "parsing" -> {
+                        val astParsedQty = lastRagStatus.ast.filesTotal - lastRagStatus.ast.filesUnparsed
+                        return RefactAIBundle.message("statusBar.astProgress", astParsedQty, lastRagStatus.ast.filesTotal)
+                    }
+                    "indexing" -> {
+                        return RefactAIBundle.message("statusBar.astIndexing")
+                    }
+                    "starting" -> {
+                        return RefactAIBundle.message("statusBar.astStarting")
+                    }
+                }
+            }
+        }
+        return "Refact.ai"
+    }
+
     private fun update(newMsg: String?) {
         val icon = if (ApplicationManager.getApplication().isDispatchThread) {
             ApplicationManager.getApplication().runWriteAction<Icon> {
@@ -232,15 +376,19 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         } else {
             getIcon()
         }
-
         ApplicationManager.getApplication()
             .invokeLater(
                 {
                     if (project.isDisposed || myStatusBar == null) {
                         return@invokeLater
                     }
+                    if (component!!.icon != icon) {
+                        component!!.icon = icon
+                    }
                     component!!.icon = icon
+                    component!!.text = getText()
                     component!!.toolTipText = newMsg ?: getTooltipText()
+                    component!!.bottomLineColor = getBackgroundColor()
                     myStatusBar!!.updateWidget(ID())
                     val statusBar = WindowManager.getInstance().getStatusBar(project)
                     statusBar?.component?.updateUI()

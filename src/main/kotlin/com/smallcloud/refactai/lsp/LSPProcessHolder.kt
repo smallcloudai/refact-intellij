@@ -17,6 +17,7 @@ import com.intellij.util.messages.Topic
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.binPrefix
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
+import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitError
 import org.apache.hc.core5.concurrent.ComplexFuture
@@ -269,8 +270,17 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
     private fun fetchToolboxConfig(): String {
         val config = InferenceGlobalContext.connection.get(url.resolve("/v1/customization"),
-            dataReceiveEnded = {},
-            errorDataReceived = {}).join().get()
+            dataReceiveEnded={
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+                InferenceGlobalContext.lastErrorMsg = null
+            },
+            errorDataReceived = {},
+            failedDataReceiveEnded = {
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                if (it != null) {
+                    InferenceGlobalContext.lastErrorMsg = it.message
+                }
+            }).join().get()
         return config as String
     }
 
@@ -321,8 +331,17 @@ class LSPProcessHolder(val project: Project) : Disposable {
     private fun getBuildInfo(): String {
         var res = ""
         InferenceGlobalContext.connection.get(url.resolve("/build_info"),
-            dataReceiveEnded = {},
-            errorDataReceived = {}).also {
+            dataReceiveEnded={
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+                InferenceGlobalContext.lastErrorMsg = null
+            },
+            errorDataReceived = {},
+            failedDataReceiveEnded = {
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                if (it != null) {
+                    InferenceGlobalContext.lastErrorMsg = it.message
+                }
+            }).also {
             try {
                 res = it.get().get() as String
                 logger.debug("build_info request finished")
@@ -343,9 +362,19 @@ class LSPProcessHolder(val project: Project) : Disposable {
     private fun getCaps(): LSPCapabilities {
         var res = LSPCapabilities()
         InferenceGlobalContext.connection.get(url.resolve("/v1/caps"),
-            dataReceiveEnded = {},
-            errorDataReceived = {}).also {
-            var requestFuture: ComplexFuture<*>?
+            dataReceiveEnded={
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+                InferenceGlobalContext.lastErrorMsg = null
+            },
+            errorDataReceived = {},
+            failedDataReceiveEnded = {
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                if (it != null) {
+                    InferenceGlobalContext.lastErrorMsg = it.message
+                }
+            }
+        ).also {
+            val requestFuture: ComplexFuture<*>?
             try {
                 requestFuture = it.get() as ComplexFuture
                 val out = requestFuture.get()
@@ -357,6 +386,47 @@ class LSPProcessHolder(val project: Project) : Disposable {
                 logger.debug("caps_received ${e.message}")
             }
             return res
+        }
+    }
+
+    fun getRagStatus(): RagStatus? {
+        InferenceGlobalContext.connection.get(
+            url.resolve("/v1/rag-status"),
+            requestProperties = mapOf("redirect" to "follow", "cache" to "no-cache", "referrer" to "no-referrer"),
+            dataReceiveEnded={
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+                InferenceGlobalContext.lastErrorMsg = null
+            },
+            errorDataReceived = {},
+            failedDataReceiveEnded = {
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                if (it != null) {
+                    InferenceGlobalContext.lastErrorMsg = it.message
+                }
+            }).also {
+            val requestFuture: ComplexFuture<*>?
+            try {
+                requestFuture = it.get() as ComplexFuture
+                val out = requestFuture.get()
+                val gson = Gson()
+                return gson.fromJson(out as String, RagStatus::class.java)
+            } catch (e: Exception) {
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                InferenceGlobalContext.lastErrorMsg = e.message
+                return null
+            }
+        }
+    }
+
+    fun attempingToReach(): String {
+        val xDebug = InferenceGlobalContext.xDebugLSPPort
+        if (xDebug != null) {
+            return "debug rust binary on ports $xDebug"
+        } else {
+            if (InferenceGlobalContext.inferenceUri != null) {
+                return InferenceGlobalContext.inferenceUri.toString()
+            }
+            return "<no-address-configured>"
         }
     }
 }

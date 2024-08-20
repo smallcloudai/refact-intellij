@@ -54,8 +54,6 @@ fun streamedInferenceFetch(
         "Authorization" to "Bearer ${request.token}",
     )
 
-    if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return null
-
     val job = InferenceGlobalContext.connection.post(
         uri, body, headers,
         stat = request.stat,

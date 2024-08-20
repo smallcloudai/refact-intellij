@@ -22,24 +22,6 @@ class InferenceGlobalContext : Disposable {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
     var connection: AsyncConnection = AsyncConnection()
 
-    fun checkConnection(uri: URI, needChangeStatus: Boolean = true) {
-        try {
-            if (needChangeStatus) {
-                status = ConnectionStatus.PENDING
-            }
-            connection.ping(uri)
-            if (needChangeStatus) {
-                status = ConnectionStatus.CONNECTED
-            }
-            lastErrorMsg = null
-        } catch (e: Exception) {
-            if (needChangeStatus) {
-                status = ConnectionStatus.DISCONNECTED
-            }
-            lastErrorMsg = e.message
-        }
-    }
-
     fun canRequest(): Boolean {
         return status == ConnectionStatus.CONNECTED
     }
@@ -75,9 +57,6 @@ class InferenceGlobalContext : Disposable {
 
             lastTask?.cancel(true)
             lastTask = reconnectScheduler.submit {
-//                checkConnection(inferenceUri!!)
-//                if (!canRequest()) return@submit
-
                 ApplicationManager.getApplication().getService(LoginStateService::class.java)
                         .tryToWebsiteLogin(force = true)
                 messageBus

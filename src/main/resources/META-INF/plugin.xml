@@ -146,7 +146,6 @@ integrated into a single package that follows your privacy settings.</p>
         <applicationService serviceImplementation="com.smallcloud.refactai.account.LoginStateService"/>
         <projectService serviceImplementation="com.smallcloud.refactai.statistic.UsageStats"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.UpdateChecker"/>
-        <applicationService serviceImplementation="com.smallcloud.refactai.io.ConnectivityManager"/>
         <projectService serviceImplementation="com.smallcloud.refactai.lsp.LSPProcessHolder"/>
     </extensions>
     <actions>

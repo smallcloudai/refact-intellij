@@ -308,7 +308,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     companion object {
-        private val BIN_PATH = Path(
+        val BIN_PATH = Path(
             getTempDirectory(),
             ApplicationInfo.getInstance().build.toString().replace(Regex("[^A-Za-z0-9 ]"), "_") +
                 "_refact_lsp${getExeSuffix()}"

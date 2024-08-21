@@ -9,6 +9,7 @@ enum class HostKind(val value: String) {
     CLOUD("cloud"),
     SELF("self"),
     ENTERPRISE("enterprise"),
+    BRING_YOUR_OWN_KEY("bring-your-own-key"),
 }
 
 sealed class Host {
@@ -17,6 +18,8 @@ sealed class Host {
     data class SelfHost(val endpointAddress: String) : Host()
 
     data class Enterprise(val endpointAddress: String, val apiKey: String) : Host()
+
+    data object BringYourOwnKey : Host()
 }
 
 class HostDeserializer : JsonDeserializer<Host> {
@@ -38,6 +41,9 @@ class HostDeserializer : JsonDeserializer<Host> {
                 val endpointAddress = host.get("endpointAddress")?.asString ?: return null
                 val apiKey = host.get("apiKey")?.asString ?: return null
                 return Host.Enterprise(endpointAddress, apiKey)
+            }
+            HostKind.BRING_YOUR_OWN_KEY.value -> {
+                return Host.BringYourOwnKey
             }
             else -> null
         }

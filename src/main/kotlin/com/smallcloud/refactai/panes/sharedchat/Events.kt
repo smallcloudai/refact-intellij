@@ -49,8 +49,6 @@ class Events {
         override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): FromChat? {
             val type = p0?.asJsonObject?.get("type")?.asString
 
-            println("From Chat");
-            println(p0)
 
             // events without payload
             if (type == EventNames.FromChat.LOG_OUT.value) {

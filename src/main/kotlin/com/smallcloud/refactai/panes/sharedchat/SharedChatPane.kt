@@ -20,6 +20,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
+import com.smallcloud.refactai.FimCache
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
@@ -29,6 +30,9 @@ import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.Host
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
 import java.io.File
@@ -159,6 +163,14 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     this@SharedChatPane.sendUserConfig()
                 }
             })
+
+        ApplicationManager.getApplication().invokeLater {
+            CoroutineScope(Dispatchers.Main).launch {
+                FimCache.subscribe { data ->
+                    this@SharedChatPane.sendFimData(data)
+                }
+            }
+        }
     }
 
     private fun setLookAndFeel() {
@@ -179,10 +191,18 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+    private fun sendFimData(data: Events.Fim.FimDebugPayload) {
+        val message = Events.Fim.Receive(data)
+        this.postMessage(message)
+    }
+
     private fun handleFimRequest() {
-        // TODO: get fill in the middle data from last completion.
-        val message = Events.Fim.Error("not setup yet")
-        postMessage(message)
+        if(FimCache.last == null) {
+            val message = Events.Fim.Error("Data not found, try causing a completion in the editor.")
+            postMessage(message)
+        } else {
+            this.sendFimData(FimCache.last!!)
+        }
     }
 
     private fun handleOpenHotKeys() {
@@ -239,8 +259,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun postMessage(message: Events.ToChat<*>?) {
-//        println("\n#### SharedChatPane.postMessage ####")
-//        println(message)
         this.browser.postMessage(message)
     }
 

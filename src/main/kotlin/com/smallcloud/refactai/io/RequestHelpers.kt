@@ -2,6 +2,7 @@ package com.smallcloud.refactai.io
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.smallcloud.refactai.FimCache
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.struct.SMCExceptions
 import com.smallcloud.refactai.struct.SMCRequest
@@ -63,6 +64,8 @@ fun streamedInferenceFetch(
             if (rawJson.has("metering_balance")) {
                 AccountManager.instance.meteringBalance = rawJson.get("metering_balance").asInt
             }
+
+            FimCache.maybeSendFimData(body)
 
             val json = gson.fromJson(body, SMCStreamingPeace::class.java)
             InferenceGlobalContext.lastAutoModel = json.model

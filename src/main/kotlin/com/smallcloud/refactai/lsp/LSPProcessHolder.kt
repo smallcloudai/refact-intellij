@@ -173,6 +173,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         synchronized(this) {
             terminate()
             if (InferenceGlobalContext.xDebugLSPPort != null) {
+                capabilities = getCaps()
                 lspProjectInitialize(this, project)
                 return
             }

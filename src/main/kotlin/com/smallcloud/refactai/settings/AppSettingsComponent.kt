@@ -30,18 +30,16 @@ import kotlin.io.path.Path
 class AppSettingsComponent {
     val splitter: JBSplitter = JBSplitter(true, 0.3f)
     private val mainPanel: JPanel
-    private val experimentalPanel: JPanel
+    private var experimentalPanel: JPanel = JPanel()
     val myTokenText = JBTextField().apply {
         addKeyListener(object : KeyListener {
             override fun keyTyped(e: KeyEvent?) {}
             override fun keyReleased(e: KeyEvent?) {}
             override fun keyPressed(e: KeyEvent?) {
                 if (e?.keyCode == KeyEvent.VK_MINUS && e.isControlDown && e.isAltDown) {
-                    developerModeCheckBox.isVisible = true
-                    myXDebugLSPPort.isVisible = true
+                    experimentalPanel.isVisible = true
                     myXDebugLSPPortLabel.isVisible = true
-                    myStagingVersionText.isVisible = true
-                    myStagingVersionLabel.isVisible = true
+                    myXDebugLSPPort.isVisible = true
                 }
             }
 
@@ -109,11 +107,6 @@ class AppSettingsComponent {
             )
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.secretApiKey")}: "),
                 myTokenText, 1, false)
-            addComponentFillVertically(JPanel(), 0)
-        }.panel
-
-        experimentalPanel = FormBuilder.createFormBuilder().run {
-            addComponent(TitledSeparator(RefactAIBundle.message("advancedSettings.experimentalFeatures")))
 
             addComponent(astCheckbox, UIUtil.LARGE_VGAP)
             addComponent(
@@ -173,11 +166,19 @@ class AppSettingsComponent {
             addLabeledComponent(JBLabel("Customization").apply {
                 isVisible = openCustomizationButton.isVisible
             }, openCustomizationButton, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
-            addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
-            addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
-            addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
+
             addComponentFillVertically(JPanel(), 0)
         }.panel
+
+        experimentalPanel = FormBuilder.createFormBuilder().run {
+            addComponent(TitledSeparator(RefactAIBundle.message("advancedSettings.experimentalFeatures")))
+
+//            addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
+            addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
+//            addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
+            addComponentFillVertically(JPanel(), 0)
+        }.panel
+        experimentalPanel.isVisible = false
 
         splitter.firstComponent = mainPanel
         splitter.secondComponent = experimentalPanel

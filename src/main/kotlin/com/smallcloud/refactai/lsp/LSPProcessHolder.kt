@@ -39,6 +39,7 @@ private fun getExeSuffix(): String {
 
 interface LSPProcessHolderChangedNotifier {
     fun capabilitiesChanged(newCaps: LSPCapabilities) {}
+    fun lspIsActive(isActive: Boolean) {}
 
     companion object {
         val TOPIC = Topic.create(
@@ -59,12 +60,24 @@ class LSPProcessHolder(val project: Project) : Disposable {
     private val schedulerCaps = AppExecutorUtil.createBoundedScheduledExecutorService(
         "SMCLSPCapsRequesterScheduler", 1
     )
-    private var capsTask: Future<*>? = null
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
-    private var isWorking = false
+    private var isWorking_ = false
     private val healthCheckerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "SMCLSHealthCheckerScheduler", 1
     )
+
+    var isWorking: Boolean
+        get() = isWorking_
+        set(newValue) {
+            if (isWorking_ == newValue) return
+            if (!project.isDisposed) {
+                project
+                    .messageBus
+                    .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
+                    .lspIsActive(newValue)
+            }
+            isWorking_ = newValue
+        }
 
     init {
         messageBus
@@ -156,16 +169,6 @@ class LSPProcessHolder(val project: Project) : Disposable {
                 startProcess()
             }
         }, 1, 1, TimeUnit.SECONDS)
-
-        capsTask = schedulerCaps.scheduleWithFixedDelay({
-            capabilities = getCaps()
-            if (capabilities.cloudName.isNotEmpty()) {
-                capsTask?.cancel(true)
-                schedulerCaps.scheduleWithFixedDelay({
-                    capabilities = getCaps()
-                }, 15, 15, TimeUnit.MINUTES)
-            }
-        }, 0, 3, TimeUnit.SECONDS)
     }
 
 
@@ -180,9 +183,6 @@ class LSPProcessHolder(val project: Project) : Disposable {
             startProcess()
         }
     }
-
-    val lspIsWorking: Boolean
-        get() = InferenceGlobalContext.xDebugLSPPort != null || isWorking
 
     var capabilities: LSPCapabilities = LSPCapabilities()
         set(newValue) {
@@ -369,7 +369,6 @@ class LSPProcessHolder(val project: Project) : Disposable {
             },
             errorDataReceived = {},
             failedDataReceiveEnded = {
-                InferenceGlobalContext.status = ConnectionStatus.ERROR
                 if (it != null) {
                     InferenceGlobalContext.lastErrorMsg = it.message
                 }

@@ -179,7 +179,11 @@ class PrivacyService : Disposable {
     }
 
     fun addMember(file: String, privacy: Privacy? = null): PrivacyMember? {
-        return VirtualFileManager.getInstance().findFileByNioPath(Path.of(file))?.let { addMember(it, privacy) }
+        return ApplicationManager.getApplication().executeOnPooledThread {
+            VirtualFileManager.getInstance().findFileByNioPath(Path.of(file))?.let { addMember(it, privacy) }
+        }.get() as PrivacyMember?
+
+//        return VirtualFileManager.getInstance().findFileByNioPath(Path.of(file))?.let { addMember(it, privacy) }
     }
 
     private fun addMember(file: VirtualFile, privacy: Privacy? = null): PrivacyMember? {

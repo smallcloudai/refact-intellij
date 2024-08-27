@@ -1,6 +1,7 @@
 package com.smallcloud.refactai.panes
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
@@ -32,6 +33,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()
         val chatPanes = ChatPanes(project)
+        Disposer.register(toolWindow.disposable, chatPanes)
         val content: Content = contentFactory.createContent(chatPanes.getComponent(), "Chat", false)
         content.isCloseable = false
         content.putUserData(panesKey, chatPanes)

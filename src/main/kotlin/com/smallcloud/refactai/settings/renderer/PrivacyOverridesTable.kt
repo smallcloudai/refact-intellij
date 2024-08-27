@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.settings.renderer
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.Messages
@@ -11,7 +12,6 @@ import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
-import icons.CollaborationToolsIcons
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.event.MouseEvent
@@ -35,8 +35,8 @@ val privacyToString = mapOf(
 internal class ButtonRenderer : LinkLabel<String>(), TableCellRenderer {
     init {
         isOpaque = true
-        icon = CollaborationToolsIcons.Delete
-        preferredSize = Dimension(CollaborationToolsIcons.Delete.iconWidth + 4, 0)
+        icon = AllIcons.Actions.DeleteTag
+        preferredSize = Dimension(AllIcons.Actions.DeleteTag.iconWidth + 4, 0)
         horizontalAlignment = CENTER
     }
 
@@ -88,7 +88,7 @@ private class ButtonEditor(checkBox: JBCheckBox?) : DefaultCellEditor(checkBox) 
 
     init {
         button.isOpaque = true
-        button.icon = CollaborationToolsIcons.Delete
+        button.icon = AllIcons.Actions.DeleteTag
 
         button.addMouseListener(object : MouseListener {
             override fun mousePressed(e: MouseEvent?) {
@@ -180,8 +180,8 @@ class PrivacyOverridesTable : JBTable(PrivacyOverridesTableModel()) {
         val secondColumn = columnModel.getColumn(2)
         secondColumn.cellRenderer = ButtonRenderer()
         secondColumn.cellEditor = ButtonEditor(JBCheckBox())
-        secondColumn.preferredWidth = CollaborationToolsIcons.Delete.iconWidth + 4
-        secondColumn.minWidth = CollaborationToolsIcons.Delete.iconWidth + 4
-        secondColumn.maxWidth = CollaborationToolsIcons.Delete.iconWidth + 4
+        secondColumn.preferredWidth = AllIcons.Actions.DeleteTag.iconWidth + 4
+        secondColumn.minWidth = AllIcons.Actions.DeleteTag.iconWidth + 4
+        secondColumn.maxWidth = AllIcons.Actions.DeleteTag.iconWidth + 4
     }
 }

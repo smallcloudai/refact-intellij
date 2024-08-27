@@ -17,6 +17,7 @@ import com.intellij.ui.JBColor
 import com.intellij.util.Consumer
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.ExtraInfoChangedNotifier
+import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources.Icons.HAND_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_12x12
@@ -27,9 +28,11 @@ import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.listeners.SelectionChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
+import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.lsp.RagStatus
 import com.smallcloud.refactai.notifications.emitLogin
 import com.smallcloud.refactai.notifications.emitRegular
+import com.smallcloud.refactai.notifications.emitWarning
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
 import com.smallcloud.refactai.privacy.PrivacyService
@@ -38,6 +41,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.net.URI
 import java.util.*
+import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import javax.swing.Icon
 import javax.swing.JComponent
@@ -62,6 +66,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private var statusbarState: StatusBarState = StatusBarState()
+    private var lspSyncTask: Future<*>? =null
 
     private fun lspSync() {
         try {
@@ -70,7 +75,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 statusbarState.lastRagStatus = ragStatus
             }
             if (ragStatus == null) {
-                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
                 return
             }
             if (ragStatus.ast != null && ragStatus.ast.astMaxFilesHit) {
@@ -78,7 +83,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     statusbarState.astLimitHit = true
                 }
                 update(null)
-                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
                 return
             }
             if (ragStatus.vecdb != null && ragStatus.vecdb.vecdbMaxFilesHit) {
@@ -86,7 +91,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     statusbarState.vecdbLimitHit = true
                 }
                 update(null)
-                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
                 return
             }
 
@@ -105,15 +110,15 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 || (ragStatus.vecdb != null && listOf("starting", "parsing").contains(ragStatus.vecdb.state))
             ) {
                 logger.info("ast or vecdb is still indexing")
-                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 700, TimeUnit.MILLISECONDS)
+                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 700, TimeUnit.MILLISECONDS)
             } else {
                 logger.info("ast and vecdb status complete, slowdown poll")
-                AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
             }
 
             update(null)
         } catch (e: Exception) {
-            AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
+            lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
         }
     }
 
@@ -191,9 +196,18 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 }
 
             })
-
-
-        lspSync()
+        project.messageBus.connect(PluginState.instance)
+            .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
+                override fun lspIsActive(isActive: Boolean) {
+                    statusbarState = StatusBarState()
+                    lspSyncTask?.cancel(true)
+                    lspSyncTask = null
+                    if (isActive) {
+                        lspSync()
+                    }
+                    update(null)
+                }
+            })
     }
 
     override fun ID(): String {
@@ -226,6 +240,10 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         synchronized(this) {
             lastRagStatus = statusbarState.lastRagStatus?.copy()
         }
+        if (statusbarState.astLimitHit || statusbarState.vecdbLimitHit) {
+            return AllIcons.Debugger.ThreadStates.Socket
+        }
+
         if (lastRagStatus != null) {
             val lastRagStatus = lastRagStatus!!
             if ((lastRagStatus.vecdb != null && !listOf("done", "idle").contains(lastRagStatus.vecdb.state))
@@ -266,11 +284,8 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return statusbarState.vecdbWarning
         }
 
-        if (statusbarState.astLimitHit) {
-            return RefactAIBundle.message("statusBar.tooltipIfAstLimitHit")
-        }
-        if (statusbarState.vecdbLimitHit) {
-            return RefactAIBundle.message("statusBar.tooltipIfVecdbLimitHit")
+        if (statusbarState.astLimitHit || statusbarState.vecdbLimitHit) {
+            return RefactAIBundle.message("statusBar.tooltipClickToMakeChanges")
         }
 
         if (InferenceGlobalContext.status == ConnectionStatus.ERROR && InferenceGlobalContext.lastErrorMsg != null) {
@@ -319,6 +334,10 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     override fun getClickConsumer(): Consumer<MouseEvent> {
         return Consumer { e: MouseEvent ->
             if (!e.isPopupTrigger && MouseEvent.BUTTON1 == e.button) {
+                if (statusbarState.astLimitHit || statusbarState.vecdbLimitHit) {
+                    emitWarning(project, RefactAIBundle.message("statusBar.notificationAstVecdbLimitMsg"))
+                    return@Consumer
+                }
                 if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud)
                     emitLogin(project)
                 else
@@ -344,6 +363,14 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         synchronized(this) {
             lastRagStatus = statusbarState.lastRagStatus?.copy()
         }
+
+        if (statusbarState.astLimitHit) {
+            return RefactAIBundle.message("statusBar.tooltipIfAstLimitHit")
+        }
+        if (statusbarState.vecdbLimitHit) {
+            return RefactAIBundle.message("statusBar.tooltipIfVecdbLimitHit")
+        }
+
         if (lastRagStatus != null) {
             val lastRagStatus = lastRagStatus!!
             if (lastRagStatus.vecdb != null && !listOf("done", "idle").contains(lastRagStatus.vecdb.state)) {

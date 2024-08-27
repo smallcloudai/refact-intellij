@@ -78,6 +78,7 @@ object Resources {
     val pluginId: PluginId = getPluginId()
     val jbBuildVersion: String = ApplicationInfo.getInstance().build.toString()
     const val refactAIRootSettingsID = "refactai_root"
+    const val refactAIAdvancedSettingsID = "refactai_advanced_settings"
 
     object Icons {
         private fun brushForTheme(icon: Icon): Icon {

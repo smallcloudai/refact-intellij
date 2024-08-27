@@ -9,13 +9,22 @@ import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.ui.jcef.*
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.lsp.LSPCapabilities
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
-import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.browser.CefFrame
+import org.cef.callback.CefAuthCallback
+import org.cef.callback.CefCallback
+import org.cef.handler.*
+import org.cef.misc.BoolRef
+import org.cef.misc.StringRef
+import org.cef.network.CefCookie
+import org.cef.network.CefRequest
+import org.cef.network.CefResponse
+import org.cef.network.CefURLRequest
+import org.cef.security.CefSSLInfo
 import javax.swing.JComponent
 
 
@@ -129,11 +138,13 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         editor.project.messageBus.connect(PluginState.instance)
             .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
-                override fun capabilitiesChanged(newCaps: LSPCapabilities) {
-                    setupReact = false
-                    installedScript = false
-                    browser.cefBrowser.reload()
-                    addMessageHandler(myJSQueryOpenInBrowser)
+                override fun lspIsActive(isActive: Boolean) {
+                    if (isActive) {
+                        setupReact = false
+                        installedScript = false
+                        browser.cefBrowser.reload()
+                        addMessageHandler(myJSQueryOpenInBrowser)
+                    }
                 }
             })
 

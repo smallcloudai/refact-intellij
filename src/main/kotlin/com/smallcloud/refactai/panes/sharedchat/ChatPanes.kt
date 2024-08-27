@@ -1,13 +1,15 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.project.Project
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-class ChatPanes(val project: Project) {
+class ChatPanes(val project: Project): Disposable {
     private var component: JComponent? = null
+    private var pane: SharedChatPane? = null
     private val holder = JPanel().also {
         it.layout = BorderLayout()
     }
@@ -15,8 +17,8 @@ class ChatPanes(val project: Project) {
     private fun setupPanes() {
         invokeLater {
             holder.removeAll()
-            val newPane = SharedChatPane(project)
-            component = newPane.webView.component
+            pane = SharedChatPane(project)
+            component = pane?.webView?.component
             holder.add(component)
         }
     }
@@ -31,5 +33,9 @@ class ChatPanes(val project: Project) {
 
     fun requestFocus() {
         component?.requestFocus()
+    }
+
+    override fun dispose() {
+        pane?.dispose()
     }
 }

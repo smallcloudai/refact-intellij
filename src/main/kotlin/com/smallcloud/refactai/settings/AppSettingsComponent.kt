@@ -50,6 +50,10 @@ class AppSettingsComponent {
     private val myAstFileLimitText = JBTextField()
     private val myAstLightMode = JCheckBox(RefactAIBundle.message("advancedSettings.useASTLightMode"))
     private val myVecdbFileLimitText = JBTextField()
+    private val insecureSSLCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.insecureSSL"))
+    private val telemetrySnippetCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.telemetryCodeSnippets"))
+    private val pauseCompletionCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.pauseCompletion"))
+    private val completionMaxTokenText = JBTextField()
     val astCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion")).apply {
         isVisible = true
     }
@@ -117,6 +121,52 @@ class AppSettingsComponent {
                     setCopyable(true)
                 }, 0
             )
+            addComponent(insecureSSLCheckBox, UIUtil.LARGE_VGAP)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.insecureSSLDesc"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ).apply {
+                    setCopyable(true)
+                }, 0
+            )
+
+            addLabeledComponent(JBLabel(RefactAIBundle.message("advancedSettings.completionMaxTokens")),
+                completionMaxTokenText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.completionMaxTokensDesc"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
+
+            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.codeCompletionModel")}: "),
+                myModelText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.codeCompletionModelDesc"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
+
+//            addComponent(telemetrySnippetCheckBox, UIUtil.LARGE_VGAP)
+//            addComponent(
+//                JBLabel(
+//                    RefactAIBundle.message("advancedSettings.telemetryCodeSnippetsDesc"),
+//                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+//                ).apply {
+//                    setCopyable(true)
+//                }, 0
+//            )
+            addComponent(pauseCompletionCheckBox, UIUtil.LARGE_VGAP)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.pauseCompletionDesc"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ).apply {
+                    setCopyable(true)
+                }, 0
+            )
 
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.astFileLimit")}: "), myAstFileLimitText,
                 (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
@@ -155,14 +205,6 @@ class AppSettingsComponent {
                 }, 0
             )
 
-            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.codeCompletionModel")}: "),
-                myModelText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
-            addComponent(
-                JBLabel(
-                    RefactAIBundle.message("advancedSettings.codeCompletionModelDesc"),
-                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ), 0
-            )
             addLabeledComponent(JBLabel("Customization").apply {
                 isVisible = openCustomizationButton.isVisible
             }, openCustomizationButton, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
@@ -235,6 +277,30 @@ class AppSettingsComponent {
         get() = myModelText.text
         set(newVal) {
             myModelText.text = newVal
+        }
+
+    var insecureSSL: Boolean
+        get() = insecureSSLCheckBox.isSelected
+        set(newVal) {
+            insecureSSLCheckBox.isSelected = newVal
+        }
+
+    var completionMaxTokens: Int
+        get() = completionMaxTokenText.text.toIntOrNull() ?: 0
+        set(newVal) {
+            completionMaxTokenText.text = newVal.toString()
+        }
+
+    var telemetrySnippetsEnabled: Boolean
+        get() = telemetrySnippetCheckBox.isSelected
+        set(newVal) {
+            telemetrySnippetCheckBox.isSelected = newVal
+        }
+
+    var pauseCompletion: Boolean
+        get() = pauseCompletionCheckBox.isSelected
+        set(newVal) {
+            pauseCompletionCheckBox.isSelected = newVal
         }
 
     var xDebugLSPPort: Int?

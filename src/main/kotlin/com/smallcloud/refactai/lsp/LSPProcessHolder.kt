@@ -139,6 +139,12 @@ class LSPProcessHolder(val project: Project) : Disposable {
                         settingsChanged()
                     }
                 }
+
+                override fun insecureSSLChanged(newValue: Boolean) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
+                    }
+                }
             })
 
         Companion::class.java.getResourceAsStream(
@@ -209,6 +215,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             astLightMode = InferenceGlobalContext.astLightMode,
             vecdb = InferenceGlobalContext.vecdbIsEnabled,
             vecdbFileLimit = InferenceGlobalContext.vecdbFileLimit,
+            insecureSSL = InferenceGlobalContext.insecureSSL,
         )
 
         val processIsAlive = process?.isAlive == true

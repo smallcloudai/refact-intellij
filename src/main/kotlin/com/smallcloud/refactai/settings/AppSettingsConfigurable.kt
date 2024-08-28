@@ -68,7 +68,10 @@ class AppSettingsConfigurable : Configurable {
 
         modified =
             modified || mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null } != InferenceGlobalContext.model
-
+        modified = modified || mySettingsComponent!!.insecureSSL != InferenceGlobalContext.insecureSSL
+        modified = modified || mySettingsComponent!!.completionMaxTokens!= InferenceGlobalContext.completionMaxTokens
+        modified = modified || mySettingsComponent!!.telemetrySnippetsEnabled != InferenceGlobalContext.telemetrySnippetsEnabled
+        modified = modified || mySettingsComponent!!.pauseCompletion != !InferenceGlobalContext.useAutoCompletion
         return modified
     }
 
@@ -84,6 +87,10 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.astLightMode = mySettingsComponent!!.astLightMode
         InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
         InferenceGlobalContext.vecdbFileLimit = mySettingsComponent!!.vecdbFileLimit
+        InferenceGlobalContext.insecureSSL = mySettingsComponent!!.insecureSSL
+        InferenceGlobalContext.completionMaxTokens = mySettingsComponent!!.completionMaxTokens
+        InferenceGlobalContext.telemetrySnippetsEnabled = mySettingsComponent!!.telemetrySnippetsEnabled
+        InferenceGlobalContext.useAutoCompletion = !mySettingsComponent!!.pauseCompletion
         InferenceGlobalContext.model = mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null }
     }
 
@@ -99,6 +106,10 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
         mySettingsComponent!!.vecdbFileLimit = InferenceGlobalContext.vecdbFileLimit
         mySettingsComponent!!.inferenceModel = InferenceGlobalContext.model
+        mySettingsComponent!!.insecureSSL = InferenceGlobalContext.insecureSSL
+        mySettingsComponent!!.completionMaxTokens = InferenceGlobalContext.completionMaxTokens
+        mySettingsComponent!!.telemetrySnippetsEnabled = InferenceGlobalContext.telemetrySnippetsEnabled
+        mySettingsComponent!!.pauseCompletion = !InferenceGlobalContext.useAutoCompletion
     }
 
     override fun disposeUIResources() {

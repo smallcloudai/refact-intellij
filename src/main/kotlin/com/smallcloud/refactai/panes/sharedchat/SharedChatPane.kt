@@ -1,5 +1,7 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.processTools.getResultStdoutStr
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -17,13 +19,17 @@ import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
+import com.smallcloud.refactai.lsp.LSPProcessHolder
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
@@ -33,6 +39,7 @@ import com.smallcloud.refactai.settings.Host
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
 import java.io.File
@@ -68,7 +75,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun handleSetupHost(host: Host) {
+    private suspend fun handleSetupHost(host: Host) {
         val accountManager = AccountManager.instance;
         val settings = AppSettingsState.instance
         when (host) {
@@ -85,6 +92,29 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Host.SelfHost -> {
                 accountManager.apiKey = "any-key-will-work"
                 settings.userInferenceUri = host.endpointAddress
+            }
+            is Host.BringYourOwnKey -> {
+                val process = GeneralCommandLine(listOf(BIN_PATH, "--save-byok-file"))
+                    .withRedirectErrorStream(true)
+                    .createProcess()
+                process.awaitExit()
+                val out = process.getResultStdoutStr().getOrNull()
+                if (out == null) {
+                    println("Save btok file output is null")
+                    return;
+                }
+
+                ApplicationManager.getApplication().invokeLater {
+                    val virtualFile: VirtualFile? = LocalFileSystem.getInstance().findFileByIoFile(File(out))
+                    if (virtualFile != null) {
+                        // Open the file in the editor
+                        FileEditorManager.getInstance(project).openFile(virtualFile, true)
+                    } else {
+                        println("File not found: $out")
+                    }
+                    accountManager.apiKey = "any-key-will-work"
+                    settings.userInferenceUri = out
+                }
             }
         }
     }
@@ -230,7 +260,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     }
 
-    private fun handleEvent(event: Events.FromChat) {
+    private suspend fun handleEvent(event: Events.FromChat) {
         logger.info("Event received: $event")
         when (event) {
             is Events.Editor.Paste -> this.handlePaste(event.content)
@@ -251,7 +281,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         ChatWebView(
             this.editor
         ) { event ->
-            this.handleEvent(event)
+            runBlocking {
+                handleEvent(event)
+            }
         }
     }
 

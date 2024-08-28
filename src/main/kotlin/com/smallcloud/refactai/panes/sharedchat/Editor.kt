@@ -24,7 +24,7 @@ class Editor (val project: Project) {
         return language
     }
 
-    fun getSelectedSnippet(cb: (Events.Editor.Snippet) -> Unit) {
+    fun getSelectedSnippet(cb: (Events.Editor.Snippet?) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
             if (!project.isDisposed && FileEditorManager.getInstance(project).selectedFiles.isNotEmpty()) {
                 val fileEditorManager = FileEditorManager.getInstance(project)
@@ -45,6 +45,8 @@ class Editor (val project: Project) {
                     val snippet = Events.Editor.Snippet(language, code, path, name)
                     cb(snippet)
                 }
+            } else {
+                cb(null)
             }
         }
     }

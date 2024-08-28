@@ -48,8 +48,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun sendSelectedSnippet() {
         this.editor.getSelectedSnippet { snippet ->
-            val message = Editor.SetSnippetToChat(snippet)
-            this.postMessage(message)
+            if (snippet != null) {
+                val message = Editor.SetSnippetToChat(snippet)
+                this.postMessage(message)
+            }
         }
     }
 

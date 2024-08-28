@@ -112,15 +112,6 @@ class AppSettingsComponent {
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.secretApiKey")}: "),
                 myTokenText, 1, false)
 
-            addComponent(astCheckbox, UIUtil.LARGE_VGAP)
-            addComponent(
-                JBLabel(
-                    RefactAIBundle.message("advancedSettings.useMultipleFilesCompletionDescription"),
-                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ).apply {
-                    setCopyable(true)
-                }, 0
-            )
             addComponent(insecureSSLCheckBox, UIUtil.LARGE_VGAP)
             addComponent(
                 JBLabel(
@@ -167,7 +158,15 @@ class AppSettingsComponent {
                     setCopyable(true)
                 }, 0
             )
-
+            addComponent(astCheckbox, UIUtil.LARGE_VGAP)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.useMultipleFilesCompletionDescription"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ).apply {
+                    setCopyable(true)
+                }, 0
+            )
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.astFileLimit")}: "), myAstFileLimitText,
                 (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
             addComponent(

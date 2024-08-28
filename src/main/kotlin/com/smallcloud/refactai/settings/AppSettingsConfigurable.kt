@@ -23,6 +23,7 @@ class AppSettingsConfigurable : Configurable {
                     mySettingsComponent?.astIsEnabled = InferenceGlobalContext.astIsEnabled
                     mySettingsComponent?.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
                     mySettingsComponent?.splitter?.revalidate()
+                    // mySettingsComponent?.
                 }
             })
     }
@@ -65,6 +66,7 @@ class AppSettingsConfigurable : Configurable {
         modified = modified || mySettingsComponent!!.astLightMode != InferenceGlobalContext.astLightMode
         modified = modified || mySettingsComponent!!.vecdbIsEnabled != InferenceGlobalContext.vecdbIsEnabled
         modified = modified || mySettingsComponent!!.vecdbFileLimit != InferenceGlobalContext.vecdbFileLimit
+        modified = modified || mySettingsComponent!!.shiftEnterToSubmit != InferenceGlobalContext.shiftEnterToSubmit
 
         modified =
             modified || mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null } != InferenceGlobalContext.model
@@ -92,6 +94,7 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.telemetrySnippetsEnabled = mySettingsComponent!!.telemetrySnippetsEnabled
         InferenceGlobalContext.useAutoCompletion = !mySettingsComponent!!.pauseCompletion
         InferenceGlobalContext.model = mySettingsComponent!!.inferenceModel?.trim()?.ifEmpty { null }
+        InferenceGlobalContext.shiftEnterToSubmit = mySettingsComponent!!.shiftEnterToSubmit
     }
 
     override fun reset() {
@@ -110,6 +113,7 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.completionMaxTokens = InferenceGlobalContext.completionMaxTokens
         mySettingsComponent!!.telemetrySnippetsEnabled = InferenceGlobalContext.telemetrySnippetsEnabled
         mySettingsComponent!!.pauseCompletion = !InferenceGlobalContext.useAutoCompletion
+        mySettingsComponent!!.shiftEnterToSubmit = InferenceGlobalContext.shiftEnterToSubmit
     }
 
     override fun disposeUIResources() {

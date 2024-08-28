@@ -55,6 +55,7 @@ class Editor (val project: Project) {
     fun getUserConfig(): Events.Config.UpdatePayload {
         val hasAst = AppSettingsState.instance.astIsEnabled
         val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
+        val shiftEnterToSubmit = AppSettingsState.instance.shiftEnterToSubmit
         val features = Events.Config.Features(hasAst, hasVecdb)
         val isDarkMode = UIUtil.isUnderDarcula()
         val mode = if (isDarkMode) "dark" else "light"
@@ -64,7 +65,7 @@ class Editor (val project: Project) {
         val addressURL = AppSettingsState.instance.userInferenceUri ?: ""
         val keyBindings = Events.Config.KeyBindings(getActionKeybinding("ForceCompletionAction"))
 
-        return Events.Config.UpdatePayload(features, themeProps, lspPort, apiKey, addressURL, keyBindings)
+        return Events.Config.UpdatePayload(features, themeProps, lspPort, apiKey, addressURL, keyBindings, tabbed = false, shiftEnterToSubmit = shiftEnterToSubmit)
     }
 
     fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo) -> Unit) {

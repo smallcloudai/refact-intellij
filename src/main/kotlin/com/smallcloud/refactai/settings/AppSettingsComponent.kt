@@ -54,6 +54,10 @@ class AppSettingsComponent {
     private val telemetrySnippetCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.telemetryCodeSnippets"))
     private val pauseCompletionCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.pauseCompletion"))
     private val completionMaxTokenText = JBTextField()
+
+    val myShiftEnterToSubmit = JCheckBox("Use shift plus enter to submit chat.").apply {
+        isVisible = true
+    }
     val astCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion")).apply {
         isVisible = true
     }
@@ -111,6 +115,8 @@ class AppSettingsComponent {
             )
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.secretApiKey")}: "),
                 myTokenText, 1, false)
+
+            addComponent(myShiftEnterToSubmit, UIUtil.LARGE_VGAP)
 
             addComponent(insecureSSLCheckBox, UIUtil.LARGE_VGAP)
             addComponent(
@@ -267,6 +273,13 @@ class AppSettingsComponent {
         set(newVal) {
             vecdbCheckbox.isSelected = newVal
         }
+
+    var shiftEnterToSubmit: Boolean
+        get() = myShiftEnterToSubmit.isSelected
+        set(newVal) {
+            myShiftEnterToSubmit.isSelected = newVal
+        }
+
     var vecdbFileLimit: Int
         get() = myVecdbFileLimitText.text.toIntOrNull() ?: 15000
         set(newVal) {

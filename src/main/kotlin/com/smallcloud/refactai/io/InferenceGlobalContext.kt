@@ -219,6 +219,14 @@ class InferenceGlobalContext : Disposable {
                 .xDebugLSPPortChanged(newValue)
         }
 
+    var shiftEnterToSubmit: Boolean
+        get() { return AppSettingsState.shiftEnterToSubmit }
+        set(newValue) {
+            if (newValue == AppSettingsState.shiftEnterToSubmit) return
+            messageBus.syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+                .shiftEnterToSubmitChanged(newValue)
+        }
+
     fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
         val apiKey = AccountManager.apiKey
 

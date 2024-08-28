@@ -196,6 +196,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     logger.info("vecdb changed to: $newValue")
                     this@SharedChatPane.sendUserConfig()
                 }
+
+                override fun shiftEnterToSubmitChanged(newValue: Boolean) {
+                    logger.info("use shit plu enter changed to $newValue")
+                    this@SharedChatPane.sendUserConfig()
+                }
             })
 
         editor.project.messageBus.connect(PluginState.instance)

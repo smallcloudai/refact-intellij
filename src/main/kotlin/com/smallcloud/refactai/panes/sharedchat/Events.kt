@@ -293,7 +293,8 @@ class Events {
             val addressURL: String?,
             val keyBindings: Config.KeyBindings,
             val tabbed: Boolean? = false,
-            val host: String? = "jetbrains"
+            val host: String? = "jetbrains",
+            val shiftEnterToSubmit: Boolean? = false
         ): Payload()
 
         class Update(payload: UpdatePayload): ToChat<Payload>(EventNames.ToChat.UPDATE_CONFIG, payload)

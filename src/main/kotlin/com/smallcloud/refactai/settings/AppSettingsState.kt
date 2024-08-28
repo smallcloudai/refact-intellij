@@ -54,6 +54,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var insecureSSL: Boolean = false
     var telemetrySnippetsEnabled: Boolean = false
     var isFirstStart: Boolean = true
+    var shiftEnterToSubmit: Boolean = false
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -131,6 +132,10 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     }
                     override fun telemetrySnippetsEnabledChanged(newValue: Boolean) {
                         instance.telemetrySnippetsEnabled = newValue
+                    }
+
+                    override fun shiftEnterToSubmitChanged(newValue: Boolean) {
+                        instance.shiftEnterToSubmit = newValue
                     }
                 })
         messageBus

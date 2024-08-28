@@ -19,6 +19,9 @@ interface InferenceGlobalContextChangedNotifier {
     fun vecdbFlagChanged(newValue: Boolean) {}
     fun vecdbFileLimitChanged(newValue: Int) {}
     fun xDebugLSPPortChanged(newPort: Int?) {}
+    fun insecureSSLChanged(newValue: Boolean) {}
+    fun completionMaxTokensChanged(newMaxTokens: Int) {}
+    fun telemetrySnippetsEnabledChanged(newValue: Boolean) {}
 
     companion object {
         val TOPIC = Topic.create(

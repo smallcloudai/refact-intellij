@@ -30,18 +30,16 @@ import kotlin.io.path.Path
 class AppSettingsComponent {
     val splitter: JBSplitter = JBSplitter(true, 0.3f)
     private val mainPanel: JPanel
-    private val experimentalPanel: JPanel
+    private var experimentalPanel: JPanel = JPanel()
     val myTokenText = JBTextField().apply {
         addKeyListener(object : KeyListener {
             override fun keyTyped(e: KeyEvent?) {}
             override fun keyReleased(e: KeyEvent?) {}
             override fun keyPressed(e: KeyEvent?) {
                 if (e?.keyCode == KeyEvent.VK_MINUS && e.isControlDown && e.isAltDown) {
-                    developerModeCheckBox.isVisible = true
-                    myXDebugLSPPort.isVisible = true
+                    experimentalPanel.isVisible = true
                     myXDebugLSPPortLabel.isVisible = true
-                    myStagingVersionText.isVisible = true
-                    myStagingVersionLabel.isVisible = true
+                    myXDebugLSPPort.isVisible = true
                 }
             }
 
@@ -52,6 +50,10 @@ class AppSettingsComponent {
     private val myAstFileLimitText = JBTextField()
     private val myAstLightMode = JCheckBox(RefactAIBundle.message("advancedSettings.useASTLightMode"))
     private val myVecdbFileLimitText = JBTextField()
+    private val insecureSSLCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.insecureSSL"))
+    private val telemetrySnippetCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.telemetryCodeSnippets"))
+    private val pauseCompletionCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.pauseCompletion"))
+    private val completionMaxTokenText = JBTextField()
     val astCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion")).apply {
         isVisible = true
     }
@@ -109,16 +111,57 @@ class AppSettingsComponent {
             )
             addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.secretApiKey")}: "),
                 myTokenText, 1, false)
-            addComponentFillVertically(JPanel(), 0)
-        }.panel
-
-        experimentalPanel = FormBuilder.createFormBuilder().run {
-            addComponent(TitledSeparator(RefactAIBundle.message("advancedSettings.experimentalFeatures")))
 
             addComponent(astCheckbox, UIUtil.LARGE_VGAP)
             addComponent(
                 JBLabel(
                     RefactAIBundle.message("advancedSettings.useMultipleFilesCompletionDescription"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ).apply {
+                    setCopyable(true)
+                }, 0
+            )
+            addComponent(insecureSSLCheckBox, UIUtil.LARGE_VGAP)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.insecureSSLDesc"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ).apply {
+                    setCopyable(true)
+                }, 0
+            )
+
+            addLabeledComponent(JBLabel(RefactAIBundle.message("advancedSettings.completionMaxTokens")),
+                completionMaxTokenText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.completionMaxTokensDesc"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
+
+            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.codeCompletionModel")}: "),
+                myModelText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.codeCompletionModelDesc"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ), 0
+            )
+
+//            addComponent(telemetrySnippetCheckBox, UIUtil.LARGE_VGAP)
+//            addComponent(
+//                JBLabel(
+//                    RefactAIBundle.message("advancedSettings.telemetryCodeSnippetsDesc"),
+//                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+//                ).apply {
+//                    setCopyable(true)
+//                }, 0
+//            )
+            addComponent(pauseCompletionCheckBox, UIUtil.LARGE_VGAP)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.pauseCompletionDesc"),
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ).apply {
                     setCopyable(true)
@@ -162,22 +205,22 @@ class AppSettingsComponent {
                 }, 0
             )
 
-            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.codeCompletionModel")}: "),
-                myModelText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
-            addComponent(
-                JBLabel(
-                    RefactAIBundle.message("advancedSettings.codeCompletionModelDesc"),
-                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ), 0
-            )
             addLabeledComponent(JBLabel("Customization").apply {
                 isVisible = openCustomizationButton.isVisible
             }, openCustomizationButton, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
-            addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
-            addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
-            addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
+
             addComponentFillVertically(JPanel(), 0)
         }.panel
+
+        experimentalPanel = FormBuilder.createFormBuilder().run {
+            addComponent(TitledSeparator(RefactAIBundle.message("advancedSettings.experimentalFeatures")))
+
+//            addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
+            addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
+//            addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
+            addComponentFillVertically(JPanel(), 0)
+        }.panel
+        experimentalPanel.isVisible = false
 
         splitter.firstComponent = mainPanel
         splitter.secondComponent = experimentalPanel
@@ -234,6 +277,30 @@ class AppSettingsComponent {
         get() = myModelText.text
         set(newVal) {
             myModelText.text = newVal
+        }
+
+    var insecureSSL: Boolean
+        get() = insecureSSLCheckBox.isSelected
+        set(newVal) {
+            insecureSSLCheckBox.isSelected = newVal
+        }
+
+    var completionMaxTokens: Int
+        get() = completionMaxTokenText.text.toIntOrNull() ?: 0
+        set(newVal) {
+            completionMaxTokenText.text = newVal.toString()
+        }
+
+    var telemetrySnippetsEnabled: Boolean
+        get() = telemetrySnippetCheckBox.isSelected
+        set(newVal) {
+            telemetrySnippetCheckBox.isSelected = newVal
+        }
+
+    var pauseCompletion: Boolean
+        get() = pauseCompletionCheckBox.isSelected
+        set(newVal) {
+            pauseCompletionCheckBox.isSelected = newVal
         }
 
     var xDebugLSPPort: Int?

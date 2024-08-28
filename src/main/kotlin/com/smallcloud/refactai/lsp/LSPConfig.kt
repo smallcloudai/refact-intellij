@@ -14,6 +14,7 @@ data class LSPConfig(
     var astLightMode: Boolean = false,
     var vecdb: Boolean = true,
     var vecdbFileLimit: Int? = null,
+    var insecureSSL: Boolean = false,
 ) {
     fun toArgs(): List<String> {
         val params = mutableListOf<String>()
@@ -52,6 +53,9 @@ data class LSPConfig(
         if (vecdb && vecdbFileLimit != null) {
             params.add("--vecdb-max-files")
             params.add("$vecdbFileLimit")
+        }
+        if (insecureSSL) {
+            params.add("--insecure")
         }
         return params
     }

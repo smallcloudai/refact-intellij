@@ -3,24 +3,29 @@ package com.smallcloud.refactai.panes.sharedchat.browser
 import com.google.gson.Gson
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
+import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.ui.jcef.*
-import com.intellij.util.messages.MessageBus
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.account.AccountManagerChangedNotifier
+import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
+import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
-import com.smallcloud.refactai.settings.AppSettingsState
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
-import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.browser.CefFrame
+import org.cef.callback.CefAuthCallback
+import org.cef.callback.CefCallback
+import org.cef.handler.*
+import org.cef.misc.BoolRef
+import org.cef.misc.StringRef
+import org.cef.network.CefCookie
+import org.cef.network.CefRequest
+import org.cef.network.CefResponse
+import org.cef.network.CefURLRequest
+import org.cef.security.CefSSLInfo
 import javax.swing.JComponent
-import com.intellij.openapi.keymap.KeymapUtil
-import com.smallcloud.refactai.panes.sharedchat.Editor
-import javax.swing.JFrame
-import javax.swing.JWindow
 
 
 fun getActionKeybinding(actionId: String): String {
@@ -36,7 +41,7 @@ fun getActionKeybinding(actionId: String): String {
     return KeymapUtil.getShortcutText(shortcuts[0])
 }
 
-class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromChat) -> Unit): Disposable {
+class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromChat) -> Unit) : Disposable {
     private val jsPoolSize = "200"
 
     init {
@@ -45,8 +50,16 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
 
     fun setStyle() {
         val isDarkMode = UIUtil.isUnderDarcula()
-        val mode = if (isDarkMode) { "dark" } else { "light" }
-        val bodyClass = if (isDarkMode) { "vscode-dark" } else { "vscode-light" }
+        val mode = if (isDarkMode) {
+            "dark"
+        } else {
+            "light"
+        }
+        val bodyClass = if (isDarkMode) {
+            "vscode-dark"
+        } else {
+            "vscode-light"
+        }
         val backgroundColour = UIUtil.getPanelBackground()
         val red = backgroundColour.red
         val green = backgroundColour.green
@@ -68,6 +81,7 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
 
         val browser = JBCefBrowser
             .createBuilder()
+            .setEnableOpenDevToolsMenuItem(true)
             .setUrl("http://refactai/index.html")
             .setOffScreenRendering(useOsr)
             .build()
@@ -76,7 +90,9 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
             jsPoolSize,
         )
-        browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
+        if (System.getenv("REFACT_DEBUG") != "1") {
+            browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
+        }
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 
@@ -85,7 +101,7 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
 
         val myJSQueryOpenInBrowserRedirectHyperlink = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowserRedirectHyperlink.addHandler { href ->
-            if(href.isNotEmpty()) {
+            if (href.isNotEmpty()) {
                 BrowserUtil.browse(href)
             }
             null
@@ -94,18 +110,18 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
         var installedScript = false
         var setupReact = false
 
-        browser.jbCefClient.addLoadHandler(object: CefLoadHandlerAdapter() {
+        browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadingStateChange(
                 browser: CefBrowser,
                 isLoading: Boolean,
                 canGoBack: Boolean,
                 canGoForward: Boolean
             ) {
-                if(isLoading) {
+                if (isLoading) {
                     return;
                 }
 
-                if(!installedScript) {
+                if (!installedScript) {
                     installedScript = setUpJavaScriptMessageBus(browser, myJSQueryOpenInBrowser)
                 }
 
@@ -120,25 +136,19 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
 
         }, browser.cefBrowser)
 
-        val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
-        messageBus
-            .connect(PluginState.instance)
-            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun apiKeyChanged(newApiKey: String?) {
-                    setupReact = false
-                    installedScript = false
-                    browser.cefBrowser.reload()
-                    addMessageHandler(myJSQueryOpenInBrowser)
+        editor.project.messageBus.connect(PluginState.instance)
+            .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
+                override fun lspIsActive(isActive: Boolean) {
+                    if (isActive) {
+                        setupReact = false
+                        installedScript = false
+                        browser.cefBrowser.reload()
+                        addMessageHandler(myJSQueryOpenInBrowser)
+                    }
                 }
             })
 
         browser.createImmediately()
-
-
-//        val dev = JBCefBrowser.createBuilder().setCefBrowser(browser.cefBrowser).setClient(browser.jbCefClient).build()
-//        JFrame().add(dev.component)
-//        dev.openDevtools()
-
         browser
     }
 
@@ -146,7 +156,7 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
         myJSQueryOpenInBrowser.addHandler { msg ->
             val event = Events.parse(msg)
 
-            if(event != null) {
+            if (event != null) {
                 messageHandler(event)
             }
             null
@@ -201,7 +211,7 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
              const msg = JSON.stringify(event);
              ${myJSQueryOpenInBrowser.inject("msg")}
         }""".trimIndent()
-        if(browser != null) {
+        if (browser != null) {
             browser.executeJavaScript(script, browser.url, 0);
             return true
         }
@@ -209,7 +219,7 @@ class ChatWebView(val editor: Editor , val messageHandler:  (event: Events.FromC
     }
 
     fun postMessage(message: Events.ToChat<*>?) {
-        if(message != null) {
+        if (message != null) {
             val json = Events.stringify(message)
             println("post message json: $json")
             this.postMessage(json)

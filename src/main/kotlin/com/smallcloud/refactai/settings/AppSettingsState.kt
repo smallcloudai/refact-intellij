@@ -50,6 +50,9 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var astFileLimit: Int = 15000
     var vecdbFileLimit: Int = 15000
     var astLightMode: Boolean = false
+    var completionMaxTokens: Int = 0
+    var insecureSSL: Boolean = false
+    var telemetrySnippetsEnabled: Boolean = false
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -117,6 +120,16 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     }
                     override fun xDebugLSPPortChanged(newPort: Int?) {
                         instance.xDebugLSPPort = newPort
+                    }
+
+                    override fun insecureSSLChanged(newValue: Boolean) {
+                        instance.insecureSSL = newValue
+                    }
+                    override fun completionMaxTokensChanged(newMaxTokens: Int) {
+                        instance.completionMaxTokens = newMaxTokens
+                    }
+                    override fun telemetrySnippetsEnabledChanged(newValue: Boolean) {
+                        instance.telemetrySnippetsEnabled = newValue
                     }
                 })
         messageBus

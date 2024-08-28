@@ -219,6 +219,10 @@ class CompletionMode(
         } else {
             temperatureCounter = 0
         }
+        if (InferenceGlobalContext.completionMaxTokens > 1) {
+            request.body.parameters.maxNewTokens = InferenceGlobalContext.completionMaxTokens
+        }
+
         if (temperatureCounter > 1) {
             request.body.parameters.temperature = 0.6F
         }

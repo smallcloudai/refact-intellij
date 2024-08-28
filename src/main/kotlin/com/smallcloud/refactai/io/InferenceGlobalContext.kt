@@ -200,6 +200,33 @@ class InferenceGlobalContext : Disposable {
                 .vecdbFileLimitChanged(newValue)
         }
 
+    var insecureSSL: Boolean
+        get() = AppSettingsState.insecureSSL
+        set(newValue) {
+            if (newValue == insecureSSL) return
+            messageBus
+               .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+               .insecureSSLChanged(newValue)
+        }
+
+    var completionMaxTokens: Int
+        get() { return AppSettingsState.completionMaxTokens }
+        set(newValue) {
+            if (newValue == completionMaxTokens) return
+            messageBus
+              .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+              .completionMaxTokensChanged(newValue)
+        }
+
+    var telemetrySnippetsEnabled: Boolean
+        get() { return AppSettingsState.telemetrySnippetsEnabled }
+        set(newValue) {
+            if (newValue == telemetrySnippetsEnabled) return
+            messageBus
+              .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
+              .telemetrySnippetsEnabledChanged(newValue)
+        }
+
     var xDebugLSPPort: Int?
         get() { return AppSettingsState.xDebugLSPPort }
         set(newValue) {

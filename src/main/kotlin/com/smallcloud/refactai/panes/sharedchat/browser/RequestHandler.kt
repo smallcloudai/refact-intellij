@@ -1,6 +1,8 @@
 package com.smallcloud.refactai.panes.sharedchat.browser
 
 import com.intellij.openapi.project.DumbAware
+import com.smallcloud.refactai.io.Response
+import com.smallcloud.refactai.io.sendRequest
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.callback.CefCallback
@@ -13,7 +15,10 @@ import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.io.IOException
 import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URLConnection
+import java.util.concurrent.Future
 
 class RequestHandlerFactory : CefSchemeHandlerFactory {
     override fun create(
@@ -22,10 +27,9 @@ class RequestHandlerFactory : CefSchemeHandlerFactory {
         schemeName: String,
         request: CefRequest
     ): CefResourceHandler {
-        return ResourceHandler()
+        return RefactChatResourceHandler()
     }
 }
-
 data object ClosedConnection : ResourceHandlerState() {
     override fun getResponseHeaders(
         cefResponse: CefResponse,
@@ -98,7 +102,7 @@ class OpenedConnection(private val connection: URLConnection?) :
         bytesRead: IntRef,
         callback: CefCallback
     ): Boolean {
-        return inputStream?.let {inputStream ->
+        return inputStream?.let { inputStream ->
             val availableSize = inputStream.available()
             return if (availableSize > 0) {
                 val maxBytesToRead = minOf(availableSize, bytesToRead)
@@ -117,7 +121,7 @@ class OpenedConnection(private val connection: URLConnection?) :
     }
 }
 
-class ResourceHandler : CefResourceHandler, DumbAware {
+class RefactChatResourceHandler : CefResourceHandler, DumbAware {
     private var state: ResourceHandlerState = ClosedConnection
     private var currentUrl: String? = null
     override fun processRequest(
@@ -143,7 +147,7 @@ class ResourceHandler : CefResourceHandler, DumbAware {
         redirectUrl: StringRef
     ) {
 
-        if (currentUrl !== null){
+        if (currentUrl !== null) {
             when {
                 currentUrl!!.contains("css") -> cefResponse.mimeType = "text/css"
                 currentUrl!!.contains("js") -> cefResponse.mimeType = "text/javascript"

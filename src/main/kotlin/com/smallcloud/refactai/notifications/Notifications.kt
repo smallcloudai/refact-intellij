@@ -21,6 +21,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
+import com.smallcloud.refactai.Resources.refactAIAdvancedSettingsID
 import com.smallcloud.refactai.Resources.refactAIRootSettingsID
 import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
@@ -207,6 +208,25 @@ fun emitRegular(project: Project, editor: Editor) {
         })
     }
 
+
+    notification.notify(project)
+    lastRegularNotification = notification
+}
+
+fun emitWarning(project: Project, msg: String) {
+    removeLastRegularNotification()
+    val notification =
+        NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
+            Resources.titleStr,
+            msg,
+            NotificationType.INFORMATION
+        )
+    notification.icon = Resources.Icons.LOGO_RED_16x16
+
+    notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
+        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIAdvancedSettingsID, null)
+        notification.expire()
+    })
 
     notification.notify(project)
     lastRegularNotification = notification

@@ -6,7 +6,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
-import com.smallcloud.refactai.notifications.emitLogin
 import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.utils.getLastUsedProject
 import java.util.concurrent.Future
@@ -77,25 +76,13 @@ class LoginStateService: Disposable {
                 if (lastWebsiteLoginStatus == "OK") {
                     finishedGood()
                 }
-                emitLoginIfNeeded()
             } catch (e: Exception) {
                 e.message?.let { logError("check_login exception", it) }
-                emitLoginIfNeeded()
             } finally {
                 popupLoginMessageOnce = true
             }
         }
         return lastTask
-    }
-
-    private fun emitLoginIfNeeded() {
-        if (!popupLoginMessageOnce && lastWebsiteLoginStatus.isEmpty()) {
-            AppExecutorUtil.getAppScheduledExecutorService().schedule({
-                if (!AccountManager.isLoggedIn) {
-                    emitLogin(getLastUsedProject())
-                }
-            }, 7, TimeUnit.SECONDS)
-        }
     }
 
     override fun dispose() {

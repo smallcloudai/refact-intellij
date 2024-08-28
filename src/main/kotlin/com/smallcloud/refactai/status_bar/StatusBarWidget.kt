@@ -30,7 +30,6 @@ import com.smallcloud.refactai.listeners.SelectionChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.lsp.RagStatus
-import com.smallcloud.refactai.notifications.emitLogin
 import com.smallcloud.refactai.notifications.emitRegular
 import com.smallcloud.refactai.notifications.emitWarning
 import com.smallcloud.refactai.privacy.Privacy
@@ -273,7 +272,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
 
     override fun getTooltipText(): String? {
         if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud) {
-            return RefactAIBundle.message("statusBar.clickToLogin")
+            return null
         }
 
         if (!isPrivacyEnabled()) {
@@ -338,9 +337,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     emitWarning(project, RefactAIBundle.message("statusBar.notificationAstVecdbLimitMsg"))
                     return@Consumer
                 }
-                if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud)
-                    emitLogin(project)
-                else
+                if (AccountManager.isLoggedIn || !InferenceGlobalContext.isCloud)
                     getEditor()?.let { emitRegular(project, it) }
             }
         }

@@ -144,25 +144,6 @@ private fun addDisableEnablePrivacy(
     }
 }
 
-fun emitLogin(project: Project) {
-    removeLastNotification()
-    val notification = NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group")
-        .createNotification(
-            RefactAIBundle.message("notifications.loginTo", Resources.titleStr),
-            NotificationType.INFORMATION
-        )
-    notification.icon = Resources.Icons.LOGO_RED_16x16
-
-    notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.login")) {
-        login()
-        notification.expire()
-    }).addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
-        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
-        notification.expire()
-    }).notify(project)
-    lastNotification = notification
-}
-
 private fun getStatusPrivacyString(currentPrivacy: Privacy): String {
     return when (currentPrivacy) {
         Privacy.DISABLED -> RefactAIBundle.message("privacy.level0Status")

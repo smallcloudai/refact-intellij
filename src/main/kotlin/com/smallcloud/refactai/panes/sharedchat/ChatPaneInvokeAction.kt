@@ -9,6 +9,10 @@ import com.smallcloud.refactai.utils.getLastUsedProject
 
 class ChatPaneInvokeAction: AnAction(Resources.Icons.LOGO_RED_16x16) {
     override fun actionPerformed(e: AnActionEvent) {
+        actionPerformed()
+    }
+
+    fun actionPerformed() {
         val chat = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact")
         chat?.activate{
             RefactAIToolboxPaneFactory.focusChat()

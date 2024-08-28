@@ -11,6 +11,7 @@ import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.listeners.UninstallListener
 import com.smallcloud.refactai.notifications.notificationStartup
+import com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeAction
 import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.settingsStartup
@@ -20,11 +21,14 @@ import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as get
 
 
 class Initializer : StartupActivity, Disposable {
-     private fun execute(project: Project) {
+    private fun execute(project: Project) {
         val shouldInitialize = !(initialized.getAndSet(true) || ApplicationManager.getApplication().isUnitTestMode)
         if (shouldInitialize) {
             Logger.getInstance("SMCInitializer").info("Bin prefix = ${Resources.binPrefix}")
-
+            if (AppSettingsState.instance.isFirstStart) {
+                AppSettingsState.instance.isFirstStart = false
+                ChatPaneInvokeAction().actionPerformed()
+            }
             if (InferenceGlobalContext.instance.canRequest()) {
                 when (InferenceGlobalContext.instance.deploymentMode) {
                     DeploymentMode.CLOUD, DeploymentMode.SELF_HOSTED -> {
@@ -45,8 +49,8 @@ class Initializer : StartupActivity, Disposable {
             PluginInstaller.addStateListener(UninstallListener())
             UpdateChecker.instance
         }
-         getLSPProcessHolder(project)
-         PrivacyService.instance.projectOpened(project)
+        getLSPProcessHolder(project)
+        PrivacyService.instance.projectOpened(project)
     }
 
     override fun dispose() {

@@ -53,6 +53,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var completionMaxTokens: Int = 0
     var insecureSSL: Boolean = false
     var telemetrySnippetsEnabled: Boolean = false
+    var isFirstStart: Boolean = true
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus

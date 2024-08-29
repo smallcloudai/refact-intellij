@@ -25,15 +25,21 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
+import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManager
+import com.smallcloud.refactai.account.AccountManager.Companion
+import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.account.LoginStateService
+import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
+import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
 import com.smallcloud.refactai.settings.AppSettingsState
+import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance
 import com.smallcloud.refactai.settings.Host
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +48,7 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
 import java.io.File
+import java.net.URI
 import javax.swing.JPanel
 import javax.swing.UIManager
 
@@ -75,24 +82,23 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private suspend fun handleSetupHost(host: Host) {
-        val accountManager = AccountManager.instance;
-        val settings = AppSettingsState.instance
+        val accountManager = AccountManager.instance
         when (host) {
             is Host.CloudHost -> {
-                accountManager.apiKey = host.apiKey;
-                settings.userInferenceUri = "refact";
+                accountManager.apiKey = host.apiKey
+                InferenceGlobalContext.instance.inferenceUri = "refact"
                 ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
             }
 
             is Host.Enterprise -> {
                 accountManager.apiKey = host.apiKey
-                settings.userInferenceUri = host.endpointAddress
+                InferenceGlobalContext.instance.inferenceUri = host.endpointAddress
                 ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
             }
 
             is Host.SelfHost -> {
                 accountManager.apiKey = "any-key-will-work"
-                settings.userInferenceUri = host.endpointAddress
+                InferenceGlobalContext.instance.inferenceUri = host.endpointAddress
             }
 
             is Host.BringYourOwnKey -> {
@@ -115,7 +121,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                         println("File not found: $out")
                     }
                     accountManager.apiKey = "any-key-will-work"
-                    settings.userInferenceUri = out
+                    InferenceGlobalContext.instance.inferenceUri = out
                 }
             }
         }
@@ -127,7 +133,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun logOut() {
         AccountManager.instance.logout()
-        AppSettingsState.instance.userInferenceUri = ""
+        InferenceGlobalContext.instance.inferenceUri = null
     }
 
     private fun handlePaste(content: String) {
@@ -195,6 +201,22 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
                 override fun vecdbFlagChanged(newValue: Boolean) {
                     logger.info("vecdb changed to: $newValue")
+                    this@SharedChatPane.sendUserConfig()
+                }
+            })
+
+        editor.project.messageBus.connect(PluginState.instance)
+            .subscribe(
+                InferenceGlobalContextChangedNotifier.TOPIC,
+                object : InferenceGlobalContextChangedNotifier {
+                    override fun userInferenceUriChanged(newUrl: String?) {
+                        this@SharedChatPane.sendUserConfig()
+                    }
+                })
+        editor.project.messageBus
+            .connect(PluginState.instance)
+            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+                override fun apiKeyChanged(newApiKey: String?) {
                     this@SharedChatPane.sendUserConfig()
                 }
             })

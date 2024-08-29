@@ -7,6 +7,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.util.ui.UIUtil
+import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.AccountManager.Companion.instance
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.browser.getActionKeybinding
@@ -60,7 +61,7 @@ class Editor (val project: Project) {
         val themeProps = Events.Config.ThemeProps(mode)
         val apiKey = instance.apiKey
         val lspPort = lsp.url.port
-        val addressURL = AppSettingsState.instance.userInferenceUri;
+        val addressURL = AppSettingsState.instance.userInferenceUri ?: ""
         val keyBindings = Events.Config.KeyBindings(getActionKeybinding("ForceCompletionAction"))
 
         return Events.Config.UpdatePayload(features, themeProps, lspPort, apiKey, addressURL, keyBindings)

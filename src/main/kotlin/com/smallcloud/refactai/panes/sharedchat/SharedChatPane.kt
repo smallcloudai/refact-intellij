@@ -127,6 +127,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun logOut() {
         AccountManager.instance.logout()
+        AppSettingsState.instance.userInferenceUri = ""
     }
 
     private fun handlePaste(content: String) {

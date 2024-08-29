@@ -28,7 +28,6 @@ import com.smallcloud.refactai.FimCache
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
-import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
@@ -84,17 +83,20 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 settings.userInferenceUri = "refact";
                 ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
             }
+
             is Host.Enterprise -> {
                 accountManager.apiKey = host.apiKey
                 settings.userInferenceUri = host.endpointAddress
                 ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
             }
+
             is Host.SelfHost -> {
                 accountManager.apiKey = "any-key-will-work"
                 settings.userInferenceUri = host.endpointAddress
             }
+
             is Host.BringYourOwnKey -> {
-                val process = GeneralCommandLine(listOf(BIN_PATH, "--save-byok-file"))
+                val process = GeneralCommandLine(listOf(BIN_PATH, "--address-url", "", "--save-byok-file"))
                     .withRedirectErrorStream(true)
                     .createProcess()
                 process.awaitExit()
@@ -229,7 +231,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handleFimRequest() {
-        if(FimCache.last == null) {
+        if (FimCache.last == null) {
             val message = Events.Fim.Error("Data not found, try causing a completion in the editor.")
             postMessage(message)
         } else {

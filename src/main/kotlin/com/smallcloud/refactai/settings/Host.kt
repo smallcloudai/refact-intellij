@@ -13,7 +13,7 @@ enum class HostKind(val value: String) {
 }
 
 sealed class Host {
-    data class CloudHost(val apiKey: String, val sendCorrectedCodeSnippets: Boolean) : Host()
+    data class CloudHost(val apiKey: String, val sendCorrectedCodeSnippets: Boolean, val userName: String) : Host()
 
     data class SelfHost(val endpointAddress: String) : Host()
 
@@ -31,7 +31,8 @@ class HostDeserializer : JsonDeserializer<Host> {
             HostKind.CLOUD.value -> {
                 val apiKey = host.get("apiKey")?.asString ?: return null
                 val sendCorrectedCodeSnippets = host.get("sendCorrectedCodeSnippets")?.asBoolean?: false
-                return Host.CloudHost(apiKey, sendCorrectedCodeSnippets)
+                val userName = host.get("userName")?.asString?: "";
+                return Host.CloudHost(apiKey, sendCorrectedCodeSnippets, userName)
             }
             HostKind.SELF.value -> {
                 val endpointAddress = host.get("endpointAddress")?.asString ?: return null

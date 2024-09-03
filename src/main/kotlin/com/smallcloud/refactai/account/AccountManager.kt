@@ -2,8 +2,8 @@ package com.smallcloud.refactai.account
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.settings.AppSettingsState
-import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 class AccountManager: Disposable {
     private var previousLoggedInState: Boolean = false
@@ -56,9 +56,7 @@ class AccountManager: Disposable {
 
     val isLoggedIn: Boolean
         get() {
-//            return apiKey.isNullOrEmpty()
-             return (InferenceGlobalContext.isCloud && !apiKey.isNullOrEmpty() && !user.isNullOrEmpty()) ||
-                     (!InferenceGlobalContext.isCloud && !ticket.isNullOrEmpty())
+             return !apiKey.isNullOrEmpty()
         }
 
     var meteringBalance: Int? = null
@@ -94,6 +92,7 @@ class AccountManager: Disposable {
 
     fun logout() {
         apiKey = null
+        InferenceGlobalContext.instance.inferenceUri = null
         user = null
         meteringBalance = null
     }

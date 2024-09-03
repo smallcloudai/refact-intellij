@@ -73,7 +73,10 @@ class Events {
                 // EventNames.FromChat.FIM_READY.value -> p2?.deserialize(payload, Fim.Ready::class.java)
                 EventNames.FromChat.FIM_REQUEST.value -> Fim.Request()
                 EventNames.FromChat.OPEN_HOTKEYS.value -> OpenHotKeys()
-                EventNames.FromChat.OPEN_FILE.value -> p2?.deserialize(payload, OpenFile::class.java)
+                EventNames.FromChat.OPEN_FILE.value -> {
+                    val payload: OpenFilePayload = p2?.deserialize(payload, OpenFilePayload::class.java) ?: return null
+                    OpenFile(payload)
+                }
                     else -> null
             }
         }

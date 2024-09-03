@@ -23,7 +23,6 @@ import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.refactAIAdvancedSettingsID
 import com.smallcloud.refactai.Resources.refactAIRootSettingsID
-import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
@@ -94,7 +93,8 @@ fun startup() {
                 if (AppSettingsState.rateUsNotification) {
                     rateUsFuture?.cancel(true)
                 }
-            }, 2, 2, TimeUnit.MINUTES)
+            }, 2, 2, TimeUnit.MINUTES
+        )
     }
 }
 
@@ -103,10 +103,10 @@ fun emitRateUs() {
         return
     }
     val project = getLastUsedProject()
-    val notification = NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group")
-        .createNotification(Resources.titleStr, RefactAIBundle.message("notifications.rateUs"),
-            NotificationType.INFORMATION)
-        .setListener(object: Adapter() {
+    val notification =
+        NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
+            Resources.titleStr, RefactAIBundle.message("notifications.rateUs"), NotificationType.INFORMATION
+        ).setListener(object : Adapter() {
             override fun hyperlinkActivated(notification: Notification, event: HyperlinkEvent) {
                 val url: URL = event.url
                 BrowserUtil.browse(url)
@@ -158,11 +158,10 @@ fun emitRegular(project: Project, editor: Editor) {
     val currentPrivacy = PrivacyServiceInstance.getPrivacy(file)
     val notification =
         NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
-            Resources.titleStr,
-            if (InferenceGlobalContext.isCloud) RefactAIBundle.message("notifications.filePrivacy",
-                    getStatusPrivacyString(currentPrivacy))
-            else RefactAIBundle.message("notifications.selfHostedIsEnabled"),
-            NotificationType.INFORMATION
+            Resources.titleStr, if (InferenceGlobalContext.isCloud) RefactAIBundle.message(
+                "notifications.filePrivacy", getStatusPrivacyString(currentPrivacy)
+            )
+            else RefactAIBundle.message("notifications.selfHostedIsEnabled"), NotificationType.INFORMATION
         )
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
@@ -171,8 +170,11 @@ fun emitRegular(project: Project, editor: Editor) {
         notification.expire()
     })
 
-    notification.addAction(NotificationAction.createSimple(if (InferenceGlobalContext.useAutoCompletion)
-        RefactAIBundle.message("notifications.pause") else RefactAIBundle.message("notifications.play")) {
+    notification.addAction(NotificationAction.createSimple(
+        if (InferenceGlobalContext.useAutoCompletion) RefactAIBundle.message("notifications.pause") else RefactAIBundle.message(
+            "notifications.play"
+        )
+    ) {
         InferenceGlobalContext.useAutoCompletion = !InferenceGlobalContext.useAutoCompletion
         notification.expire()
     })
@@ -182,7 +184,7 @@ fun emitRegular(project: Project, editor: Editor) {
     if (chat != null && getLSPProcessHolder(project).capabilities.codeChatModels.isNotEmpty()) {
         val chatShortcut = KeymapUtil.getShortcutText("ActivateRefactChatToolWindow")
         notification.addAction(NotificationAction.createSimple("Chat ($chatShortcut)") {
-            chat.activate{
+            chat.activate {
                 RefactAIToolboxPaneFactory.chat?.requestFocus()
             }
             notification.expire()
@@ -198,9 +200,7 @@ fun emitWarning(project: Project, msg: String) {
     removeLastRegularNotification()
     val notification =
         NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
-            Resources.titleStr,
-            msg,
-            NotificationType.INFORMATION
+            Resources.titleStr, msg, NotificationType.INFORMATION
         )
     notification.icon = Resources.Icons.LOGO_RED_16x16
 

@@ -2,23 +2,15 @@ package com.smallcloud.refactai.io
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
-import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.struct.SMCRequestBody
 import java.net.URI
-import java.util.concurrent.Future
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
 
 class InferenceGlobalContext : Disposable {
-    private val reconnectScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
-            "SMCInferenceGlobalContextScheduler", 1
-    )
-    private var lastTask: Future<*>? = null
-
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
     var connection: AsyncConnection = AsyncConnection()
 
@@ -54,15 +46,6 @@ class InferenceGlobalContext : Disposable {
             messageBus
                     .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                     .userInferenceUriChanged(newInferenceUrl)
-
-            lastTask?.cancel(true)
-            lastTask = reconnectScheduler.submit {
-                ApplicationManager.getApplication().getService(LoginStateService::class.java)
-                        .tryToWebsiteLogin(force = true)
-                messageBus
-                        .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                        .deploymentModeChanged(deploymentMode)
-            }
         }
 
     // cloudInferenceUri is uri from SMC server; must be change only in login method
@@ -242,10 +225,7 @@ class InferenceGlobalContext : Disposable {
         return SMCRequest(requestData, apiKey ?: "self_hosted")
     }
 
-    override fun dispose() {
-        lastTask?.cancel(true)
-        reconnectScheduler.shutdown()
-    }
+    override fun dispose() {}
 
     companion object {
         @JvmStatic

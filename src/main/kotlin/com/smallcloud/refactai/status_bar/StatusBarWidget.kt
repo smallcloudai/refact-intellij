@@ -255,14 +255,19 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         return when (InferenceGlobalContext.status) {
             ConnectionStatus.DISCONNECTED -> AllIcons.Debugger.ThreadStates.Socket
             ConnectionStatus.ERROR -> AllIcons.Debugger.ThreadStates.Socket
-            ConnectionStatus.CONNECTED -> if (isPrivacyEnabled()) LOGO_RED_16x16 else HAND_12x12
+            ConnectionStatus.CONNECTED -> if (isPrivacyDisabled()) HAND_12x12 else LOGO_RED_16x16
             ConnectionStatus.PENDING -> spinIcon
         }
         return LOGO_RED_16x16
     }
 
-    private fun isPrivacyEnabled(): Boolean {
-        return PrivacyService.instance.getPrivacy(getEditor()?.let { getVirtualFile(it) }) != Privacy.DISABLED
+    private fun isPrivacyDisabled(): Boolean {
+        val editor = getEditor()
+        return if (editor == null) {
+            false
+        } else {
+            PrivacyService.instance.getPrivacy(getVirtualFile(editor)) == Privacy.DISABLED
+        }
     }
 
     // Compatability implementation. DO NOT ADD @Override.
@@ -275,7 +280,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return null
         }
 
-        if (!isPrivacyEnabled()) {
+        if (isPrivacyDisabled()) {
             return RefactAIBundle.message("statusBar.tooltipIfPrivacyDisabled")
         }
 

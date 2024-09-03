@@ -17,8 +17,6 @@ import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
-import com.smallcloud.refactai.account.LoginStateService
-import com.smallcloud.refactai.account.login
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.privacy.Privacy
 import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
@@ -54,12 +52,12 @@ class AppRootComponent(private val project: Project) {
     private val privacyTitledSeparator = TitledSeparator(RefactAIBundle.message("rootSettings.yourPrivacyRules"))
     private val privacySettingDescription = JBLabel("${RefactAIBundle.message("rootSettings.globalDefaults")}:")
     private val privacySettingSelfHostedWarning =
-            JBLabel("<html>${RefactAIBundle.message("privacy.selfhostedModeWarning")}</html>")
+        JBLabel("<html>${RefactAIBundle.message("privacy.selfhostedModeWarning")}</html>")
 
     private val privacyDefaultsRBGroup = ButtonGroup()
     private val privacyDefaultsRBDisabled = JBRadioButton(
         "${RefactAIBundle.message("privacy.level0Name")}: " +
-                RefactAIBundle.message("privacy.level0ShortDescription")
+            RefactAIBundle.message("privacy.level0ShortDescription")
     )
     private val privacyDefaultsRBDisabledDescription = JBLabel(
         RefactAIBundle.message("privacy.level0ExtraDescription"),
@@ -67,7 +65,7 @@ class AppRootComponent(private val project: Project) {
     )
     private val privacyDefaultsRBRefactAI = JBRadioButton(
         "${RefactAIBundle.message("privacy.level1Name")}: " +
-                RefactAIBundle.message("privacy.level1ShortDescription")
+            RefactAIBundle.message("privacy.level1ShortDescription")
     )
     private val privacyDefaultsRBRefactAIDescription = JBLabel(
         RefactAIBundle.message("privacy.level1ExtraDescription"),
@@ -75,7 +73,7 @@ class AppRootComponent(private val project: Project) {
     )
     private val privacyDefaultsRBRefactAIPlus = JBRadioButton(
         "${RefactAIBundle.message("privacy.level2Name")}: " +
-                RefactAIBundle.message("privacy.level2ShortDescription")
+            RefactAIBundle.message("privacy.level2ShortDescription")
     )
     private val privacyDefaultsRBRefactAIPlusDescription = JBLabel(
         RefactAIBundle.message("privacy.level2ExtraDescription"),
@@ -89,9 +87,9 @@ class AppRootComponent(private val project: Project) {
     private fun askDialog(project: Project, newPrivacy: Privacy): Int {
         return if (MessageDialogBuilder.okCancel(
                 Resources.titleStr, "Be careful! " +
-                        "You are about to change global privacy default to:\n\n<b>${privacyToString[newPrivacy]}</b>\n\n" +
-                        "Access settings for\n<b>${project.basePath}</b>\nwill remain at " +
-                        "<b>${privacyToString[PrivacyService.instance.getPrivacy(project.basePath!!)]}</b>"
+                    "You are about to change global privacy default to:\n\n<b>${privacyToString[newPrivacy]}</b>\n\n" +
+                    "Access settings for\n<b>${project.basePath}</b>\nwill remain at " +
+                    "<b>${privacyToString[PrivacyService.instance.getPrivacy(project.basePath!!)]}</b>"
             )
                 .yesText(Messages.getOkButton())
                 .noText(Messages.getCancelButton())
@@ -193,28 +191,22 @@ class AppRootComponent(private val project: Project) {
                 }
             })
         ApplicationManager.getApplication()
-                .messageBus
-                .connect(PluginState.instance)
-                .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
-                    override fun userInferenceUriChanged(newUrl: String?) {
-                        revalidate()
-                    }
+            .messageBus
+            .connect(PluginState.instance)
+            .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
+                override fun userInferenceUriChanged(newUrl: String?) {
+                    revalidate()
+                }
 
-                    override fun deploymentModeChanged(newMode: DeploymentMode) {
-                        currentState = if (newMode == DeploymentMode.SELF_HOSTED || AccountManager.isLoggedIn)
-                            SettingsState.SIGNED else SettingsState.UNSIGNED
-                        revalidate()
-                    }
-                })
+                override fun deploymentModeChanged(newMode: DeploymentMode) {
+                    currentState = if (newMode == DeploymentMode.SELF_HOSTED || AccountManager.isLoggedIn)
+                        SettingsState.SIGNED else SettingsState.UNSIGNED
+                    revalidate()
+                }
+            })
 
-        loginButton.addActionListener {
-            login()
-        }
         logoutButton.addActionListener {
             AccountManager.logout()
-        }
-        forceLoginButton.addActionListener {
-            ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
         }
         forceLoginButton.addActionListener {
             activePlanLabel.text = "${RefactAIBundle.message("rootSettings.activePlan")}: ⏳"
@@ -237,7 +229,7 @@ class AppRootComponent(private val project: Project) {
     private fun setupProperties() {
         activePlanLabel.text = "${RefactAIBundle.message("rootSettings.activePlan")}: ${AccountManager.activePlan}"
         activePlanLabel.isVisible = currentState == SettingsState.SIGNED &&
-                AccountManager.activePlan != null && InferenceGlobalContext.isCloud
+            AccountManager.activePlan != null && InferenceGlobalContext.isCloud
         logoutButton.isVisible = AccountManager.isLoggedIn && AccountManager.user != "self-hosted"
         loginButton.isVisible = currentState != SettingsState.SIGNED
         forceLoginButton.isVisible = currentState != SettingsState.UNSIGNED
@@ -268,7 +260,8 @@ class AppRootComponent(private val project: Project) {
         privacyOverridesTable.isVisible = currentState == SettingsState.SIGNED
         privacyOverridesTable.isEnabled = InferenceGlobalContext.isCloud
 
-        privacySettingSelfHostedWarning.isVisible = currentState == SettingsState.SIGNED && !InferenceGlobalContext.isCloud
+        privacySettingSelfHostedWarning.isVisible =
+            currentState == SettingsState.SIGNED && !InferenceGlobalContext.isCloud
     }
 
     val preferredFocusedComponent: JComponent

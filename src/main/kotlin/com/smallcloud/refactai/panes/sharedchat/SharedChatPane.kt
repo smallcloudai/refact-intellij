@@ -27,19 +27,14 @@ import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManager
-import com.smallcloud.refactai.account.AccountManager.Companion
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
-import com.smallcloud.refactai.account.LoginStateService
 import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
-import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
-import com.smallcloud.refactai.settings.AppSettingsState
-import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance
 import com.smallcloud.refactai.settings.Host
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +43,6 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
 import java.io.File
-import java.net.URI
 import javax.swing.JPanel
 import javax.swing.UIManager
 
@@ -86,14 +80,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         when (host) {
             is Host.CloudHost -> {
                 accountManager.apiKey = host.apiKey
-                InferenceGlobalContext.instance.inferenceUri = "refact"
-                ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
+                InferenceGlobalContext.instance.inferenceUri = "Refact"
             }
 
             is Host.Enterprise -> {
                 accountManager.apiKey = host.apiKey
                 InferenceGlobalContext.instance.inferenceUri = host.endpointAddress
-                ApplicationManager.getApplication().getService(LoginStateService::class.java).tryToWebsiteLogin(true)
             }
 
             is Host.SelfHost -> {

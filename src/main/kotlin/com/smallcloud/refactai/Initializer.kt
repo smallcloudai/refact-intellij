@@ -6,16 +6,12 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
-import com.smallcloud.refactai.account.LoginStateService
-import com.smallcloud.refactai.account.login
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.listeners.UninstallListener
 import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeAction
 import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.settingsStartup
-import com.smallcloud.refactai.struct.DeploymentMode
 import java.util.concurrent.atomic.AtomicBoolean
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
@@ -28,21 +24,6 @@ class Initializer : StartupActivity, Disposable {
             if (AppSettingsState.instance.isFirstStart) {
                 AppSettingsState.instance.isFirstStart = false
                 ChatPaneInvokeAction().actionPerformed()
-            }
-            if (InferenceGlobalContext.instance.canRequest()) {
-                when (InferenceGlobalContext.instance.deploymentMode) {
-                    DeploymentMode.CLOUD, DeploymentMode.SELF_HOSTED -> {
-                        if (!AppSettingsState.instance.startupLoggedIn) {
-                            AppSettingsState.instance.startupLoggedIn = true
-                            login()
-                        } else {
-                            ApplicationManager.getApplication().getService(LoginStateService::class.java)
-                                .tryToWebsiteLogin(true)
-                        }
-                    }
-
-                    else -> {}
-                }
             }
             settingsStartup()
             notificationStartup()

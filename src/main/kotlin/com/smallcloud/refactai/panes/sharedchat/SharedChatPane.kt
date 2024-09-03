@@ -80,7 +80,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         when (host) {
             is Host.CloudHost -> {
                 accountManager.apiKey = host.apiKey
-                InferenceGlobalContext.instance.inferenceUri = "refact"
+                InferenceGlobalContext.instance.inferenceUri = "Refact"
                 accountManager.user = host.userName
             }
 

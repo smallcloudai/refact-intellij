@@ -34,7 +34,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
         val contentFactory = ContentFactory.getInstance()
         val chatPanes = ChatPanes(project)
         Disposer.register(toolWindow.disposable, chatPanes)
-        val content: Content = contentFactory.createContent(chatPanes.getComponent(), "Chat", false)
+        val content: Content = contentFactory.createContent(chatPanes.getComponent(), null, true)
         content.isCloseable = false
         content.putUserData(panesKey, chatPanes)
         toolWindow.contentManager.addContent(content)

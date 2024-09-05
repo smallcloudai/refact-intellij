@@ -1,8 +1,6 @@
 package com.smallcloud.refactai.panes.sharedchat.browser
 
 import com.intellij.openapi.project.DumbAware
-import com.smallcloud.refactai.io.Response
-import com.smallcloud.refactai.io.sendRequest
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.callback.CefCallback
@@ -15,10 +13,7 @@ import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.io.IOException
 import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URI
 import java.net.URLConnection
-import java.util.concurrent.Future
 
 class RequestHandlerFactory : CefSchemeHandlerFactory {
     override fun create(

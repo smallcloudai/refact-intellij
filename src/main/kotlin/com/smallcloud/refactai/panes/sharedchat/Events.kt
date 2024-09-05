@@ -59,7 +59,7 @@ class Events {
             if(type == null) return null
 
             return when(type) {
-                EventNames.FromChat.NEW_FILE.value -> p2?.deserialize(payload, Editor.NewFile::class.java)
+                EventNames.FromChat.NEW_FILE.value -> payload?.asString?.let { Editor.NewFile(it) }
                 EventNames.FromChat.OPEN_SETTINGS.value -> OpenSettings()
                 EventNames.FromChat.SETUP_HOST.value -> {
                     val host = p2?.deserialize<Host>(payload, Host::class.java) ?: return null

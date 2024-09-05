@@ -67,6 +67,11 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     private var statusbarState: StatusBarState = StatusBarState()
     private var lspSyncTask: Future<*>? =null
 
+    override fun dispose() {
+        lspSyncTask?.cancel(true)
+        super<EditorBasedWidget>.dispose()
+    }
+
     private fun lspSync() {
         try {
             val ragStatus = lsp.getRagStatus()

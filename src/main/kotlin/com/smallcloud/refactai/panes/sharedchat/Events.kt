@@ -70,12 +70,15 @@ class Events {
                     Setup.OpenExternalUrl(url)
                 }
 
+                EventNames.FromChat.PASTE_DIFF.value -> payload?.asString?.let { Events.Editor.Paste(it) }
+
+
                 // EventNames.FromChat.FIM_READY.value -> p2?.deserialize(payload, Fim.Ready::class.java)
                 EventNames.FromChat.FIM_REQUEST.value -> Fim.Request()
                 EventNames.FromChat.OPEN_HOTKEYS.value -> OpenHotKeys()
                 EventNames.FromChat.OPEN_FILE.value -> {
-                    val payload: OpenFilePayload = p2?.deserialize(payload, OpenFilePayload::class.java) ?: return null
-                    OpenFile(payload)
+                    val file: OpenFilePayload = p2?.deserialize(payload, OpenFilePayload::class.java) ?: return null
+                    OpenFile(file)
                 }
                     else -> null
             }
@@ -247,7 +250,7 @@ class Events {
 
     class Editor {
         data class ContentPayload(
-            val content: String
+            val payload: String
         ): Payload()
 
         data class NewFile(

@@ -42,4 +42,16 @@ class EventsTest {
         assertEquals(expected, result)
     }
 
+    @Test
+    fun parsePasteBackMessage() {
+        val message = """{"type":"ide/diffPasteBack","payload":"test"}"""
+        val expected = Events.Editor.Paste("test")
+        val result = Events.parse(message)
+        assertNotNull(result)
+        assertEquals(expected.type, result?.type)
+        assertEquals(expected.payload, result?.payload)
+        assertEquals(expected.content, "test")
+
+    }
+
 }

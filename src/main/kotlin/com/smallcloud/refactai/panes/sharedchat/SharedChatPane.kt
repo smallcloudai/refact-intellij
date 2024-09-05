@@ -31,6 +31,7 @@ import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
+import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
@@ -210,6 +211,14 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             .connect(PluginState.instance)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun apiKeyChanged(newApiKey: String?) {
+                    this@SharedChatPane.sendUserConfig()
+                }
+            })
+
+        editor.project.messageBus
+            .connect(PluginState.instance)
+            .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
+                override fun lspIsActive(isActive: Boolean) {
                     this@SharedChatPane.sendUserConfig()
                 }
             })

@@ -136,18 +136,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         }, browser.cefBrowser)
 
-        editor.project.messageBus.connect(PluginState.instance)
-            .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
-                override fun lspIsActive(isActive: Boolean) {
-                    if (isActive) {
-                        setupReact = false
-                        installedScript = false
-                        browser.cefBrowser.reload()
-                        addMessageHandler(myJSQueryOpenInBrowser)
-                    }
-                }
-            })
-
         browser.createImmediately()
         browser
     }

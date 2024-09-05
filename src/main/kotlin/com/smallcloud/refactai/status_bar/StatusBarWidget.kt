@@ -122,6 +122,8 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     init {
+        if (lsp.isWorking)
+            lspSync()
         ApplicationManager.getApplication()
             .messageBus
             .connect(this)

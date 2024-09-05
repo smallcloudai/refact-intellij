@@ -158,7 +158,7 @@ integrated into a single package that follows your privacy settings.</p>
         </action>
         <action class="com.smallcloud.refactai.listeners.ForceCompletionAction"
                 id="ForceCompletionAction"
-                text="Make A Force Completion"
+                text="Run Code Completion Manually"
                 description="Refact AI Make A Manual Trigger Completion">
             <keyboard-shortcut first-keystroke="alt SLASH" keymap="$default"/>
         </action>
@@ -169,7 +169,7 @@ integrated into a single package that follows your privacy settings.</p>
         </group>
 <!--        For display shortcut on the pane, action must be with mask "Activate${id.filterNot { it.isWhitespace() }}ToolWindow"-->
         <action id="ActivateRefactChatToolWindow"
-                text="Open Refact Toolbox"
+                text="Open Refact Sidebar"
                 class="com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeAction">
             <keyboard-shortcut first-keystroke="F1" keymap="$default"/>
         </action>

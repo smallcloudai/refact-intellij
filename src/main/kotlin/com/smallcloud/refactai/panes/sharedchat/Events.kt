@@ -33,6 +33,7 @@ class EventNames {
         @SerializedName("activeFile/setFileInfo") SET_ACTIVE_FILE_INFO("activeFile/setFileInfo"),
         @SerializedName("fim/error") FIM_ERROR("fim/error"),
         @SerializedName("fim/receive") FIM_RECEIVE("fim/receive"),
+        @SerializedName("chatThread/new") NEW_CHAT("chatThread/new"),
         // logout, open external url, setup host
     }
 }
@@ -275,6 +276,8 @@ class Events {
         class SetSnippetToChat(payload: Snippet): ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
 
     }
+
+    object NewChat: ToChat<Unit>(EventNames.ToChat.NEW_CHAT, Unit)
 
     class Config {
         abstract class BaseFeatures()

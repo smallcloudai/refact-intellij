@@ -35,6 +35,10 @@ class ChatPanes(val project: Project): Disposable {
         component?.requestFocus()
     }
 
+    fun newChat() {
+        pane?.newChat()
+    }
+
     override fun dispose() {
         pane?.dispose()
     }

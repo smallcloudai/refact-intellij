@@ -53,6 +53,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val editor = Editor(project)
     var id: String? = null;
 
+    fun newChat() {
+        this.postMessage(Events.NewChat)
+    }
 
     private fun sendSelectedSnippet() {
         this.editor.getSelectedSnippet { snippet ->

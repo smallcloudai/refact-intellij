@@ -55,6 +55,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
             tw.contentManager.setSelectedContent(content, true)
             val panes = content.getUserData(panesKey)
             panes?.requestFocus()
+            chat?.newChat()
         }
     }
 }

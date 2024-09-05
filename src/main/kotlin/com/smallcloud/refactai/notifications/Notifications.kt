@@ -181,7 +181,7 @@ fun emitRegular(project: Project, editor: Editor) {
 
 
     val chat = ToolWindowManager.getInstance(project).getToolWindow("Refact")
-    if (chat != null && getLSPProcessHolder(project).capabilities.codeChatModels.isNotEmpty()) {
+    if (chat != null && getLSPProcessHolder(project).getCaps().codeChatModels.isNotEmpty()) {
         val chatShortcut = KeymapUtil.getShortcutText("ActivateRefactChatToolWindow")
         notification.addAction(NotificationAction.createSimple("Chat ($chatShortcut)") {
             chat.activate {

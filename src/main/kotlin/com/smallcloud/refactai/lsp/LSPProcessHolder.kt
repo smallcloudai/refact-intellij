@@ -367,7 +367,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             return URI("http://127.0.0.1:${port}/")
         }
 
-    private fun getCaps(): LSPCapabilities {
+    fun getCaps(): LSPCapabilities {
         var res = LSPCapabilities()
         InferenceGlobalContext.connection.get(url.resolve("/v1/caps"),
             dataReceiveEnded={
@@ -385,7 +385,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             try {
                 requestFuture = it.get() as ComplexFuture
                 val out = requestFuture.get()
-                logger.warn("LSP caps_received $out")
+                logger.debug("LSP caps_received $out")
                 val gson = Gson()
                 res = gson.fromJson(out as String, LSPCapabilities::class.java)
                 logger.debug("caps_received request finished")

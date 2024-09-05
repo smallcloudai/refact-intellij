@@ -47,11 +47,11 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
         val chat: ChatPanes?
             get() {
                 val tw = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact")
-                return tw?.contentManager?.findContent("Chat")?.getUserData(panesKey)
+                return tw?.contentManager?.getContent(0)?.getUserData(panesKey)
             }
         fun focusChat() {
             val tw = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact")
-            val content = tw?.contentManager?.findContent("Chat") ?: return
+            val content = tw?.contentManager?.getContent(0) ?: return
             tw.contentManager.setSelectedContent(content, true)
             val panes = content.getUserData(panesKey)
             panes?.requestFocus()

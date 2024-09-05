@@ -116,13 +116,10 @@ integrated into a single package that follows your privacy settings.</p>
                                 implementationClass="com.smallcloud.refactai.modes.completion.PopupCompletionContributor"
                                 order="first"/>
 
-        <projectConfigurable parentId="tools" instance="com.smallcloud.refactai.settings.AppRootConfigurable"
-                             id="refactai_root"
-                             displayName="Refact.ai"/>
-        <applicationConfigurable parentId="refactai_root"
+        <applicationConfigurable parentId="tools"
                                  instance="com.smallcloud.refactai.settings.AppSettingsConfigurable"
                                  id="refactai_advanced_settings"
-                                 displayName="Advanced"/>
+                                 displayName="Refact.ai"/>
         <errorHandler implementation="com.smallcloud.refactai.PluginErrorReportSubmitter"/>
 
         <actionPromoter implementation="com.smallcloud.refactai.listeners.InlineActionsPromoter"/>
@@ -136,7 +133,6 @@ integrated into a single package that follows your privacy settings.</p>
 
         <applicationService serviceImplementation="com.smallcloud.refactai.settings.AppSettingsState"/>
         <applicationService serviceImplementation="com.smallcloud.refactai.settings.PrivacyState"/>
-<!--        <applicationService serviceImplementation="com.smallcloud.refactai.panes.sharedchat.ChatHistory" />-->
         
         <editorFactoryListener implementation="com.smallcloud.refactai.listeners.LastEditorGetterListener"/>
 
@@ -179,9 +175,6 @@ integrated into a single package that follows your privacy settings.</p>
         </action>
 
         <group id="RefactAIChatGroup">
-<!--            <action id="RefactAIAskChat"-->
-<!--                    text="Ask in Chat"-->
-<!--                    class="com.smallcloud.refactai.listeners.AskChatAction"/>-->
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <separator/>
         </group>

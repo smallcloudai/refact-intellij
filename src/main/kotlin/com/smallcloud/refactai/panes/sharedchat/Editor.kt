@@ -7,7 +7,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.util.ui.UIUtil
-import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.AccountManager.Companion.instance
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.browser.getActionKeybinding
@@ -80,6 +79,8 @@ class Editor (val project: Project) {
 
                 val selection = editor?.caretModel?.currentCaret?.selectionRange
                 val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
+                val line1 = selection?.startOffset?.let { editor.offsetToLogicalPosition(it).line } ?: 0
+                val line2 = selection?.endOffset?.let { editor.offsetToLogicalPosition(it).line } ?: 0
 
                 val code = editor?.document?.getText(range)
 
@@ -90,8 +91,8 @@ class Editor (val project: Project) {
                     filePath,
                     canPaste,
                     cursor = cursor,
-                    line1 = selection?.startOffset,
-                    line2 = selection?.endOffset,
+                    line1 = line1,
+                    line2 = line2,
                     content = code,
                 )
                 cb(fileInfo)

@@ -45,7 +45,7 @@ class EventsTest {
     @Test
     fun parsePasteBackMessage() {
         val message = """{"type":"ide/diffPasteBack","payload":"test"}"""
-        val expected = Events.Editor.Paste("test")
+        val expected = Events.Editor.PasteDiff("test")
         val result = Events.parse(message)
         assertNotNull(result)
         assertEquals(expected.type, result?.type)

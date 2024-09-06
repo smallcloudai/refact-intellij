@@ -1,10 +1,5 @@
 package com.smallcloud.refactai.panes.sharedchat
 
-import com.intellij.diff.DiffContentFactory
-import com.intellij.diff.DiffManager
-import com.intellij.diff.DiffRequestFactory
-import com.intellij.diff.merge.MergeRequest
-import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.processTools.getResultStdoutStr
 import com.intellij.ide.BrowserUtil
@@ -16,16 +11,20 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
+import com.intellij.openapi.editor.markup.HighlighterLayer
+import com.intellij.openapi.editor.markup.HighlighterTargetArea
+import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.vcs.changes.ChangeListManager
+import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.ui.JBColor
 import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
 import com.smallcloud.refactai.PluginState
@@ -136,33 +135,37 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         InferenceGlobalContext.instance.inferenceUri = null
     }
 
-    // Opens JB diff tool
     private fun handlePasteDiff(content: String) {
-        this.editor.getSelectedSnippet { snippet ->
-            if (snippet != null) {
-                val currentContent = snippet.code
-                val title = "Diff for ${snippet.path}"
-                val indent = snippet.code.takeWhile { it == ' ' || it == '\t' }
-                val newCode = content.prependIndent(indent)
-
-                ApplicationManager.getApplication().invokeLater {
-                    val contentFactory = DiffContentFactory.getInstance()
-                    val originalContent = contentFactory.create(project, currentContent)
-                    val modifiedContent = contentFactory.create(project, newCode)
-                    val request = SimpleDiffRequest(
-                        title,
-                        originalContent,
-                        modifiedContent,
-                        "Original",
-                        "Modified"
-                    )
-                    DiffManager.getInstance().showDiff(project, request)
-                }
-            } else {
-                logger.warn("No selection found to create a diff.")
-            }
-        }
+        editor.addDiff(content)
     }
+
+    // Opens JB diff tool
+//    private fun handlePasteDiff(content: String) {
+//        this.editor.getSelectedSnippet { snippet ->
+//            if (snippet != null) {
+//                val currentContent = snippet.code
+//                val title = "Diff for ${snippet.path}"
+//                val indent = snippet.code.takeWhile { it == ' ' || it == '\t' }
+//                val newCode = content.prependIndent(indent)
+//
+//                ApplicationManager.getApplication().invokeLater {
+//                    val contentFactory = DiffContentFactory.getInstance()
+//                    val originalContent = contentFactory.create(project, currentContent)
+//                    val modifiedContent = contentFactory.create(project, newCode)
+//                    val request = SimpleDiffRequest(
+//                        title,
+//                        originalContent,
+//                        modifiedContent,
+//                        "Original",
+//                        "Modified"
+//                    )
+//                    DiffManager.getInstance().showDiff(project, request)
+//                }
+//            } else {
+//                logger.warn("No selection found to create a diff.")
+//            }
+//        }
+//    }
     private fun handleNewFile(content: String) {
         val vf = LightVirtualFile("Untitled", content)
         val fileDescriptor = OpenFileDescriptor(project, vf)

@@ -20,6 +20,7 @@ import com.smallcloud.refactai.listeners.GlobalCaretListener
 import com.smallcloud.refactai.listeners.GlobalFocusListener
 import com.smallcloud.refactai.modes.completion.CompletionMode
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
+import com.smallcloud.refactai.modes.diff.DiffMode
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.statistic.UsageStats
 import java.lang.System.currentTimeMillis
@@ -28,9 +29,10 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
-
+// TODO: add diff to prevent completions from happening on the diff
 enum class ModeType {
     Completion,
+    Diff,
 }
 
 
@@ -38,6 +40,7 @@ class ModeProvider(
     private val editor: Editor,
     private val modes: Map<ModeType, Mode> = mapOf(
         ModeType.Completion to CompletionMode(),
+        ModeType.Diff to DiffMode()
     ),
     private var activeMode: Mode? = null,
 ) : Disposable, InferenceGlobalContextChangedNotifier {
@@ -131,6 +134,16 @@ class ModeProvider(
 
     override fun dispose() {
     }
+
+    fun switchMode(newMode: ModeType = ModeType.Completion) {
+        if (activeMode == modes[newMode]) return
+        activeMode?.cleanup(editor)
+        activeMode = modes[newMode]
+    }
+
+    fun getDiffMode(): DiffMode = (modes[ModeType.Diff] as DiffMode?)!!
+
+
 
     companion object {
         private const val MAX_EDITORS: Int = 8

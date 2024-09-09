@@ -9,19 +9,20 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.vcs.ex.Range
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
-import com.smallcloud.refactai.io.streamedInferenceFetchOld
+//import com.smallcloud.refactai.io.streamedInferenceFetchOld
 import com.smallcloud.refactai.modes.Mode
 import com.smallcloud.refactai.modes.ModeProvider.Companion.getOrCreateModeProvider
 import com.smallcloud.refactai.modes.ModeType
-import com.smallcloud.refactai.modes.completion.prompt.RequestCreatorOld
+//import com.smallcloud.refactai.modes.completion.prompt.RequestCreatorOld
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
-import com.smallcloud.refactai.modes.highlight.HighlightContext
+// import com.smallcloud.refactai.modes.highlight.HighlightContext
 import com.smallcloud.refactai.statistic.UsageStatistic
-import com.smallcloud.refactai.struct.LongthinkFunctionEntry
-import com.smallcloud.refactai.struct.SMCRequestOld
+//import com.smallcloud.refactai.struct.LongthinkFunctionEntry
+//import com.smallcloud.refactai.struct.SMCRequestOld
 import com.smallcloud.refactai.utils.getExtension
 import dev.gitlive.difflib.DiffUtils
 import dev.gitlive.difflib.patch.Patch
@@ -85,12 +86,15 @@ class DiffMode(
     override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
         diffLayout?.applyPreview()
         diffLayout = null
-        editor.putUserData(Resources.ExtraUserDataKeys.addedFromHL, lastFromHL)
-        if (lastFromHL) {
-            getOrCreateModeProvider(editor).getHighlightMode().actionPerformed(editor)
-        } else {
-            getOrCreateModeProvider(editor).switchMode()
-        }
+        println("Tab Pressed")
+        // getOrCreateModeProvider(editor).getDiffMode().actionPerformed(editor)
+        // getOrCreateModeProvider(editor).switchMode()
+//        editor.putUserData(Resources.ExtraUserDataKeys.addedFromHL, lastFromHL)
+//        if (lastFromHL) {
+//            getOrCreateModeProvider(editor).getHighlightMode().actionPerformed(editor)
+//        } else {
+//            getOrCreateModeProvider(editor).switchMode()
+//        }
     }
 
     override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
@@ -123,133 +127,25 @@ class DiffMode(
         cancel(editor)
     }
 
-    fun actionPerformed(editor: Editor, highlightContext: HighlightContext? = null,
-                        entryFromContext: LongthinkFunctionEntry? = null) {
-        lastFromHL = highlightContext != null
-        val fileName = getActiveFile(editor.document) ?: return
-        val selectionModel = editor.selectionModel
-        var startSelectionOffset: Int = selectionModel.selectionStart
-        var endSelectionOffset: Int = selectionModel.selectionEnd
-        val startPosition: LogicalPosition
-        val finishPosition: LogicalPosition
-        val request: SMCRequestOld
-        if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return
-        if (diffLayout == null || highlightContext != null) {
-            val entry: LongthinkFunctionEntry = highlightContext?.entry ?: entryFromContext ?: return
-            var funcName = (if (lastFromHL) entry.functionHlClick else entry.functionSelection)
-            if (funcName.isNullOrEmpty()) {
-                funcName = entry.functionName
-            }
-
-            val stat = UsageStatistic(scope, entry.functionName, extension = getExtension(fileName))
-            request = RequestCreatorOld.create(
-                fileName, editor.document.text,
-                startSelectionOffset, endSelectionOffset,
-                stat, entry.intent, funcName, listOf(),
-                model = InferenceGlobalContext.longthinkModel ?: entry.model ?: InferenceGlobalContext.model ?: Resources.defaultModel,
-            ) ?: return
-            startPosition = editor.offsetToLogicalPosition(startSelectionOffset)
-            finishPosition = editor.offsetToLogicalPosition(endSelectionOffset - 1)
-            selectionModel.removeSelection()
-            editor.contentComponent.requestFocus()
-            getOrCreateModeProvider(editor).switchMode(ModeType.Diff)
-        } else {
-            val lastDiffLayout = diffLayout ?: return
-            request = lastDiffLayout.request
-            startPosition = editor.offsetToLogicalPosition(request.body.cursor0)
-            finishPosition = editor.offsetToLogicalPosition(request.body.cursor1)
-            lastDiffLayout.cancelPreview()
-            diffLayout = null
-        }
-
-        needRainbowAnimation = true
-        renderTask = scheduler.submit {
-            waitingDiff(
-                editor,
-                startPosition, finishPosition,
-                this::isProgress
-            )
-        }
-        processTask = scheduler.submit {
-            process(request, editor)
-        }
-    }
-
-    fun process(
-        request: SMCRequestOld,
-        editor: Editor
+    fun actionPerformed(
+        editor: Editor,
+        content: String
     ) {
-        request.body.stopTokens = listOf()
-        request.body.maxTokens = 550
-        request.body.maxEdits = if (request.body.functionName == "diff-atcursor") 1 else 10
 
-        InferenceGlobalContext.status = ConnectionStatus.PENDING
+        val selectionModel = editor.selectionModel
+        val startSelectionOffset: Int = selectionModel.selectionStart
+        val endSelectionOffset: Int = selectionModel.selectionEnd
 
-        var lastPatch: Patch<String>? = null
-        streamedInferenceFetchOld(request, dataReceiveEnded = {
-            finishRenderRainbow()
-            if (lastPatch == null) return@streamedInferenceFetchOld
-            diffLayout = DiffLayout(editor, request)
-            app.invokeLater {
-                diffLayout?.update(lastPatch!!)
-            }
+        selectionModel.removeSelection()
+        editor.contentComponent.requestFocus()
+        getOrCreateModeProvider(editor).switchMode(ModeType.Diff)
+        diffLayout?.cancelPreview()
+        diffLayout = DiffLayout(editor, content)
+        val originalText = editor.document.text
+        val newText = originalText.replaceRange(startSelectionOffset, endSelectionOffset, content)
+        val patch = DiffUtils.diff(originalText.split("\n"), newText.split("\n"))
 
-            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-            InferenceGlobalContext.lastErrorMsg = null
-        }) { prediction ->
-            if (prediction.status == null || prediction.status == "error") {
-                InferenceGlobalContext.status = ConnectionStatus.ERROR
-                InferenceGlobalContext.lastErrorMsg = "Parameters are not correct"
-                return@streamedInferenceFetchOld
-            }
+        diffLayout?.update(patch)
 
-            val predictedText = prediction.choices.firstOrNull()?.filesHeadMidTail?.get(request.body.cursorFile)?.mid
-            val finishReason = prediction.choices.firstOrNull()?.finishReason
-            if (predictedText == null || finishReason == null) {
-                return@streamedInferenceFetchOld
-            }
-
-            lastPatch = request.body.sources[request.body.cursorFile]?.let { originText ->
-                prediction.choices.firstOrNull()?.filesHeadMidTail?.get(request.body.cursorFile)?.let { headMidTail ->
-                    val newText = originText.replaceRange(headMidTail.head,
-                            originText.length - headMidTail.tail, headMidTail.mid)
-                    DiffUtils.diff(
-                            originText.split('\n'),
-                            newText.split('\n'),
-                    )
-                }
-            }
-        }?.also {
-            var requestFuture: Future<*>? = null
-            try {
-                requestFuture = it.get()
-                requestFuture.get()
-                logger.debug("Diff request finished")
-            } catch (_: InterruptedException) {
-                requestFuture?.cancel(true)
-                finishRenderRainbow()
-                getOrCreateModeProvider(editor).switchMode()
-            } catch (e: ExecutionException) {
-                catchNetExceptions(e.cause)
-                getOrCreateModeProvider(editor).switchMode()
-            } catch (e: Exception) {
-                InferenceGlobalContext.status = ConnectionStatus.ERROR
-                InferenceGlobalContext.lastErrorMsg = e.message
-                logger.warn("Exception while diff request processing", e)
-                getOrCreateModeProvider(editor).switchMode()
-            }
-        }
-    }
-
-    private fun catchNetExceptions(e: Throwable?) {
-        InferenceGlobalContext.status = ConnectionStatus.ERROR
-        InferenceGlobalContext.lastErrorMsg = e?.message
-        logger.warn("Exception while diff request processing", e)
-    }
-
-    private fun getActiveFile(document: Document): String? {
-        if (!app.isDispatchThread) return null
-        val file = FileDocumentManager.getInstance().getFile(document)
-        return file?.presentableName
     }
 }

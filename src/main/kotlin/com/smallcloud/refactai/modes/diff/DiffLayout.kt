@@ -5,15 +5,18 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.Disposer
 import com.smallcloud.refactai.modes.diff.renderer.Inlayer
-import com.smallcloud.refactai.struct.SMCRequestOld
+// import com.smallcloud.refactai.struct.SMCRequestOld
 import dev.gitlive.difflib.patch.DeltaType
 import dev.gitlive.difflib.patch.Patch
 
 class DiffLayout(
     private val editor: Editor,
-    val request: SMCRequestOld,
+    // val request: SMCRequestOld,
+    val content: String,
 ) : Disposable {
-    private var inlayer: Inlayer = Inlayer(editor, request.body.intent)
+    // private var inlayer: Inlayer = Inlayer(editor, request.body.intent)
+    private var inlayer: Inlayer = Inlayer(editor, content)
+
     private var blockEvents: Boolean = false
     private var lastPatch = Patch<String>()
     var rendered: Boolean = false

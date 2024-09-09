@@ -13,7 +13,6 @@ import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.TextRange
 import com.intellij.util.text.findTextRange
-import com.smallcloud.refactai.listeners.AIToolboxInvokeAction
 import com.smallcloud.refactai.listeners.CancelPressedAction
 import com.smallcloud.refactai.listeners.TabPressedAction
 import com.smallcloud.refactai.modes.diff.getOffsetFromStringNumber
@@ -60,6 +59,7 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
         return str.substring(0, str.findTextRange(splited[1])!!.startOffset)
     }
 
+    // here
     private fun renderPanel(msg: String, offset: Int) {
         val logicalPosition = editor.offsetToLogicalPosition(offset)
         val alignment = findAlignment(
@@ -76,11 +76,11 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
         val renderer = PanelRenderer(firstSymbolPos, editor, listOf(
             "${getAcceptSymbol()} Approve (Tab)" to { TabPressedAction().actionPerformed(editor, context) },
             "${getRejectSymbol()} Reject (ESC)" to { CancelPressedAction().actionPerformed(editor, context) },
-            "${getRerunSymbol()} Rerun \"${msg}\" (F1)" to {
-                val action = AIToolboxInvokeAction()
-                val event = AnActionEvent.createFromAnAction(action, null, ActionPlaces.UNKNOWN, context)
-                ActionUtil.performActionDumbAwareWithCallbacks(action, event)
-            }
+//            "${getRerunSymbol()} Rerun \"${msg}\" (F1)" to {
+//                val action = AIToolboxInvokeAction()
+//                val event = AnActionEvent.createFromAnAction(action, null, ActionPlaces.UNKNOWN, context)
+//                ActionUtil.performActionDumbAwareWithCallbacks(action, event)
+//            }
         ))
         editor.inlayModel
             .addBlockElement(offset, false, true, 1, renderer)

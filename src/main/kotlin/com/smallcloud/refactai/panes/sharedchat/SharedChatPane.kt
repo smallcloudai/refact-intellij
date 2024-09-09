@@ -34,6 +34,7 @@ import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
+import com.smallcloud.refactai.modes.diff.DiffMode
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
@@ -136,7 +137,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handlePasteDiff(content: String) {
-        editor.addDiff(content)
+        // editor.addDiff(content)
+        val currentEditor = FileEditorManager.getInstance(project).selectedTextEditor?: return
+        ApplicationManager.getApplication().invokeLater {
+            DiffMode().actionPerformed(currentEditor, content)
+        }
     }
 
     // Opens JB diff tool

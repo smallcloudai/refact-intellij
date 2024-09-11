@@ -71,7 +71,7 @@ class Events {
                     Setup.OpenExternalUrl(url)
                 }
 
-                EventNames.FromChat.PASTE_DIFF.value -> payload?.asString?.let { Events.Editor.Paste(it) }
+                EventNames.FromChat.PASTE_DIFF.value -> payload?.asString?.let { Events.Editor.PasteDiff(it) }
 
 
                 // EventNames.FromChat.FIM_READY.value -> p2?.deserialize(payload, Fim.Ready::class.java)
@@ -258,7 +258,7 @@ class Events {
             val content: String,
         ): FromChat(EventNames.FromChat.NEW_FILE, ContentPayload(content))
 
-        data class Paste(
+        data class PasteDiff(
             val content: String
         ): FromChat(EventNames.FromChat.PASTE_DIFF, ContentPayload(content))
 

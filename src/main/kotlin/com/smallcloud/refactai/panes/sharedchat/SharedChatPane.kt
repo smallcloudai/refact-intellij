@@ -11,18 +11,20 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent
-import com.intellij.openapi.fileEditor.FileEditorManagerListener
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.editor.markup.HighlighterLayer
+import com.intellij.openapi.editor.markup.HighlighterTargetArea
+import com.intellij.openapi.editor.markup.TextAttributes
+import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.ui.JBColor
 import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
 import com.smallcloud.refactai.PluginState
@@ -32,6 +34,8 @@ import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
+import com.smallcloud.refactai.modes.ModeProvider
+import com.smallcloud.refactai.modes.diff.DiffMode
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
@@ -133,15 +137,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         InferenceGlobalContext.instance.inferenceUri = null
     }
 
-    private fun handlePaste(content: String) {
+    private fun handlePasteDiff(content: String) {
+        val currentEditor = FileEditorManager.getInstance(project).selectedTextEditor?: return
         ApplicationManager.getApplication().invokeLater {
-            val editor = FileEditorManager.getInstance(project).selectedTextEditor
-            val selection = editor?.caretModel?.currentCaret?.selectionRange
-            if (selection != null) {
-                WriteCommandAction.runWriteCommandAction(project) {
-                    editor.document.replaceString(selection.startOffset, selection.endOffset, content)
-                }
-            }
+            ModeProvider.getOrCreateModeProvider(currentEditor).getDiffMode().actionPerformed(currentEditor, content)
         }
     }
 
@@ -293,7 +292,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private suspend fun handleEvent(event: Events.FromChat) {
         logger.info("Event received: $event")
         when (event) {
-            is Events.Editor.Paste -> this.handlePaste(event.content)
+            is Events.Editor.PasteDiff -> this.handlePasteDiff(event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.content)
             is Events.OpenSettings -> this.handleOpenSettings()
             is Events.Setup.SetupHost -> this.handleSetupHost(event.host)

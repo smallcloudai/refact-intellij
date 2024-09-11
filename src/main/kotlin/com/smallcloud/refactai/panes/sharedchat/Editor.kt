@@ -2,30 +2,15 @@ package com.smallcloud.refactai.panes.sharedchat
 
 import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.editor.markup.HighlighterLayer
-import com.intellij.openapi.editor.markup.HighlighterTargetArea
-import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.ui.JBColor
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.account.AccountManager.Companion.instance
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.browser.getActionKeybinding
 import com.smallcloud.refactai.settings.AppSettingsState
-
-
-enum class DiffType {
-    Old, New
-}
-
-data class Diff (
-    val type: DiffType,
-    val content: String,
-)
 
 
 class Editor (val project: Project) {
@@ -119,53 +104,4 @@ class Editor (val project: Project) {
             }
         }
     }
-
-    fun addDiff(content: String) {
-        val editor = FileEditorManager.getInstance(project).selectedTextEditor?: return
-        val selectionModel = editor.selectionModel
-        val document = editor.document
-        val selectedText = document.getText(TextRange(selectionModel.selectionStart, selectionModel.selectionEnd))
-        val indent = selectedText.takeWhile { it == ' ' || it == '\t' }
-        val newCode = content.prependIndent(indent)
-        val originalLines = selectedText.split("\n").map { Diff(DiffType.Old, it) }
-        val newLines = newCode.split("\n").map { Diff(DiffType.New, it) }
-
-        val lines = mutableListOf<Diff>()
-        val maxLength = maxOf(originalLines.size, newLines.size)
-
-        for (i in 0 until maxLength) {
-            if (i < originalLines.size) lines.add(originalLines[i])
-            if (i < newLines.size) lines.add(newLines[i])
-        }
-
-        // TODO add "accept" and "reject" controls
-        // TODO: remove on close, remove on esc, remove on undo
-
-        WriteCommandAction.runWriteCommandAction(project) {
-            val newText = lines.joinToString("\n") { it.content }
-            document.replaceString(selectionModel.selectionStart, selectionModel.selectionEnd, newText)
-            selectionModel.removeSelection()
-            val markupModel = editor.markupModel
-            var offset = selectionModel.selectionStart
-            for (line in lines) {
-                val endOfLineOffset = offset + line.content.length
-                val textAttributes = TextAttributes()
-                // TODO: make transparent
-                textAttributes.backgroundColor = when (line.type) {
-                    DiffType.Old -> JBColor.RED
-                    DiffType.New -> JBColor.GREEN
-                }
-                markupModel.addRangeHighlighter(
-                    offset,
-                    endOfLineOffset,
-                    HighlighterLayer.ADDITIONAL_SYNTAX,
-                    textAttributes,
-                    HighlighterTargetArea.EXACT_RANGE
-                )
-                offset = endOfLineOffset + 1 // +1 for the newline character
-            }
-        }
-
-    }
-
 }

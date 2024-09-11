@@ -29,12 +29,11 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
-// TODO: add diff to prevent completions from happening on the diff
+
 enum class ModeType {
     Completion,
     Diff,
 }
-
 
 class ModeProvider(
     private val editor: Editor,

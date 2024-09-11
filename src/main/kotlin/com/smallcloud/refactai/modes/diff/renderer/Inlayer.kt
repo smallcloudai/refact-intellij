@@ -56,7 +56,6 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
         return str.substring(0, str.findTextRange(splited[1])!!.startOffset)
     }
 
-    // here
     private fun renderPanel(msg: String, offset: Int) {
         val logicalPosition = editor.offsetToLogicalPosition(offset)
         val alignment = findAlignment(

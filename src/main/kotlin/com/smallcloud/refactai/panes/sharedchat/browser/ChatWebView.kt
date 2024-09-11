@@ -71,20 +71,14 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     val webView by lazy {
-        val osName = System.getProperty("os.name").lowercase()
-        val useOsr = when {
-            osName.contains("mac") || osName.contains("darwin") -> false
-            osName.contains("win") -> false
-            osName.contains("nix") || osName.contains("nux") || osName.contains("aix") -> true
-            else -> true
-        }
 
         val browser = JBCefBrowser
             .createBuilder()
             .setEnableOpenDevToolsMenuItem(true)
             .setUrl("http://refactai/index.html")
-            .setOffScreenRendering(useOsr)
+            .setOffScreenRendering(true)
             .build()
+
 
         browser.jbCefClient.setProperty(
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,

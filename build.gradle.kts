@@ -98,7 +98,7 @@ fun getVersionString(baseVersion: String): String {
     if (System.getenv("PUBLISH_EAP") != "1" &&
         tag.isNotEmpty() && tag.contains(baseVersion)) return baseVersion
 
-    val branch = "git rev-parse --abbrev-ref HEAD".runCommand(workingDir = rootDir)
+    val branch = "git rev-parse --abbrev-ref HEAD".runCommand(workingDir = rootDir).replace("/", "-")
     val numberOfCommits = if (branch == "main") {
         val lastTag = "git describe --tags --abbrev=0 @^".runCommand(workingDir = rootDir)
         "git rev-list ${lastTag}..HEAD --count".runCommand(workingDir = rootDir)

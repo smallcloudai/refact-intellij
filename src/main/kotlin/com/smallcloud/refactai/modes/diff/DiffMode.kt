@@ -75,16 +75,23 @@ class DiffMode(
         val startSelectionOffset: Int = selectionModel.selectionStart
         val endSelectionOffset: Int = selectionModel.selectionEnd
 
+        val indent = selectionModel.selectedText?.takeWhile { it ==' ' || it == '\t' }
+        val indentedCode = content.prependIndent(indent?: "")
+
         selectionModel.removeSelection()
-        editor.contentComponent.requestFocus()
+        // doesn't seem to take focus
+        // editor.contentComponent.requestFocus()
         getOrCreateModeProvider(editor).switchMode(ModeType.Diff)
         diffLayout?.cancelPreview()
         val diff = DiffLayout(editor, content)
         val originalText = editor.document.text
-        val newText = originalText.replaceRange(startSelectionOffset, endSelectionOffset, content)
+        val newText = originalText.replaceRange(startSelectionOffset, endSelectionOffset, indentedCode)
         val patch = DiffUtils.diff(originalText.split("\n"), newText.split("\n"))
 
         diffLayout = diff.update(patch)
 
+        app.invokeLater {
+            editor.contentComponent.requestFocus()
+        }
     }
 }

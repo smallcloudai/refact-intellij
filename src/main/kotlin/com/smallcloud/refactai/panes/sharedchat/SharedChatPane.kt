@@ -34,6 +34,7 @@ import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
+import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.modes.diff.DiffMode
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
@@ -137,40 +138,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handlePasteDiff(content: String) {
-        // editor.addDiff(content)
         val currentEditor = FileEditorManager.getInstance(project).selectedTextEditor?: return
         ApplicationManager.getApplication().invokeLater {
-            DiffMode().actionPerformed(currentEditor, content)
+            ModeProvider.getOrCreateModeProvider(currentEditor).getDiffMode().actionPerformed(currentEditor, content)
         }
     }
 
-    // Opens JB diff tool
-//    private fun handlePasteDiff(content: String) {
-//        this.editor.getSelectedSnippet { snippet ->
-//            if (snippet != null) {
-//                val currentContent = snippet.code
-//                val title = "Diff for ${snippet.path}"
-//                val indent = snippet.code.takeWhile { it == ' ' || it == '\t' }
-//                val newCode = content.prependIndent(indent)
-//
-//                ApplicationManager.getApplication().invokeLater {
-//                    val contentFactory = DiffContentFactory.getInstance()
-//                    val originalContent = contentFactory.create(project, currentContent)
-//                    val modifiedContent = contentFactory.create(project, newCode)
-//                    val request = SimpleDiffRequest(
-//                        title,
-//                        originalContent,
-//                        modifiedContent,
-//                        "Original",
-//                        "Modified"
-//                    )
-//                    DiffManager.getInstance().showDiff(project, request)
-//                }
-//            } else {
-//                logger.warn("No selection found to create a diff.")
-//            }
-//        }
-//    }
     private fun handleNewFile(content: String) {
         val vf = LightVirtualFile("Untitled", content)
         val fileDescriptor = OpenFileDescriptor(project, vf)

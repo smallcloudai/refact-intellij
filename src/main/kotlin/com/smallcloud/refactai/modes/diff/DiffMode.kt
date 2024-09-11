@@ -34,9 +34,6 @@ import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as I
 class DiffMode(
     override var needToRender: Boolean = true
 ) : Mode {
-    private val scope: String = "query_diff"
-    private val logger = Logger.getInstance(DiffMode::class.java)
-    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("SMCDiffScheduler", 2)
     private val app = ApplicationManager.getApplication()
     private var diffLayout: DiffLayout? = null
     private var processTask: Future<*>? = null
@@ -140,12 +137,12 @@ class DiffMode(
         editor.contentComponent.requestFocus()
         getOrCreateModeProvider(editor).switchMode(ModeType.Diff)
         diffLayout?.cancelPreview()
-        diffLayout = DiffLayout(editor, content)
+        val diff = DiffLayout(editor, content)
         val originalText = editor.document.text
         val newText = originalText.replaceRange(startSelectionOffset, endSelectionOffset, content)
         val patch = DiffUtils.diff(originalText.split("\n"), newText.split("\n"))
 
-        diffLayout?.update(patch)
+        diffLayout = diff.update(patch)
 
     }
 }

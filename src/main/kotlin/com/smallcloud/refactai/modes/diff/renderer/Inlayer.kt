@@ -2,9 +2,6 @@ package com.smallcloud.refactai.modes.diff.renderer
 
 import com.intellij.ide.DataManager
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.editor.markup.HighlighterTargetArea
@@ -76,11 +73,6 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
         val renderer = PanelRenderer(firstSymbolPos, editor, listOf(
             "${getAcceptSymbol()} Approve (Tab)" to { TabPressedAction().actionPerformed(editor, context) },
             "${getRejectSymbol()} Reject (ESC)" to { CancelPressedAction().actionPerformed(editor, context) },
-//            "${getRerunSymbol()} Rerun \"${msg}\" (F1)" to {
-//                val action = AIToolboxInvokeAction()
-//                val event = AnActionEvent.createFromAnAction(action, null, ActionPlaces.UNKNOWN, context)
-//                ActionUtil.performActionDumbAwareWithCallbacks(action, event)
-//            }
         ))
         editor.inlayModel
             .addBlockElement(offset, false, true, 1, renderer)

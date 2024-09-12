@@ -154,7 +154,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         this.editor.getActiveFileInfo { file ->
             val fileJson = Gson().toJson(file)
             this.editor.getSelectedSnippet { snippet ->
-                val snippetJson = Gson().toJson(snippet)
+                val snippetJson = if(snippet != null) Gson().toJson(snippet) else "undefined";
                 val script = """
                     const config = ${configJson};
                     const active_file = ${fileJson};

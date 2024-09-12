@@ -72,10 +72,12 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     val webView by lazy {
 
+
         val browser = JBCefBrowser
             .createBuilder()
             .setEnableOpenDevToolsMenuItem(true)
             .setUrl("http://refactai/index.html")
+            // change this to enable dev tools
             .setOffScreenRendering(true)
             .build()
 
@@ -88,6 +90,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
         }
 
+
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
@@ -95,7 +98,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         val myJSQueryOpenInBrowserRedirectHyperlink = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowserRedirectHyperlink.addHandler { href ->
-            if (href.isNotEmpty()) {
+            if (href.isNotEmpty() && !href.contains("#")) {
                 BrowserUtil.browse(href)
             }
             null

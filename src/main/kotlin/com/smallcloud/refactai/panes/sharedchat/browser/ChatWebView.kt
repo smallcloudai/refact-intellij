@@ -3,15 +3,20 @@ package com.smallcloud.refactai.panes.sharedchat.browser
 import com.google.gson.Gson
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.ui.jcef.*
 import com.intellij.util.ui.UIUtil
+import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
+import org.cef.handler.*
 import org.cef.handler.CefLoadHandlerAdapter
 import javax.swing.JComponent
 
@@ -64,9 +69,9 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             .setEnableOpenDevToolsMenuItem(true)
             .setUrl("http://refactai/index.html")
             // change this to enable dev tools
-            // setting to false prevents "Accept diff with tab"
+            // setting to false prevents "Accept diff with tab": fixed with onTabHandler
             // setting to true causes slow scroll issues :/
-            .setOffScreenRendering(true)
+            .setOffScreenRendering(false)
             .build()
 
         browser.jbCefClient.setProperty(
@@ -76,6 +81,29 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         if (System.getenv("REFACT_DEBUG") != "1") {
             browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
         }
+
+        val onTabHandler: CefKeyboardHandler = object : CefKeyboardHandlerAdapter() {
+            override fun onKeyEvent(browser: CefBrowser?, event: CefKeyboardHandler.CefKeyEvent?): Boolean {
+                val wasTabPressed = event?.type == CefKeyboardHandler.CefKeyEvent.EventType.KEYEVENT_KEYUP && event.modifiers == 0 && event.character == '\t';
+                val currentEditor = FileEditorManager.getInstance(editor.project).selectedTextEditor
+                val isInDiffMode = currentEditor != null && ModeProvider.getOrCreateModeProvider(currentEditor).isDiffMode()
+
+                if(wasTabPressed && currentEditor != null && isInDiffMode) {
+                    ApplicationManager.getApplication().invokeLater {
+                        ModeProvider.getOrCreateModeProvider(currentEditor)
+                            .onTabPressed(currentEditor, null, DataContext.EMPTY_CONTEXT)
+                    }
+                    return false;
+                }
+                return super.onKeyEvent(browser, event)
+            }
+        }
+
+        browser.jbCefClient.addKeyboardHandler(onTabHandler, browser.cefBrowser)
+        browser.component.mouseWheelListeners.iterator().forEach {
+            browser.component.removeMouseWheelListener(it)
+        }
+
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 

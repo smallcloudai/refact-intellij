@@ -142,6 +142,7 @@ class ModeProvider(
 
     fun getDiffMode(): DiffMode = (modes[ModeType.Diff] as DiffMode?)!!
 
+    fun isDiffMode(): Boolean = activeMode == modes[ModeType.Diff]
 
 
     companion object {

@@ -78,6 +78,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             .setEnableOpenDevToolsMenuItem(true)
             .setUrl("http://refactai/index.html")
             // change this to enable dev tools
+            // setting to false prevents "Accept diff with tab"
+            // setting to true causes slow scroll issues :/
             .setOffScreenRendering(true)
             .build()
 

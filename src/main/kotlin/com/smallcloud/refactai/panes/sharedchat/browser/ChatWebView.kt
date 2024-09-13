@@ -100,9 +100,9 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         }
 
         browser.jbCefClient.addKeyboardHandler(onTabHandler, browser.cefBrowser)
-        browser.component.mouseWheelListeners.iterator().forEach {
-            browser.component.removeMouseWheelListener(it)
-        }
+//        browser.component.mouseWheelListeners.iterator().forEach {
+//            browser.component.removeMouseWheelListener(it)
+//        }
 
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())

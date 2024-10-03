@@ -5,26 +5,23 @@ import com.intellij.execution.processTools.getResultStdoutStr
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
-import com.intellij.openapi.editor.markup.HighlighterLayer
-import com.intellij.openapi.editor.markup.HighlighterTargetArea
-import com.intellij.openapi.editor.markup.TextAttributes
-import com.intellij.openapi.fileEditor.*
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
-import com.intellij.ui.JBColor
 import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
 import com.smallcloud.refactai.PluginState
@@ -35,7 +32,6 @@ import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.modes.ModeProvider
-import com.smallcloud.refactai.modes.diff.DiffMode
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
@@ -103,7 +99,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
 
             is Host.BringYourOwnKey -> {
-                val process = GeneralCommandLine(listOf(BIN_PATH, "--address-url", "", "--save-byok-file"))
+                val process = GeneralCommandLine(listOf(BIN_PATH, "--only-create-yaml-configs"))
                     .withRedirectErrorStream(true)
                     .createProcess()
                 process.awaitExit()
@@ -112,17 +108,18 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     println("Save btok file output is null")
                     return;
                 }
+                val fileName = out.lines().last()
 
                 ApplicationManager.getApplication().invokeLater {
-                    val virtualFile: VirtualFile? = LocalFileSystem.getInstance().findFileByIoFile(File(out))
+                    val virtualFile: VirtualFile? = LocalFileSystem.getInstance().findFileByIoFile(File(fileName))
                     if (virtualFile != null) {
                         // Open the file in the editor
                         FileEditorManager.getInstance(project).openFile(virtualFile, true)
                     } else {
-                        println("File not found: $out")
+                        println("File not found: $fileName")
                     }
                     accountManager.apiKey = "any-key-will-work"
-                    InferenceGlobalContext.instance.inferenceUri = out
+                    InferenceGlobalContext.instance.inferenceUri = fileName
                 }
             }
         }
@@ -138,7 +135,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handlePasteDiff(content: String) {
-        val currentEditor = FileEditorManager.getInstance(project).selectedTextEditor?: return
+        val currentEditor = FileEditorManager.getInstance(project).selectedTextEditor ?: return
         ApplicationManager.getApplication().invokeLater {
             ModeProvider.getOrCreateModeProvider(currentEditor).getDiffMode().actionPerformed(currentEditor, content)
         }

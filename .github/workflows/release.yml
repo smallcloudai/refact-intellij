@@ -166,6 +166,12 @@ jobs:
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
         run: ./gradlew publishPlugin
 
+      - name: Notify to Discord
+        run: |
+          curl -X POST ${{ secrets.DISCORD_WEBHOOK_URL }} \
+          -H "Content-Type: application/json" \
+          -d '{"msg":"JB plugin ${{ steps.setupvars.outputs.plugin_version }} is released in ${{ steps.setupvars.outputs.slack_notification_channel }} channel"}'
+
       - name: Post to a Slack channel
         id: slack
         uses: slackapi/slack-github-action@v1.26.0

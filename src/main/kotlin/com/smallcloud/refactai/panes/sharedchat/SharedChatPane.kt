@@ -111,7 +111,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 val fileName = out.lines().last()
 
                 ApplicationManager.getApplication().invokeLater {
-                    val virtualFile: VirtualFile? = LocalFileSystem.getInstance().findFileByIoFile(File(fileName))
+                    val virtualFile: VirtualFile? = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(fileName))
                     if (virtualFile != null) {
                         // Open the file in the editor
                         FileEditorManager.getInstance(project).openFile(virtualFile, true)

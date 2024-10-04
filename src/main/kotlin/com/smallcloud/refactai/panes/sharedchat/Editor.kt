@@ -12,6 +12,7 @@ import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.browser.getActionKeybinding
 import com.smallcloud.refactai.settings.AppSettingsState
 
+
 class Editor (val project: Project) {
 
     private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
@@ -103,5 +104,4 @@ class Editor (val project: Project) {
             }
         }
     }
-
 }

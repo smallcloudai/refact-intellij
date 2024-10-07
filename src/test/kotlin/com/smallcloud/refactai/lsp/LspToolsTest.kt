@@ -1,7 +1,7 @@
 package com.smallcloud.refactai.lsp
 
 import com.google.gson.Gson
-import org.junit.jupiter.api.Assertions.*
+import org.junit.Assert.*
 import kotlin.test.Test
 
 class LspToolsTest {

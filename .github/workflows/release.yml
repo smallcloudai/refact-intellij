@@ -91,12 +91,12 @@ jobs:
       - name: Gradle Wrapper Validation
         uses: gradle/wrapper-validation-action@v3
 
-      # Setup Java 11 environment for the next steps
+      # Setup Java 17 environment for the next steps
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: 11
+          java-version: 17
 
       # Set environment variables
       - name: Export Properties
@@ -105,7 +105,7 @@ jobs:
         run: |
           echo "pluginVerifierHomeDir=~/.pluginVerifier" >> $GITHUB_OUTPUT
           ./gradlew properties --console=plain -q
-          ./gradlew listProductsReleases # prepare list of IDEs for Plugin Verifier
+          ./gradlew printProductsReleases # prepare list of IDEs for Plugin Verifier
 
       # Run tests
       - name: Run Tests
@@ -128,7 +128,7 @@ jobs:
 
       # Run Verify Plugin task and IntelliJ Plugin Verifier tool
       - name: Run Plugin Verification tasks
-        run: ./gradlew runPluginVerifier -Dplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
+        run: ./gradlew verifyPlugin -Dplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
 
       # Collect Plugin Verifier Result
       - name: Collect Plugin Verifier Result

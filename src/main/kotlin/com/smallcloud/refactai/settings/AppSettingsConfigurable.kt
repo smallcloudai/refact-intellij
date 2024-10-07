@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
-import org.jetbrains.annotations.Nls
 import javax.swing.JComponent
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
@@ -29,7 +28,7 @@ class AppSettingsConfigurable : Configurable {
 
     // A default constructor with no arguments is required because this implementation
     // is registered as an applicationConfigurable EP
-    override fun getDisplayName(): @Nls(capitalization = Nls.Capitalization.Title) String {
+    override fun getDisplayName(): String {
         return "Settings"
     }
 

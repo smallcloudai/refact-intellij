@@ -29,6 +29,7 @@ bin/
 /nbproject/private/
 /nbbuild/
 /dist/
+.intellijPlatform/
 /nbdist/
 /.nb-gradle/
 

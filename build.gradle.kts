@@ -1,10 +1,27 @@
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+
 plugins {
-    id("java")
-    id("org.jetbrains.intellij") version "1.16.0"
-    id("org.jetbrains.kotlin.jvm") version "1.9.21"
-    id("org.jetbrains.changelog") version "2.0.0"
-    id("org.jetbrains.qodana") version "0.1.13"
-    id("org.jetbrains.kotlinx.kover") version "0.6.1"
+    id("java") // Java support
+    alias(libs.plugins.kotlin) // Kotlin support
+    alias(libs.plugins.intelliJPlatform) // IntelliJ Platform Gradle Plugin
+    alias(libs.plugins.changelog) // Gradle Changelog Plugin
+    alias(libs.plugins.qodana) // Gradle Qodana Plugin
+    alias(libs.plugins.kover) // Gradle Kover Plugin
+}
+
+group = providers.gradleProperty("pluginGroup").get()
+
+val javaCompilerVersion = "17"
+kotlin {
+    jvmToolchain(javaCompilerVersion.toInt())
+}
+
+repositories {
+    mavenCentral()
+
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
 dependencies {
@@ -18,31 +35,48 @@ dependencies {
 
     // test libraries
     testImplementation(kotlin("test"))
+    intellijPlatform {
+        create(providers.gradleProperty("platformType"), providers.gradleProperty("platformVersion"))
+
+        // Plugin Dependencies. Uses `platformBundledPlugins` property from the gradle.properties file for bundled IntelliJ Platform plugins.
+        bundledPlugins(providers.gradleProperty("platformBundledPlugins").map { it.split(',') })
+
+        // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file for plugin from JetBrains Marketplace.
+        plugins(providers.gradleProperty("platformPlugins").map { it.split(',') })
+
+        instrumentationTools()
+        pluginVerifier()
+        zipSigner()
+        testFramework(TestFrameworkType.Platform)
+    }
 }
 
+intellijPlatform {
+    pluginConfiguration {
+        version = getVersionString(providers.gradleProperty("pluginVersion").get())
+        ideaVersion {
+            sinceBuild = providers.gradleProperty("pluginSinceBuild")
+            untilBuild = providers.gradleProperty("pluginUntilBuild")
+        }
+    }
 
+    signing {
+        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+        privateKey = providers.environmentVariable("PRIVATE_KEY")
+        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+    }
 
-group = "com.smallcloud"
-version = getVersionString("1.4.2")
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+        channels = providers.environmentVariable("PUBLISH_CHANNEL").map { listOf(it) }
+    }
 
-repositories {
-    mavenCentral()
+    pluginVerification {
+        ides {
+            recommended()
+        }
+    }
 }
-
-
-// Configure Gradle IntelliJ Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#intellij-extension-type
-intellij {
-//    version.set("LATEST-EAP-SNAPSHOT")
-    version.set("2023.1.6")
-    type.set("PC") // Target IDE Platform
-
-    plugins.set(listOf(
-        "Git4Idea",
-    ))
-}
-
-val javaCompilerVersion = "17"
 
 tasks {
     // Set the JVM compatibility versions
@@ -53,59 +87,29 @@ tasks {
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = javaCompilerVersion
     }
-
-    patchPluginXml {
-        sinceBuild.set("231")
-        untilBuild.set("242.*")
-    }
-
-    signPlugin {
-        certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
-        privateKey.set(System.getenv("PRIVATE_KEY"))
-        password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
-    }
-
-    publishPlugin {
-        channels.set(listOf(System.getenv("PUBLISH_CHANNEL")))
-        token.set(System.getenv("PUBLISH_TOKEN"))
-    }
-
-    test  {
-        useJUnitPlatform()
-    }
 }
 
-fun String.runCommand(
-    workingDir: File = File("."),
-    timeoutAmount: Long = 10,
-    timeoutUnit: TimeUnit = TimeUnit.SECONDS
-): String = ProcessBuilder(split("\\s(?=(?:[^'\"`]*(['\"`])[^'\"`]*\\1)*[^'\"`]*$)".toRegex()))
-    .directory(workingDir)
-    .redirectOutput(ProcessBuilder.Redirect.PIPE)
-    .redirectError(ProcessBuilder.Redirect.PIPE)
-    .start()
-    .apply { waitFor(timeoutAmount, timeoutUnit) }
-    .run {
-        val error = errorStream.bufferedReader().readText().trim()
-        if (error.isNotEmpty()) {
-            throw Exception(error)
-        }
-        inputStream.bufferedReader().readText().trim()
-    }
+fun runCommand(cmd: String): String {
+    return providers.exec {
+        commandLine(cmd.split(" "))
+    }.standardOutput.asText.get().trim()
+}
 
 fun getVersionString(baseVersion: String): String {
-    val tag = "git tag -l --points-at HEAD".runCommand(workingDir = rootDir)
+    val tag = runCommand("git tag -l --points-at HEAD")
+    println(tag)
+
     if (System.getenv("PUBLISH_EAP") != "1" &&
         tag.isNotEmpty() && tag.contains(baseVersion)) return baseVersion
 
-    val branch = "git rev-parse --abbrev-ref HEAD".runCommand(workingDir = rootDir).replace("/", "-")
+    val branch = runCommand("git rev-parse --abbrev-ref HEAD").replace("/", "-")
     val numberOfCommits = if (branch == "main") {
-        val lastTag = "git describe --tags --abbrev=0 @^".runCommand(workingDir = rootDir)
-        "git rev-list ${lastTag}..HEAD --count".runCommand(workingDir = rootDir)
+        val lastTag = runCommand("git describe --tags --abbrev=0 @^")
+        runCommand("git rev-list ${lastTag}..HEAD --count")
     } else {
-        "git rev-list --count HEAD ^origin/main".runCommand(workingDir = rootDir)
+        runCommand("git rev-list --count HEAD ^origin/main")
     }
-    val commitId = "git rev-parse --short=8 HEAD".runCommand(workingDir = rootDir)
+    val commitId = runCommand("git rev-parse --short=8 HEAD")
     return if (System.getenv("PUBLISH_EAP") == "1") {
         "$baseVersion.$numberOfCommits-eap-$commitId"
     } else {

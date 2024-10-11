@@ -54,4 +54,103 @@ class EventsTest {
 
     }
 
+    @Test
+    fun parseStartAnimation() {
+        val message = """{"type":"ide/animateFile/start","payload":"/path/to/file.txt"}"""
+        val expected = Events.Animation.Start("/path/to/file.txt")
+        val result = Events.parse(message)
+        assertNotNull(result)
+        assertEquals(expected.type, result?.type)
+        assertEquals(expected.payload, result?.payload)
+    }
+
+    @Test
+    fun parseStopAnimation() {
+        val message = """{"type":"ide/animateFile/stop","payload":"/path/to/file.txt"}"""
+        val expected = Events.Animation.Stop("/path/to/file.txt")
+        val result = Events.parse(message)
+        assertNotNull(result)
+        assertEquals(expected.type, result?.type)
+        assertEquals(expected.payload, result?.payload)
+    }
+
+    @Test
+    fun parseShowPatch() {
+        val message = """{
+            "type": "ide/diffPreview",
+            "payload": {
+                "currentPin": "📍OTHER",
+                "allPins": ["📍OTHER", "📍OTHER"],
+                "results": [{
+                    "file_text": "foo",
+                    "file_name_edit": null,
+                    "file_name_delete": null,
+                    "file_name_add": "path/to/file.txt"
+                }],
+               state: [{
+                    "chunk_id": 0,
+                    "applied": false,
+                    "can_unapply": false,
+                    "success": true,
+                    "detail": null,
+               }],
+            }
+        }""".trimMargin()
+        val expectedPayload = Events.Patch.ShowPayload(
+            currentPin = "📍OTHER",
+            allPins = listOf("📍OTHER", "📍OTHER"),
+            results = listOf(
+                Events.Patch.PatchResult(
+                    fileText = "foo",
+                    fileNameEdit = null,
+                    fileNameDelete = null,
+                    fileNameAdd = "path/to/file.txt"
+                )
+            ),
+            state = listOf(
+                Events.Patch.PatchState(
+                    chunkId = 0,
+                    applied = false,
+                    canUnapply = false,
+                    success = true,
+                    detail = null
+                )
+            )
+        )
+        val expected = Events.Patch.Show(expectedPayload)
+        val result = Events.parse(message)
+        assertNotNull(result)
+        assertEquals(expected.type, result?.type)
+        // TODO: class might need a compare method
+        // assertEquals(expected.payload, result?.payload)
+    }
+
+    @Test
+    fun parseApplyPatch() {
+        val message = """{
+            |"type": "ide/writeResultsToFile",
+            |"payload": [{
+                "file_text": "foo",
+                "file_name_edit": null,
+                "file_name_delete": null,
+                "file_name_add": "path/to/file.txt"
+            |}]
+        } """.trimMargin()
+
+        val patchResult = Events.Patch.PatchResult(
+            fileText = "foo",
+            fileNameEdit = null,
+            fileNameDelete = null,
+            fileNameAdd = "path/to/file.txt"
+        )
+        val payload = Events.Patch.ApplyPayload(listOf(patchResult))
+        val expected = Events.Patch.Apply(payload)
+
+        val result = Events.parse(message)
+
+        assertNotNull(result)
+        assertEquals(expected.type, result?.type)
+        // TODO: class might need a compare method
+        // assertEquals(expected.payload, result?.payload)
+    }
 }

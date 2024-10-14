@@ -92,10 +92,10 @@ class EventsTest {
                     "applied": false,
                     "can_unapply": false,
                     "success": true,
-                    "detail": null,
-               }],
+                    "detail": null
+               }]
             }
-        }""".trimMargin()
+        }"""
         val expectedPayload = Events.Patch.ShowPayload(
             currentPin = "📍OTHER",
             allPins = listOf("📍OTHER", "📍OTHER"),
@@ -128,14 +128,14 @@ class EventsTest {
     @Test
     fun parseApplyPatch() {
         val message = """{
-            |"type": "ide/writeResultsToFile",
-            |"payload": [{
+            "type": "ide/writeResultsToFile",
+            "payload": [{
                 "file_text": "foo",
                 "file_name_edit": null,
                 "file_name_delete": null,
                 "file_name_add": "path/to/file.txt"
-            |}]
-        } """.trimMargin()
+            }]
+        }"""
 
         val patchResult = Events.Patch.PatchResult(
             fileText = "foo",

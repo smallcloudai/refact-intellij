@@ -92,7 +92,15 @@ class Events {
 
                 // TODO: test this
                 EventNames.FromChat.DIFF_PREVIEW.value -> Patch.Show(p2?.deserialize(payload, Patch.ShowPayload::class.java)?: return null)
-                EventNames.FromChat.WRITE_RESULTS_TO_FILE.value -> Patch.Apply(p2?.deserialize(payload, Patch.ApplyPayload::class.java)?: return null)
+                // EventNames.FromChat.WRITE_RESULTS_TO_FILE.value -> Patch.Apply(p2?.deserialize(payload, Patch.ApplyPayload::class.java)?: return null)
+                EventNames.FromChat.WRITE_RESULTS_TO_FILE.value -> {
+                    val l = mutableListOf<Patch.PatchResult>()
+                    val items = p2?.deserialize(payload, l::class.java)?: l
+                    val p = Patch.ApplyPayload(items)
+                    return Patch.Apply(p)
+                }
+
+
 
                 else -> null
             }
@@ -116,10 +124,10 @@ class Events {
 
         data class PatchState(
             @SerializedName("chunk_id") val chunkId: Int,
-            val applied: Boolean,
+            @SerializedName("applied") val applied: Boolean,
             @SerializedName("can_unapply") val canUnapply: Boolean,
-            val success: Boolean,
-            val detail: String?,
+            @SerializedName("success") val success: Boolean,
+            @SerializedName("detail") val detail: String?,
         )
 
         data class ShowPayload(
@@ -132,6 +140,7 @@ class Events {
         class Show(override val payload: ShowPayload): FromChat(EventNames.FromChat.DIFF_PREVIEW, payload)
 
         class ApplyPayload(items: List<PatchResult>): Payload()
+        // typealias ApplyPayload: Payload()
         class Apply(override val payload: ApplyPayload): FromChat(EventNames.FromChat.WRITE_RESULTS_TO_FILE, payload)
     }
 

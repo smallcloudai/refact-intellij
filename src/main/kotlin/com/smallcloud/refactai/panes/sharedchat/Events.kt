@@ -89,15 +89,13 @@ class Events {
                 EventNames.FromChat.START_ANIMATION.value -> Animation.Start(payload?.asString?: "")
 
                 EventNames.FromChat.STOP_ANIMATION.value -> Animation.Stop(payload?.asString?: "")
-
-                // TODO: test this
+                
                 EventNames.FromChat.DIFF_PREVIEW.value -> Patch.Show(p2?.deserialize(payload, Patch.ShowPayload::class.java)?: return null)
-                // EventNames.FromChat.WRITE_RESULTS_TO_FILE.value -> Patch.Apply(p2?.deserialize(payload, Patch.ApplyPayload::class.java)?: return null)
                 EventNames.FromChat.WRITE_RESULTS_TO_FILE.value -> {
-                    val l = mutableListOf<Patch.PatchResult>()
-                    val items = p2?.deserialize(payload, l::class.java)?: l
-                    val p = Patch.ApplyPayload(items)
-                    return Patch.Apply(p)
+                    val results = mutableListOf<Patch.PatchResult>()
+                    val items = p2?.deserialize(payload, results::class.java)?: results
+                    val applyPayload = Patch.ApplyPayload(items)
+                    return Patch.Apply(applyPayload)
                 }
 
 

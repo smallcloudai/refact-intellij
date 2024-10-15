@@ -137,7 +137,7 @@ class Events {
 
         class Show(override val payload: ShowPayload): FromChat(EventNames.FromChat.DIFF_PREVIEW, payload)
 
-        class ApplyPayload(items: List<PatchResult>): Payload()
+        class ApplyPayload(val items: List<PatchResult>): Payload()
         // typealias ApplyPayload: Payload()
         class Apply(override val payload: ApplyPayload): FromChat(EventNames.FromChat.WRITE_RESULTS_TO_FILE, payload)
     }

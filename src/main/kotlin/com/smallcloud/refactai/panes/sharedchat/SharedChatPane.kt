@@ -10,10 +10,7 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent
-import com.intellij.openapi.fileEditor.FileEditorManagerListener
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
@@ -286,6 +283,28 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     }
 
+    private fun handlePatchApply(payload: Events.Patch.ApplyPayload) {
+        payload.items.forEach { item ->
+            if (item.fileNameAdd != null) {
+                val virtualFile = LightVirtualFile(item.fileNameAdd, item.fileText)
+                val fileDescriptor = OpenFileDescriptor(project, virtualFile)
+                FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+            }
+
+            if (item.fileNameEdit != null) {
+                val file = LocalFileSystem.getInstance().findFileByPath(item.fileNameEdit)
+                if(file != null) {
+                    FileDocumentManager.getInstance().getDocument(file)?.setText(item.fileText)
+                }
+            }
+
+            if (item.fileNameDelete != null) {
+                LocalFileSystem.getInstance().findFileByPath(item.fileNameDelete)?.delete(this.project)
+            }
+
+        }
+    }
+
     private suspend fun handleEvent(event: Events.FromChat) {
         logger.info("Event received: $event")
         when (event) {
@@ -298,6 +317,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.Fim.Request -> this.handleFimRequest()
             is Events.OpenHotKeys -> this.handleOpenHotKeys()
             is Events.OpenFile -> this.handleOpenFile(event.payload.fileName, event.payload.line)
+            is Events.Patch.Apply -> this.handlePatchApply(event.payload)
+            is Events.Patch.Show -> {
+                // TODO
+            }
 
             else -> Unit
         }

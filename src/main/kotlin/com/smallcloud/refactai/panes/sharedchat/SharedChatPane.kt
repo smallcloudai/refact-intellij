@@ -305,6 +305,36 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+    private fun handlePatchShow(payload: Events.Patch.ShowPayload) {
+        payload.results.forEach { result ->
+            if (result.fileNameAdd != null) {
+                // Create a new file and open it
+                val virtualFile = LightVirtualFile(result.fileNameAdd, result.fileText)
+                val fileDescriptor = OpenFileDescriptor(project, virtualFile)
+                FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+            }
+
+            if (result.fileNameEdit != null) {
+                // Open the file and add the diff
+                val file = LocalFileSystem.getInstance().findFileByPath(result.fileNameEdit)
+                if (file != null) {
+                    // Open the existing file
+                    val fileDescriptor = OpenFileDescriptor(project, file)
+                    FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+                    // TODO: add the diff
+//                    val document = FileDocumentManager.getInstance().getDocument(file)
+//                    document?.setText(result.fileText) // Update the content with the diff
+                }
+            }
+
+
+            if (result.fileNameDelete!= null) {
+                // delete the file
+                LocalFileSystem.getInstance().findFileByPath(result.fileNameDelete)?.delete(this.project)
+            }
+        }
+    }
+
     private suspend fun handleEvent(event: Events.FromChat) {
         logger.info("Event received: $event")
         when (event) {
@@ -318,9 +348,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.OpenHotKeys -> this.handleOpenHotKeys()
             is Events.OpenFile -> this.handleOpenFile(event.payload.fileName, event.payload.line)
             is Events.Patch.Apply -> this.handlePatchApply(event.payload)
-            is Events.Patch.Show -> {
-                // TODO
-            }
+            is Events.Patch.Show -> this.handlePatchShow(event.payload)
 
             else -> Unit
         }

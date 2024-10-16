@@ -327,6 +327,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     val fileDescriptor = OpenFileDescriptor(project, file)
                     ApplicationManager.getApplication().invokeLater {
                         val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+                        editor?.selectionModel?.setSelection(0, editor.document.textLength)
                         if (editor != null) {
                             ModeProvider.getOrCreateModeProvider(editor).getDiffMode()
                                 .actionPerformed(editor, result.fileText)

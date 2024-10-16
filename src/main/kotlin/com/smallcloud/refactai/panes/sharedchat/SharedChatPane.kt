@@ -277,7 +277,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         val vf = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
             VfsUtil.findFileByIoFile(file, true)
         } ?: return
-        
+
         val fileDescriptor = OpenFileDescriptor(project, vf)
 
         ApplicationManager.getApplication().invokeLater {
@@ -289,14 +289,28 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     }
 
+    private fun deleteFile(fileName: String) {
+        ApplicationManager.getApplication().runReadAction {
+            LocalFileSystem.getInstance().findFileByPath(fileName)?.delete(this.project)
+        }
+    }
+
+    private fun openNewFileWithContent(fileName: String, content: String) {
+        val virtualFile = LightVirtualFile(fileName, content)
+        val fileDescriptor = OpenFileDescriptor(project, virtualFile)
+        ApplicationManager.getApplication().invokeLater {
+            FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+        }
+    }
+
     private fun handlePatchApply(payload: Events.Patch.ApplyPayload) {
         payload.items.forEach { item ->
             if (item.fileNameAdd != null) {
-                val virtualFile = LightVirtualFile(item.fileNameAdd, item.fileText)
-                val fileDescriptor = OpenFileDescriptor(project, virtualFile)
-                ApplicationManager.getApplication().invokeLater {
-                    FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
-                }
+                this.openNewFileWithContent(item.fileNameAdd, item.fileText)
+            }
+
+            if (item.fileNameDelete != null) {
+                this.deleteFile(item.fileNameDelete)
             }
 
             if (item.fileNameEdit != null) {
@@ -309,26 +323,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 }
 
             }
-
-            if (item.fileNameDelete != null) {
-                ApplicationManager.getApplication().runReadAction {
-                    LocalFileSystem.getInstance().findFileByPath(item.fileNameDelete)?.delete(this.project)
-                }
-
-            }
-
         }
     }
 
     private fun handlePatchShow(payload: Events.Patch.ShowPayload) {
         payload.results.forEach { result ->
             if (result.fileNameAdd != null) {
-                // Create a new file and open it
-                val virtualFile = LightVirtualFile(result.fileNameAdd, result.fileText)
-                val fileDescriptor = OpenFileDescriptor(project, virtualFile)
-                ApplicationManager.getApplication().invokeLater {
-                    FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
-                }
+                this.openNewFileWithContent(result.fileNameAdd, result.fileText)
+            }
+            if (result.fileNameDelete!= null) {
+                this.deleteFile(result.fileNameDelete)
             }
 
             if (result.fileNameEdit != null) {
@@ -349,12 +353,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
             }
 
-
-            if (result.fileNameDelete!= null) {
-                ApplicationManager.getApplication().runReadAction {
-                    LocalFileSystem.getInstance().findFileByPath(result.fileNameDelete)?.delete(this.project)
-                }
-            }
         }
     }
 

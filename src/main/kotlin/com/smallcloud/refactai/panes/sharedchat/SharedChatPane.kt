@@ -288,13 +288,17 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             if (item.fileNameAdd != null) {
                 val virtualFile = LightVirtualFile(item.fileNameAdd, item.fileText)
                 val fileDescriptor = OpenFileDescriptor(project, virtualFile)
-                FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+                ApplicationManager.getApplication().invokeLater {
+                    FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+                }
             }
 
             if (item.fileNameEdit != null) {
                 val file = LocalFileSystem.getInstance().findFileByPath(item.fileNameEdit)
                 if(file != null) {
-                    FileDocumentManager.getInstance().getDocument(file)?.setText(item.fileText)
+                    ApplicationManager.getApplication().invokeLater {
+                        FileDocumentManager.getInstance().getDocument(file)?.setText(item.fileText)
+                    }
                 }
             }
 
@@ -311,19 +315,23 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 // Create a new file and open it
                 val virtualFile = LightVirtualFile(result.fileNameAdd, result.fileText)
                 val fileDescriptor = OpenFileDescriptor(project, virtualFile)
-                FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+                ApplicationManager.getApplication().invokeLater {
+                    FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+                }
             }
 
             if (result.fileNameEdit != null) {
                 // Open the file and add the diff
                 val file = LocalFileSystem.getInstance().findFileByPath(result.fileNameEdit)
                 if (file != null) {
-                    // Open the existing file
                     val fileDescriptor = OpenFileDescriptor(project, file)
-                    FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
-                    // TODO: add the diff
-//                    val document = FileDocumentManager.getInstance().getDocument(file)
-//                    document?.setText(result.fileText) // Update the content with the diff
+                    ApplicationManager.getApplication().invokeLater {
+                        val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+                        if (editor != null) {
+                            ModeProvider.getOrCreateModeProvider(editor).getDiffMode()
+                                .actionPerformed(editor, result.fileText)
+                        }
+                    }
                 }
             }
 

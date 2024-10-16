@@ -108,8 +108,8 @@ class Events {
 
     class Animation {
         data class AnimationPayload(val payload: String): Payload();
-        class Start(fileName: String): FromChat(EventNames.FromChat.START_ANIMATION, AnimationPayload(fileName))
-        class Stop(fileName: String): FromChat(EventNames.FromChat.STOP_ANIMATION, AnimationPayload(fileName))
+        data class Start(val fileName: String): FromChat(EventNames.FromChat.START_ANIMATION, AnimationPayload(fileName))
+        data class Stop(val fileName: String): FromChat(EventNames.FromChat.STOP_ANIMATION, AnimationPayload(fileName))
     }
 
     class Patch {

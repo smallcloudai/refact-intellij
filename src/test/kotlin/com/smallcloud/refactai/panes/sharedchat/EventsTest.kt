@@ -153,4 +153,24 @@ class EventsTest {
         // TODO: class might need a compare method
         // assertEquals(expected.payload, result?.payload)
     }
+
+    @Test
+    fun parseeAnimationStart() {
+        val message = """{"type": "ide/animateFile/start", "payload": "path/to/file.txt"}"""
+        val expected = Events.Animation.Start("path/to/file.txt")
+        val result = Events.parse(message)
+        assertNotNull(result)
+        assertEquals(expected.type, result?.type)
+        assertEquals(expected.payload, result?.payload)
+    }
+
+    @Test
+    fun parseAnimationStop() {
+        val message = """{"type": "ide/animateFile/stop", "payload": "path/to/file.txt"}"""
+        val expected = Events.Animation.Stop("path/to/file.txt")
+        val result = Events.parse(message)
+        assertNotNull(result)
+        assertEquals(expected.type, result?.type)
+        assertEquals(expected.payload, result?.payload)
+    }
 }

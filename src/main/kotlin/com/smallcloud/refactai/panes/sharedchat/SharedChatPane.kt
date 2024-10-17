@@ -10,10 +10,7 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent
-import com.intellij.openapi.fileEditor.FileEditorManagerListener
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
@@ -22,6 +19,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
 import com.smallcloud.refactai.PluginState
@@ -32,6 +30,7 @@ import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.modes.ModeProvider
+import com.smallcloud.refactai.modes.diff.waitingDiff
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
@@ -52,6 +51,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val logger = Logger.getInstance(SharedChatPane::class.java)
     private val editor = Editor(project)
     var id: String? = null;
+    val animatedFiles = mutableSetOf<String>()
+    private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("SMCRainbowScheduler", 2)
 
     fun newChat() {
         this.postMessage(Events.NewChat)
@@ -273,7 +274,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun handleOpenFile(fileName: String, line: Int?) {
         val file = File(fileName)
-        val vf = VfsUtil.findFileByIoFile(file, true) ?: return
+        val vf = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
+            VfsUtil.findFileByIoFile(file, true)
+        } ?: return
 
         val fileDescriptor = OpenFileDescriptor(project, vf)
 
@@ -284,6 +287,103 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
         }
 
+    }
+
+    private fun deleteFile(fileName: String) {
+        ApplicationManager.getApplication().runReadAction {
+            LocalFileSystem.getInstance().findFileByPath(fileName)?.delete(this.project)
+        }
+    }
+
+    private fun openNewFileWithContent(fileName: String, content: String) {
+        val virtualFile = LightVirtualFile(fileName, content)
+        val fileDescriptor = OpenFileDescriptor(project, virtualFile)
+        ApplicationManager.getApplication().invokeLater {
+            FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+        }
+    }
+
+    private fun handlePatchApply(payload: Events.Patch.ApplyPayload) {
+        payload.items.forEach { item ->
+            if (item.fileNameAdd != null) {
+                this.openNewFileWithContent(item.fileNameAdd, item.fileText)
+            }
+
+            if (item.fileNameDelete != null) {
+                this.deleteFile(item.fileNameDelete)
+            }
+
+            if (item.fileNameEdit != null) {
+                val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
+                    LocalFileSystem.getInstance().findFileByPath(item.fileNameEdit)
+                } ?: return
+
+                ApplicationManager.getApplication().invokeLater {
+                    FileDocumentManager.getInstance().getDocument(file)?.setText(item.fileText)
+                }
+
+            }
+        }
+    }
+
+    private fun handlePatchShow(payload: Events.Patch.ShowPayload) {
+        payload.results.forEach { result ->
+            if (result.fileNameAdd != null) {
+                this.openNewFileWithContent(result.fileNameAdd, result.fileText)
+            }
+            if (result.fileNameDelete!= null) {
+                this.deleteFile(result.fileNameDelete)
+            }
+
+            if (result.fileNameEdit != null) {
+                // Open the file and add the diff
+                val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
+                    LocalFileSystem.getInstance().findFileByPath(result.fileNameEdit)
+                } ?: return
+
+                val fileDescriptor = OpenFileDescriptor(project, file)
+                ApplicationManager.getApplication().invokeLater {
+                    val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+                    editor?.selectionModel?.setSelection(0, editor.document.textLength)
+                    if (editor != null) {
+                        ModeProvider.getOrCreateModeProvider(editor).getDiffMode()
+                            .actionPerformed(editor, result.fileText)
+                    }
+                }
+
+            }
+
+        }
+    }
+
+
+    private fun handleAnimationStart(fileName: String) {
+        // TODO: implement
+        println("\nAnimatinve: $fileName")
+        val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
+            LocalFileSystem.getInstance().findFileByPath(fileName)
+        } ?: return
+        val fileDescriptor = OpenFileDescriptor(project, file)
+        println("file: $file")
+        ApplicationManager.getApplication().invokeLater {
+            val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true) ?: return@invokeLater
+            println("editor: $editor")
+            // editor.selectionModel.setSelection(0, editor.document.textLength)
+            animatedFiles.add(fileName)
+            scheduler.submit {
+                waitingDiff(
+                    editor,
+                    editor.offsetToLogicalPosition(0),
+                    editor.offsetToLogicalPosition(editor.document.textLength),
+                    {  -> animatedFiles.contains(fileName) }
+                )
+            }
+        }
+    }
+
+    private fun handleAnimationStop(fileName: String) {
+        println("Stop animation: $fileName")
+        animatedFiles.remove(fileName)
     }
 
     private suspend fun handleEvent(event: Events.FromChat) {
@@ -298,6 +398,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.Fim.Request -> this.handleFimRequest()
             is Events.OpenHotKeys -> this.handleOpenHotKeys()
             is Events.OpenFile -> this.handleOpenFile(event.payload.fileName, event.payload.line)
+            is Events.Patch.Apply -> this.handlePatchApply(event.payload)
+            is Events.Patch.Show -> this.handlePatchShow(event.payload)
+            is Events.Animation.Start -> this.handleAnimationStart(event.fileName)
+            is Events.Animation.Stop -> this.handleAnimationStop(event.fileName)
 
             else -> Unit
         }

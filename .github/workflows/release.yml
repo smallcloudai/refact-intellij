@@ -37,6 +37,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Setup Java 17 environment for the next steps
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
       - name: Set env CHANNEL
         shell: bash
         id: setupvars
@@ -68,7 +75,7 @@ jobs:
           name: refact-chat-js-latest
           path: ./src/main/resources/webview/dist
 
-      - uses: convictional/trigger-workflow-and-wait@v1.6.1
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
         name: "Build refact-lsp"
         with:
           owner: smallcloudai
@@ -84,19 +91,14 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build.yml
           repo: smallcloudai/refact-lsp
+          name_is_regexp: true
+          name: dist-*
           branch: ${{ steps.setupvars.outputs.lsp_version }}
           path: ./src/main/resources/bin
 
       # Validate wrapper
       - name: Gradle Wrapper Validation
-        uses: gradle/wrapper-validation-action@v3
-
-      # Setup Java 17 environment for the next steps
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: 17
+        uses: gradle/actions/wrapper-validation@v3
 
       # Set environment variables
       - name: Export Properties
@@ -151,7 +153,7 @@ jobs:
 
       # Store already-built plugin as an artifact for downloading
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact.outputs.filename }}
           path: ./build/distributions/content/*/*
@@ -170,7 +172,7 @@ jobs:
         run: |
           curl -X POST ${{ secrets.DISCORD_WEBHOOK_URL }} \
           -H "Content-Type: application/json" \
-          -d '{"msg":"JB plugin ${{ steps.setupvars.outputs.plugin_version }} is released in ${{ steps.setupvars.outputs.slack_notification_channel }} channel"}'      
+          -d '{"msg":"JB plugin ${{ steps.setupvars.outputs.plugin_version }} is released in ${{ steps.setupvars.outputs.slack_notification_channel }} channel"}'
 
       - name: Post to a Slack channel
         id: slack

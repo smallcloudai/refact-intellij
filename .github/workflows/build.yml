@@ -47,7 +47,7 @@ jobs:
           name: refact-chat-js-latest
           path: ./src/main/resources/webview/dist
 
-      - uses: convictional/trigger-workflow-and-wait@v1.6.1
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
         name: "Build refact-lsp"
         with:
           owner: smallcloudai
@@ -71,7 +71,7 @@ jobs:
 
       # Validate wrapper
       - name: Gradle Wrapper Validation
-        uses: gradle/wrapper-validation-action@v3
+        uses: gradle/actions/wrapper-validation@v3
 
       # Setup Java 17 environment for the next steps
       - name: Setup Java
@@ -114,7 +114,6 @@ jobs:
 
       # Collect Plugin Verifier Result
       - name: Collect Plugin Verifier Result
-        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: pluginVerifier-result
@@ -133,7 +132,7 @@ jobs:
 
       # Store already-built plugin as an artifact for downloading
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact.outputs.filename }}
           path: ./build/distributions/content/*/*

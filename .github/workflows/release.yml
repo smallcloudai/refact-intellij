@@ -37,6 +37,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Setup Java 17 environment for the next steps
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
       - name: Set env CHANNEL
         shell: bash
         id: setupvars
@@ -68,7 +75,7 @@ jobs:
           name: refact-chat-js-latest
           path: ./src/main/resources/webview/dist
 
-      - uses: convictional/trigger-workflow-and-wait@v1.6.1
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
         name: "Build refact-lsp"
         with:
           owner: smallcloudai
@@ -84,19 +91,14 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build.yml
           repo: smallcloudai/refact-lsp
+          name_is_regexp: true
+          name: dist-*
           branch: ${{ steps.setupvars.outputs.lsp_version }}
           path: ./src/main/resources/bin
 
       # Validate wrapper
       - name: Gradle Wrapper Validation
-        uses: gradle/wrapper-validation-action@v3
-
-      # Setup Java 11 environment for the next steps
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: 11
+        uses: gradle/actions/wrapper-validation@v3
 
       # Set environment variables
       - name: Export Properties
@@ -105,7 +107,7 @@ jobs:
         run: |
           echo "pluginVerifierHomeDir=~/.pluginVerifier" >> $GITHUB_OUTPUT
           ./gradlew properties --console=plain -q
-          ./gradlew listProductsReleases # prepare list of IDEs for Plugin Verifier
+          ./gradlew printProductsReleases # prepare list of IDEs for Plugin Verifier
 
       # Run tests
       - name: Run Tests
@@ -128,7 +130,7 @@ jobs:
 
       # Run Verify Plugin task and IntelliJ Plugin Verifier tool
       - name: Run Plugin Verification tasks
-        run: ./gradlew runPluginVerifier -Dplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
+        run: ./gradlew verifyPlugin -Dplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
 
       # Collect Plugin Verifier Result
       - name: Collect Plugin Verifier Result
@@ -151,7 +153,7 @@ jobs:
 
       # Store already-built plugin as an artifact for downloading
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact.outputs.filename }}
           path: ./build/distributions/content/*/*

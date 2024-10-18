@@ -71,20 +71,24 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     val webView by lazy {
-        val osName = System.getProperty("os.name").lowercase()
-        val useOsr = when {
-            osName.contains("mac") || osName.contains("darwin") -> false
-            osName.contains("win") -> false
-            osName.contains("nix") || osName.contains("nux") || osName.contains("aix") -> true
-            else -> true
-        }
+
 
         val browser = JBCefBrowser
             .createBuilder()
             .setEnableOpenDevToolsMenuItem(true)
             .setUrl("http://refactai/index.html")
-            .setOffScreenRendering(useOsr)
+            // change this to enable dev tools
+            // setting to false prevents "Accept diff with tab"
+            // setting to true causes slow scroll issues :/
+            .setOffScreenRendering(true)
             .build()
+
+        browser.jbCefClient.addDisplayHandler(object : CefDisplayHandlerAdapter() {
+            override fun onCursorChange(browser: CefBrowser?, cursorType: Int): Boolean {
+                browser?.uiComponent?.cursor = java.awt.Cursor.getPredefinedCursor(cursorType);
+                return false
+            }
+        }, browser.cefBrowser)
 
         browser.jbCefClient.setProperty(
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
@@ -94,6 +98,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
         }
 
+
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
@@ -101,7 +106,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         val myJSQueryOpenInBrowserRedirectHyperlink = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowserRedirectHyperlink.addHandler { href ->
-            if (href.isNotEmpty()) {
+            if (href.isNotEmpty() && !href.contains("#")) {
                 BrowserUtil.browse(href)
             }
             null
@@ -157,7 +162,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         this.editor.getActiveFileInfo { file ->
             val fileJson = Gson().toJson(file)
             this.editor.getSelectedSnippet { snippet ->
-                val snippetJson = Gson().toJson(snippet)
+                val snippetJson = if(snippet != null) Gson().toJson(snippet) else "undefined";
                 val script = """
                     const config = ${configJson};
                     const active_file = ${fileJson};
@@ -209,7 +214,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     fun postMessage(message: Events.ToChat<*>?) {
         if (message != null) {
             val json = Events.stringify(message)
-            println("post message json: $json")
+            // println("post message json: $json")
             this.postMessage(json)
         }
     }

@@ -24,7 +24,11 @@ class EventNames {
         LOG_OUT("log_out"),
         FIM_READY("fim/ready"),
         FIM_REQUEST("fim/request"),
-
+        // Adding
+        START_ANIMATION("ide/animateFile/start"),
+        STOP_ANIMATION("ide/animateFile/stop"),
+        DIFF_PREVIEW("ide/diffPreview"),
+        WRITE_RESULTS_TO_FILE("ide/writeResultsToFile")
     }
 
     enum class ToChat(val value: String) {
@@ -81,10 +85,61 @@ class Events {
                     val file: OpenFilePayload = p2?.deserialize(payload, OpenFilePayload::class.java) ?: return null
                     OpenFile(file)
                 }
-                    else -> null
+
+                EventNames.FromChat.START_ANIMATION.value -> Animation.Start(payload?.asString?: "")
+
+                EventNames.FromChat.STOP_ANIMATION.value -> Animation.Stop(payload?.asString?: "")
+                
+                EventNames.FromChat.DIFF_PREVIEW.value -> Patch.Show(p2?.deserialize(payload, Patch.ShowPayload::class.java)?: return null)
+                EventNames.FromChat.WRITE_RESULTS_TO_FILE.value -> {
+                    val results = mutableListOf<Patch.PatchResult>()
+                    val items = p2?.deserialize(payload, results::class.java)?: results
+                    val applyPayload = Patch.ApplyPayload(items)
+                    return Patch.Apply(applyPayload)
+                }
+
+
+
+                else -> null
             }
         }
 
+    }
+
+    class Animation {
+        data class AnimationPayload(val payload: String): Payload();
+        data class Start(val fileName: String): FromChat(EventNames.FromChat.START_ANIMATION, AnimationPayload(fileName))
+        data class Stop(val fileName: String): FromChat(EventNames.FromChat.STOP_ANIMATION, AnimationPayload(fileName))
+    }
+
+    class Patch {
+        data class PatchResult(
+            @SerializedName("file_text") val fileText: String,
+            @SerializedName("file_name_edit") val fileNameEdit: String?,
+            @SerializedName("file_name_delete") val fileNameDelete: String?,
+            @SerializedName("file_name_add") val fileNameAdd: String?,
+        )
+
+        data class PatchState(
+            @SerializedName("chunk_id") val chunkId: Int,
+            @SerializedName("applied") val applied: Boolean,
+            @SerializedName("can_unapply") val canUnapply: Boolean,
+            @SerializedName("success") val success: Boolean,
+            @SerializedName("detail") val detail: String?,
+        )
+
+        data class ShowPayload(
+            val currentPin: String,
+            val allPins: List<String>,
+            val results: List<PatchResult>,
+            val state: List<PatchState>,
+        ): Payload()
+
+        class Show(override val payload: ShowPayload): FromChat(EventNames.FromChat.DIFF_PREVIEW, payload)
+
+        class ApplyPayload(val items: List<PatchResult>): Payload()
+        // typealias ApplyPayload: Payload()
+        class Apply(override val payload: ApplyPayload): FromChat(EventNames.FromChat.WRITE_RESULTS_TO_FILE, payload)
     }
 
     class Fim {

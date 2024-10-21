@@ -106,7 +106,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         val myJSQueryOpenInBrowserRedirectHyperlink = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowserRedirectHyperlink.addHandler { href ->
-            if (href.isNotEmpty() && !href.contains("#")) {
+            if (href.isNotEmpty() && !href.contains("#") && !href.equals("http://refactai/index.html") ) {
                 BrowserUtil.browse(href)
             }
             null

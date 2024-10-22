@@ -10,6 +10,7 @@ plugins {
 }
 
 group = providers.gradleProperty("pluginGroup").get()
+version = getVersionString(providers.gradleProperty("pluginVersion").get())
 
 val javaCompilerVersion = "17"
 kotlin {
@@ -53,7 +54,6 @@ dependencies {
 
 intellijPlatform {
     pluginConfiguration {
-        version = getVersionString(providers.gradleProperty("pluginVersion").get())
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")
             untilBuild = providers.gradleProperty("pluginUntilBuild")
@@ -97,7 +97,6 @@ fun runCommand(cmd: String): String {
 
 fun getVersionString(baseVersion: String): String {
     val tag = runCommand("git tag -l --points-at HEAD")
-    println(tag)
 
     if (System.getenv("PUBLISH_EAP") != "1" &&
         tag.isNotEmpty() && tag.contains(baseVersion)) return baseVersion

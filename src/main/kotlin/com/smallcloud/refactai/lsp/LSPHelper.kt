@@ -1,8 +1,11 @@
 package com.smallcloud.refactai.lsp
 
 import com.google.gson.Gson
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.editor.Editor
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
@@ -33,6 +36,33 @@ fun lspDocumentDidChanged(project: Project, docUrl: String, text: String) {
         mapOf(
             "uri" to docUrl,
             "text" to text,
+        )
+    )
+
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+        InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+        InferenceGlobalContext.lastErrorMsg = null
+    }, failedDataReceiveEnded = {
+        InferenceGlobalContext.status = ConnectionStatus.ERROR
+        if (it != null) {
+            InferenceGlobalContext.lastErrorMsg = it.message
+        }
+    })
+}
+
+private fun getVirtualFile(editor: Editor): VirtualFile? {
+    return FileDocumentManager.getInstance().getFile(editor.document)
+}
+
+fun lspSetActiveDocument(editor: Editor) {
+    val project = editor.project ?: return
+    val vFile = getVirtualFile(editor) ?: return
+    if (!vFile.exists()) return
+
+    val url = getLSPProcessHolder(project).url.resolve("/v1/lsp-set-active-document")
+    val data = Gson().toJson(
+        mapOf(
+            "uri" to vFile.url,
         )
     )
 

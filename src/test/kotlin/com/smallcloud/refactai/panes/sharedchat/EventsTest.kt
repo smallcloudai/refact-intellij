@@ -3,7 +3,7 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import kotlin.test.Test
-import org.junit.jupiter.api.Assertions.*
+import org.junit.Assert.*
 
 class EventsTest {
 
@@ -45,7 +45,7 @@ class EventsTest {
     @Test
     fun parsePasteBackMessage() {
         val message = """{"type":"ide/diffPasteBack","payload":"test"}"""
-        val expected = Events.Editor.Paste("test")
+        val expected = Events.Editor.PasteDiff("test")
         val result = Events.parse(message)
         assertNotNull(result)
         assertEquals(expected.type, result?.type)

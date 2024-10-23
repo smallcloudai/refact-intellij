@@ -327,6 +327,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handlePatchShow(payload: Events.Patch.ShowPayload) {
+
+
         payload.results.forEach { result ->
             if (result.fileNameAdd != null) {
                 this.openNewFileWithContent(result.fileNameAdd, result.fileText)
@@ -336,7 +338,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
 
             if (result.fileNameEdit != null) {
-                // Open the file and add the diff
+                this.handleAnimationStop(result.fileNameEdit)
+
                 val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
                     LocalFileSystem.getInstance().findFileByPath(result.fileNameEdit)
                 } ?: return
@@ -358,8 +361,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
 
     private fun handleAnimationStart(fileName: String) {
-        // TODO: implement
-        println("\nAnimatinve: $fileName")
         val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
             LocalFileSystem.getInstance().findFileByPath(fileName)
         } ?: return
@@ -367,7 +368,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         println("file: $file")
         ApplicationManager.getApplication().invokeLater {
             val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true) ?: return@invokeLater
-            println("editor: $editor")
             // editor.selectionModel.setSelection(0, editor.document.textLength)
             animatedFiles.add(fileName)
             scheduler.submit {
@@ -382,12 +382,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handleAnimationStop(fileName: String) {
-        println("Stop animation: $fileName")
         animatedFiles.remove(fileName)
     }
 
     private suspend fun handleEvent(event: Events.FromChat) {
-        logger.info("Event received: $event")
         when (event) {
             is Events.Editor.PasteDiff -> this.handlePasteDiff(event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.content)

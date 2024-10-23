@@ -365,7 +365,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             LocalFileSystem.getInstance().findFileByPath(fileName)
         } ?: return
         val fileDescriptor = OpenFileDescriptor(project, file)
-        println("file: $file")
         ApplicationManager.getApplication().invokeLater {
             val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true) ?: return@invokeLater
             // editor.selectionModel.setSelection(0, editor.document.textLength)

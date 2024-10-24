@@ -29,7 +29,6 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
         }
     }
 
-
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()
         val chatPanes = ChatPanes(project)
@@ -40,8 +39,6 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
         toolWindow.contentManager.addContent(content)
     }
 
-
-
     companion object {
         private val panesKey = Key.create<ChatPanes>("refact.panes")
         val chat: ChatPanes?
@@ -49,6 +46,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
                 val tw = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact")
                 return tw?.contentManager?.getContent(0)?.getUserData(panesKey)
             }
+
         fun focusChat() {
             val tw = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact")
             val content = tw?.contentManager?.getContent(0) ?: return

@@ -1,6 +1,7 @@
 package com.smallcloud.refactai.lsp
 
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationInfo
@@ -264,7 +265,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
                 InferenceGlobalContext.connection.ping(url)
                 buildInfo = getBuildInfo()
                 capabilities = getCaps()
-                fetchToolboxConfig()
+                fetchCustomization()
                 isWorking = true
                 break
             } catch (e: Exception) {
@@ -276,7 +277,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         lspProjectInitialize(this, project)
     }
 
-    private fun fetchToolboxConfig(): String {
+    fun fetchCustomization(): JsonObject {
         val config = InferenceGlobalContext.connection.get(url.resolve("/v1/customization"),
             dataReceiveEnded={
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
@@ -289,7 +290,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
                     InferenceGlobalContext.lastErrorMsg = it.message
                 }
             }).join().get()
-        return config as String
+        return Gson().fromJson(config as String, JsonObject::class.java)
     }
 
     private fun safeTerminate() {

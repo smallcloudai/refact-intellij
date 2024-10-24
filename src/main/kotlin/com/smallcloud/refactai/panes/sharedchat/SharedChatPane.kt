@@ -66,6 +66,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+    fun executeCodeLensCommand(command: String, file: String) {
+        this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload(command, file)))
+    }
+
     private fun sendUserConfig() {
         val config = this.editor.getUserConfig()
         val message = Events.Config.Update(config)

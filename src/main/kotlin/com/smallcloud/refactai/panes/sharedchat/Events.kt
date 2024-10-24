@@ -34,6 +34,7 @@ class EventNames {
         @SerializedName("fim/error") FIM_ERROR("fim/error"),
         @SerializedName("fim/receive") FIM_RECEIVE("fim/receive"),
         @SerializedName("chatThread/new") NEW_CHAT("chatThread/new"),
+        @SerializedName("codeLens/exec") CODE_LENS_EXEC("codeLens/exec"),
         // logout, open external url, setup host
     }
 }
@@ -274,10 +275,14 @@ class Events {
         ): Payload()
 
         class SetSnippetToChat(payload: Snippet): ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
-
     }
 
     object NewChat: ToChat<Unit>(EventNames.ToChat.NEW_CHAT, Unit)
+    data class CodeLensCommandPayload(
+        val command: String = "",
+        val path: String = "",
+    ): Payload()
+    class CodeLensCommand(payload: CodeLensCommandPayload): ToChat<Payload>(EventNames.ToChat.CODE_LENS_EXEC, payload)
 
     class Config {
         abstract class BaseFeatures()

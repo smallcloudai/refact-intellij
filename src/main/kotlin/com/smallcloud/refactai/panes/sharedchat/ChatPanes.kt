@@ -31,6 +31,10 @@ class ChatPanes(val project: Project): Disposable {
         return holder
     }
 
+    fun executeCodeLensCommand(command: String, file: String) {
+        pane?.executeCodeLensCommand(command, file)
+    }
+
     fun requestFocus() {
         component?.requestFocus()
     }

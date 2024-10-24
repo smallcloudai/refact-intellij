@@ -31,6 +31,10 @@ class ChatPanes(val project: Project): Disposable {
         return holder
     }
 
+    fun executeCodeLensCommand(command: String, sendImmediately: Boolean, openNewTab: Boolean) {
+        pane?.executeCodeLensCommand(command, sendImmediately, openNewTab)
+    }
+
     fun requestFocus() {
         component?.requestFocus()
     }

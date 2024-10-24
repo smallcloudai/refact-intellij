@@ -28,7 +28,9 @@ class EventNames {
         START_ANIMATION("ide/animateFile/start"),
         STOP_ANIMATION("ide/animateFile/stop"),
         DIFF_PREVIEW("ide/diffPreview"),
-        WRITE_RESULTS_TO_FILE("ide/writeResultsToFile")
+        WRITE_RESULTS_TO_FILE("ide/writeResultsToFile"),
+        IS_CHAT_STREAMING("ide/isChatStreaming"),
+        CHAT_PAGE_CHANGE("ide/chatPageChange"),
     }
 
     enum class ToChat(val value: String) {
@@ -38,6 +40,8 @@ class EventNames {
         @SerializedName("fim/error") FIM_ERROR("fim/error"),
         @SerializedName("fim/receive") FIM_RECEIVE("fim/receive"),
         @SerializedName("chatThread/new") NEW_CHAT("chatThread/new"),
+        // codelens
+        @SerializedName("textarea/replace") CODE_LENS_EXEC("textarea/replace"),
         // logout, open external url, setup host
     }
 }
@@ -48,13 +52,11 @@ class Events {
 
     open class Payload: Serializable
 
-    abstract class FromChat(val type: EventNames.FromChat, open val payload: Payload?): Serializable
+    abstract class FromChat(val type: EventNames.FromChat, open val payload: Serializable?): Serializable
 
     private class FromChatDeserializer : JsonDeserializer<FromChat> {
         override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): FromChat? {
             val type = p0?.asJsonObject?.get("type")?.asString
-
-
             // events without payload
             if (type == EventNames.FromChat.LOG_OUT.value) {
                 return Setup.LogOut()
@@ -81,6 +83,8 @@ class Events {
                 // EventNames.FromChat.FIM_READY.value -> p2?.deserialize(payload, Fim.Ready::class.java)
                 EventNames.FromChat.FIM_REQUEST.value -> Fim.Request()
                 EventNames.FromChat.OPEN_HOTKEYS.value -> OpenHotKeys()
+                EventNames.FromChat.IS_CHAT_STREAMING.value -> { IsChatStreaming(payload?.asBoolean?: false) }
+                EventNames.FromChat.CHAT_PAGE_CHANGE.value -> { ChatPageChange(payload?.asString ?: "") }
                 EventNames.FromChat.OPEN_FILE.value -> {
                     val file: OpenFilePayload = p2?.deserialize(payload, OpenFilePayload::class.java) ?: return null
                     OpenFile(file)
@@ -264,6 +268,10 @@ class Events {
         open val payload: T
     ): Serializable
 
+
+
+    class IsChatStreaming(val isStreaming: Boolean): FromChat(EventNames.FromChat.IS_CHAT_STREAMING, isStreaming)
+    class ChatPageChange(val currentPage: String): FromChat(EventNames.FromChat.CHAT_PAGE_CHANGE, currentPage)
     class OpenSettings: FromChat(EventNames.FromChat.OPEN_SETTINGS, null)
 
     class OpenHotKeys: FromChat(EventNames.FromChat.OPEN_HOTKEYS, null)
@@ -329,10 +337,14 @@ class Events {
         ): Payload()
 
         class SetSnippetToChat(payload: Snippet): ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
-
     }
 
     object NewChat: ToChat<Unit>(EventNames.ToChat.NEW_CHAT, Unit)
+    data class CodeLensCommandPayload(
+        val value: String = "",
+        @SerializedName("send_immediately") val sendImmediately: Boolean = false,
+    ): Payload()
+    class CodeLensCommand(payload: CodeLensCommandPayload): ToChat<Payload>(EventNames.ToChat.CODE_LENS_EXEC, payload)
 
     class Config {
         abstract class BaseFeatures()

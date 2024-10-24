@@ -143,6 +143,7 @@ integrated into a single package that follows your privacy settings.</p>
         <applicationService serviceImplementation="com.smallcloud.refactai.UpdateChecker"/>
         <projectService serviceImplementation="com.smallcloud.refactai.lsp.LSPProcessHolder"/>
         <projectService serviceImplementation="com.smallcloud.refactai.lsp.LSPActiveDocNotifierService" />
+        <codeInsight.codeVisionProviderFactory implementation="com.smallcloud.refactai.code_lens.RefactCodeVisionProviderFactory"/>
     </extensions>
     <actions>
         <action class="com.smallcloud.refactai.listeners.TabPressedAction"

@@ -43,6 +43,7 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
 import java.io.File
+import java.util.concurrent.Future
 import javax.swing.JPanel
 import javax.swing.UIManager
 
@@ -50,9 +51,33 @@ import javax.swing.UIManager
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val logger = Logger.getInstance(SharedChatPane::class.java)
     private val editor = Editor(project)
+    private var currentPage: String = ""
+    private var isChatStreaming: Boolean = false
     var id: String? = null;
-    val animatedFiles = mutableSetOf<String>()
+    private val animatedFiles = mutableSetOf<String>()
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("SMCRainbowScheduler", 2)
+
+    private val messageQuery: ArrayDeque<Events.ToChat<*>> = ArrayDeque<Events.ToChat<*>>()
+    private var workerFuture: Future<*>? = null
+    private val workerScheduler =
+        AppExecutorUtil.createBoundedScheduledExecutorService("SMCSharedChatPaneWorkerScheduler", 1)
+
+    init {
+        workerFuture = workerScheduler.scheduleWithFixedDelay({
+            synchronized(this) {
+                while (isReady() && messageQuery.isNotEmpty()) {
+                    messageQuery.removeFirst().let {
+                        this.browser.postMessage(it)
+                    }
+                }
+            }
+        }, 0, 80, java.util.concurrent.TimeUnit.MILLISECONDS)
+        this.addEventListeners()
+    }
+
+    private fun isReady(): Boolean {
+        return currentPage.isNotEmpty() // didn't get first message
+    }
 
     fun newChat() {
         this.postMessage(Events.NewChat)
@@ -65,6 +90,14 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 this.postMessage(message)
             }
         }
+    }
+
+    fun executeCodeLensCommand(command: String, sendImmediately: Boolean, openNewTab: Boolean) {
+        if (isChatStreaming) return
+        if (openNewTab || this.currentPage != "chat") {
+            newChat()
+        }
+        this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload(command, sendImmediately)))
     }
 
     private fun sendUserConfig() {
@@ -112,7 +145,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 val fileName = out.lines().last()
 
                 ApplicationManager.getApplication().invokeLater {
-                    val virtualFile: VirtualFile? = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(fileName))
+                    val virtualFile: VirtualFile? =
+                        LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(fileName))
                     if (virtualFile != null) {
                         // Open the file in the editor
                         FileEditorManager.getInstance(project).openFile(virtualFile, true)
@@ -175,7 +209,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 this@SharedChatPane.sendActiveFileInfo()
                 this@SharedChatPane.sendSelectedSnippet()
             }
-
         }
 
         project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, listener)
@@ -242,7 +275,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             this.setLookAndFeel()
         }
     }
-
 
     private fun handleOpenSettings() {
         ApplicationManager.getApplication().invokeLater {
@@ -350,7 +382,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             if (result.fileNameAdd != null) {
                 this.openNewFileWithContent(this.sanitizeFileNameForPosix(result.fileNameAdd), result.fileText)
             }
-            if (result.fileNameDelete!= null) {
+            if (result.fileNameDelete != null) {
                 this.deleteFile(this.sanitizeFileNameForPosix(result.fileNameDelete))
             }
 
@@ -385,16 +417,15 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         } ?: return
         val fileDescriptor = OpenFileDescriptor(project, file)
         ApplicationManager.getApplication().invokeLater {
-            val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true) ?: return@invokeLater
-            // editor.selectionModel.setSelection(0, editor.document.textLength)
+            val editor =
+                FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true) ?: return@invokeLater
             animatedFiles.add(sanitizedFileName)
             scheduler.submit {
                 waitingDiff(
                     editor,
                     editor.offsetToLogicalPosition(0),
-                    editor.offsetToLogicalPosition(editor.document.textLength),
-                    {  -> animatedFiles.contains(sanitizedFileName) }
-                )
+                    editor.offsetToLogicalPosition(editor.document.textLength)
+                ) { animatedFiles.contains(sanitizedFileName) }
             }
         }
     }
@@ -418,6 +449,13 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.Patch.Show -> this.handlePatchShow(event.payload)
             is Events.Animation.Start -> this.handleAnimationStart(event.fileName)
             is Events.Animation.Stop -> this.handleAnimationStop(event.fileName)
+            is Events.IsChatStreaming -> {
+                isChatStreaming = event.payload as Boolean
+            }
+
+            is Events.ChatPageChange -> {
+                currentPage = event.payload.toString()
+            }
 
             else -> Unit
         }
@@ -433,24 +471,25 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-
     val webView by lazy {
         browser.webView
     }
 
     private fun postMessage(message: Events.ToChat<*>?) {
-        this.browser.postMessage(message)
+        synchronized(this) {
+            if (message != null) {
+                messageQuery.add(message)
+            }
+        }
     }
-
 
     override fun dispose() {
         UIManager.removePropertyChangeListener(uiChangeListener)
         webView.dispose()
+        scheduler.shutdownNow()
+        workerFuture?.cancel(true)
+        workerScheduler.shutdownNow()
         Disposer.dispose(this)
     }
 
-    init {
-        this.addEventListeners()
-    }
 }
-

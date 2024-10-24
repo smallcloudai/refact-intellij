@@ -89,7 +89,7 @@ object Resources {
 
         val LOGO_RED_12x12: Icon = IconLoader.getIcon("/icons/refactai_logo_red_12x12.svg", Resources::class.java)
         val LOGO_RED_13x13: Icon = IconLoader.getIcon("/icons/refactai_logo_red_13x13.svg", Resources::class.java)
-        val LOGO_12x12: Icon = IconLoader.getIcon("/icons/refactai_logo_12x12.svg", Resources::class.java)
+        val LOGO_12x12: Icon = makeIcon("/icons/refactai_logo_12x12.svg")
         val LOGO_RED_16x16: Icon = IconLoader.getIcon("/icons/refactai_logo_red_16x16.svg", Resources::class.java)
 
         val COIN_16x16: Icon = makeIcon("/icons/coin_16x16.svg")

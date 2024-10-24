@@ -1,11 +1,11 @@
 package com.smallcloud.refactai.lsp
 
 import com.google.gson.Gson
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.editor.Editor
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
@@ -75,4 +75,28 @@ fun lspSetActiveDocument(editor: Editor) {
             InferenceGlobalContext.lastErrorMsg = it.message
         }
     })
+}
+
+
+fun lspGetCodeLens(editor: Editor): String {
+    val project = editor.project!!
+    val url = getLSPProcessHolder(project).url.resolve("/v1/code-lens")
+    val data = Gson().toJson(
+        mapOf(
+            "uri" to editor.virtualFile.url,
+        )
+    )
+
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+        InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+        InferenceGlobalContext.lastErrorMsg = null
+    }, failedDataReceiveEnded = {
+        InferenceGlobalContext.status = ConnectionStatus.ERROR
+        if (it != null) {
+            InferenceGlobalContext.lastErrorMsg = it.message
+        }
+    }).let {
+        val res = it.get()!!.get() as String
+        return res
+    }
 }

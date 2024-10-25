@@ -273,7 +273,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handleOpenFile(fileName: String, line: Int?) {
-        val file = File(fileName)
+        val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
+        val file = File(sanitizedFileName)
         val vf = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
             VfsUtil.findFileByIoFile(file, true)
         } ?: return
@@ -295,6 +296,21 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+    private fun sanitizeFileNameForPosix(fileName: String): String {
+        val patterns = listOf(
+            Regex("""^\\\\\\\\\?\\.*""") to 5, // '\\\\?\\' prefix
+            Regex("""^\\\\\?\\.*""") to 4,     // '\\?\' prefix
+            Regex("""^\\\?\\.*""") to 3        // '\?\' prefix
+        )
+
+        for ((pattern, length) in patterns) {
+            if (pattern.containsMatchIn(fileName))
+                return fileName.substring(length)
+        }
+
+        return fileName
+    }
+
     private fun openNewFileWithContent(fileName: String, content: String) {
         val virtualFile = LightVirtualFile(fileName, content)
         val fileDescriptor = OpenFileDescriptor(project, virtualFile)
@@ -306,16 +322,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handlePatchApply(payload: Events.Patch.ApplyPayload) {
         payload.items.forEach { item ->
             if (item.fileNameAdd != null) {
-                this.openNewFileWithContent(item.fileNameAdd, item.fileText)
+                this.openNewFileWithContent(this.sanitizeFileNameForPosix(item.fileNameAdd), item.fileText)
             }
 
             if (item.fileNameDelete != null) {
-                this.deleteFile(item.fileNameDelete)
+                this.deleteFile(this.sanitizeFileNameForPosix(item.fileNameDelete))
             }
 
             if (item.fileNameEdit != null) {
                 val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-                    LocalFileSystem.getInstance().findFileByPath(item.fileNameEdit)
+                    LocalFileSystem.getInstance().findFileByPath(this.sanitizeFileNameForPosix(item.fileNameEdit))
                 } ?: return
 
                 ApplicationManager.getApplication().invokeLater {
@@ -331,17 +347,18 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
         payload.results.forEach { result ->
             if (result.fileNameAdd != null) {
-                this.openNewFileWithContent(result.fileNameAdd, result.fileText)
+                this.openNewFileWithContent(this.sanitizeFileNameForPosix(result.fileNameAdd), result.fileText)
             }
             if (result.fileNameDelete!= null) {
-                this.deleteFile(result.fileNameDelete)
+                this.deleteFile(this.sanitizeFileNameForPosix(result.fileNameDelete))
             }
 
             if (result.fileNameEdit != null) {
-                this.handleAnimationStop(result.fileNameEdit)
+                val sanitizedFileNameEdit = this.sanitizeFileNameForPosix(result.fileNameEdit)
+                this.handleAnimationStop(sanitizedFileNameEdit)
 
                 val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-                    LocalFileSystem.getInstance().findFileByPath(result.fileNameEdit)
+                    LocalFileSystem.getInstance().findFileByPath(sanitizedFileNameEdit)
                 } ?: return
 
                 val fileDescriptor = OpenFileDescriptor(project, file)
@@ -361,20 +378,21 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
 
     private fun handleAnimationStart(fileName: String) {
+        val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
         val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-            LocalFileSystem.getInstance().findFileByPath(fileName)
+            LocalFileSystem.getInstance().findFileByPath(sanitizedFileName)
         } ?: return
         val fileDescriptor = OpenFileDescriptor(project, file)
         ApplicationManager.getApplication().invokeLater {
             val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true) ?: return@invokeLater
             // editor.selectionModel.setSelection(0, editor.document.textLength)
-            animatedFiles.add(fileName)
+            animatedFiles.add(sanitizedFileName)
             scheduler.submit {
                 waitingDiff(
                     editor,
                     editor.offsetToLogicalPosition(0),
                     editor.offsetToLogicalPosition(editor.document.textLength),
-                    {  -> animatedFiles.contains(fileName) }
+                    {  -> animatedFiles.contains(sanitizedFileName) }
                 )
             }
         }

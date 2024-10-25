@@ -299,7 +299,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun sanitizeFileNameForPosix(fileName: String): String {
         val patterns = listOf(
             Regex("""^\\\\\\\\\?\\.*""") to 5, // '\\\\?\\' prefix
-            Regex("""^\\\\\?\\.*""") to 4,     // '\\?\' prefix
+            Regex("""^\\\\\?\\[^\\].*""") to 4,     // '\\?\' prefix
+            Regex("""^\\\\\?\\\\.*""") to 5,     // '\\?\\' prefix
             Regex("""^\\\?\\.*""") to 3        // '\?\' prefix
         )
 

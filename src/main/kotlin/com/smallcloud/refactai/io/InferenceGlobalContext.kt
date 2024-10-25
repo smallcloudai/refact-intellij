@@ -6,17 +6,12 @@ import com.intellij.util.messages.MessageBus
 import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.struct.SMCRequestBody
-import java.net.URI
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
 
 class InferenceGlobalContext : Disposable {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
     var connection: AsyncConnection = AsyncConnection()
-
-    fun canRequest(): Boolean {
-        return status == ConnectionStatus.CONNECTED
-    }
 
     var status: ConnectionStatus = ConnectionStatus.CONNECTED
         set(newStatus) {
@@ -46,30 +41,6 @@ class InferenceGlobalContext : Disposable {
             messageBus
                     .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
                     .userInferenceUriChanged(newInferenceUrl)
-        }
-
-    // cloudInferenceUri is uri from SMC server; must be change only in login method
-    var cloudInferenceUri: URI?
-        set(newInferenceUrl) {
-            if (newInferenceUrl == AppSettingsState.inferenceUri?.let { URI(it) }) return
-            messageBus
-                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                    .inferenceUriChanged(newInferenceUrl)
-        }
-        get() {
-            return AppSettingsState.inferenceUri?.let { URI(it) }
-        }
-
-
-    var isNewChatStyle: Boolean = false
-
-    var temperature: Float?
-        get() = AppSettingsState.temperature
-        set(newTemp) {
-            if (newTemp == temperature) return
-            messageBus
-                    .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                    .temperatureChanged(newTemp)
         }
 
     var developerModeEnabled: Boolean

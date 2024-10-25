@@ -26,6 +26,7 @@ import com.smallcloud.refactai.account.AccountManager.Companion.instance as Acco
     Storage("SMCSettings.xml"),
 ])
 class AppSettingsState : PersistentStateComponent<AppSettingsState> {
+    var embeddedWarningShowed: Int = 0
     var apiKey: String? = null
     var temperature: Float? = null
     var model: String? = null

@@ -83,6 +83,10 @@ fun startup() {
         }
 
     }, PluginState.instance)
+    if (AppSettingsState.embeddedWarningShowed < 1) {
+        emitInfo(RefactAIBundle.message("notifications.embeddedWarning"))
+        AppSettingsState.embeddedWarningShowed = 1
+    }
 
     if (!AppSettingsState.rateUsNotification) {
         rateUsFuture = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(
@@ -213,8 +217,8 @@ fun emitWarning(project: Project, msg: String) {
     lastRegularNotification = notification
 }
 
-fun emitInfo(msg: String) {
-    removeLastNotification()
+fun emitInfo(msg: String, needToDeleteLast: Boolean = true) {
+    if (needToDeleteLast) removeLastNotification()
     val project = getLastUsedProject()
     val notification = NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group")
         .createNotification(Resources.titleStr, msg, NotificationType.INFORMATION)

@@ -6,6 +6,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
+import com.smallcloud.refactai.io.CloudMessageService
 import com.smallcloud.refactai.listeners.UninstallListener
 import com.smallcloud.refactai.lsp.LSPActiveDocNotifierService
 import com.smallcloud.refactai.notifications.notificationStartup
@@ -30,6 +31,7 @@ class Initializer : StartupActivity, Disposable {
             notificationStartup()
             PluginInstaller.addStateListener(UninstallListener())
             UpdateChecker.instance
+            ApplicationManager.getApplication().getService(CloudMessageService::class.java)
         }
         getLSPProcessHolder(project)
         project.getService(LSPActiveDocNotifierService::class.java)

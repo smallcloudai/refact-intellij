@@ -8,10 +8,10 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentFactory
-import com.intellij.ui.jcef.JBCefApp
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.sharedchat.ChatPanes
 import com.smallcloud.refactai.utils.getLastUsedProject
+import com.smallcloud.refactai.utils.isJcefCanStart
 
 
 class RefactAIToolboxPaneFactory : ToolWindowFactory {
@@ -20,15 +20,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
         super.init(toolWindow)
     }
 
-    override fun isApplicable(project: Project): Boolean {
-        return try {
-            JBCefApp.isSupported() && JBCefApp.isStarted()
-            JBCefApp.isSupported()
-        } catch (_: Exception) {
-            false
-        }
-    }
-
+    override fun isApplicable(project: Project): Boolean = isJcefCanStart()
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()

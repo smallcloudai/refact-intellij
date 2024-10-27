@@ -221,7 +221,13 @@ fun emitInfo(msg: String, needToDeleteLast: Boolean = true) {
     if (needToDeleteLast) removeLastNotification()
     val project = getLastUsedProject()
     val notification = NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group")
-        .createNotification(Resources.titleStr, msg, NotificationType.INFORMATION)
+        .createNotification(Resources.titleStr, msg, NotificationType.INFORMATION).setListener(object : Adapter() {
+            override fun hyperlinkActivated(notification: Notification, event: HyperlinkEvent) {
+                val url: URL = event.url
+                BrowserUtil.browse(url)
+                notification.expire()
+            }
+        })
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {

@@ -42,7 +42,6 @@ class CodeLensAction(
             .replace("%CODE_SELECTION%", text)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     fun actionPerformed() {
         val chat = editor.project?.let { ToolWindowManager.getInstance(it).getToolWindow("Refact") }
         chat?.activate {
@@ -52,17 +51,15 @@ class CodeLensAction(
 
         // If content is empty, then it's "Open Chat" instruction, selecting range of code in active tab
         if (contentMsg.isEmpty()) {
-            GlobalScope.launch {
+            CoroutineScope(Dispatchers.Main).launch {
                 delay(500)
-                withContext(Dispatchers.Main) {
-                    val pos1 = LogicalPosition(line1, 0)
-                    val pos2 = LogicalPosition(line2, editor.document.getLineEndOffset(line2))
+                val pos1 = LogicalPosition(line1, 0)
+                val pos2 = LogicalPosition(line2, editor.document.getLineEndOffset(line2))
 
-                    editor.selectionModel.setSelection(
-                        editor.logicalPositionToOffset(pos1),
-                        editor.logicalPositionToOffset(pos2)
-                    )
-                }
+                editor.selectionModel.setSelection(
+                    editor.logicalPositionToOffset(pos1),
+                    editor.logicalPositionToOffset(pos2)
+                )
             }
         }
     }

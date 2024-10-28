@@ -9,6 +9,7 @@ import com.intellij.openapi.wm.ToolWindowManager
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
 import kotlin.io.path.relativeTo
+import kotlinx.coroutines.*
 
 class CodeLensAction(
     private val editor: Editor,
@@ -34,17 +35,35 @@ class CodeLensAction(
             }.minBy { it.toString().length }
         }
 
+
         return contentMsg
             .replace("%CURRENT_FILE%", relativePath?.toString() ?: filePath.toString())
             .replace("%CURSOR_LINE%", line1.toString())
             .replace("%CODE_SELECTION%", text)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     fun actionPerformed() {
         val chat = editor.project?.let { ToolWindowManager.getInstance(it).getToolWindow("Refact") }
         chat?.activate {
             RefactAIToolboxPaneFactory.chat?.requestFocus()
             RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessage(), sendImmediately, openNewTab)
+        }
+
+        // If content is empty, then it's "Open Chat" instruction, selecting range of code in active tab
+        if (contentMsg.isEmpty()) {
+            GlobalScope.launch {
+                delay(500)
+                withContext(Dispatchers.Main) {
+                    val pos1 = LogicalPosition(line1, 0)
+                    val pos2 = LogicalPosition(line2, editor.document.getLineEndOffset(line2))
+
+                    editor.selectionModel.setSelection(
+                        editor.logicalPositionToOffset(pos1),
+                        editor.logicalPositionToOffset(pos2)
+                    )
+                }
+            }
         }
     }
 }

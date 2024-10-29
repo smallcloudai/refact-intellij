@@ -37,8 +37,8 @@ dependencies {
     // test libraries
     testImplementation(kotlin("test"))
     intellijPlatform {
-//        create(providers.gradleProperty("platformType"), providers.gradleProperty("platformVersion"))
-        intellijIdeaCommunity("2024.2.4")
+        create(providers.gradleProperty("platformType"), providers.gradleProperty("platformVersion"))
+
         // Plugin Dependencies. Uses `platformBundledPlugins` property from the gradle.properties file for bundled IntelliJ Platform plugins.
         bundledPlugins(providers.gradleProperty("platformBundledPlugins").map { it.split(',') })
 
@@ -46,7 +46,7 @@ dependencies {
         plugins(providers.gradleProperty("platformPlugins").map { it.split(',') })
 
         instrumentationTools()
-//        pluginVerifier()
+        pluginVerifier()
         zipSigner()
         testFramework(TestFrameworkType.Platform)
     }
@@ -71,11 +71,11 @@ intellijPlatform {
         channels = providers.environmentVariable("PUBLISH_CHANNEL").map { listOf(it) }
     }
 
-//    pluginVerification {
-//        ides {
-//            recommended()
-//        }
-//    }
+    pluginVerification {
+        ides {
+            recommended()
+        }
+    }
 }
 
 tasks {

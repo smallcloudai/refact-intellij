@@ -1,6 +1,7 @@
 package com.smallcloud.refactai.code_lens
 
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.project.DumbAwareAction
@@ -45,6 +46,18 @@ class CodeLensAction(
         chat?.activate {
             RefactAIToolboxPaneFactory.chat?.requestFocus()
             RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessage(), sendImmediately, openNewTab)
+        }
+        // If content is empty, then it's "Open Chat" instruction, selecting range of code in active tab
+        if (contentMsg.isEmpty()) {
+            invokeLater {
+                val pos1 = LogicalPosition(line1, 0)
+                val pos2 = LogicalPosition(line2, editor.document.getLineEndOffset(line2))
+
+                editor.selectionModel.setSelection(
+                    editor.logicalPositionToOffset(pos1),
+                    editor.logicalPositionToOffset(pos2)
+                )
+            }
         }
     }
 }

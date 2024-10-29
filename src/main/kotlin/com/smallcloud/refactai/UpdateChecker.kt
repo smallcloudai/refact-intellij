@@ -3,7 +3,6 @@ package com.smallcloud.refactai
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.gson.Gson
-import com.intellij.ide.plugins.PluginManagerConfigurable
 import com.intellij.ide.plugins.marketplace.IdeCompatibleUpdate
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationAction
@@ -94,7 +93,7 @@ class UpdateChecker : Disposable {
         ) {
             ShowSettingsUtil.getInstance().showSettingsDialog(
                 project,
-                PluginManagerConfigurable::class.java
+                "Plugins"
             )
             notification.expire()
         })

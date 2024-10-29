@@ -21,12 +21,21 @@ data class CodeLen(
     val action: CodeLensAction
 )
 
-class RefactCodeVisionProvider(private val commandKey: String, private val posAfter: String?, private val label: String) :
+fun makeIdForProvider(commandKey: String): String {
+    return "refactai.codelens.$commandKey"
+}
+
+class RefactCodeVisionProvider(
+    private val commandKey: String,
+    private val posAfter: String?,
+    private val label: String,
+    private val customization: JsonObject
+) :
     CodeVisionProvider<Unit> {
     override val defaultAnchor: CodeVisionAnchorKind
         get() = CodeVisionAnchorKind.Top
     override val id: String
-        get() = "refactai.codelens.$commandKey"
+        get() = makeIdForProvider(commandKey)
     override val name: String
         get() = "Refact.ai Hint($label)"
     override val relativeOrderings: List<CodeVisionRelativeOrdering>
@@ -38,13 +47,11 @@ class RefactCodeVisionProvider(private val commandKey: String, private val posAf
             }
         }
 
-
     override fun precomputeOnUiThread(editor: Editor) {}
 
     private fun getCodeLens(editor: Editor): List<CodeLen> {
         val codeLensStr = lspGetCodeLens(editor)
         val gson = Gson()
-        val customization = getInstance(editor.project!!)?.fetchCustomization() ?: return emptyList()
         val codeLensJson = gson.fromJson(codeLensStr, JsonObject::class.java)
         val resCodeLenses = mutableListOf<CodeLen>()
         if (customization.has("code_lens")) {
@@ -85,6 +92,8 @@ class RefactCodeVisionProvider(private val commandKey: String, private val posAf
 
     override fun computeCodeVision(editor: Editor, uiData: Unit): CodeVisionState {
         Logger.getInstance(RefactCodeVisionProvider::class.java).warn("computeCodeVision $commandKey start")
+        val lsp = editor.project?.let { getInstance(it) } ?: return CodeVisionState.NotReady
+        if (!lsp.isWorking) return CodeVisionState.NotReady
         val codeLens = getCodeLens(editor)
         return runReadAction {
             val result = ArrayList<Pair<TextRange, CodeVisionEntry>>()

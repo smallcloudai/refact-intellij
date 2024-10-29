@@ -3,6 +3,7 @@ package com.smallcloud.refactai.code_lens
 import com.google.gson.JsonObject
 import com.intellij.codeInsight.codeVision.CodeVisionProvider
 import com.intellij.codeInsight.codeVision.CodeVisionProviderFactory
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getCustomizationDirectly
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.initialize
@@ -26,8 +27,11 @@ class RefactCodeVisionProviderFactory : CodeVisionProviderFactory {
                 if (idx != 0) {
                     posAfter = allCodeLensKeys[idx - 1]
                 }
-                providers.add(RefactCodeVisionProvider(key, posAfter, label))
+                providers.add(RefactCodeVisionProvider(key, posAfter, label, customization))
             }
+            val ids = providers.map { it.id }
+            project.service<CodeLensInvalidatorService>().setCodeLensIds(ids)
+
             return providers.asSequence()
 
         }

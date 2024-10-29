@@ -5,21 +5,17 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.EditorFactoryEvent
 import com.intellij.openapi.editor.event.EditorFactoryListener
-import com.intellij.openapi.editor.event.SelectionEvent
-import com.intellij.openapi.editor.event.SelectionListener
+import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.openapi.editor.ex.FocusChangeListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.Topic
 import com.smallcloud.refactai.PluginState
-import java.util.concurrent.ScheduledFuture
 
 
 interface SelectionChangedNotifier {
-    fun isSelectionChanged(isSelection: Boolean) {}
     fun isEditorChanged(editor: Editor?) {}
 
     companion object {
@@ -27,47 +23,35 @@ interface SelectionChangedNotifier {
     }
 }
 
-class GlobalSelectionListener : SelectionListener {
-    private var lastTask: ScheduledFuture<*>? = null
-    override fun selectionChanged(e: SelectionEvent) {
-        val isSelection = e.newRange.length > 0
-        lastTask?.cancel(true)
-        lastTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({
-            ApplicationManager.getApplication().messageBus
-                    .syncPublisher(SelectionChangedNotifier.TOPIC)
-                    .isSelectionChanged(isSelection)
-
-        }, 500, java.util.concurrent.TimeUnit.MILLISECONDS)
-    }
-}
-
 class LastEditorGetterListener : EditorFactoryListener, FileEditorManagerListener {
-    private val selectorListener = GlobalSelectionListener()
+    private val focusChangeListener = object : FocusChangeListener {
+        override fun focusGained(editor: Editor) {
+            setEditor(editor)
+        }
+    }
 
     init {
         ApplicationManager.getApplication()
-                .messageBus.connect(PluginState.instance)
-                .subscribe<FileEditorManagerListener>(FileEditorManagerListener.FILE_EDITOR_MANAGER, this)
+            .messageBus.connect(PluginState.instance)
+            .subscribe<FileEditorManagerListener>(FileEditorManagerListener.FILE_EDITOR_MANAGER, this)
         instance = this
     }
 
+    private fun setEditor(editor: Editor) {
+        if (LAST_EDITOR != editor) {
+            LAST_EDITOR = editor
+            ApplicationManager.getApplication().messageBus
+                .syncPublisher(SelectionChangedNotifier.TOPIC)
+                .isEditorChanged(editor)
+        }
+    }
+
     private fun setup(editor: Editor) {
-        LAST_EDITOR = editor
-        LAST_EDITOR!!.selectionModel.addSelectionListener(selectorListener, PluginState.instance)
+        (editor as EditorEx).addFocusListener(focusChangeListener)
     }
 
     private fun getVirtualFile(editor: Editor): VirtualFile? {
         return FileDocumentManager.getInstance().getFile(editor.document)
-    }
-
-    override fun selectionChanged(event: FileEditorManagerEvent) {
-        val editor = event.newFile?.let {
-            EditorFactory.getInstance().allEditors.firstOrNull { getVirtualFile(it) == event.newFile }
-        }
-        LAST_EDITOR = editor
-        ApplicationManager.getApplication().messageBus
-                .syncPublisher(SelectionChangedNotifier.TOPIC)
-                .isEditorChanged(LAST_EDITOR)
     }
 
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {

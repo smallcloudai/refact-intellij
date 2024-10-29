@@ -44,7 +44,7 @@ class RefactCodeVisionProvider(private val commandKey: String, private val posAf
     private fun getCodeLens(editor: Editor): List<CodeLen> {
         val codeLensStr = lspGetCodeLens(editor)
         val gson = Gson()
-        val customization = getInstance(editor.project!!).fetchCustomization()
+        val customization = getInstance(editor.project!!)?.fetchCustomization() ?: return emptyList()
         val codeLensJson = gson.fromJson(codeLensStr, JsonObject::class.java)
         val resCodeLenses = mutableListOf<CodeLen>()
         if (customization.has("code_lens")) {

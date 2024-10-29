@@ -9,6 +9,7 @@ import com.intellij.openapi.startup.StartupActivity
 import com.smallcloud.refactai.io.CloudMessageService
 import com.smallcloud.refactai.listeners.UninstallListener
 import com.smallcloud.refactai.lsp.LSPActiveDocNotifierService
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.initialize
 import com.smallcloud.refactai.notifications.emitInfo
 import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeAction
@@ -25,6 +26,7 @@ class Initializer : StartupActivity, Disposable {
         val shouldInitialize = !(initialized.getAndSet(true) || ApplicationManager.getApplication().isUnitTestMode)
         if (shouldInitialize) {
             Logger.getInstance("SMCInitializer").info("Bin prefix = ${Resources.binPrefix}")
+            initialize()
             if (AppSettingsState.instance.isFirstStart) {
                 AppSettingsState.instance.isFirstStart = false
                 ChatPaneInvokeAction().actionPerformed()

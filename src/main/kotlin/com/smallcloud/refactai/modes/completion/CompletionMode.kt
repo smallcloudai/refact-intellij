@@ -121,7 +121,7 @@ class CompletionMode(
 
         val promptInfo: List<PromptInfo> = listOf()
         val stat = UsageStatistic(scope, extension = getExtension(fileName))
-        val baseUrl = getLSPProcessHolder(project).url
+        val baseUrl = getLSPProcessHolder(project)?.url!!
         val request = RequestCreator.create(
             fileName, text, logicalPos.line, pos,
             stat, "Infill", "infill", promptInfo,

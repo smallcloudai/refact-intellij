@@ -28,6 +28,7 @@ import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.Path
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
@@ -53,7 +54,6 @@ interface LSPProcessHolderChangedNotifier {
 class LSPProcessHolder(val project: Project) : Disposable {
     private var process: Process? = null
     private var lastConfig: LSPConfig? = null
-    private val logger = Logger.getInstance("LSPProcessHolder")
     private val loggerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "SMCLSPLoggerScheduler", 1
     )
@@ -148,25 +148,6 @@ class LSPProcessHolder(val project: Project) : Disposable {
                 }
             })
 
-        Companion::class.java.getResourceAsStream(
-            "/bin/${binPrefix}/refact-lsp${getExeSuffix()}"
-        ).use { input ->
-            if (input == null) {
-                emitError("LSP server is not found for host operating system, please contact support")
-            } else {
-                for (i in 0..4) {
-                    try {
-                        val path = Paths.get(BIN_PATH)
-                        path.parent.toFile().mkdirs()
-                        Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
-                        setExecutable(path.toFile())
-                        break
-                    } catch (e: Exception) {
-                        logger.warn(e.message)
-                    }
-                }
-            }
-        }
         settingsChanged()
 
         healthCheckerScheduler.scheduleWithFixedDelay({
@@ -316,20 +297,6 @@ class LSPProcessHolder(val project: Project) : Disposable {
         }
     }
 
-    companion object {
-        val BIN_PATH = Path(
-            getTempDirectory(),
-            ApplicationInfo.getInstance().build.toString().replace(Regex("[^A-Za-z0-9 ]"), "_") +
-                "_refact_lsp${getExeSuffix()}"
-        ).toString()
-
-        // here ?
-        @JvmStatic
-        fun getInstance(project: Project): LSPProcessHolder = project.service()
-
-        var buildInfo: String = ""
-    }
-
     override fun dispose() {
         terminate()
         loggerScheduler.shutdown()
@@ -435,6 +402,58 @@ class LSPProcessHolder(val project: Project) : Disposable {
                 return InferenceGlobalContext.inferenceUri.toString()
             }
             return "<no-address-configured>"
+        }
+    }
+
+    companion object {
+        val BIN_PATH = Path(
+            getTempDirectory(),
+            ApplicationInfo.getInstance().build.toString().replace(Regex("[^A-Za-z0-9 ]"), "_") +
+                "_refact_lsp${getExeSuffix()}"
+        ).toString()
+
+        @JvmStatic
+        fun getInstance(project: Project): LSPProcessHolder? = project.service()
+
+        var buildInfo: String = ""
+        private val initialized = AtomicBoolean(false)
+        private val logger = Logger.getInstance("LSPProcessHolder")
+
+        // only one time
+        fun initialize() {
+            val shouldInitialize = !initialized.getAndSet(true)
+            if (!shouldInitialize) return
+
+            Companion::class.java.getResourceAsStream(
+                "/bin/${binPrefix}/refact-lsp${getExeSuffix()}"
+            ).use { input ->
+                if (input == null) {
+                    emitError("LSP server is not found for host operating system, please contact support")
+                } else {
+                    for (i in 0..4) {
+                        try {
+                            val path = Paths.get(BIN_PATH)
+                            path.parent.toFile().mkdirs()
+                            Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
+                            setExecutable(path.toFile())
+                            break
+                        } catch (e: Exception) {
+                            logger.warn(e.message)
+                        }
+                    }
+                }
+            }
+        }
+
+        fun getCustomizationDirectly(): JsonObject? {
+            val process = GeneralCommandLine(listOf(BIN_PATH, "--print-customization"))
+                .withRedirectErrorStream(true)
+                .createProcess()
+            val exitCode = process.waitFor()
+            if (exitCode!= 0) return null
+            val out = process.inputStream.bufferedReader().use { it.readText() }
+            val customizationStr = out.trim().lines().last()
+            return Gson().fromJson(customizationStr, JsonObject::class.java)
         }
     }
 }

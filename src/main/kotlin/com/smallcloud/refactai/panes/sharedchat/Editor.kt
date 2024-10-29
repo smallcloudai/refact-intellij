@@ -15,7 +15,7 @@ import com.smallcloud.refactai.settings.AppSettingsState
 
 class Editor (val project: Project) {
 
-    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
+    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)!!
     private fun getLanguage(fm: FileEditorManager): Language? {
         val editor = fm.selectedTextEditor
         val language = editor?.document?.let {

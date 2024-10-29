@@ -31,7 +31,7 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
 }
 
 fun lspDocumentDidChanged(project: Project, docUrl: String, text: String) {
-    val url = getLSPProcessHolder(project).url.resolve("/v1/lsp-did-changed")
+    val url = getLSPProcessHolder(project)?.url?.resolve("/v1/lsp-did-changed") ?: return
     val data = Gson().toJson(
         mapOf(
             "uri" to docUrl,
@@ -59,7 +59,7 @@ fun lspSetActiveDocument(editor: Editor) {
     val vFile = getVirtualFile(editor) ?: return
     if (!vFile.exists()) return
 
-    val url = getLSPProcessHolder(project).url.resolve("/v1/lsp-set-active-document")
+    val url = getLSPProcessHolder(project)?.url?.resolve("/v1/lsp-set-active-document") ?: return
     val data = Gson().toJson(
         mapOf(
             "uri" to vFile.url,
@@ -80,7 +80,7 @@ fun lspSetActiveDocument(editor: Editor) {
 
 fun lspGetCodeLens(editor: Editor): String {
     val project = editor.project!!
-    val url = getLSPProcessHolder(project).url.resolve("/v1/code-lens")
+    val url = getLSPProcessHolder(project)?.url?.resolve("/v1/code-lens") ?: return ""
     val data = Gson().toJson(
         mapOf(
             "uri" to editor.virtualFile.url,

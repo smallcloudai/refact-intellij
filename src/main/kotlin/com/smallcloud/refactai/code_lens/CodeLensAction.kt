@@ -51,25 +51,23 @@ class CodeLensAction(
             RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessage(), sendImmediately, openNewTab)
         }
         // If content is empty, then it's "Open Chat" instruction, selecting range of code in active tab
-        if (contentMsg.isEmpty()) {
-            if (isActionRunning.compareAndSet(false, true)) {
-                ApplicationManager.getApplication().invokeLater {
-                    try {
-                        editor.selectionModel.setSelection(editor.logicalPositionToOffset(LogicalPosition(line1, 0)), editor.logicalPositionToOffset(LogicalPosition(line1, 0)))
+        if (contentMsg.isEmpty() && isActionRunning.compareAndSet(false, true)) {
+            ApplicationManager.getApplication().invokeLater {
+                try {
+                    editor.selectionModel.setSelection(editor.logicalPositionToOffset(LogicalPosition(line1, 0)), editor.logicalPositionToOffset(LogicalPosition(line1, 0)))
 
-                        ApplicationManager.getApplication().invokeLater {
-                            Thread.sleep(150)
-                            val pos1 = LogicalPosition(line1, 0)
-                            val pos2 = LogicalPosition(line2, editor.document.getLineEndOffset(line2))
+                    ApplicationManager.getApplication().invokeLater {
+                        Thread.sleep(150)
+                        val pos1 = LogicalPosition(line1, 0)
+                        val pos2 = LogicalPosition(line2, editor.document.getLineEndOffset(line2))
 
-                            val intendedStart = editor.logicalPositionToOffset(pos1)
-                            val intendedEnd = editor.logicalPositionToOffset(pos2)
+                        val intendedStart = editor.logicalPositionToOffset(pos1)
+                        val intendedEnd = editor.logicalPositionToOffset(pos2)
 
-                            editor.selectionModel.setSelection(intendedStart, intendedEnd)
-                        }
-                    } finally {
-                        isActionRunning.set(false)
+                        editor.selectionModel.setSelection(intendedStart, intendedEnd)
                     }
+                } finally {
+                    isActionRunning.set(false)
                 }
             }
         }

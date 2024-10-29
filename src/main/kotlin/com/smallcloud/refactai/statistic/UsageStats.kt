@@ -45,7 +45,7 @@ class UsageStats(private val project: Project): Disposable {
                 "url" to relatedUrl,
             )
         )
-        val url = getLSPProcessHolder(project).url.resolve(defaultReportUrlSuffix)
+        val url = getLSPProcessHolder(project)!!.url.resolve(defaultReportUrlSuffix)
         execService.submit {
             try {
                 val res = sendRequest(url, "POST", body=body)
@@ -63,7 +63,7 @@ class UsageStats(private val project: Project): Disposable {
     }
 
     fun snippetAccepted(snippetId: Int) {
-        val url = getLSPProcessHolder(project).url.resolve(defaultSnippetAcceptedUrlSuffix)
+        val url = getLSPProcessHolder(project)!!.url.resolve(defaultSnippetAcceptedUrlSuffix)
         execService.submit {
             try {
                 val gson = Gson()

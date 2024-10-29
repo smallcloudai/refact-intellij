@@ -57,7 +57,7 @@ class StatusBarState {
 class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomStatusBarWidget, WidgetPresentation {
     private var component: StatusBarComponent? = null
     private var logger: Logger = Logger.getInstance(javaClass)
-    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)
+    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)!!
     private val spinIcon = AnimatedIcon.Default.INSTANCE
 
     private fun getVirtualFile(editor: Editor): VirtualFile? {

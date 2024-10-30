@@ -5,6 +5,7 @@ import com.intellij.execution.processTools.getResultStdoutStr
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.LogicalPosition
@@ -307,13 +308,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handleOpenFile(fileName: String, line: Int?) {
         val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
         val file = File(sanitizedFileName)
-        val vf = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-            VfsUtil.findFileByIoFile(file, true)
-        } ?: return
-
-        val fileDescriptor = OpenFileDescriptor(project, vf)
-
-        ApplicationManager.getApplication().invokeLater {
+        if (!file.exists()) {
+            file.createNewFile()
+        }
+        invokeLater {
+            val vf = VfsUtil.findFileByIoFile(file, true) ?: return@invokeLater
+            val fileDescriptor = OpenFileDescriptor(project, vf)
             val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
             line?.let {
                 editor?.caretModel?.moveToLogicalPosition(LogicalPosition(line, 0))

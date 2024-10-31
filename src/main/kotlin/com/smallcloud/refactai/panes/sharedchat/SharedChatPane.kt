@@ -99,6 +99,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             newChat()
         }
         this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload(command, sendImmediately)))
+        sendActiveFileInfo()
+        sendSelectedSnippet()
     }
 
     private fun sendUserConfig() {

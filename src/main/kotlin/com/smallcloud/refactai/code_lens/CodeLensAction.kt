@@ -46,29 +46,34 @@ class CodeLensAction(
 
     fun actionPerformed() {
         val chat = editor.project?.let { ToolWindowManager.getInstance(it).getToolWindow("Refact") }
-        chat?.activate {
-            RefactAIToolboxPaneFactory.chat?.requestFocus()
-            RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessage(), sendImmediately, openNewTab)
-        }
         // If content is empty, then it's "Open Chat" instruction, selecting range of code in active tab
         if (contentMsg.isEmpty() && isActionRunning.compareAndSet(false, true)) {
             ApplicationManager.getApplication().invokeLater {
                 try {
-                    editor.selectionModel.setSelection(editor.logicalPositionToOffset(LogicalPosition(line1, 0)), editor.logicalPositionToOffset(LogicalPosition(line1, 0)))
+                    val pos1 = LogicalPosition(line1, 0)
+                    val pos2 = LogicalPosition(line2, editor.document.getLineEndOffset(line2))
 
-                    ApplicationManager.getApplication().invokeLater {
-                        Thread.sleep(150)
-                        val pos1 = LogicalPosition(line1, 0)
-                        val pos2 = LogicalPosition(line2, editor.document.getLineEndOffset(line2))
+                    val intendedStart = editor.logicalPositionToOffset(pos1)
+                    val intendedEnd = editor.logicalPositionToOffset(pos2)
 
-                        val intendedStart = editor.logicalPositionToOffset(pos1)
-                        val intendedEnd = editor.logicalPositionToOffset(pos2)
+                    val currentIntendedStart = editor.selectionModel.selectionStart
+                    val currentIntendedEnd = editor.selectionModel.selectionEnd
 
+                    if (intendedStart != currentIntendedStart || intendedEnd != currentIntendedEnd) {
                         editor.selectionModel.setSelection(intendedStart, intendedEnd)
                     }
                 } finally {
+                    // Just opening a new chat, no codelens execution
                     isActionRunning.set(false)
+                    chat?.activate {
+                        RefactAIToolboxPaneFactory.chat?.newChat()
+                    }
                 }
+            }
+        } else {
+            chat?.activate {
+                RefactAIToolboxPaneFactory.chat?.requestFocus()
+                RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessage(), sendImmediately, openNewTab)
             }
         }
     }

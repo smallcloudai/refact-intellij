@@ -98,6 +98,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         if (openNewTab || this.currentPage != "chat") {
             newChat()
         }
+        if (command == "") {
+            // Just opening a new chat, no codelens execution
+            newChat()
+            return
+        }
         this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload(command, sendImmediately)))
         sendActiveFileInfo()
         sendSelectedSnippet()

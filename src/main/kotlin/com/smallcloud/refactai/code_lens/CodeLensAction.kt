@@ -46,6 +46,12 @@ class CodeLensAction(
 
     fun actionPerformed() {
         val chat = editor.project?.let { ToolWindowManager.getInstance(it).getToolWindow("Refact") }
+
+        chat?.activate {
+            RefactAIToolboxPaneFactory.chat?.requestFocus()
+            RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessage(), sendImmediately, openNewTab)
+        }
+
         // If content is empty, then it's "Open Chat" instruction, selecting range of code in active tab
         if (contentMsg.isEmpty() && isActionRunning.compareAndSet(false, true)) {
             ApplicationManager.getApplication().invokeLater {
@@ -63,17 +69,8 @@ class CodeLensAction(
                         editor.selectionModel.setSelection(intendedStart, intendedEnd)
                     }
                 } finally {
-                    // Just opening a new chat, no codelens execution
                     isActionRunning.set(false)
-                    chat?.activate {
-                        RefactAIToolboxPaneFactory.chat?.newChat()
-                    }
                 }
-            }
-        } else {
-            chat?.activate {
-                RefactAIToolboxPaneFactory.chat?.requestFocus()
-                RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessage(), sendImmediately, openNewTab)
             }
         }
     }

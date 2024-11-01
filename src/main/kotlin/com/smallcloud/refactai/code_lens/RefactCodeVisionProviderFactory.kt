@@ -1,22 +1,16 @@
 package com.smallcloud.refactai.code_lens
 
-import com.google.gson.JsonObject
 import com.intellij.codeInsight.codeVision.CodeVisionProvider
 import com.intellij.codeInsight.codeVision.CodeVisionProviderFactory
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getCustomizationDirectly
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.initialize
+import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
 class RefactCodeVisionProviderFactory : CodeVisionProviderFactory {
-    val customization: JsonObject?
-    init {
-        initialize()
-        customization = getCustomizationDirectly()
-    }
-
     override fun createProviders(project: Project): Sequence<CodeVisionProvider<*>> {
-        if (customization == null) return emptySequence()
+        initialize()
+        val customization = getLSPProcessHolder(project)?.fetchCustomization() ?: return emptySequence()
         if (customization.has("code_lens")) {
             val allCodeLenses = customization.get("code_lens").asJsonObject
             val allCodeLensKeys = allCodeLenses.keySet().toList()

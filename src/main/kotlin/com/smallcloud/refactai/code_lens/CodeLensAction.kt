@@ -9,8 +9,8 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.wm.ToolWindowManager
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
-import kotlin.io.path.relativeTo
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.relativeTo
 
 class CodeLensAction(
     private val editor: Editor,
@@ -61,13 +61,7 @@ class CodeLensAction(
 
                     val intendedStart = editor.logicalPositionToOffset(pos1)
                     val intendedEnd = editor.logicalPositionToOffset(pos2)
-
-                    val currentIntendedStart = editor.selectionModel.selectionStart
-                    val currentIntendedEnd = editor.selectionModel.selectionEnd
-
-                    if (intendedStart != currentIntendedStart || intendedEnd != currentIntendedEnd) {
-                        editor.selectionModel.setSelection(intendedStart, intendedEnd)
-                    }
+                    editor.selectionModel.setSelection(intendedStart, intendedEnd)
                 } finally {
                     isActionRunning.set(false)
                 }

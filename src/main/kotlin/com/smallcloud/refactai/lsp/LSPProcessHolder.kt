@@ -165,6 +165,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             terminate()
             if (InferenceGlobalContext.xDebugLSPPort != null) {
                 capabilities = getCaps()
+                isWorking = true
                 lspProjectInitialize(this, project)
                 return
             }
@@ -258,7 +259,9 @@ class LSPProcessHolder(val project: Project) : Disposable {
         lspProjectInitialize(this, project)
     }
 
-    fun fetchCustomization(): JsonObject {
+    fun fetchCustomization(): JsonObject? {
+        if (!isWorking) return getCustomizationDirectly()
+
         val config = InferenceGlobalContext.connection.get(url.resolve("/v1/customization"),
             dataReceiveEnded={
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
@@ -283,9 +286,9 @@ class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     private fun terminate() {
+        isWorking = false
         process?.let {
             try {
-                isWorking = false
                 safeTerminate()
                 if (it.waitFor(3, TimeUnit.SECONDS)) {
                     logger.info("LSP SIGTERM")
@@ -449,8 +452,17 @@ class LSPProcessHolder(val project: Project) : Disposable {
             val process = GeneralCommandLine(listOf(BIN_PATH, "--print-customization"))
                 .withRedirectErrorStream(true)
                 .createProcess()
-            val exitCode = process.waitFor()
-            if (exitCode!= 0) return null
+            val isExit = process.waitFor(3, TimeUnit.SECONDS)
+            if (isExit) {
+                if (process.exitValue() != 0) {
+                    logger.warn("LSP bad_things_happened " +
+                        process.inputStream.bufferedReader().use { it.readText() })
+                    return null
+                }
+            } else {
+                process.destroy() // win11 doesn't finish process safe
+            }
+
             val out = process.inputStream.bufferedReader().use { it.readText() }
             val customizationStr = out.trim().lines().last()
             return Gson().fromJson(customizationStr, JsonObject::class.java)

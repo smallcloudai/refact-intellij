@@ -5,6 +5,7 @@ import com.intellij.codeInsight.codeVision.CodeVisionInitializer
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 
@@ -19,6 +20,7 @@ class CodeLensInvalidatorService(project: Project): Disposable {
         project.messageBus.connect(this).subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
             override fun lspIsActive(isActive: Boolean) {
                 invokeLater {
+                    logger<CodeLensInvalidatorService>().warn("Invalidating code lens")
                     project.service<CodeVisionInitializer>().getCodeVisionHost()
                         .invalidateProvider(CodeVisionHost.LensInvalidateSignal(null, ids))
                 }

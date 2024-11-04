@@ -6,6 +6,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
+import com.intellij.openapi.util.SystemInfo.isMac
 import com.intellij.ui.jcef.*
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.PluginState
@@ -71,8 +72,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     val webView by lazy {
-
-
         val browser = JBCefBrowser
             .createBuilder()
             .setEnableOpenDevToolsMenuItem(true)
@@ -80,7 +79,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             // change this to enable dev tools
             // setting to false prevents "Accept diff with tab"
             // setting to true causes slow scroll issues :/
-            .setOffScreenRendering(true)
+            .setOffScreenRendering(!isMac)
             .build()
 
 

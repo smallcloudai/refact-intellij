@@ -382,8 +382,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handlePatchShow(payload: Events.Patch.ShowPayload) {
-
-
         payload.results.forEach { result ->
             if (result.fileNameAdd != null) {
                 this.openNewFileWithContent(this.sanitizeFileNameForPosix(result.fileNameAdd), result.fileText)
@@ -414,7 +412,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
         }
     }
-
 
     private fun handleAnimationStart(fileName: String) {
         val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)

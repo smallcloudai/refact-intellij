@@ -81,6 +81,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         }
 
     init {
+        initialize()
         messageBus
             .connect(this)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {

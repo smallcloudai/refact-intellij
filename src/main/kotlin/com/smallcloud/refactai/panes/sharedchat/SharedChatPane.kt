@@ -103,6 +103,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             newChat()
             return
         }
+        isChatStreaming = true
         this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload(command, sendImmediately)))
     }
 

@@ -83,12 +83,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             .setOffScreenRendering(true)
             .build()
 
-        browser.jbCefClient.addDisplayHandler(object : CefDisplayHandlerAdapter() {
-            override fun onCursorChange(browser: CefBrowser?, cursorType: Int): Boolean {
-                browser?.uiComponent?.cursor = java.awt.Cursor.getPredefinedCursor(cursorType);
-                return false
-            }
-        }, browser.cefBrowser)
 
         browser.jbCefClient.setProperty(
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,

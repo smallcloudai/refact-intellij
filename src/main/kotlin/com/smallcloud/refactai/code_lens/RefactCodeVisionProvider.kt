@@ -94,8 +94,9 @@ class RefactCodeVisionProvider(
         Logger.getInstance(RefactCodeVisionProvider::class.java).warn("computeCodeVision $commandKey start")
         val lsp = editor.project?.let { getInstance(it) } ?: return CodeVisionState.NotReady
         if (!lsp.isWorking) return CodeVisionState.NotReady
-        val codeLens = getCodeLens(editor)
-        return runReadAction {
+
+        try {
+            val codeLens = getCodeLens(editor)
             val result = ArrayList<Pair<TextRange, CodeVisionEntry>>()
             Logger.getInstance(RefactCodeVisionProvider::class.java)
                 .warn("computeCodeVision $commandKey ${codeLens.size}")
@@ -104,7 +105,9 @@ class RefactCodeVisionProvider(
                     codeLen.action.actionPerformed()
                 }, Resources.Icons.LOGO_12x12))
             }
-            return@runReadAction CodeVisionState.Ready(result)
+            return CodeVisionState.Ready(result)
+        } catch (e: Exception) {
+            return CodeVisionState.NotReady
         }
     }
 }

@@ -85,7 +85,7 @@ class DiffMode(
         val diff = DiffLayout(editor, content)
         val originalText = editor.document.text
         val newText = originalText.replaceRange(startSelectionOffset, endSelectionOffset, indentedCode)
-        val patch = DiffUtils.diff(originalText.split("\n"), newText.split("\n"))
+        val patch = DiffUtils.diff(originalText.split("(?<=\n)".toRegex()), newText.split("(?<=\n)".toRegex()))
 
         diffLayout = diff.update(patch)
 

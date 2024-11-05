@@ -46,7 +46,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var rateUsNotification: Boolean = false
     var astIsEnabled: Boolean = true
     var astIsEnabledDefaultChanged: Boolean = false
-    var vecdbIsEnabled: Boolean = false
+    var vecdbIsEnabled: Boolean = true
     var vecdbIsEnabledDefaultChanged: Boolean = false
     var astFileLimit: Int = 15000
     var vecdbFileLimit: Int = 15000

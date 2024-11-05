@@ -134,7 +134,7 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
                             TextAttributes().apply {
                                 backgroundColor = redColor
                             },
-                            HighlighterTargetArea.EXACT_RANGE
+                            HighlighterTargetArea.LINES_IN_RANGE
                         )
                     )
                     val smallPatches: MutableList<Patch<Char>> = emptyList<Patch<Char>>().toMutableList()
@@ -180,7 +180,7 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
                             TextAttributes().apply {
                                 backgroundColor = redColor
                             },
-                            HighlighterTargetArea.EXACT_RANGE
+                            HighlighterTargetArea.LINES_IN_RANGE
                         )
                     )
                 }

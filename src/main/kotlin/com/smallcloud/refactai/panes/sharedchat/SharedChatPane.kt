@@ -422,19 +422,26 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         ApplicationManager.getApplication().invokeLater {
             val editor =
                 FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true) ?: return@invokeLater
-            animatedFiles.add(sanitizedFileName)
+            synchronized(this) {
+                animatedFiles.add(sanitizedFileName)
+            }
             scheduler.submit {
                 waitingDiff(
                     editor,
                     editor.offsetToLogicalPosition(0),
                     editor.offsetToLogicalPosition(editor.document.textLength)
-                ) { animatedFiles.contains(sanitizedFileName) }
+                ) {
+                    synchronized(this) {
+                        animatedFiles.contains(sanitizedFileName)
+                    } }
             }
         }
     }
 
     private fun handleAnimationStop(fileName: String) {
-        animatedFiles.remove(fileName)
+        synchronized(this) {
+            animatedFiles.remove(fileName)
+        }
     }
 
     private suspend fun handleEvent(event: Events.FromChat) {

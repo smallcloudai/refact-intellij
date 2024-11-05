@@ -7,7 +7,7 @@ import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-class ChatPanes(val project: Project): Disposable {
+class ChatPanes(val project: Project) : Disposable {
     private var component: JComponent? = null
     private var pane: SharedChatPane? = null
     private val holder = JPanel().also {

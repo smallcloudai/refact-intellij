@@ -106,6 +106,9 @@ integrated into a single package that follows your privacy settings.</p>
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="com.smallcloud.refactai.PluginState"/>
         <postStartupActivity implementation="com.smallcloud.refactai.Initializer"/>
+        <config.codeVisionGroupSettingProvider implementation="com.smallcloud.refactai.code_lens.RefactOpenChatSettingProvider"/>
+        <config.codeVisionGroupSettingProvider implementation="com.smallcloud.refactai.code_lens.RefactOpenProblemsSettingProvider"/>
+        <config.codeVisionGroupSettingProvider implementation="com.smallcloud.refactai.code_lens.RefactOpenExplainSettingProvider"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.refactai.listeners.DocumentListener"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.refactai.listeners.LSPDocumentListener"/>
         <statusBarWidgetFactory id="Refact AI Status Bar"

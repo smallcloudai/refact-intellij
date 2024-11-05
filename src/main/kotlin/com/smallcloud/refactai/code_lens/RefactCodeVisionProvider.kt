@@ -14,7 +14,7 @@ import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance
 import com.smallcloud.refactai.lsp.lspGetCodeLens
 import com.smallcloud.refactai.struct.ChatMessage
 import kotlin.math.max
-
+import com.intellij.codeInsight.codeVision.CodeVisionBundle
 data class CodeLen(
     val range: TextRange,
     val label: String,

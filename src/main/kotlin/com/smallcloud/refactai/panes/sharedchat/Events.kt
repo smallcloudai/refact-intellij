@@ -24,6 +24,7 @@ class EventNames {
         LOG_OUT("log_out"),
         FIM_READY("fim/ready"),
         FIM_REQUEST("fim/request"),
+
         // Adding
         START_ANIMATION("ide/animateFile/start"),
         STOP_ANIMATION("ide/animateFile/stop"),
@@ -34,25 +35,32 @@ class EventNames {
     }
 
     enum class ToChat(val value: String) {
-        @SerializedName("config/update") UPDATE_CONFIG("config/update"),
-        @SerializedName("selected_snippet/set") SET_SELECTED_SNIPPET("selected_snippet/set"),
-        @SerializedName("activeFile/setFileInfo") SET_ACTIVE_FILE_INFO("activeFile/setFileInfo"),
-        @SerializedName("fim/error") FIM_ERROR("fim/error"),
-        @SerializedName("fim/receive") FIM_RECEIVE("fim/receive"),
-        @SerializedName("chatThread/new") NEW_CHAT("chatThread/new"),
+        @SerializedName("config/update")
+        UPDATE_CONFIG("config/update"),
+        @SerializedName("selected_snippet/set")
+        SET_SELECTED_SNIPPET("selected_snippet/set"),
+        @SerializedName("activeFile/setFileInfo")
+        SET_ACTIVE_FILE_INFO("activeFile/setFileInfo"),
+        @SerializedName("fim/error")
+        FIM_ERROR("fim/error"),
+        @SerializedName("fim/receive")
+        FIM_RECEIVE("fim/receive"),
+        @SerializedName("chatThread/new")
+        NEW_CHAT("chatThread/new"),
+
         // codelens
-        @SerializedName("textarea/replace") CODE_LENS_EXEC("textarea/replace"),
+        @SerializedName("textarea/replace")
+        CODE_LENS_EXEC("textarea/replace"),
         // logout, open external url, setup host
     }
 }
 
 
-
 class Events {
 
-    open class Payload: Serializable
+    open class Payload : Serializable
 
-    abstract class FromChat(val type: EventNames.FromChat, open val payload: Serializable?): Serializable
+    abstract class FromChat(val type: EventNames.FromChat, open val payload: Serializable?) : Serializable
 
     private class FromChatDeserializer : JsonDeserializer<FromChat> {
         override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): FromChat? {
@@ -63,15 +71,16 @@ class Events {
             }
 
             val payload = p0?.asJsonObject?.get("payload")
-            if(type == null) return null
+            if (type == null) return null
 
-            return when(type) {
+            return when (type) {
                 EventNames.FromChat.NEW_FILE.value -> payload?.asString?.let { Editor.NewFile(it) }
                 EventNames.FromChat.OPEN_SETTINGS.value -> OpenSettings()
                 EventNames.FromChat.SETUP_HOST.value -> {
                     val host = p2?.deserialize<Host>(payload, Host::class.java) ?: return null
                     Setup.SetupHost(host)
                 }
+
                 EventNames.FromChat.OPEN_EXTERNAL_URL.value -> {
                     val url = payload?.asJsonObject?.get("url")?.asString ?: return null
                     Setup.OpenExternalUrl(url)
@@ -83,25 +92,36 @@ class Events {
                 // EventNames.FromChat.FIM_READY.value -> p2?.deserialize(payload, Fim.Ready::class.java)
                 EventNames.FromChat.FIM_REQUEST.value -> Fim.Request()
                 EventNames.FromChat.OPEN_HOTKEYS.value -> OpenHotKeys()
-                EventNames.FromChat.IS_CHAT_STREAMING.value -> { IsChatStreaming(payload?.asBoolean?: false) }
-                EventNames.FromChat.CHAT_PAGE_CHANGE.value -> { ChatPageChange(payload?.asString ?: "") }
+                EventNames.FromChat.IS_CHAT_STREAMING.value -> {
+                    IsChatStreaming(payload?.asBoolean ?: false)
+                }
+
+                EventNames.FromChat.CHAT_PAGE_CHANGE.value -> {
+                    ChatPageChange(payload?.asString ?: "")
+                }
+
                 EventNames.FromChat.OPEN_FILE.value -> {
                     val file: OpenFilePayload = p2?.deserialize(payload, OpenFilePayload::class.java) ?: return null
                     OpenFile(file)
                 }
 
-                EventNames.FromChat.START_ANIMATION.value -> Animation.Start(payload?.asString?: "")
+                EventNames.FromChat.START_ANIMATION.value -> Animation.Start(payload?.asString ?: "")
 
-                EventNames.FromChat.STOP_ANIMATION.value -> Animation.Stop(payload?.asString?: "")
-                
-                EventNames.FromChat.DIFF_PREVIEW.value -> Patch.Show(p2?.deserialize(payload, Patch.ShowPayload::class.java)?: return null)
+                EventNames.FromChat.STOP_ANIMATION.value -> Animation.Stop(payload?.asString ?: "")
+
+                EventNames.FromChat.DIFF_PREVIEW.value -> Patch.Show(
+                    p2?.deserialize(
+                        payload,
+                        Patch.ShowPayload::class.java
+                    ) ?: return null
+                )
+
                 EventNames.FromChat.WRITE_RESULTS_TO_FILE.value -> {
                     val results = mutableListOf<Patch.PatchResult>()
-                    val items = p2?.deserialize(payload, results::class.java)?: results
+                    val items = p2?.deserialize(payload, results::class.java) ?: results
                     val applyPayload = Patch.ApplyPayload(items)
                     return Patch.Apply(applyPayload)
                 }
-
 
 
                 else -> null
@@ -111,9 +131,11 @@ class Events {
     }
 
     class Animation {
-        data class AnimationPayload(val payload: String): Payload();
-        data class Start(val fileName: String): FromChat(EventNames.FromChat.START_ANIMATION, AnimationPayload(fileName))
-        data class Stop(val fileName: String): FromChat(EventNames.FromChat.STOP_ANIMATION, AnimationPayload(fileName))
+        data class AnimationPayload(val payload: String) : Payload();
+        data class Start(val fileName: String) :
+            FromChat(EventNames.FromChat.START_ANIMATION, AnimationPayload(fileName))
+
+        data class Stop(val fileName: String) : FromChat(EventNames.FromChat.STOP_ANIMATION, AnimationPayload(fileName))
     }
 
     class Patch {
@@ -137,18 +159,19 @@ class Events {
             val allPins: List<String>,
             val results: List<PatchResult>,
             val state: List<PatchState>,
-        ): Payload()
+        ) : Payload()
 
-        class Show(override val payload: ShowPayload): FromChat(EventNames.FromChat.DIFF_PREVIEW, payload)
+        class Show(override val payload: ShowPayload) : FromChat(EventNames.FromChat.DIFF_PREVIEW, payload)
 
-        class ApplyPayload(val items: List<PatchResult>): Payload()
+        class ApplyPayload(val items: List<PatchResult>) : Payload()
+
         // typealias ApplyPayload: Payload()
-        class Apply(override val payload: ApplyPayload): FromChat(EventNames.FromChat.WRITE_RESULTS_TO_FILE, payload)
+        class Apply(override val payload: ApplyPayload) : FromChat(EventNames.FromChat.WRITE_RESULTS_TO_FILE, payload)
     }
 
     class Fim {
-        class Ready: FromChat(EventNames.FromChat.FIM_READY, null)
-        class Request: FromChat(EventNames.FromChat.FIM_REQUEST, null)
+        class Ready : FromChat(EventNames.FromChat.FIM_READY, null)
+        class Request : FromChat(EventNames.FromChat.FIM_REQUEST, null)
 
         class Choice(
             @SerializedName("code_completion")
@@ -254,34 +277,34 @@ class Events {
             val created: Number?,
             val elapsed: Number?,
             val cached: Boolean?,
-        ): Payload()
+        ) : Payload()
 
-        class Receive(payload: FimDebugPayload): ToChat<Payload>(EventNames.ToChat.FIM_RECEIVE, payload)
+        class Receive(payload: FimDebugPayload) : ToChat<Payload>(EventNames.ToChat.FIM_RECEIVE, payload)
 
-        class Error(payload: String): ToChat<String>(EventNames.ToChat.FIM_ERROR, payload)
+        class Error(payload: String) : ToChat<String>(EventNames.ToChat.FIM_ERROR, payload)
     }
 
-    abstract class ToChat<T: Any>(
+    abstract class ToChat<T : Any>(
         @SerializedName("type")
         val type: EventNames.ToChat,
         @SerializedName("payload")
         open val payload: T
-    ): Serializable
+    ) : Serializable
 
 
+    class IsChatStreaming(val isStreaming: Boolean) : FromChat(EventNames.FromChat.IS_CHAT_STREAMING, isStreaming)
+    class ChatPageChange(val currentPage: String) : FromChat(EventNames.FromChat.CHAT_PAGE_CHANGE, currentPage)
+    class OpenSettings : FromChat(EventNames.FromChat.OPEN_SETTINGS, null)
 
-    class IsChatStreaming(val isStreaming: Boolean): FromChat(EventNames.FromChat.IS_CHAT_STREAMING, isStreaming)
-    class ChatPageChange(val currentPage: String): FromChat(EventNames.FromChat.CHAT_PAGE_CHANGE, currentPage)
-    class OpenSettings: FromChat(EventNames.FromChat.OPEN_SETTINGS, null)
-
-    class OpenHotKeys: FromChat(EventNames.FromChat.OPEN_HOTKEYS, null)
+    class OpenHotKeys : FromChat(EventNames.FromChat.OPEN_HOTKEYS, null)
 
     data class OpenFilePayload(
         @SerializedName("file_name")
         val fileName: String,
-        val line: Int?): Payload()
+        val line: Int?
+    ) : Payload()
 
-    class OpenFile(override val payload: OpenFilePayload): FromChat(EventNames.FromChat.OPEN_FILE, payload)
+    class OpenFile(override val payload: OpenFilePayload) : FromChat(EventNames.FromChat.OPEN_FILE, payload)
 
     class ActiveFile {
         data class FileInfo(
@@ -295,63 +318,69 @@ class Events {
             val usefulness: Int? = null,
         )
 
-        class ActiveFileToChat(payload: FileInfo): ToChat<FileInfo>(EventNames.ToChat.SET_ACTIVE_FILE_INFO, payload)
+        class ActiveFileToChat(payload: FileInfo) : ToChat<FileInfo>(EventNames.ToChat.SET_ACTIVE_FILE_INFO, payload)
 
     }
 
     class Setup {
         data class SetupHostPayload(
             val host: Host
-        ): Payload()
+        ) : Payload()
 
-        data class SetupHost(val host: Host): FromChat(EventNames.FromChat.SETUP_HOST, SetupHostPayload(host))
+        data class SetupHost(val host: Host) : FromChat(EventNames.FromChat.SETUP_HOST, SetupHostPayload(host))
 
-        data class UrlPayload(val url: String): Payload()
-        data class OpenExternalUrl(val url: String): FromChat(EventNames.FromChat.OPEN_EXTERNAL_URL, UrlPayload(url))
+        data class UrlPayload(val url: String) : Payload()
+        data class OpenExternalUrl(val url: String) : FromChat(EventNames.FromChat.OPEN_EXTERNAL_URL, UrlPayload(url))
 
-        class LogOut: FromChat(EventNames.FromChat.LOG_OUT, null)
+        class LogOut : FromChat(EventNames.FromChat.LOG_OUT, null)
     }
 
     class Editor {
         data class ContentPayload(
             val payload: String
-        ): Payload()
+        ) : Payload()
 
         data class NewFile(
             val content: String,
-        ): FromChat(EventNames.FromChat.NEW_FILE, ContentPayload(content))
+        ) : FromChat(EventNames.FromChat.NEW_FILE, ContentPayload(content))
 
         data class PasteDiff(
             val content: String
-        ): FromChat(EventNames.FromChat.PASTE_DIFF, ContentPayload(content))
+        ) : FromChat(EventNames.FromChat.PASTE_DIFF, ContentPayload(content))
 
         data class Snippet(
             val language: String = "",
             val code: String = "",
             val path: String = "",
             val basename: String = "",
-        ): Payload()
+        ) : Payload()
 
         data class SetSnippetPayload(
             val snippet: Snippet
-        ): Payload()
+        ) : Payload()
 
-        class SetSnippetToChat(payload: Snippet): ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
+        class SetSnippetToChat(payload: Snippet) : ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
     }
 
-    object NewChat: ToChat<Unit>(EventNames.ToChat.NEW_CHAT, Unit)
+    object NewChat : ToChat<Unit>(EventNames.ToChat.NEW_CHAT, Unit)
     data class CodeLensCommandPayload(
         val value: String = "",
         @SerializedName("send_immediately") val sendImmediately: Boolean = false,
-    ): Payload()
-    class CodeLensCommand(payload: CodeLensCommandPayload): ToChat<Payload>(EventNames.ToChat.CODE_LENS_EXEC, payload)
+    ) : Payload()
+
+    class CodeLensCommand(payload: CodeLensCommandPayload) : ToChat<Payload>(EventNames.ToChat.CODE_LENS_EXEC, payload)
 
     class Config {
         abstract class BaseFeatures()
 
-        data class Features(val ast: Boolean, val vecdb: Boolean): BaseFeatures()
+        data class Features(val ast: Boolean, val vecdb: Boolean) : BaseFeatures()
 
-        data class ThemeProps(val mode: String, val hasBackground: Boolean = false, val scale: String = "90%",  val accentColor: String ="gray")
+        data class ThemeProps(
+            val mode: String,
+            val hasBackground: Boolean = false,
+            val scale: String = "90%",
+            val accentColor: String = "gray"
+        )
 
         data class KeyBindings(val completeManual: String)
 
@@ -364,18 +393,18 @@ class Events {
             val keyBindings: Config.KeyBindings,
             val tabbed: Boolean? = false,
             val host: String? = "jetbrains"
-        ): Payload()
+        ) : Payload()
 
-        class Update(payload: UpdatePayload): ToChat<Payload>(EventNames.ToChat.UPDATE_CONFIG, payload)
+        class Update(payload: UpdatePayload) : ToChat<Payload>(EventNames.ToChat.UPDATE_CONFIG, payload)
 
     }
 
     companion object {
 
         val gson = GsonBuilder()
-             .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
-             .registerTypeAdapter(Host::class.java, HostDeserializer())
-             .create()
+            .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
+            .registerTypeAdapter(Host::class.java, HostDeserializer())
+            .create()
 
         fun parse(msg: String?): FromChat? {
             val result = gson.fromJson(msg, FromChat::class.java)

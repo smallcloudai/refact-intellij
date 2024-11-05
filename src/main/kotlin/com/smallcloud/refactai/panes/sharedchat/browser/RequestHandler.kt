@@ -25,6 +25,7 @@ class RequestHandlerFactory : CefSchemeHandlerFactory {
         return RefactChatResourceHandler()
     }
 }
+
 data object ClosedConnection : ResourceHandlerState() {
     override fun getResponseHeaders(
         cefResponse: CefResponse,
@@ -141,7 +142,6 @@ class RefactChatResourceHandler : CefResourceHandler, DumbAware {
         responseLength: IntRef,
         redirectUrl: StringRef
     ) {
-
         if (currentUrl !== null) {
             when {
                 currentUrl!!.contains("css") -> cefResponse.mimeType = "text/css"

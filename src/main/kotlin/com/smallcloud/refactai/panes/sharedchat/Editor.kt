@@ -14,14 +14,12 @@ import com.smallcloud.refactai.settings.AppSettingsState
 
 
 class Editor (val project: Project) {
-
     private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)!!
     private fun getLanguage(fm: FileEditorManager): Language? {
         val editor = fm.selectedTextEditor
         val language = editor?.document?.let {
             PsiDocumentManager.getInstance(project).getPsiFile(it)?.language
         }
-
         return language
     }
 
@@ -84,7 +82,6 @@ class Editor (val project: Project) {
                 val line2 = selection?.endOffset?.let { editor.offsetToLogicalPosition(it).line } ?: 0
 
                 val code = editor?.document?.getText(range)
-
                 val canPaste = selection != null && !selection.isEmpty
 
                 val fileInfo = Events.ActiveFile.FileInfo(
@@ -97,7 +94,6 @@ class Editor (val project: Project) {
                     content = code,
                 )
                 cb(fileInfo)
-
             } else {
                 val fileInfo = Events.ActiveFile.FileInfo()
                 cb(fileInfo)

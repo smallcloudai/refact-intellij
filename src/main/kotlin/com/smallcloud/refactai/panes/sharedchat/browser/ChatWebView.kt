@@ -13,8 +13,6 @@ import com.smallcloud.refactai.panes.sharedchat.Events
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
-import java.awt.event.MouseWheelEvent
-import java.awt.event.MouseWheelListener
 import javax.swing.JComponent
 
 

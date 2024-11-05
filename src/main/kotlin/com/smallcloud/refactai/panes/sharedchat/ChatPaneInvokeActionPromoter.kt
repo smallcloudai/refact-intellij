@@ -10,6 +10,7 @@ class ChatPaneInvokeActionPromoter : ActionPromoter {
     private fun getEditor(dataContext: DataContext): Editor? {
         return CommonDataKeys.EDITOR.getData(dataContext)
     }
+
     override fun promote(actions: MutableList<out AnAction>, context: DataContext): MutableList<AnAction> {
         if (getEditor(context) == null)
             return actions.toMutableList()

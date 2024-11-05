@@ -415,6 +415,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         synchronized(this) { // action thread
             val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
             if (animatedFiles.contains(sanitizedFileName)) return
+            animatedFiles.add(sanitizedFileName)
             val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
                 LocalFileSystem.getInstance().findFileByPath(sanitizedFileName)
             } ?: return
@@ -422,9 +423,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             ApplicationManager.getApplication().invokeLater {
                 val editor =
                     FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true) ?: return@invokeLater
-                synchronized(this) { // render thread
-                    animatedFiles.add(sanitizedFileName)
-                }
                 scheduler.submit {
                     waitingDiff(
                         editor,
@@ -447,6 +445,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private suspend fun handleEvent(event: Events.FromChat) {
+        logger.warn(event.toString())
         when (event) {
             is Events.Editor.PasteDiff -> this.handlePasteDiff(event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.content)

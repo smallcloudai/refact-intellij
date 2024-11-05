@@ -66,8 +66,10 @@ class DiffLayout(
             when (det.type) {
                 DeltaType.INSERT -> {
                     document.insertString(
-                        getOffsetFromStringNumber(det.source.position),
-                        det.target.lines!!.joinToString("\n", postfix = "\n")
+                        getOffsetFromStringNumber(det.target.position),
+                        det.target.lines!!.joinToString("\n",
+                            prefix = if (det.target.position != det.source.position) "\n" else "",
+                            postfix = if (det.target.position == det.source.position) "\n" else "")
                     )
                 }
 

@@ -19,6 +19,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.io.awaitExit
@@ -45,6 +46,7 @@ import org.jetbrains.annotations.NotNull
 import java.beans.PropertyChangeListener
 import java.io.File
 import java.util.concurrent.Future
+import javax.swing.FocusManager
 import javax.swing.JPanel
 import javax.swing.UIManager
 
@@ -407,9 +409,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                             .actionPerformed(editor, result.fileText)
                     }
                 }
-
             }
-
         }
     }
 

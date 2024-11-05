@@ -37,13 +37,29 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
         rangeHighlighters.clear()
     }
 
-    private fun renderInsertBlock(lines: List<String>, smallPatches: List<Patch<Char>>, offset: Int) {
-        val logicalPosition = editor.offsetToLogicalPosition(offset)
+    private fun getPriorityForOffset(offset: Int, isAbove: Boolean): Int {
+        val allInlaysForOffset = inlays.filter {
+            it.offset == offset
+        }.sortedBy { it.properties.priority }
+        return if (isAbove) {
+            (allInlaysForOffset.lastOrNull()?.properties?.priority?.plus(1)) ?: 1
+        } else {
+            (allInlaysForOffset.firstOrNull()?.properties?.priority?.minus(1)) ?: 998
+        }
+    }
+
+    private fun renderInsertBlock(lines: List<String>, smallPatches: List<Patch<Char>>,
+                                  offset: Int, targetLine: Int, isInline: Boolean = false) {
         val renderer = InsertBlockElementRenderer(editor, lines, smallPatches, false)
-        val isAbove = (logicalPosition.line < 1)
-        val element = editor
-            .inlayModel
-            .addBlockElement(offset, false, isAbove, if (isAbove) 1 else 998, renderer)
+        val isAbove = (targetLine < 1)
+        val priority = getPriorityForOffset(offset, isAbove)
+        val element = if (isInline) {
+            editor.inlayModel.addInlineElement(offset, false, renderer)
+        } else {
+            editor
+                .inlayModel
+                .addBlockElement(offset, false, isAbove, priority, renderer)
+        }
         element?.let {
             Disposer.register(this, it)
             inlays.add(element)
@@ -99,9 +115,13 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
             if (det.target.lines == null) continue
             when (det.type) {
                 DeltaType.INSERT -> {
+                    val isInline = det.source.lines?.let {
+                        it.size == 1 && it.first().isEmpty()
+                    } ?: false
                     renderInsertBlock(
                         det.target.lines!!, emptyList(),
-                        getOffsetFromStringNumber(det.source.position + det.source.size() - 1)
+                        getOffsetFromStringNumber(det.source.position + det.source.size() - 1),
+                        det.target.position, isInline
                     )
                 }
 
@@ -146,7 +166,8 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
                     renderInsertBlock(
                         det.target.lines!!,
                         smallPatches,
-                        getOffsetFromStringNumber(det.source.position + det.source.size() - 1)
+                        getOffsetFromStringNumber(det.source.position + det.source.size() - 1),
+                        det.target.position
                     )
                 }
 

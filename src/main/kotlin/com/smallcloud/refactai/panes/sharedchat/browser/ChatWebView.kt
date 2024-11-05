@@ -6,26 +6,15 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
-import com.intellij.openapi.util.SystemInfo.isMac
 import com.intellij.ui.jcef.*
 import com.intellij.util.ui.UIUtil
-import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
-import org.cef.browser.CefFrame
-import org.cef.callback.CefAuthCallback
-import org.cef.callback.CefCallback
-import org.cef.handler.*
-import org.cef.misc.BoolRef
-import org.cef.misc.StringRef
-import org.cef.network.CefCookie
-import org.cef.network.CefRequest
-import org.cef.network.CefResponse
-import org.cef.network.CefURLRequest
-import org.cef.security.CefSSLInfo
+import org.cef.handler.CefLoadHandlerAdapter
+import java.awt.event.MouseWheelEvent
+import java.awt.event.MouseWheelListener
 import javax.swing.JComponent
 
 
@@ -79,9 +68,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             // change this to enable dev tools
             // setting to false prevents "Accept diff with tab"
             // setting to true causes slow scroll issues :/
-            .setOffScreenRendering(!isMac)
+            .setOffScreenRendering(true)
             .build()
-
 
         browser.jbCefClient.setProperty(
             JBCefClient.Properties.JS_QUERY_POOL_SIZE,
@@ -90,7 +78,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         if (System.getenv("REFACT_DEBUG") != "1") {
             browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
         }
-
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 

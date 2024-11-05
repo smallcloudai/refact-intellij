@@ -70,7 +70,6 @@ class DiffMode(
         editor: Editor,
         content: String
     ) {
-
         val selectionModel = editor.selectionModel
         val startSelectionOffset: Int = selectionModel.selectionStart
         val endSelectionOffset: Int = selectionModel.selectionEnd
@@ -91,7 +90,7 @@ class DiffMode(
         diffLayout = diff.update(patch)
 
         app.invokeLater {
-            editor.contentComponent.requestFocus()
+            editor.contentComponent.requestFocusInWindow()
         }
     }
 }

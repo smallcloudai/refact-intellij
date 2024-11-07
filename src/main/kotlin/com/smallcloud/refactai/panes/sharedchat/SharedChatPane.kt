@@ -329,6 +329,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun deleteFile(fileName: String) {
+        logger.warn("deleteFile: $fileName")
         ApplicationManager.getApplication().runReadAction {
             LocalFileSystem.getInstance().findFileByPath(fileName)?.delete(this.project)
         }
@@ -352,6 +353,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun openNewFileWithContent(fileName: String, content: String) {
         val virtualFile = LightVirtualFile(fileName, content)
+        logger.warn("openNewFileWithContent: $fileName")
         val fileDescriptor = OpenFileDescriptor(project, virtualFile)
         ApplicationManager.getApplication().invokeLater {
             FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
@@ -369,9 +371,15 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
 
             if (item.fileNameEdit != null) {
+                val fileName = this.sanitizeFileNameForPosix(item.fileNameEdit)
+                logger.warn("handlePatchApply: item.fileNameEdit = $fileName")
                 val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-                    LocalFileSystem.getInstance().findFileByPath(this.sanitizeFileNameForPosix(item.fileNameEdit))
-                } ?: return
+                    LocalFileSystem.getInstance().refreshAndFindFileByPath(fileName)
+                }
+                if (file == null) {
+                    logger.warn("handlePatchApply: item.fileNameEdit = $fileName is null")
+                    return@forEach
+                }
 
                 ApplicationManager.getApplication().invokeLater {
                     FileDocumentManager.getInstance().getDocument(file)?.setText(item.fileText)
@@ -392,11 +400,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
             if (result.fileNameEdit != null) {
                 val sanitizedFileNameEdit = this.sanitizeFileNameForPosix(result.fileNameEdit)
+                logger.warn("handlePatchShow: item.fileNameEdit = $sanitizedFileNameEdit")
                 this.handleAnimationStop(sanitizedFileNameEdit)
 
                 val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-                    LocalFileSystem.getInstance().findFileByPath(sanitizedFileNameEdit)
-                } ?: return
+                    LocalFileSystem.getInstance().refreshAndFindFileByPath(sanitizedFileNameEdit)
+                }
+                if (file == null) {
+                    logger.warn("handlePatchShow: item.fileNameEdit = $sanitizedFileNameEdit is null")
+                    return@forEach
+                }
 
                 val fileDescriptor = OpenFileDescriptor(project, file)
                 ApplicationManager.getApplication().invokeLater {

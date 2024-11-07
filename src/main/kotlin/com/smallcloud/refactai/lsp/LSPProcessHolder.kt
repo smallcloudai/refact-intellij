@@ -466,7 +466,12 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
             val out = process.inputStream.bufferedReader().use { it.readText() }
             val customizationStr = out.trim().lines().last()
-            return Gson().fromJson(customizationStr, JsonObject::class.java)
+            return try {
+                Gson().fromJson(customizationStr, JsonObject::class.java)
+            } catch (e: Exception) {
+                logger.warn("LSP bad_things_happened " + e.message)
+                null
+            }
         }
     }
 }

@@ -477,7 +477,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private suspend fun handleEvent(event: Events.FromChat) {
-        logger.warn(event.toString())
+        logger.warn("${event.toString()} ${event.payload.toString()}")
         when (event) {
             is Events.Editor.PasteDiff -> this.handlePasteDiff(event.content)
             is Events.Editor.NewFile -> this.handleNewFile(event.content)

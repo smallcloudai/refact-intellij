@@ -247,6 +247,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             try {
                 InferenceGlobalContext.connection.ping(url)
                 buildInfo = getBuildInfo()
+                logger.warn("LSP binary build info $buildInfo")
                 capabilities = getCaps()
                 fetchCustomization()
                 isWorking = true
@@ -324,9 +325,9 @@ class LSPProcessHolder(val project: Project) : Disposable {
             }).also {
             try {
                 res = it.get().get() as String
-                logger.debug("build_info request finished")
+                logger.warn("build_info request finished")
             } catch (e: Exception) {
-                logger.debug("build_info ${e.message}")
+                logger.warn("build_info ${e.message}")
             }
         }
         return res
@@ -442,7 +443,8 @@ class LSPProcessHolder(val project: Project) : Disposable {
                             setExecutable(path.toFile())
                             break
                         } catch (e: Exception) {
-                            logger.warn(e.message)
+                            logger.warn("LSP bad_things_happened: can not save binary $BIN_PATH")
+                            logger.warn("LSP bad_things_happened: error message - ${e.message}")
                         }
                     }
                 }

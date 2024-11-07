@@ -17,6 +17,7 @@ import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.StandardFileSystems
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
@@ -314,18 +315,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handleOpenFile(fileName: String, line: Int?) {
         val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
         val file = File(sanitizedFileName)
-        if (!file.exists()) {
-            file.createNewFile()
-        }
+        logger.warn("handleOpenFile: $fileName")
         invokeLater {
             val vf = VfsUtil.findFileByIoFile(file, true) ?: return@invokeLater
             val fileDescriptor = OpenFileDescriptor(project, vf)
             val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+            logger.warn("handleOpenFile: $fileName found")
             line?.let {
                 editor?.caretModel?.moveToLogicalPosition(LogicalPosition(line, 0))
             }
         }
-
     }
 
     private fun deleteFile(fileName: String) {
@@ -351,40 +350,74 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         return fileName
     }
 
-    private fun openNewFileWithContent(fileName: String, content: String) {
-        val virtualFile = LightVirtualFile(fileName, content)
+    private fun openNewFile(fileName: String) {
+        val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
+        val file = File(sanitizedFileName)
+        if (!file.exists()) {
+            file.createNewFile()
+        }
+        val fileSystem = StandardFileSystems.local()
+        fileSystem.refresh(false)
         logger.warn("openNewFileWithContent: $fileName")
-        val fileDescriptor = OpenFileDescriptor(project, virtualFile)
+    }
+
+    private fun setContent(fileName: String, content: String) {
+        logger.warn("setContent: item.fileNameEdit = $fileName")
+        val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
+            LocalFileSystem.getInstance().refreshAndFindFileByPath(fileName)
+        }
+        if (file == null) {
+            logger.warn("setContent: item.fileNameEdit = $fileName is null")
+            return
+        }
+
         ApplicationManager.getApplication().invokeLater {
-            FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+            FileDocumentManager.getInstance().getDocument(file)?.setText(content)
         }
     }
 
     private fun handlePatchApply(payload: Events.Patch.ApplyPayload) {
         payload.items.forEach { item ->
             if (item.fileNameAdd != null) {
-                this.openNewFileWithContent(this.sanitizeFileNameForPosix(item.fileNameAdd), item.fileText)
+                val fileName = this.sanitizeFileNameForPosix(item.fileNameAdd)
+                logger.warn("handlePatchApply: item.fileNameAdd = $fileName")
+                this.openNewFile(fileName)
+                setContent(fileName, item.fileText)
             }
 
             if (item.fileNameDelete != null) {
-                this.deleteFile(this.sanitizeFileNameForPosix(item.fileNameDelete))
+                val fileName = this.sanitizeFileNameForPosix(item.fileNameDelete)
+                logger.warn("handlePatchApply: item.fileNameDelete = $fileName")
+                this.deleteFile(fileName)
             }
 
             if (item.fileNameEdit != null) {
                 val fileName = this.sanitizeFileNameForPosix(item.fileNameEdit)
                 logger.warn("handlePatchApply: item.fileNameEdit = $fileName")
-                val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-                    LocalFileSystem.getInstance().refreshAndFindFileByPath(fileName)
-                }
-                if (file == null) {
-                    logger.warn("handlePatchApply: item.fileNameEdit = $fileName is null")
-                    return@forEach
-                }
+                setContent(fileName, item.fileText)
+            }
+        }
+    }
 
-                ApplicationManager.getApplication().invokeLater {
-                    FileDocumentManager.getInstance().getDocument(file)?.setText(item.fileText)
-                }
+    private fun showPatch(fileName: String, fileText: String) {
+        logger.warn("showPatch: item.fileNameEdit = $fileName")
+        this.handleAnimationStop(fileName)
 
+        val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
+            LocalFileSystem.getInstance().refreshAndFindFileByPath(fileName)
+        }
+        if (file == null) {
+            logger.warn("showPatch: item.fileNameEdit = $fileName is null")
+            return
+        }
+
+        val fileDescriptor = OpenFileDescriptor(project, file)
+        ApplicationManager.getApplication().invokeLater {
+            val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
+            editor?.selectionModel?.setSelection(0, editor.document.textLength)
+            if (editor != null) {
+                ModeProvider.getOrCreateModeProvider(editor).getDiffMode()
+                    .actionPerformed(editor, fileText)
             }
         }
     }
@@ -392,34 +425,20 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handlePatchShow(payload: Events.Patch.ShowPayload) {
         payload.results.forEach { result ->
             if (result.fileNameAdd != null) {
-                this.openNewFileWithContent(this.sanitizeFileNameForPosix(result.fileNameAdd), result.fileText)
+                val sanitizedFileNameEdit = this.sanitizeFileNameForPosix(result.fileNameAdd)
+                logger.warn("handlePatchShow: item.fileNameAdd = $sanitizedFileNameEdit")
+                this.openNewFile(sanitizedFileNameEdit)
+                showPatch(sanitizedFileNameEdit, result.fileText)
             }
             if (result.fileNameDelete != null) {
+                logger.warn("handlePatchShow: item.fileNameDelete = ${this.sanitizeFileNameForPosix(result.fileNameDelete)}")
                 this.deleteFile(this.sanitizeFileNameForPosix(result.fileNameDelete))
             }
 
             if (result.fileNameEdit != null) {
                 val sanitizedFileNameEdit = this.sanitizeFileNameForPosix(result.fileNameEdit)
                 logger.warn("handlePatchShow: item.fileNameEdit = $sanitizedFileNameEdit")
-                this.handleAnimationStop(sanitizedFileNameEdit)
-
-                val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-                    LocalFileSystem.getInstance().refreshAndFindFileByPath(sanitizedFileNameEdit)
-                }
-                if (file == null) {
-                    logger.warn("handlePatchShow: item.fileNameEdit = $sanitizedFileNameEdit is null")
-                    return@forEach
-                }
-
-                val fileDescriptor = OpenFileDescriptor(project, file)
-                ApplicationManager.getApplication().invokeLater {
-                    val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
-                    editor?.selectionModel?.setSelection(0, editor.document.textLength)
-                    if (editor != null) {
-                        ModeProvider.getOrCreateModeProvider(editor).getDiffMode()
-                            .actionPerformed(editor, result.fileText)
-                    }
-                }
+                showPatch(sanitizedFileNameEdit, result.fileText)
             }
         }
     }

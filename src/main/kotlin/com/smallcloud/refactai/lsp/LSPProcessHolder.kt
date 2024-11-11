@@ -22,10 +22,13 @@ import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitError
 import org.apache.hc.core5.concurrent.ComplexFuture
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 import java.net.URI
-import java.nio.file.Files
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
+import java.util.*
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -45,8 +48,7 @@ interface LSPProcessHolderChangedNotifier {
 
     companion object {
         val TOPIC = Topic.create(
-            "Connection Changed Notifier",
-            LSPProcessHolderChangedNotifier::class.java
+            "Connection Changed Notifier", LSPProcessHolderChangedNotifier::class.java
         )
     }
 }
@@ -67,38 +69,36 @@ class LSPProcessHolder(val project: Project) : Disposable {
         "SMCLSHealthCheckerScheduler", 1
     )
 
+    private val exitThread: Thread = Thread {
+        terminate()
+    }
+
     var isWorking: Boolean
         get() = isWorking_
         set(newValue) {
             if (isWorking_ == newValue) return
             if (!project.isDisposed) {
-                project
-                    .messageBus
-                    .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
-                    .lspIsActive(newValue)
+                project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).lspIsActive(newValue)
             }
             isWorking_ = newValue
         }
 
     init {
         initialize()
-        messageBus
-            .connect(this)
-            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun apiKeyChanged(newApiKey: String?) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+        messageBus.connect(this).subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
+            override fun apiKeyChanged(newApiKey: String?) {
+                AppExecutorUtil.getAppScheduledExecutorService().submit {
+                    settingsChanged()
                 }
+            }
 
-                override fun planStatusChanged(newPlan: String?) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+            override fun planStatusChanged(newPlan: String?) {
+                AppExecutorUtil.getAppScheduledExecutorService().submit {
+                    settingsChanged()
                 }
-            })
-        messageBus
-            .connect(this)
+            }
+        })
+        messageBus.connect(this)
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                 override fun userInferenceUriChanged(newUrl: String?) {
                     AppExecutorUtil.getAppScheduledExecutorService().submit {
@@ -149,6 +149,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
                 }
             })
 
+        Runtime.getRuntime().addShutdownHook(exitThread)
         settingsChanged()
 
         healthCheckerScheduler.scheduleWithFixedDelay({
@@ -159,7 +160,6 @@ class LSPProcessHolder(val project: Project) : Disposable {
             }
         }, 1, 1, TimeUnit.SECONDS)
     }
-
 
     private fun settingsChanged() {
         synchronized(this) {
@@ -178,15 +178,11 @@ class LSPProcessHolder(val project: Project) : Disposable {
         set(newValue) {
             if (newValue == field) return
             field = newValue
-            project
-                .messageBus
-                .syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)
-                .capabilitiesChanged(field)
+            project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).capabilitiesChanged(field)
         }
 
     private fun startProcess() {
-        val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else
-            InferenceGlobalContext.inferenceUri
+        val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
         val newConfig = LSPConfig(
             address = address,
             apiKey = AccountManager.apiKey,
@@ -214,8 +210,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             try {
                 newConfig.port = (32000..32199).random()
                 logger.warn("LSP start_process " + BIN_PATH + " " + newConfig.toArgs())
-                process = GeneralCommandLine(listOf(BIN_PATH) + newConfig.toArgs())
-                    .withRedirectErrorStream(true)
+                process = GeneralCommandLine(listOf(BIN_PATH) + newConfig.toArgs()).withRedirectErrorStream(true)
                     .createProcess()
                 process!!.waitFor(5, TimeUnit.SECONDS)
                 lastConfig = newConfig
@@ -238,8 +233,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         }
         process!!.onExit().thenAcceptAsync { process1 ->
             if (process1.exitValue() != 0) {
-                logger.warn("LSP bad_things_happened " +
-                    process1.inputStream.bufferedReader().use { it.readText() })
+                logger.warn("LSP bad_things_happened " + process1.inputStream.bufferedReader().use { it.readText() })
             }
         }
         attempt = 0
@@ -264,18 +258,15 @@ class LSPProcessHolder(val project: Project) : Disposable {
     fun fetchCustomization(): JsonObject? {
         if (!isWorking) return getCustomizationDirectly()
 
-        val config = InferenceGlobalContext.connection.get(url.resolve("/v1/customization"),
-            dataReceiveEnded={
-                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-                InferenceGlobalContext.lastErrorMsg = null
-            },
-            errorDataReceived = {},
-            failedDataReceiveEnded = {
-                InferenceGlobalContext.status = ConnectionStatus.ERROR
-                if (it != null) {
-                    InferenceGlobalContext.lastErrorMsg = it.message
-                }
-            }).join().get()
+        val config = InferenceGlobalContext.connection.get(url.resolve("/v1/customization"), dataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.lastErrorMsg = null
+        }, errorDataReceived = {}, failedDataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.ERROR
+            if (it != null) {
+                InferenceGlobalContext.lastErrorMsg = it.message
+            }
+        }).join().get()
         return Gson().fromJson(config as String, JsonObject::class.java)
     }
 
@@ -307,22 +298,20 @@ class LSPProcessHolder(val project: Project) : Disposable {
         loggerScheduler.shutdown()
         schedulerCaps.shutdown()
         healthCheckerScheduler.shutdown()
+        Runtime.getRuntime().removeShutdownHook(exitThread)
     }
 
     private fun getBuildInfo(): String {
         var res = ""
-        InferenceGlobalContext.connection.get(url.resolve("/build_info"),
-            dataReceiveEnded={
-                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-                InferenceGlobalContext.lastErrorMsg = null
-            },
-            errorDataReceived = {},
-            failedDataReceiveEnded = {
-                InferenceGlobalContext.status = ConnectionStatus.ERROR
-                if (it != null) {
-                    InferenceGlobalContext.lastErrorMsg = it.message
-                }
-            }).also {
+        InferenceGlobalContext.connection.get(url.resolve("/build_info"), dataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.lastErrorMsg = null
+        }, errorDataReceived = {}, failedDataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.ERROR
+            if (it != null) {
+                InferenceGlobalContext.lastErrorMsg = it.message
+            }
+        }).also {
             try {
                 res = it.get().get() as String
                 logger.warn("build_info request finished")
@@ -342,18 +331,14 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
     fun getCaps(): LSPCapabilities {
         var res = LSPCapabilities()
-        InferenceGlobalContext.connection.get(url.resolve("/v1/caps"),
-            dataReceiveEnded={
-                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-                InferenceGlobalContext.lastErrorMsg = null
-            },
-            errorDataReceived = {},
-            failedDataReceiveEnded = {
-                if (it != null) {
-                    InferenceGlobalContext.lastErrorMsg = it.message
-                }
+        InferenceGlobalContext.connection.get(url.resolve("/v1/caps"), dataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.lastErrorMsg = null
+        }, errorDataReceived = {}, failedDataReceiveEnded = {
+            if (it != null) {
+                InferenceGlobalContext.lastErrorMsg = it.message
             }
-        ).also {
+        }).also {
             val requestFuture: ComplexFuture<*>?
             try {
                 requestFuture = it.get() as ComplexFuture
@@ -370,10 +355,9 @@ class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     fun getRagStatus(): RagStatus? {
-        InferenceGlobalContext.connection.get(
-            url.resolve("/v1/rag-status"),
+        InferenceGlobalContext.connection.get(url.resolve("/v1/rag-status"),
             requestProperties = mapOf("redirect" to "follow", "cache" to "no-cache", "referrer" to "no-referrer"),
-            dataReceiveEnded={
+            dataReceiveEnded = {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = null
             },
@@ -411,11 +395,8 @@ class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     companion object {
-        val BIN_PATH = Path(
-            getTempDirectory(),
-            ApplicationInfo.getInstance().build.toString().replace(Regex("[^A-Za-z0-9 ]"), "_") +
-                "_refact_lsp${getExeSuffix()}"
-        ).toString()
+        var BIN_PATH: String? = null
+        private var TMP_BIN_PATH: String? = null
 
         @JvmStatic
         fun getInstance(project: Project): LSPProcessHolder? = project.service()
@@ -424,42 +405,84 @@ class LSPProcessHolder(val project: Project) : Disposable {
         private val initialized = AtomicBoolean(false)
         private val logger = Logger.getInstance("LSPProcessHolder")
 
+        private fun generateMD5HexAndWriteInTmpFile(input: InputStream, tmpFileName: File): String {
+            val digest = MessageDigest.getInstance("MD5")
+            val buffer = ByteArray(1024)
+            var bytesRead: Int
+            val fileOut = FileOutputStream(tmpFileName)
+            while (input.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+                fileOut.write(buffer, 0, bytesRead)
+            }
+            fileOut.flush()
+            fileOut.close()
+            input.close()
+            return digest.digest().joinToString("") { String.format("%02x", it) }
+        }
+
         // only one time
         fun initialize() {
-            val shouldInitialize = !initialized.getAndSet(true)
-            if (!shouldInitialize) return
+            // should all wait until binary file is initialized
+            synchronized(this) {
+                val shouldInitialize = !initialized.getAndSet(true)
+                if (!shouldInitialize) return
 
-            Companion::class.java.getResourceAsStream(
-                "/bin/${binPrefix}/refact-lsp${getExeSuffix()}"
-            ).use { input ->
-                if (input == null) {
-                    emitError("LSP server is not found for host operating system, please contact support")
-                } else {
-                    for (i in 0..4) {
-                        try {
-                            val path = Paths.get(BIN_PATH)
-                            path.parent.toFile().mkdirs()
-                            Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
-                            setExecutable(path.toFile())
-                            break
-                        } catch (e: Exception) {
-                            logger.warn("LSP bad_things_happened: can not save binary $BIN_PATH")
-                            logger.warn("LSP bad_things_happened: error message - ${e.message}")
+                Companion::class.java.getResourceAsStream(
+                    "/bin/${binPrefix}/refact-lsp${getExeSuffix()}"
+                ).use { input ->
+                    if (input == null) {
+                        emitError("LSP server is not found for host operating system, please contact support")
+                    } else {
+                        val tmpFileName =
+                            Path(getTempDirectory(), "${UUID.randomUUID().toString()}${getExeSuffix()}").toFile()
+                        TMP_BIN_PATH = tmpFileName.toString()
+                        val hash = generateMD5HexAndWriteInTmpFile(input, tmpFileName)
+                        BIN_PATH = Path(
+                            getTempDirectory(),
+                            ApplicationInfo.getInstance().build.toString()
+                                .replace(Regex("[^A-Za-z0-9 ]"), "_") + "_refact_lsp_${hash}${getExeSuffix()}"
+                        ).toString()
+                        var shouldUseTmp = false
+                        for (i in 0..4) {
+                            try {
+                                val path = Paths.get(BIN_PATH!!)
+                                path.parent.toFile().mkdirs()
+                                if (tmpFileName.renameTo(path.toFile())) {
+                                    setExecutable(path.toFile())
+                                }
+                                shouldUseTmp = false
+                                break
+                            } catch (e: Exception) {
+                                logger.warn("LSP bad_things_happened: can not save binary $BIN_PATH")
+                                logger.warn("LSP bad_things_happened: error message - ${e.message}")
+                                shouldUseTmp = true
+                            }
+                        }
+                        if (shouldUseTmp) {
+                            setExecutable(tmpFileName)
+                            BIN_PATH = TMP_BIN_PATH
+                        } else {
+                            if (tmpFileName.exists()) {
+                                tmpFileName.deleteOnExit()
+                            }
                         }
                     }
                 }
             }
         }
 
+        // run after close application
+        fun cleanup() {
+
+        }
+
         fun getCustomizationDirectly(): JsonObject? {
-            val process = GeneralCommandLine(listOf(BIN_PATH, "--print-customization"))
-                .withRedirectErrorStream(true)
+            val process = GeneralCommandLine(listOf(BIN_PATH, "--print-customization")).withRedirectErrorStream(true)
                 .createProcess()
             val isExit = process.waitFor(3, TimeUnit.SECONDS)
             if (isExit) {
                 if (process.exitValue() != 0) {
-                    logger.warn("LSP bad_things_happened " +
-                        process.inputStream.bufferedReader().use { it.readText() })
+                    logger.warn("LSP bad_things_happened " + process.inputStream.bufferedReader().use { it.readText() })
                     return null
                 }
             } else {
@@ -471,7 +494,8 @@ class LSPProcessHolder(val project: Project) : Disposable {
             return try {
                 Gson().fromJson(customizationStr, JsonObject::class.java)
             } catch (e: Exception) {
-                logger.warn("LSP bad_things_happened " + e.message)
+                logger.warn("LSP can not parse json string $customizationStr")
+                logger.warn("LSP can not parse json string error = ${e.message}")
                 null
             }
         }

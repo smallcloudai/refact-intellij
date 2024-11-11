@@ -422,49 +422,46 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
         // only one time
         fun initialize() {
-            // should all wait until binary file is initialized
-            synchronized(this) {
-                val shouldInitialize = !initialized.getAndSet(true)
-                if (!shouldInitialize) return
+            val shouldInitialize = !initialized.getAndSet(true)
+            if (!shouldInitialize) return
 
-                Companion::class.java.getResourceAsStream(
-                    "/bin/${binPrefix}/refact-lsp${getExeSuffix()}"
-                ).use { input ->
-                    if (input == null) {
-                        emitError("LSP server is not found for host operating system, please contact support")
-                    } else {
-                        val tmpFileName =
-                            Path(getTempDirectory(), "${UUID.randomUUID().toString()}${getExeSuffix()}").toFile()
-                        TMP_BIN_PATH = tmpFileName.toString()
-                        val hash = generateMD5HexAndWriteInTmpFile(input, tmpFileName)
-                        BIN_PATH = Path(
-                            getTempDirectory(),
-                            ApplicationInfo.getInstance().build.toString()
-                                .replace(Regex("[^A-Za-z0-9 ]"), "_") + "_refact_lsp_${hash}${getExeSuffix()}"
-                        ).toString()
-                        var shouldUseTmp = false
-                        for (i in 0..4) {
-                            try {
-                                val path = Paths.get(BIN_PATH!!)
-                                path.parent.toFile().mkdirs()
-                                if (tmpFileName.renameTo(path.toFile())) {
-                                    setExecutable(path.toFile())
-                                }
-                                shouldUseTmp = false
-                                break
-                            } catch (e: Exception) {
-                                logger.warn("LSP bad_things_happened: can not save binary $BIN_PATH")
-                                logger.warn("LSP bad_things_happened: error message - ${e.message}")
-                                shouldUseTmp = true
+            Companion::class.java.getResourceAsStream(
+                "/bin/${binPrefix}/refact-lsp${getExeSuffix()}"
+            ).use { input ->
+                if (input == null) {
+                    emitError("LSP server is not found for host operating system, please contact support")
+                } else {
+                    val tmpFileName =
+                        Path(getTempDirectory(), "${UUID.randomUUID().toString()}${getExeSuffix()}").toFile()
+                    TMP_BIN_PATH = tmpFileName.toString()
+                    val hash = generateMD5HexAndWriteInTmpFile(input, tmpFileName)
+                    BIN_PATH = Path(
+                        getTempDirectory(),
+                        ApplicationInfo.getInstance().build.toString()
+                            .replace(Regex("[^A-Za-z0-9 ]"), "_") + "_refact_lsp_${hash}${getExeSuffix()}"
+                    ).toString()
+                    var shouldUseTmp = false
+                    for (i in 0..4) {
+                        try {
+                            val path = Paths.get(BIN_PATH!!)
+                            path.parent.toFile().mkdirs()
+                            if (tmpFileName.renameTo(path.toFile())) {
+                                setExecutable(path.toFile())
                             }
+                            shouldUseTmp = false
+                            break
+                        } catch (e: Exception) {
+                            logger.warn("LSP bad_things_happened: can not save binary $BIN_PATH")
+                            logger.warn("LSP bad_things_happened: error message - ${e.message}")
+                            shouldUseTmp = true
                         }
-                        if (shouldUseTmp) {
-                            setExecutable(tmpFileName)
-                            BIN_PATH = TMP_BIN_PATH
-                        } else {
-                            if (tmpFileName.exists()) {
-                                tmpFileName.deleteOnExit()
-                            }
+                    }
+                    if (shouldUseTmp) {
+                        setExecutable(tmpFileName)
+                        BIN_PATH = TMP_BIN_PATH
+                    } else {
+                        if (tmpFileName.exists()) {
+                            tmpFileName.deleteOnExit()
                         }
                     }
                 }

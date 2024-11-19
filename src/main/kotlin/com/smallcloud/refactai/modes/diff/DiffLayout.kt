@@ -1,6 +1,8 @@
 package com.smallcloud.refactai.modes.diff
 
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.Disposer
@@ -51,7 +53,9 @@ class DiffLayout(
 
     fun applyPreview() {
         try {
-            applyPreviewInternal()
+            WriteCommandAction.runWriteCommandAction(null) {
+                applyPreviewInternal()
+            }
         } catch (e: Throwable) {
             Logger.getInstance(javaClass).warn("Failed in the processes of accepting completion", e)
         } finally {

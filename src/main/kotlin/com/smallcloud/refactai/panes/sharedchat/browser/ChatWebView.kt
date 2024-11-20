@@ -14,7 +14,7 @@ import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import javax.swing.JComponent
-
+import com.intellij.openapi.util.SystemInfo
 
 fun getActionKeybinding(actionId: String): String {
     // Get the KeymapManager instance
@@ -66,7 +66,14 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             // change this to enable dev tools
             // setting to false prevents "Accept diff with tab"
             // setting to true causes slow scroll issues :/
-            .setOffScreenRendering(true)
+            .setOffScreenRendering(
+                when {
+                    SystemInfo.isWindows -> false
+                    SystemInfo.isMac -> false
+                    SystemInfo.isLinux -> true
+                    else -> false
+                }
+            )
             .build()
 
         browser.jbCefClient.setProperty(

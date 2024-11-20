@@ -3,6 +3,8 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.processTools.getResultStdoutStr
 import com.intellij.ide.BrowserUtil
+import com.intellij.ide.ui.LafManager
+import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.invokeLater
@@ -43,11 +45,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.annotations.NotNull
-import java.beans.PropertyChangeListener
 import java.io.File
 import java.util.concurrent.Future
 import javax.swing.JPanel
-import javax.swing.UIManager
 
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
@@ -63,6 +63,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private var workerFuture: Future<*>? = null
     private val workerScheduler =
         AppExecutorUtil.createBoundedScheduledExecutorService("SMCSharedChatPaneWorkerScheduler", 1)
+
+    private val uiChangeListener = LafManagerListener { _ ->
+        this.setLookAndFeel()
+    }
 
     init {
         workerFuture = workerScheduler.scheduleWithFixedDelay({
@@ -224,7 +228,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         val ef = EditorFactory.getInstance()
         ef.eventMulticaster.addSelectionListener(selectionListener, this)
 
-        UIManager.addPropertyChangeListener(uiChangeListener)
+        ApplicationManager.getApplication().messageBus.connect(this).subscribe(LafManagerListener.TOPIC, uiChangeListener)
 
         // ast and vecdb settings change
         project.messageBus.connect()
@@ -276,12 +280,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun setLookAndFeel() {
         this.browser.setStyle()
         this.sendUserConfig()
-    }
-
-    private val uiChangeListener = PropertyChangeListener { event ->
-        if (event.propertyName == "lookAndFeel") {
-            this.setLookAndFeel()
-        }
     }
 
     private fun handleOpenSettings() {
@@ -527,7 +525,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     override fun dispose() {
-        UIManager.removePropertyChangeListener(uiChangeListener)
         webView.dispose()
         scheduler.shutdownNow()
         workerFuture?.cancel(true)

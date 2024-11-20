@@ -59,15 +59,15 @@ fun streamedInferenceFetch(
         uri, body, headers,
         stat = request.stat,
         dataReceiveEnded = dataReceiveEnded,
-        dataReceived = { body: String, reqId: String ->
-            val rawJson = gson.fromJson(body, JsonObject::class.java)
+        dataReceived = { responseBody: String, reqId: String ->
+            val rawJson = gson.fromJson(responseBody, JsonObject::class.java)
             if (rawJson.has("metering_balance")) {
                 AccountManager.instance.meteringBalance = rawJson.get("metering_balance").asInt
             }
 
-            FimCache.maybeSendFimData(body)
+            FimCache.maybeSendFimData(responseBody)
 
-            val json = gson.fromJson(body, SMCStreamingPeace::class.java)
+            val json = gson.fromJson(responseBody, SMCStreamingPeace::class.java)
             InferenceGlobalContext.lastAutoModel = json.model
             json.requestId = reqId
             UsageStats?.addStatistic(true, request.stat, request.uri.toString(), "")

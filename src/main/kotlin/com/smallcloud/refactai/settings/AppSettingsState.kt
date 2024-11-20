@@ -170,8 +170,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
 }
 
 fun settingsStartup() {
-    val settings = AppSettingsState.instance
-    PluginState.startup(settings)
+    AppSettingsState.instance
     AccountManager.startup()
     PrivacyState.instance
 }

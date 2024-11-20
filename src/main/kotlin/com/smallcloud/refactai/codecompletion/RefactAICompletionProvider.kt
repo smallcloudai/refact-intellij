@@ -183,14 +183,14 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
         if (!state.isValid()) return null
         val stat = UsageStatistic(scope = "completion", extension = getExtension(fileName))
         val baseUrl = getInstance(editor.project!!)?.url!!
-        val request = RequestCreator.create(
+        val httpRequest = RequestCreator.create(
             fileName, text, logicalPos.line, pos,
             stat,
             baseUrl = baseUrl,
             stream = false, model = InferenceGlobalContext.model,
             multiline = isMultiline, useAst = InferenceGlobalContext.astIsEnabled,
         ) ?: return null
-        return Context(request, state, force = force)
+        return Context(httpRequest, state, force = force)
     }
 
     override suspend fun getSuggestionDebounced(request: InlineCompletionRequest): InlineCompletionSingleSuggestion =
@@ -230,7 +230,7 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
                     val elems = if (completion.multiline) {
                         getMultilineElements(completion, context.editorState)
                     } else {
-                        getSingleLineElements(completion, context.editorState)
+                        getSingleLineElements(completion)
                     }
 
                     elems.forEach {
@@ -244,8 +244,7 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
         })
 
     private fun getSingleLineElements(
-        completionData: Completion,
-        editorState: EditorTextState
+        completionData: Completion
     ): List<InlineCompletionElement> {
         val res = mutableListOf<InlineCompletionElement>()
 

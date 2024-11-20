@@ -242,16 +242,16 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return LOGO_12x12
         }
 
-        var lastRagStatus: RagStatus? = null
+        var lastRagStatusMb: RagStatus?
         synchronized(this) {
-            lastRagStatus = statusbarState.lastRagStatus?.copy()
+            lastRagStatusMb = statusbarState.lastRagStatus?.copy()
         }
         if (statusbarState.astLimitHit || statusbarState.vecdbLimitHit) {
             return AllIcons.Debugger.ThreadStates.Socket
         }
 
-        if (lastRagStatus != null) {
-            val lastRagStatus = lastRagStatus!!
+        if (lastRagStatusMb != null) {
+            val lastRagStatus = lastRagStatusMb!!
             if ((lastRagStatus.vecdb != null && !listOf("done", "idle").contains(lastRagStatus.vecdb.state))
                 || lastRagStatus.ast != null && !listOf("done", "idle").contains(lastRagStatus.ast.state)
             ) {
@@ -265,7 +265,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             ConnectionStatus.CONNECTED -> if (isPrivacyDisabled()) HAND_12x12 else LOGO_RED_16x16
             ConnectionStatus.PENDING -> spinIcon
         }
-        return LOGO_RED_16x16
     }
 
     private fun isPrivacyDisabled(): Boolean {
@@ -312,13 +311,13 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             msg += "<br><br>${RefactAIBundle.message("statusBar.lastUsedModel", InferenceGlobalContext.lastAutoModel!!)}"
         }
 
-        var lastRagStatus: RagStatus? = null
+        var lastRagStatusMb: RagStatus?
         synchronized(this) {
-            lastRagStatus = statusbarState.lastRagStatus?.copy()
+            lastRagStatusMb = statusbarState.lastRagStatus?.copy()
         }
         var ragStatusMsg = ""
-        if (lastRagStatus != null) {
-            val lastRagStatus = lastRagStatus!!
+        if (lastRagStatusMb != null) {
+            val lastRagStatus = lastRagStatusMb!!
             ragStatusMsg += if (lastRagStatus.ast != null) {
                 "${RefactAIBundle.message("statusBar.astStatus", lastRagStatus.ast.astIndexFilesTotal, 
                     lastRagStatus.ast.astIndexSymbolsTotal)}<br><br>"
@@ -368,9 +367,9 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private fun getText(): String {
-        var lastRagStatus: RagStatus? = null
+        var lastRagStatusMb: RagStatus?
         synchronized(this) {
-            lastRagStatus = statusbarState.lastRagStatus?.copy()
+            lastRagStatusMb = statusbarState.lastRagStatus?.copy()
         }
 
         if (statusbarState.astLimitHit) {
@@ -380,8 +379,8 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             return RefactAIBundle.message("statusBar.tooltipIfVecdbLimitHit")
         }
 
-        if (lastRagStatus != null) {
-            val lastRagStatus = lastRagStatus!!
+        if (lastRagStatusMb != null) {
+            val lastRagStatus = lastRagStatusMb!!
             if (lastRagStatus.vecdb != null && !listOf("done", "idle").contains(lastRagStatus.vecdb.state)) {
                 val vecdbParsedQty = lastRagStatus.vecdb.filesTotal - lastRagStatus.vecdb.filesUnprocessed
                 return RefactAIBundle.message("statusBar.vecDBProgress", vecdbParsedQty, lastRagStatus.vecdb.filesTotal)

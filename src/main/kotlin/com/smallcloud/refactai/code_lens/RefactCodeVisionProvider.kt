@@ -101,7 +101,7 @@ class RefactCodeVisionProvider(
             Logger.getInstance(RefactCodeVisionProvider::class.java)
                 .warn("computeCodeVision $commandKey ${codeLens.size}")
             for (codeLen in codeLens) {
-                result.add(codeLen.range to ClickableTextCodeVisionEntry(codeLen.label, id, { event, editor ->
+                result.add(codeLen.range to ClickableTextCodeVisionEntry(codeLen.label, id, { _, _ ->
                     codeLen.action.actionPerformed()
                 }, Resources.Icons.LOGO_12x12))
             }

@@ -55,7 +55,5 @@ class PluginState : Disposable {
         @JvmStatic
         val instance: PluginState
             get() = ApplicationManager.getApplication().getService(PluginState::class.java)
-        fun startup(settings: AppSettingsState) {
-        }
     }
 }

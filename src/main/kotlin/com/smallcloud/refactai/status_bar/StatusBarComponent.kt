@@ -16,7 +16,7 @@ class StatusBarComponent: TextPanel {
         private val GAP = JBUIScale.scale(3)
     }
 
-    open var icon: Icon? = null
+    var icon: Icon? = null
     var bottomLineColor: Color = UIUtil.getPanelBackground()
 
     constructor() : super(null)
@@ -26,7 +26,6 @@ class StatusBarComponent: TextPanel {
         val panelWidth = width
         val panelHeight = height
         g as Graphics2D
-        val fontMetrics = g.getFontMetrics()
         setupAntialiasing(g)
         g.setColor(bottomLineColor)
         g.fillRect(0, panelHeight - GAP, panelWidth, GAP)

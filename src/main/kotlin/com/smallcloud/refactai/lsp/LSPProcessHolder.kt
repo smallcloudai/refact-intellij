@@ -483,6 +483,9 @@ class LSPProcessHolder(val project: Project) : Disposable {
         }
 
         fun getCustomizationDirectly(): JsonObject? {
+            if (BIN_PATH == null) {
+                return null
+            }
             val process = GeneralCommandLine(listOf(BIN_PATH, "--print-customization")).withRedirectErrorStream(true)
                 .createProcess()
             val isExit = process.waitFor(3, TimeUnit.SECONDS)

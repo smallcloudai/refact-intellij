@@ -2,20 +2,22 @@ package com.smallcloud.refactai.panes.sharedchat.browser
 
 import com.google.gson.Gson
 import com.intellij.ide.BrowserUtil
-import com.intellij.ide.startup.importSettings.data.ThemeService
 import com.intellij.ide.ui.LafManager
-import com.intellij.ide.ui.UITheme
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.util.SystemInfo
-import com.intellij.ui.jcef.*
-import com.intellij.util.ui.StartupUiUtil.isDarkTheme
+import com.intellij.ui.jcef.JBCefBrowser
+import com.intellij.ui.jcef.JBCefBrowserBase
+import com.intellij.ui.jcef.JBCefJSQuery
+import com.intellij.ui.jcef.executeJavaScript
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
@@ -57,10 +59,12 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         val red = backgroundColour.red
         val green = backgroundColour.green
         val blue = backgroundColour.blue
-        this.webView.executeJavaScriptAsync("""document.body.style.setProperty("background-color", "rgb($red, $green, $blue");""")
-        this.webView.executeJavaScriptAsync("""document.body.class = "$bodyClass";""")
-        this.webView.executeJavaScriptAsync("""document.documentElement.className = "$mode";""")
-
+        val webView = this.webView
+        CoroutineScope(Dispatchers.Default).launch {
+            webView.executeJavaScript("""document.body.style.setProperty("background-color", "rgb($red, $green, $blue");""")
+            webView.executeJavaScript("""document.body.class = "$bodyClass";""")
+            webView.executeJavaScript("""document.documentElement.className = "$mode";""")
+        }
     }
 
     val webView by lazy {

@@ -13,6 +13,9 @@ class DiffLayout(
     val content: String,
 ) : Disposable {
     private var inlayer: Inlayer = Inlayer(editor, content)
+    init {
+        Disposer.register(this, inlayer)
+    }
     private var blockEvents: Boolean = false
     private var lastPatch = Patch<String>()
     var rendered: Boolean = false

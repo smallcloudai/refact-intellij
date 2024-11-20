@@ -3,6 +3,7 @@ package com.smallcloud.refactai
 import com.intellij.ide.plugins.PluginInstaller
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
@@ -29,7 +30,7 @@ class Initializer : ProjectActivity, Disposable {
             initialize()
             if (AppSettingsState.instance.isFirstStart) {
                 AppSettingsState.instance.isFirstStart = false
-                ChatPaneInvokeAction().actionPerformed()
+                invokeLater { ChatPaneInvokeAction().actionPerformed() }
             }
             settingsStartup()
             notificationStartup()

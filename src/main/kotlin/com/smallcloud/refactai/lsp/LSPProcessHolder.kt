@@ -263,17 +263,21 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
     fun fetchCustomization(): JsonObject? {
         if (!isWorking) return getCustomizationDirectly()
-
-        val config = InferenceGlobalContext.connection.get(url.resolve("/v1/customization"), dataReceiveEnded = {
-            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-            InferenceGlobalContext.lastErrorMsg = null
-        }, errorDataReceived = {}, failedDataReceiveEnded = {
-            InferenceGlobalContext.status = ConnectionStatus.ERROR
-            if (it != null) {
-                InferenceGlobalContext.lastErrorMsg = it.message
-            }
-        }).join().get()
-        return Gson().fromJson(config as String, JsonObject::class.java)
+        try {
+            val config = InferenceGlobalContext.connection.get(url.resolve("/v1/customization"), dataReceiveEnded = {
+                InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+                InferenceGlobalContext.lastErrorMsg = null
+            }, errorDataReceived = {}, failedDataReceiveEnded = {
+                InferenceGlobalContext.status = ConnectionStatus.ERROR
+                if (it != null) {
+                    InferenceGlobalContext.lastErrorMsg = it.message
+                }
+            }).join().get()
+            return Gson().fromJson(config as String, JsonObject::class.java)
+        } catch (e: Exception) {
+            logger.warn("LSP fetchCustomization error " + e.message)
+            return null
+        }
     }
 
     private fun safeTerminate() {

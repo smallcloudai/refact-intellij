@@ -80,11 +80,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 }
             )
             .build()
-
-        browser.jbCefClient.setProperty(
-            JBCefClient.Properties.JS_QUERY_POOL_SIZE,
-            jsPoolSize,
-        )
+        
         if (System.getenv("REFACT_DEBUG") != "1") {
             browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
         }

@@ -1,7 +1,6 @@
 package com.smallcloud.refactai.code_lens
 
 import com.intellij.codeInsight.codeVision.CodeVisionHost
-import com.intellij.codeInsight.codeVision.CodeVisionInitializer
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.components.service
@@ -21,7 +20,7 @@ class CodeLensInvalidatorService(project: Project): Disposable {
             override fun lspIsActive(isActive: Boolean) {
                 invokeLater {
                     logger<CodeLensInvalidatorService>().warn("Invalidating code lens")
-                    project.service<CodeVisionInitializer>().getCodeVisionHost()
+                    project.service<CodeVisionHost>()
                         .invalidateProvider(CodeVisionHost.LensInvalidateSignal(null, ids))
                 }
             }

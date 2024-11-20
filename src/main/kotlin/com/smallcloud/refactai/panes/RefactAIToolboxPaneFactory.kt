@@ -20,7 +20,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
         super.init(toolWindow)
     }
 
-    override fun isApplicable(project: Project): Boolean = isJcefCanStart()
+    override suspend fun isApplicableAsync(project: Project): Boolean = isJcefCanStart()
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()

@@ -2,11 +2,17 @@ package com.smallcloud.refactai.panes.sharedchat.browser
 
 import com.google.gson.Gson
 import com.intellij.ide.BrowserUtil
+import com.intellij.ide.startup.importSettings.data.ThemeService
+import com.intellij.ide.ui.LafManager
+import com.intellij.ide.ui.UITheme
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.ui.jcef.*
+import com.intellij.util.ui.StartupUiUtil.isDarkTheme
 import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
@@ -14,7 +20,6 @@ import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefLoadHandlerAdapter
 import javax.swing.JComponent
-import com.intellij.openapi.util.SystemInfo
 
 fun getActionKeybinding(actionId: String): String {
     // Get the KeymapManager instance
@@ -37,7 +42,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     fun setStyle() {
-        val isDarkMode = UIUtil.isUnderDarcula()
+        val isDarkMode = LafManager.getInstance().currentUIThemeLookAndFeel.isDark
         val mode = if (isDarkMode) {
             "dark"
         } else {

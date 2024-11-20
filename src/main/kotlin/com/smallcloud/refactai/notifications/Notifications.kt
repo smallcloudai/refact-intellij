@@ -109,15 +109,15 @@ fun emitRateUs() {
     val project = getLastUsedProject()
     val notification =
         NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
-            Resources.titleStr, RefactAIBundle.message("notifications.rateUs"), NotificationType.INFORMATION
-        ).setListener(object : Adapter() {
+            Resources.titleStr, RefactAIBundle.message("notifications.rateUs"), NotificationType.INFORMATION,
+        ).also { it.setListener(object : Adapter() {
             override fun hyperlinkActivated(notification: Notification, event: HyperlinkEvent) {
                 val url: URL = event.url
                 BrowserUtil.browse(url)
                 AppSettingsState.rateUsNotification = true
                 notification.expire()
             }
-        })
+        })}
     notification.icon = Resources.Icons.LOGO_RED_16x16
     notification.notify(project)
     lastRateUsNotification = notification

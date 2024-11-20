@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.intellij.ide.ui.LafManager
 import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -54,7 +55,7 @@ class Editor (val project: Project) {
         val hasAst = AppSettingsState.instance.astIsEnabled
         val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
         val features = Events.Config.Features(hasAst, hasVecdb)
-        val isDarkMode = UIUtil.isUnderDarcula()
+        val isDarkMode = LafManager.getInstance().currentUIThemeLookAndFeel.isDark
         val mode = if (isDarkMode) "dark" else "light"
         val themeProps = Events.Config.ThemeProps(mode)
         val apiKey = instance.apiKey

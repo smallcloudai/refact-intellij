@@ -208,6 +208,12 @@ class LSPProcessHolder(val project: Project) : Disposable {
         var attempt = 0
         while (attempt < 5) {
             try {
+                if (BIN_PATH == null) {
+                    attempt = 0 // wait for initialize()
+                    logger.warn("LSP start_process BIN_PATH is null; waiting...")
+                    Thread.sleep(1000)
+                    continue
+                }
                 newConfig.port = (32000..32199).random()
                 logger.warn("LSP start_process " + BIN_PATH + " " + newConfig.toArgs())
                 process = GeneralCommandLine(listOf(BIN_PATH) + newConfig.toArgs()).withRedirectErrorStream(true)
@@ -422,6 +428,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
         // only one time
         fun initialize() {
+            logger.warn("LSP initialize start")
             val shouldInitialize = !initialized.getAndSet(true)
             if (!shouldInitialize) return
 
@@ -466,6 +473,8 @@ class LSPProcessHolder(val project: Project) : Disposable {
                     }
                 }
             }
+            logger.warn("LSP initialize finished")
+            logger.warn("LSP initialize BIN_PATH=$BIN_PATH")
         }
 
         // run after close application

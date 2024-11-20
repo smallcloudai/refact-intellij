@@ -14,8 +14,6 @@ object RequestCreator {
         fileName: String, text: String,
         line: Int, column: Int,
         stat: UsageStatistic,
-        intent: String, functionName: String,
-        promptInfo: List<PromptInfo>,
         baseUrl: URI,
         model: String? = null,
         useAst: Boolean = false,

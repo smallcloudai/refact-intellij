@@ -110,13 +110,11 @@ integrated into a single package that follows your privacy settings.</p>
         <config.codeVisionGroupSettingProvider implementation="com.smallcloud.refactai.code_lens.RefactOpenProblemsSettingProvider"/>
         <config.codeVisionGroupSettingProvider implementation="com.smallcloud.refactai.code_lens.RefactOpenExplainSettingProvider"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.refactai.listeners.DocumentListener"/>
+        <editorFactoryDocumentListener implementation="com.smallcloud.refactai.codecompletion.RefactInlineCompletionDocumentListener"/>
         <editorFactoryDocumentListener implementation="com.smallcloud.refactai.listeners.LSPDocumentListener"/>
         <statusBarWidgetFactory id="Refact AI Status Bar"
                                 implementation="com.smallcloud.refactai.status_bar.SMCStatusBarWidgetFactory"/>
         <notificationGroup id="Refact AI Notification Group" displayType="BALLOON"/>
-        <completion.contributor language="any"
-                                implementationClass="com.smallcloud.refactai.modes.completion.PopupCompletionContributor"
-                                order="first"/>
 
         <applicationConfigurable parentId="tools"
                                  instance="com.smallcloud.refactai.settings.AppSettingsConfigurable"
@@ -126,10 +124,9 @@ integrated into a single package that follows your privacy settings.</p>
 
         <actionPromoter implementation="com.smallcloud.refactai.listeners.InlineActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.AcceptActionsPromoter"/>
-        <actionPromoter implementation="com.smallcloud.refactai.listeners.CancelActionsPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.listeners.ForceCompletionActionPromoter"/>
         <actionPromoter implementation="com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeActionPromoter"/>
-
+        <inline.completion.provider implementation="com.smallcloud.refactai.codecompletion.RefactAICompletionProvider" order="first"/>
         <toolWindow id="Refact" anchor="right"
                     canCloseContents="true"
                     factoryClass="com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory"/>

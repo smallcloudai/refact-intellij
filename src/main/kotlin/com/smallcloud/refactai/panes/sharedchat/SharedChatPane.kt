@@ -327,7 +327,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun deleteFile(fileName: String) {
         logger.warn("deleteFile: $fileName")
-        ApplicationManager.getApplication().runReadAction {
+        ApplicationManager.getApplication().invokeLater {
             LocalFileSystem.getInstance().findFileByPath(fileName)?.delete(this.project)
         }
     }
@@ -361,15 +361,13 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun setContent(fileName: String, content: String) {
         logger.warn("setContent: item.fileNameEdit = $fileName")
-        val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-            LocalFileSystem.getInstance().refreshAndFindFileByPath(fileName)
-        }
-        if (file == null) {
-            logger.warn("setContent: item.fileNameEdit = $fileName is null")
-            return
-        }
-
         ApplicationManager.getApplication().invokeLater {
+            val file = LocalFileSystem.getInstance().refreshAndFindFileByPath(fileName)
+            if (file == null) {
+                logger.warn("setContent: item.fileNameEdit = $fileName is null")
+                return@invokeLater
+            }
+
             FileDocumentManager.getInstance().getDocument(file)?.setText(content)
         }
     }
@@ -401,16 +399,14 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         logger.warn("showPatch: item.fileNameEdit = $fileName")
         this.handleAnimationStop(fileName)
 
-        val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-            LocalFileSystem.getInstance().refreshAndFindFileByPath(fileName)
-        }
-        if (file == null) {
-            logger.warn("showPatch: item.fileNameEdit = $fileName is null")
-            return
-        }
-
-        val fileDescriptor = OpenFileDescriptor(project, file)
         ApplicationManager.getApplication().invokeLater {
+            val file = LocalFileSystem.getInstance().refreshAndFindFileByPath(fileName)
+            if (file == null) {
+                logger.warn("showPatch: item.fileNameEdit = $fileName is null")
+                return@invokeLater
+            }
+
+            val fileDescriptor = OpenFileDescriptor(project, file)
             val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
             editor?.selectionModel?.setSelection(0, editor.document.textLength)
             if (editor != null) {

@@ -79,7 +79,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 when {
                     SystemInfo.isWindows -> false
                     SystemInfo.isMac -> false
-                    SystemInfo.isLinux -> true
+                    SystemInfo.isLinux -> false
                     else -> false
                 }
             )

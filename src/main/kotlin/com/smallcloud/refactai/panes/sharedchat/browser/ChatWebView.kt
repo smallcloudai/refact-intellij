@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.ui.LafManager
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
@@ -19,7 +20,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.cef.CefApp
+import org.cef.CefSettings
 import org.cef.browser.CefBrowser
+import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
 import javax.swing.JComponent
 
@@ -38,6 +41,7 @@ fun getActionKeybinding(actionId: String): String {
 
 class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromChat) -> Unit) : Disposable {
     private val jsPoolSize = "200"
+    private val logger = Logger.getInstance(ChatWebView::class.java)
 
     init {
         System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
@@ -84,10 +88,35 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 }
             )
             .build()
-        
+
         if (System.getenv("REFACT_DEBUG") != "1") {
             browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
         }
+
+        browser.jbCefClient.addDisplayHandler(object : CefDisplayHandlerAdapter() {
+            private fun logSeverityToString(severity: CefSettings.LogSeverity?): String {
+                return when (severity) {
+                    CefSettings.LogSeverity.LOGSEVERITY_DEFAULT -> "DEFAULT"
+                    CefSettings.LogSeverity.LOGSEVERITY_VERBOSE -> "VERBOSE"
+                    CefSettings.LogSeverity.LOGSEVERITY_INFO -> "INFO"
+                    CefSettings.LogSeverity.LOGSEVERITY_WARNING -> "WARNING"
+                    CefSettings.LogSeverity.LOGSEVERITY_ERROR -> "ERROR"
+                    CefSettings.LogSeverity.LOGSEVERITY_FATAL -> "FATAL"
+                    else -> "UNKNOWN"
+                }
+            }
+
+            override fun onConsoleMessage(
+                browser: CefBrowser?,
+                level: CefSettings.LogSeverity?,
+                message: String?,
+                source: String?,
+                line: Int
+            ): Boolean {
+                logger.warn("CONSOLE: ${logSeverityToString(level)} $message $source $line")
+                return super.onConsoleMessage(browser, level, message, source, line)
+            }
+        }, browser.cefBrowser)
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 
@@ -96,7 +125,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         val myJSQueryOpenInBrowserRedirectHyperlink = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
         myJSQueryOpenInBrowserRedirectHyperlink.addHandler { href ->
-            if (href.isNotEmpty() && !href.contains("#") && !href.equals("http://refactai/index.html") ) {
+            if (href.isNotEmpty() && !href.contains("#") && !href.equals("http://refactai/index.html")) {
                 BrowserUtil.browse(href)
             }
             null
@@ -152,7 +181,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         this.editor.getActiveFileInfo { file ->
             val fileJson = Gson().toJson(file)
             this.editor.getSelectedSnippet { snippet ->
-                val snippetJson = if(snippet != null) Gson().toJson(snippet) else "undefined";
+                val snippetJson = if (snippet != null) Gson().toJson(snippet) else "undefined";
                 val script = """
                     const config = ${configJson};
                     const active_file = ${fileJson};

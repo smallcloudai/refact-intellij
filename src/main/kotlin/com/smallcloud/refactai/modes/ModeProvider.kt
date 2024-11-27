@@ -58,6 +58,7 @@ class ModeProvider(
 
     fun isInCompletionMode(): Boolean =
         activeMode === modes[ModeType.Completion]
+    fun isDiffMode(): Boolean = activeMode == modes[ModeType.Diff]
     fun getCompletionMode(): Mode = modes[ModeType.Completion]!!
 
     fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {

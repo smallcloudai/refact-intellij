@@ -4,7 +4,10 @@ import com.google.gson.Gson
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.ui.LafManager
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
@@ -14,6 +17,7 @@ import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.ui.jcef.executeJavaScript
 import com.intellij.util.ui.UIUtil
+import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +27,8 @@ import org.cef.CefApp
 import org.cef.CefSettings
 import org.cef.browser.CefBrowser
 import org.cef.handler.CefDisplayHandlerAdapter
+import org.cef.handler.CefKeyboardHandler
+import org.cef.handler.CefKeyboardHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
 import javax.swing.JComponent
 
@@ -72,22 +78,43 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     val webView by lazy {
+        val isOSREnable = when {
+            SystemInfo.isWindows -> false
+            SystemInfo.isMac -> false
+            SystemInfo.isLinux -> true
+            else -> false
+        }
         val browser = JBCefBrowser
             .createBuilder()
             .setEnableOpenDevToolsMenuItem(true)
             .setUrl("http://refactai/index.html")
             // change this to enable dev tools
-            // setting to false prevents "Accept diff with tab"
+            // setting to false prevents "Accept diff with tab": fixed with onTabHandler
             // setting to true causes slow scroll issues :/
-            .setOffScreenRendering(
-                when {
-                    SystemInfo.isWindows -> false
-                    SystemInfo.isMac -> false
-                    SystemInfo.isLinux -> true
-                    else -> false
-                }
-            )
+            .setOffScreenRendering(isOSREnable)
             .build()
+
+
+        if (!isOSREnable) {
+            val onTabHandler: CefKeyboardHandler = object : CefKeyboardHandlerAdapter() {
+                override fun onKeyEvent(browser: CefBrowser?, event: CefKeyboardHandler.CefKeyEvent?): Boolean {
+                    val wasTabPressed = event?.type == CefKeyboardHandler.CefKeyEvent.EventType.KEYEVENT_KEYUP && event.modifiers == 0 && event.character == '\t';
+                    val currentEditor = FileEditorManager.getInstance(editor.project).selectedTextEditor
+                    val isInDiffMode = currentEditor != null && ModeProvider.getOrCreateModeProvider(currentEditor).isDiffMode()
+
+                    if(wasTabPressed && currentEditor != null && isInDiffMode) {
+                        ApplicationManager.getApplication().invokeLater {
+                            ModeProvider.getOrCreateModeProvider(currentEditor)
+                                .onTabPressed(currentEditor, null, DataContext.EMPTY_CONTEXT)
+                        }
+                        return false
+                    }
+                    return super.onKeyEvent(browser, event)
+                }
+            }
+
+            browser.jbCefClient.addKeyboardHandler(onTabHandler, browser.cefBrowser)
+        }
 
         if (System.getenv("REFACT_DEBUG") != "1") {
             browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)

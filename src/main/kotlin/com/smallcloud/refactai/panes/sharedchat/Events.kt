@@ -373,7 +373,7 @@ class Events {
     class Config {
         abstract class BaseFeatures()
 
-        data class Features(val ast: Boolean, val vecdb: Boolean) : BaseFeatures()
+        data class Features(val ast: Boolean, val vecdb: Boolean, val images: Boolean? = false) : BaseFeatures()
 
         data class ThemeProps(
             val mode: String,

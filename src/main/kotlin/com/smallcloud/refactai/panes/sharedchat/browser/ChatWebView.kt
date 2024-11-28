@@ -7,10 +7,13 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileChooser.FileChooser
+import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
@@ -26,11 +29,12 @@ import kotlinx.coroutines.launch
 import org.cef.CefApp
 import org.cef.CefSettings
 import org.cef.browser.CefBrowser
-import org.cef.handler.CefDisplayHandlerAdapter
-import org.cef.handler.CefKeyboardHandler
-import org.cef.handler.CefKeyboardHandlerAdapter
-import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.callback.CefFileDialogCallback
+import org.cef.handler.*
+import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JComponent
+
 
 fun getActionKeybinding(actionId: String): String {
     // Get the KeymapManager instance
@@ -77,6 +81,23 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         }
     }
 
+    fun showFileChooserDialog(project: Project?, title: String?, isMultiple: Boolean, filters: Vector<String>): String {
+        val filePath: AtomicReference<String> = AtomicReference("")
+        ApplicationManager.getApplication().invokeAndWait {
+            var fileChooserDescriptor =
+                FileChooserDescriptor(true, false, false, false, false, false)
+            fileChooserDescriptor.title = if (title.isNullOrEmpty() || title.isBlank()) "Choose File" else title
+            fileChooserDescriptor =
+                fileChooserDescriptor.withFileFilter { file -> filters.any { filter -> file.name.endsWith(filter) } }
+            val file = FileChooser.chooseFile(fileChooserDescriptor, project, null)
+            if (file != null) {
+                filePath.set(file.canonicalPath)
+            }
+        }
+        return filePath.get()
+    }
+
+
     val webView by lazy {
         val isOSREnable = when {
             SystemInfo.isWindows -> false
@@ -98,11 +119,13 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         if (!isOSREnable) {
             val onTabHandler: CefKeyboardHandler = object : CefKeyboardHandlerAdapter() {
                 override fun onKeyEvent(browser: CefBrowser?, event: CefKeyboardHandler.CefKeyEvent?): Boolean {
-                    val wasTabPressed = event?.type == CefKeyboardHandler.CefKeyEvent.EventType.KEYEVENT_KEYUP && event.modifiers == 0 && event.character == '\t';
+                    val wasTabPressed =
+                        event?.type == CefKeyboardHandler.CefKeyEvent.EventType.KEYEVENT_KEYUP && event.modifiers == 0 && event.character == '\t';
                     val currentEditor = FileEditorManager.getInstance(editor.project).selectedTextEditor
-                    val isInDiffMode = currentEditor != null && ModeProvider.getOrCreateModeProvider(currentEditor).isDiffMode()
+                    val isInDiffMode =
+                        currentEditor != null && ModeProvider.getOrCreateModeProvider(currentEditor).isDiffMode()
 
-                    if(wasTabPressed && currentEditor != null && isInDiffMode) {
+                    if (wasTabPressed && currentEditor != null && isInDiffMode) {
                         ApplicationManager.getApplication().invokeLater {
                             ModeProvider.getOrCreateModeProvider(currentEditor)
                                 .onTabPressed(currentEditor, null, DataContext.EMPTY_CONTEXT)
@@ -144,6 +167,28 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 return super.onConsoleMessage(browser, level, message, source, line)
             }
         }, browser.cefBrowser)
+        if (SystemInfo.isLinux) {
+            browser.jbCefClient.addDialogHandler(object : CefDialogHandler {
+                override fun onFileDialog(
+                    cefBrowser: CefBrowser?,
+                    mode: CefDialogHandler.FileDialogMode,
+                    title: String,
+                    defaultFilePath: String,
+                    filters: Vector<String>,
+                    callback: CefFileDialogCallback
+                ): Boolean {
+                    val filePath = showFileChooserDialog(
+                        editor.project,
+                        title,
+                        mode == CefDialogHandler.FileDialogMode.FILE_DIALOG_OPEN_MULTIPLE,
+                        filters
+                    )
+                    filters.add(filePath)
+                    callback.Continue(filters)
+                    return true
+                }
+            }, browser.cefBrowser)
+        }
 
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 

@@ -18,7 +18,10 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.application
+import com.intellij.util.ui.JBFont
+import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.streamedInferenceFetch
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance
@@ -40,6 +43,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
+import javax.swing.JComponent
+import javax.swing.SwingConstants
 import kotlin.io.path.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -109,6 +114,17 @@ private val specialSymbolsRegex = "^[:\\s\\t\\n\\r(){},.\"'\\];]*\$".toRegex()
 class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
     private val logger = Logger.getInstance("inlineCompletion")
 
+    override val providerPresentation = object: InlineCompletionProviderPresentation {
+        override fun getTooltip(project: Project?): JComponent {
+            val selectedModelCode = InferenceGlobalContext.lastAutoModel ?: ""
+            val text = if (selectedModelCode.isNotEmpty()) {
+                "${Resources.titleStr}: $selectedModelCode"
+            } else {
+                Resources.titleStr
+            }
+            return JBLabel(text, Resources.Icons.LOGO_RED_16x16, SwingConstants.LEADING)
+        }
+    }
     override val id: InlineCompletionProviderID = InlineCompletionProviderID("Refact.ai")
     override val suggestionUpdateManager: InlineCompletionSuggestionUpdateManager = Default()
     override val insertHandler: InlineCompletionInsertHandler = InsertHandler()

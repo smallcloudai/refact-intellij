@@ -38,7 +38,7 @@ class EventsTest {
             Events.Config.KeyBindings("foo"))
         val message = Events.Config.Update(payload)
         val result = Events.stringify(message)
-        val expected = """{"type":"config/update","payload":{"features":{"ast":true,"vecdb":false,"images":false},"themeProps":{"mode":"light","hasBackground":false,"scale":"90%","accentColor":"gray"},"lspPort":8001,"apiKey":"apiKey","addressURL":"http://127.0.0.1;8001","keyBindings":{"completeManual":"foo"},"tabbed":false,"host":"jetbrains"}}"""
+        val expected = """{"type":"config/update","payload":{"features":{"ast":true,"vecdb":false,"images":true},"themeProps":{"mode":"light","hasBackground":false,"scale":"90%","accentColor":"gray"},"lspPort":8001,"apiKey":"apiKey","addressURL":"http://127.0.0.1;8001","keyBindings":{"completeManual":"foo"},"tabbed":false,"host":"jetbrains"}}"""
         assertEquals(expected, result)
     }
 

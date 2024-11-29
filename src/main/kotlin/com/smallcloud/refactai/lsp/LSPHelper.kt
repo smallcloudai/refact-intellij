@@ -100,3 +100,25 @@ fun lspGetCodeLens(editor: Editor): String {
         return res
     }
 }
+
+fun lspGetCommitMessage(project: Project, diff: String, currentMessage: String): String {
+    val url = getLSPProcessHolder(project)?.url?.resolve("/v1/commit-message-from-diff") ?: return ""
+    val data = Gson().toJson(
+        mapOf(
+            "diff" to diff,
+            "text" to currentMessage,
+        )
+    )
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+        InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+        InferenceGlobalContext.lastErrorMsg = null
+    }, failedDataReceiveEnded = {
+        InferenceGlobalContext.status = ConnectionStatus.ERROR
+        if (it != null) {
+            InferenceGlobalContext.lastErrorMsg = it.message
+        }
+    }).let {
+        val res = it.get()!!.get() as String
+        return res
+    }
+}

@@ -181,6 +181,13 @@ integrated into a single package that follows your privacy settings.</p>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <separator/>
         </group>
+<!--        Temporary disable; JB has broken vcs plugin in 2024.3 -->
+<!--        <group id="RefactAI.GenerateGitCommitMessageGroup">-->
+<!--            <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>-->
+<!--            <action-->
+<!--                    id="RefactAIGenerateGitCommitMessage"-->
+<!--                    class="com.smallcloud.refactai.listeners.GenerateGitCommitMessageAction" />-->
+<!--        </group>-->
     </actions>
     <resource-bundle>bundles.RefactAI</resource-bundle>
     <applicationListeners>

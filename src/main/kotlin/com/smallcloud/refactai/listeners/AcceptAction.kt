@@ -27,7 +27,9 @@ class TabPressedAction : EditorAction(InlineCompletionHandler()), ActionToIgnore
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
             Logger.getInstance("RefactTabPressedAction").debug("executeWriteAction")
             val provider = ModeProvider.getOrCreateModeProvider(editor)
-            if (!provider.isInCompletionMode()) {
+            if (provider.isInCompletionMode()) {
+                InlineCompletion.getHandlerOrNull(editor)?.insert()
+            } else {
                 provider.onTabPressed(editor, caret, dataContext)
             }
         }
@@ -38,10 +40,15 @@ class TabPressedAction : EditorAction(InlineCompletionHandler()), ActionToIgnore
             dataContext: DataContext
         ): Boolean {
             val provider = ModeProvider.getOrCreateModeProvider(editor)
-            if (!provider.isInCompletionMode()) {
+            if (provider.isInCompletionMode()) {
+                val ctx = InlineCompletionContext.getOrNull(editor) ?: return false
+                if (ctx.state.elements.size != 1) return false
+                val elem = ctx.state.elements.first()
+                if (elem !is InlineCompletionGrayTextElementCustom.Presentable) return false
+                return elem.delta == caret.logicalPosition.column
+            } else {
                 return ModeProvider.getOrCreateModeProvider(editor).modeInActiveState()
             }
-            return false
         }
     }
 }

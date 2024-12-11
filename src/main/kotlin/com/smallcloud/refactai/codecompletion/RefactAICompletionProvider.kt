@@ -18,6 +18,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.application
 import com.intellij.util.ui.JBFont
@@ -49,6 +50,8 @@ import kotlin.io.path.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+
+val EditorRefactLastSnippetTelemetryIdKey = Key.create<Int>("refact.snippetTelemetryId")
 
 private class Default : InlineCompletionSuggestionUpdateManager.Adapter {
     override fun onDocumentChange(
@@ -253,10 +256,10 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
                         send(it)
                         delay(2)
                     }
+                    EditorRefactLastSnippetTelemetryIdKey[request.editor] = completion.snippetTelemetryId
                 }
             }
             awaitClose()
-
         })
 
     private fun getSingleLineElements(

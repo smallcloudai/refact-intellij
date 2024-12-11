@@ -509,7 +509,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     val webView by lazy {
-        System.setProperty("ide.browser.jcef.log.level", "info")
+//        System.setProperty("ide.browser.jcef.log.level", "info")
         browser.webView
     }
 

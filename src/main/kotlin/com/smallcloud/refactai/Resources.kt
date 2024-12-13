@@ -65,6 +65,7 @@ object Resources {
     val defaultCodeCompletionUrlSuffix = URI("v1/code-completion")
     val cloudUserMessage: URI = defaultCloudUrl.resolve("/v1/user-message")
     val defaultReportUrlSuffix: URI = URI("v1/telemetry-network")
+    val defaultChatReportUrlSuffix: URI = URI("v1/telemetry-chat")
     val defaultSnippetAcceptedUrlSuffix: URI = URI("v1/snippet-accepted")
     val version: String = getVersion()
     const val client: String = "jetbrains"

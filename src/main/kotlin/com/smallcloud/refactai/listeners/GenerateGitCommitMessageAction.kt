@@ -37,7 +37,7 @@ class GenerateGitCommitMessageAction : AnAction(
             val lspService =
                 event.project?.service<com.smallcloud.refactai.lsp.LSPProcessHolder>() ?: return@invokeLater
 
-            val isEnabled = lspService.isWorking && (commitWorkflowUi.getIncludedChanges().isNotEmpty() && commitWorkflowUi.getIncludedUnversionedFiles().isNotEmpty())
+            val isEnabled = lspService.isWorking && (commitWorkflowUi.getIncludedChanges().isNotEmpty() || commitWorkflowUi.getIncludedUnversionedFiles().isNotEmpty())
 
             event.presentation.isEnabled = isEnabled
             event.presentation.text = if (lspService.isWorking) {
@@ -53,7 +53,6 @@ class GenerateGitCommitMessageAction : AnAction(
         if (project == null || project.basePath == null) {
             return
         }
-
 
         val gitDiff = getDiff(event, project) ?: return
         val commitWorkflowUi = event.getData(VcsDataKeys.COMMIT_WORKFLOW_UI)
@@ -87,7 +86,6 @@ class GenerateGitCommitMessageAction : AnAction(
 
             try {
                 val includedChanges = commitWorkflowUi.getIncludedChanges()
-                commitWorkflowUi.getIncludedUnversionedFiles()
                 val filePatches = IdeaTextPatchBuilder.buildPatch(
                     project, includedChanges, projectFileVcsRoot.toNioPath(), false, true
                 )

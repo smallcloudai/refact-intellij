@@ -52,6 +52,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 val EditorRefactLastSnippetTelemetryIdKey = Key.create<Int>("refact.snippetTelemetryId")
+val EditorRefactLastCompletionIsMultilineKey = Key.create<Boolean>("refact.lastCompletion.isMultiline")
 
 private class Default : InlineCompletionSuggestionUpdateManager.Adapter {
     override fun onDocumentChange(
@@ -257,6 +258,7 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
                         delay(2)
                     }
                     EditorRefactLastSnippetTelemetryIdKey[request.editor] = completion.snippetTelemetryId
+                    EditorRefactLastCompletionIsMultilineKey[request.editor] = completion.multiline
                 }
             }
             awaitClose()

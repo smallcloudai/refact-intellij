@@ -2,6 +2,7 @@ package com.smallcloud.refactai.code_lens
 
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.project.DumbAwareAction
@@ -9,6 +10,8 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.wm.ToolWindowManager
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
+import com.smallcloud.refactai.statistic.UsageStatistic
+import com.smallcloud.refactai.statistic.UsageStats
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.relativeTo
 
@@ -50,6 +53,7 @@ class CodeLensAction(
         chat?.activate {
             RefactAIToolboxPaneFactory.chat?.requestFocus()
             RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessage(), sendImmediately, openNewTab)
+            editor.project?.service<UsageStats>()?.addChatStatistic(true, UsageStatistic("openChatByCodelens"), "")
         }
 
         // If content is empty, then it's "Open Chat" instruction, selecting range of code in active tab

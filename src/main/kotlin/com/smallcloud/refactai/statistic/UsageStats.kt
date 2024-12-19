@@ -7,6 +7,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.smallcloud.refactai.Resources.defaultChatReportUrlSuffix
 import com.smallcloud.refactai.Resources.defaultReportUrlSuffix
 import com.smallcloud.refactai.Resources.defaultSnippetAcceptedUrlSuffix
 import com.smallcloud.refactai.io.sendRequest
@@ -88,6 +89,48 @@ class UsageStats(private val project: Project): Disposable {
                     throw Exception(json.get("human_readable_message").asString)
                 }
                 acceptedCompletionCounter.incrementAndGet()
+            } catch (e: Exception) {
+                Logger.getInstance(UsageStats::class.java).warn("report to $url failed: $e")
+            }
+        }
+    }
+    
+    fun addChatStatistic(
+        positive: Boolean,
+        stat: UsageStatistic,
+        errorMessage: Any
+    ) {
+        var errorMessageStr = errorMessage.toString()
+        val gson = Gson()
+        if (errorMessageStr.length > 200) {
+            errorMessageStr = errorMessageStr.substring(0, 200) + "…"
+        }
+
+        val errorMessageJson = gson.toJson(errorMessageStr)
+        var scope = stat.scope
+        if (stat.subScope.isNotEmpty()) {
+            scope += ":" + stat.subScope
+        }
+
+        val scopeJson = gson.toJson(scope)
+        val body = gson.toJson(
+            mapOf(
+                "success" to positive,
+                "error_message" to errorMessageJson,
+                "scope" to scopeJson,
+            )
+        )
+        val url = getLSPProcessHolder(project)!!.url.resolve(defaultChatReportUrlSuffix)
+        execService.submit {
+            try {
+                val res = sendRequest(url, "POST", body=body)
+                if (res.body.isNullOrEmpty()) return@submit
+
+                val json = gson.fromJson(res.body, JsonObject::class.java)
+                val success = if (json.has("success")) json.get("success").asInt else null
+                if (success != null && success != 1) {
+                    throw Exception(json.get("human_readable_message").asString)
+                }
             } catch (e: Exception) {
                 Logger.getInstance(UsageStats::class.java).warn("report to $url failed: $e")
             }

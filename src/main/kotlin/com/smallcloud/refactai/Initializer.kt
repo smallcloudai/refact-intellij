@@ -40,44 +40,6 @@ class Initializer : ProjectActivity, Disposable {
             PluginInstaller.addStateListener(UninstallListener())
             UpdateChecker.instance
 
-            ApplicationManager.getApplication()
-                .messageBus
-                .connect(PluginState.instance)
-                .subscribe(KeymapManagerListener.TOPIC, object : KeymapManagerListener {
-                    override fun shortcutsChanged(
-                        keymap: Keymap,
-                        actionIds: MutableCollection<String?>,
-                        fromSettings: Boolean
-                    ) {
-                        if (Thread.currentThread().stackTrace.count { it.className.startsWith("com.smallcloud.refactai.Initializer") } > 1) {
-                            return
-                        }
-                        for (id in actionIds) {
-                            if (!listOf(IdeActions.ACTION_INSERT_INLINE_COMPLETION, ACTION_ID_).contains(id)) {
-                                continue
-                            }
-                            val shortcuts = keymap.getShortcuts(id)
-                            if (id == IdeActions.ACTION_INSERT_INLINE_COMPLETION) {
-                                keymap.removeAllActionShortcuts(ACTION_ID_)
-                                for (shortcut in shortcuts) {
-                                    keymap.addShortcut(
-                                        ACTION_ID_,
-                                        shortcut
-                                    )
-                                }
-                            } else if (id == ACTION_ID_) {
-                                keymap.removeAllActionShortcuts(IdeActions.ACTION_INSERT_INLINE_COMPLETION)
-                                for (shortcut in shortcuts) {
-                                    keymap.addShortcut(
-                                        IdeActions.ACTION_INSERT_INLINE_COMPLETION,
-                                        shortcut
-                                    )
-                                }
-                            }
-                        }
-                    }
-                })
-
             ApplicationManager.getApplication().getService(CloudMessageService::class.java)
             if (!isJcefCanStart()) {
                 emitInfo(RefactAIBundle.message("notifications.chatCanNotStartWarning"), false)

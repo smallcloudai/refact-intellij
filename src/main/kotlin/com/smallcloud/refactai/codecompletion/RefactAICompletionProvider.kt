@@ -18,6 +18,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.application
 import com.intellij.util.ui.JBFont
@@ -49,6 +50,9 @@ import kotlin.io.path.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
+
+val EditorRefactLastSnippetTelemetryIdKey = Key.create<Int>("refact.snippetTelemetryId")
+val EditorRefactLastCompletionIsMultilineKey = Key.create<Boolean>("refact.lastCompletion.isMultiline")
 
 private class Default : InlineCompletionSuggestionUpdateManager.Adapter {
     override fun onDocumentChange(
@@ -144,17 +148,16 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
 
     override fun restartOn(event: InlineCompletionEvent): Boolean = false
 
-    private fun getActiveFile(document: Document, project: Project?): String? {
-        val projectPath = project?.basePath ?: return null
+    private fun getActiveFile(document: Document): String? {
         val file = FileDocumentManager.getInstance().getFile(document) ?: return null
-        return Path(file.path).toUri().toString().replace(Path(projectPath).toUri().toString(), "")
+        return Path(file.path).toString()
     }
 
     private class Context(val request: SMCRequest, val editorState: EditorTextState, val force: Boolean = false)
 
 
     private fun makeContext(request: InlineCompletionRequest): Context? {
-        val fileName = getActiveFile(request.document, request.editor.project) ?: return null
+        val fileName = getActiveFile(request.document) ?: return null
         if (PrivacyService.instance.getPrivacy(FileDocumentManager.getInstance().getFile(request.document))
             == Privacy.DISABLED && !InferenceGlobalContext.isSelfHosted
         ) return null
@@ -253,10 +256,11 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
                         send(it)
                         delay(2)
                     }
+                    EditorRefactLastSnippetTelemetryIdKey[request.editor] = completion.snippetTelemetryId
+                    EditorRefactLastCompletionIsMultilineKey[request.editor] = completion.multiline
                 }
             }
             awaitClose()
-
         })
 
     private fun getSingleLineElements(

@@ -148,9 +148,11 @@ integrated into a single package that follows your privacy settings.</p>
     </extensions>
     <actions>
         <action class="com.smallcloud.refactai.listeners.TabPressedAction"
-                id="TabPressedAction"
+                id="InsertInlineCompletionAction"
                 text="Accept Inline Completion"
+                overrides="true"
                 description="Refact AI Accept Inline Completion">
+            <add-to-group group-id="InlineCompletion" anchor="first"/>
             <keyboard-shortcut first-keystroke="TAB" keymap="$default"/>
         </action>
         <action class="com.smallcloud.refactai.listeners.CancelPressedAction"
@@ -182,12 +184,12 @@ integrated into a single package that follows your privacy settings.</p>
             <separator/>
         </group>
 <!--        Temporary disable; JB has broken vcs plugin in 2024.3 -->
-<!--        <group id="RefactAI.GenerateGitCommitMessageGroup">-->
-<!--            <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>-->
-<!--            <action-->
-<!--                    id="RefactAIGenerateGitCommitMessage"-->
-<!--                    class="com.smallcloud.refactai.listeners.GenerateGitCommitMessageAction" />-->
-<!--        </group>-->
+        <group id="RefactAI.GenerateGitCommitMessageGroup">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
+            <action
+                    id="RefactAIGenerateGitCommitMessage"
+                    class="com.smallcloud.refactai.listeners.GenerateGitCommitMessageAction" />
+        </group>
     </actions>
     <resource-bundle>bundles.RefactAI</resource-bundle>
     <applicationListeners>

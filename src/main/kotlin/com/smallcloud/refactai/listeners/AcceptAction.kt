@@ -22,14 +22,14 @@ const val ACTION_ID_ = "TabPressedAction"
 
 class TabPressedAction : EditorAction(InsertInlineCompletionHandler()), ActionToIgnore {
     val ACTION_ID = ACTION_ID_
-
     init {
         this.templatePresentation.icon = Resources.Icons.LOGO_RED_16x16
     }
 
     class InsertInlineCompletionHandler : EditorWriteActionHandler() {
+        private val logger = Logger.getInstance("RefactTabPressedAction")
         override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
-            Logger.getInstance("RefactTabPressedAction").debug("executeWriteAction")
+            logger.warn("executeWriteAction")
             val provider = ModeProvider.getOrCreateModeProvider(editor)
             if (provider.isInCompletionMode()) {
                 InlineCompletion.getHandlerOrNull(editor)?.insert()
@@ -48,16 +48,26 @@ class TabPressedAction : EditorAction(InsertInlineCompletionHandler()), ActionTo
             caret: Caret,
             dataContext: DataContext
         ): Boolean {
+            logger.warn("isEnabledForCaret")
             val provider = ModeProvider.getOrCreateModeProvider(editor)
             if (provider.isInCompletionMode()) {
+                logger.warn("provider.isInCompletionMode()")
                 val ctx = InlineCompletionContext.getOrNull(editor) ?: return false
-                if (ctx.state.elements.size != 1) return false
+                if (ctx.state.elements.isEmpty()) return false
                 val elem = ctx.state.elements.first()
                 val isMultiline = EditorRefactLastCompletionIsMultilineKey[editor]
-                if (isMultiline && elem is InlineCompletionGrayTextElementCustom.Presentable)
+                logger.warn("isMultiline = $isMultiline")
+                logger.warn("elem is InlineCompletionGrayTextElementCustom.Presentable = ${elem is InlineCompletionGrayTextElementCustom.Presentable}")
+                if (isMultiline && elem is InlineCompletionGrayTextElementCustom.Presentable) {
+                    logger.warn("elem.delta = ${elem.delta}")
+                    logger.warn("caret.logicalPosition.column = ${caret.logicalPosition.column}")
+                    logger.warn("elem.element.text = start'${elem.element.text}'end")
+                    logger.warn("elem.element.text = start'${editor.document.text.lines()[caret.logicalPosition.line]}'end")
                     return elem.delta == caret.logicalPosition.column
+                }
                 return true
             } else {
+                logger.warn("else provider.isInCompletionMode()")
                 return ModeProvider.getOrCreateModeProvider(editor).modeInActiveState()
             }
         }

@@ -50,7 +50,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var vecdbIsEnabledDefaultChanged: Boolean = false
     var astFileLimit: Int = 15000
     var vecdbFileLimit: Int = 15000
-    var astLightMode: Boolean = false
     var completionMaxTokens: Int = 0
     var insecureSSL: Boolean = false
     var telemetrySnippetsEnabled: Boolean = false
@@ -109,9 +108,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     }
                     override fun astFileLimitChanged(newValue: Int) {
                         instance.astFileLimit = newValue
-                    }
-                    override fun astLightModeChanged(newValue: Boolean) {
-                        instance.astLightMode = newValue
                     }
                     override fun vecdbFileLimitChanged(newValue: Int) {
                         instance.vecdbFileLimit = newValue

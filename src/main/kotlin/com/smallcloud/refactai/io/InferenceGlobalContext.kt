@@ -126,16 +126,6 @@ class InferenceGlobalContext : Disposable {
                   .astFileLimitChanged(newValue)
         }
 
-    var astLightMode: Boolean
-        get() = AppSettingsState.astLightMode
-        set(newValue) {
-            if (newValue == astLightMode) return
-            messageBus
-                 .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-                 .astLightModeChanged(newValue)
-        }
-
-
     var vecdbIsEnabled: Boolean
         get() = AppSettingsState.vecdbIsEnabled
         set(newValue) {

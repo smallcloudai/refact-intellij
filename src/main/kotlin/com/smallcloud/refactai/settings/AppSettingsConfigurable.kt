@@ -61,7 +61,6 @@ class AppSettingsConfigurable : Configurable {
 
         modified = modified || mySettingsComponent!!.astIsEnabled != InferenceGlobalContext.astIsEnabled
         modified = modified || mySettingsComponent!!.astFileLimit != InferenceGlobalContext.astFileLimit
-        modified = modified || mySettingsComponent!!.astLightMode != InferenceGlobalContext.astLightMode
         modified = modified || mySettingsComponent!!.vecdbIsEnabled != InferenceGlobalContext.vecdbIsEnabled
         modified = modified || mySettingsComponent!!.vecdbFileLimit != InferenceGlobalContext.vecdbFileLimit
 
@@ -83,7 +82,6 @@ class AppSettingsConfigurable : Configurable {
         InferenceGlobalContext.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
         InferenceGlobalContext.astIsEnabled = mySettingsComponent!!.astIsEnabled
         InferenceGlobalContext.astFileLimit = mySettingsComponent!!.astFileLimit
-        InferenceGlobalContext.astLightMode = mySettingsComponent!!.astLightMode
         InferenceGlobalContext.vecdbIsEnabled = mySettingsComponent!!.vecdbIsEnabled
         InferenceGlobalContext.vecdbFileLimit = mySettingsComponent!!.vecdbFileLimit
         InferenceGlobalContext.insecureSSL = mySettingsComponent!!.insecureSSL
@@ -101,7 +99,6 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.xDebugLSPPort = InferenceGlobalContext.xDebugLSPPort
         mySettingsComponent!!.astIsEnabled = InferenceGlobalContext.astIsEnabled
         mySettingsComponent!!.astFileLimit = InferenceGlobalContext.astFileLimit
-        mySettingsComponent!!.astLightMode = InferenceGlobalContext.astLightMode
         mySettingsComponent!!.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
         mySettingsComponent!!.vecdbFileLimit = InferenceGlobalContext.vecdbFileLimit
         mySettingsComponent!!.inferenceModel = InferenceGlobalContext.model

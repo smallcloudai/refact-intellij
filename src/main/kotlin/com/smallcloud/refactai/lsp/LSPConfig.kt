@@ -11,7 +11,6 @@ data class LSPConfig(
     var deployment: DeploymentMode = DeploymentMode.CLOUD,
     var ast: Boolean = true,
     var astFileLimit: Int? = null,
-    var astLightMode: Boolean = false,
     var vecdb: Boolean = true,
     var vecdbFileLimit: Int? = null,
     var insecureSSL: Boolean = false,
@@ -44,9 +43,6 @@ data class LSPConfig(
             params.add("--ast-max-files")
             params.add("$astFileLimit")
         }
-        if (ast && astLightMode) {
-            params.add("--ast-light-mode")
-        }
         if (vecdb) {
             params.add("--vecdb")
         }
@@ -72,7 +68,6 @@ data class LSPConfig(
         if (useTelemetry != other.useTelemetry) return false
         if (deployment != other.deployment) return false
         if (ast != other.ast) return false
-        if (astLightMode != other.astLightMode) return false
         if (vecdb != other.vecdb) return false
         if (astFileLimit != other.astFileLimit) return false
         if (vecdbFileLimit != other.vecdbFileLimit) return false

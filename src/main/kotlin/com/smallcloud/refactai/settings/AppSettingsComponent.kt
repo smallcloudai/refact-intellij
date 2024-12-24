@@ -48,7 +48,6 @@ class AppSettingsComponent {
     private val myContrastUrlText = JBTextField()
     private val myModelText = JBTextField()
     private val myAstFileLimitText = JBTextField()
-    private val myAstLightMode = JCheckBox(RefactAIBundle.message("advancedSettings.useASTLightMode"))
     private val myVecdbFileLimitText = JBTextField()
     private val insecureSSLCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.insecureSSL"))
     private val telemetrySnippetCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.telemetryCodeSnippets"))
@@ -175,15 +174,6 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
-            addComponent(myAstLightMode, UIUtil.LARGE_VGAP)
-            addComponent(
-                JBLabel(
-                    RefactAIBundle.message("advancedSettings.useASTLightModeDescription"),
-                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ).apply {
-                    setCopyable(true)
-                }, 0
-            )
 
             addComponent(vecdbCheckbox, UIUtil.LARGE_VGAP)
             addComponent(
@@ -256,11 +246,6 @@ class AppSettingsComponent {
         get() = myAstFileLimitText.text.toIntOrNull() ?: 15000
         set(newVal) {
             myAstFileLimitText.text = newVal.toString()
-        }
-    var astLightMode: Boolean
-        get() = myAstLightMode.isSelected
-        set(newVal) {
-            myAstLightMode.isSelected = newVal
         }
     var vecdbIsEnabled: Boolean
         get() = vecdbCheckbox.isSelected

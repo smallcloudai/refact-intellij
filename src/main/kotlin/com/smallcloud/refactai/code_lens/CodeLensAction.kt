@@ -12,6 +12,7 @@ import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.statistic.UsageStats
+import com.smallcloud.refactai.struct.ChatMessage
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.relativeTo
 
@@ -19,7 +20,7 @@ class CodeLensAction(
     private val editor: Editor,
     private val line1: Int,
     private val line2: Int,
-    private val contentMsg: String,
+    private val messages: Array<ChatMessage>,
     private val sendImmediately: Boolean,
     private val openNewTab: Boolean
 ) : DumbAwareAction(Resources.Icons.LOGO_RED_16x16) {
@@ -27,7 +28,37 @@ class CodeLensAction(
         actionPerformed()
     }
 
-    private fun formatMessage(): String {
+    private fun replaceVariablesInText(
+        text: String,
+        relativePath: String,
+        cursor: Int?,
+        codeSelection: String
+    ): String {
+        return text
+            .replace("%CURRENT_FILE%", relativePath)
+            .replace("%CURSOR_LINE%", cursor?.plus(1)?.toString() ?: "")
+            .replace("%CODE_SELECTION%", codeSelection)
+            .replace("%PROMPT_EXPLORATION_TOOLS%", "")
+    }
+
+    private fun formatMultipleMessagesForCodeLens(
+        messages: Array<ChatMessage>,
+        relativePath: String,
+        cursor: Int?,
+        text: String
+    ): Array<ChatMessage> {
+        return messages.map { message ->
+            if (message.role == "user") {
+                message.copy(
+                    content = replaceVariablesInText(message.content, relativePath, cursor, text)
+                )
+            } else {
+                message
+            }
+        }.toTypedArray()
+    }
+
+    private fun formatMessage(): Array<ChatMessage> {
         val pos1 = LogicalPosition(line1, 0)
         val text = editor.document.text.slice(
             editor.logicalPositionToOffset(pos1) until editor.document.getLineEndOffset(line2)
@@ -39,10 +70,9 @@ class CodeLensAction(
             }.minBy { it.toString().length }
         }
 
-        return contentMsg
-            .replace("%CURRENT_FILE%", relativePath?.toString() ?: filePath.toString())
-            .replace("%CURSOR_LINE%", line1.toString())
-            .replace("%CODE_SELECTION%", text)
+        val formattedMessages = formatMultipleMessagesForCodeLens(messages, relativePath?.toString() ?: filePath.toString(), line1, text);
+
+        return formattedMessages
     }
 
     private val isActionRunning = AtomicBoolean(false)
@@ -52,7 +82,7 @@ class CodeLensAction(
 
         chat?.activate {
             RefactAIToolboxPaneFactory.chat?.requestFocus()
-            RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessage(), sendImmediately, openNewTab)
+            RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand("", formatMessage(), sendImmediately, openNewTab)
             editor.project?.service<UsageStats>()?.addChatStatistic(true, UsageStatistic("openChatByCodelens"), "")
         }
 

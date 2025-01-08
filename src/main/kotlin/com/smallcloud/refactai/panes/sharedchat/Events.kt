@@ -7,6 +7,7 @@ import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import com.smallcloud.refactai.settings.Host
 import com.smallcloud.refactai.settings.HostDeserializer
+import com.smallcloud.refactai.struct.ChatMessage
 import java.io.Serializable
 import java.lang.reflect.Type
 
@@ -366,7 +367,21 @@ class Events {
     data class CodeLensCommandPayload(
         val value: String = "",
         @SerializedName("send_immediately") val sendImmediately: Boolean = false,
-    ) : Payload()
+        val messages: Array<ChatMessage>
+    ) : Payload() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as CodeLensCommandPayload
+
+            return messages.contentEquals(other.messages)
+        }
+
+        override fun hashCode(): Int {
+            return messages.contentHashCode()
+        }
+    }
 
     class CodeLensCommand(payload: CodeLensCommandPayload) : ToChat<Payload>(EventNames.ToChat.CODE_LENS_EXEC, payload)
 

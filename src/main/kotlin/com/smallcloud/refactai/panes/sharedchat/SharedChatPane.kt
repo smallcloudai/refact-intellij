@@ -76,6 +76,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
         }, 0, 80, java.util.concurrent.TimeUnit.MILLISECONDS)
         this.addEventListeners()
+
     }
 
     private fun isReady(): Boolean {
@@ -225,11 +226,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         val ef = EditorFactory.getInstance()
         ef.eventMulticaster.addSelectionListener(selectionListener, this)
 
-        ApplicationManager.getApplication().messageBus.connect(this).subscribe(UISettingsListener.TOPIC, object: UISettingsListener {
-            override fun uiSettingsChanged(uiSettings: UISettings) {
-                setLookAndFeel()
-            }
-        })
+//        ApplicationManager.getApplication().messageBus.connect(this).subscribe(UISettingsListener.TOPIC,
+//            UISettingsListener { setLookAndFeel() })
+        UISettings.getInstance().addUISettingsListener(
+            UISettingsListener {
+                ApplicationManager.getApplication().invokeLater {
+                    println("Ui Update")
+                    // this.browser.setStyle()
+                    this@SharedChatPane.setLookAndFeel()
+                }
+            }, this)
         // ast and vecdb settings change
         project.messageBus.connect()
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {

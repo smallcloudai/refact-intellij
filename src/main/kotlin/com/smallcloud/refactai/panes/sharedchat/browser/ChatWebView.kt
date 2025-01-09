@@ -59,6 +59,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun setStyle() {
         val isDarkMode = LafManager.getInstance().currentUIThemeLookAndFeel.isDark
+        // println("isDark: $isDarkMode")
         val mode = if (isDarkMode) {
             "dark"
         } else {
@@ -74,10 +75,12 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         val green = backgroundColour.green
         val blue = backgroundColour.blue
         val webView = this.webView
+        println("bodyClass: ${bodyClass}")
         CoroutineScope(Dispatchers.Default).launch {
             webView.executeJavaScript("""document.body.style.setProperty("background-color", "rgb($red, $green, $blue");""")
             webView.executeJavaScript("""document.body.class = "$bodyClass";""")
             webView.executeJavaScript("""document.documentElement.className = "$mode";""")
+            println("updated dom")
         }
     }
 
@@ -299,7 +302,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     fun postMessage(message: Events.ToChat<*>?) {
         if (message != null) {
             val json = Events.stringify(message)
-            // println("post message json: $json")
+            println("post message json: $json")
             this.postMessage(json)
         }
     }

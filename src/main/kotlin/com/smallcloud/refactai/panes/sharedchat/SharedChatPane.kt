@@ -104,7 +104,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         if (openNewTab || this.currentPage != "chat") {
             newChat()
         }
-        if (command.isEmpty()) {
+        if (messages.isEmpty()) {
             // Just opening a new chat, no codelens execution
             newChat()
             return

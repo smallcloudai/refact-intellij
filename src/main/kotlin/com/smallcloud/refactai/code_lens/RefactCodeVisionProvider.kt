@@ -70,16 +70,19 @@ class RefactCodeVisionProvider(
                     val value = allCodeLenses.get(commandKey).asJsonObject
                     val msgs = value.asJsonObject.get("messages").asJsonArray.map {
                         gson.fromJson(it.asJsonObject, ChatMessage::class.java)
-                    }.toList()
-                    val msg = msgs.find { it.role == "user" }
+                    }.toTypedArray()
+                    val userMsg = msgs.find { it.role == "user" }
+
                     val sendImmediately = value.asJsonObject.get("auto_submit").asBoolean
                     val openNewTab = value.asJsonObject.get("new_tab")?.asBoolean ?: true
-                    if (msg != null || msgs.isEmpty()) {
+
+                    val isValidCodeLen = msgs.isEmpty() || userMsg != null
+                    if (isValidCodeLen) {
                         resCodeLenses.add(
                             CodeLen(
                                 range,
                                 value.asJsonObject.get("label").asString,
-                                CodeLensAction(editor, line1, line2, msg?.content ?: "", sendImmediately, openNewTab)
+                                CodeLensAction(editor, line1, line2, msgs, sendImmediately, openNewTab)
                             )
                         )
                     }

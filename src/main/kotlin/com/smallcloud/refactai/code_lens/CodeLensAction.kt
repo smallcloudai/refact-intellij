@@ -47,7 +47,7 @@ class CodeLensAction(
         cursor: Int?,
         text: String
     ): Array<ChatMessage> {
-        return messages.map { message ->
+        val formattedMessages = messages.map { message ->
             if (message.role == "user") {
                 message.copy(
                     content = replaceVariablesInText(message.content, relativePath, cursor, text)
@@ -56,9 +56,10 @@ class CodeLensAction(
                 message
             }
         }.toTypedArray()
+        return formattedMessages
     }
 
-    private fun formatMessage(): Array<ChatMessage> {
+    private fun formatMessages(): Array<ChatMessage> {
         val pos1 = LogicalPosition(line1, 0)
         val text = editor.document.text.slice(
             editor.logicalPositionToOffset(pos1) until editor.document.getLineEndOffset(line2)
@@ -82,12 +83,12 @@ class CodeLensAction(
 
         chat?.activate {
             RefactAIToolboxPaneFactory.chat?.requestFocus()
-            RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand("", formatMessage(), sendImmediately, openNewTab)
+            RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand("", formatMessages(), sendImmediately, openNewTab)
             editor.project?.service<UsageStats>()?.addChatStatistic(true, UsageStatistic("openChatByCodelens"), "")
         }
 
         // If content is empty, then it's "Open Chat" instruction, selecting range of code in active tab
-        if (contentMsg.isEmpty() && isActionRunning.compareAndSet(false, true)) {
+        if (messages.isEmpty() && isActionRunning.compareAndSet(false, true)) {
             ApplicationManager.getApplication().invokeLater {
                 try {
                     val pos1 = LogicalPosition(line1, 0)

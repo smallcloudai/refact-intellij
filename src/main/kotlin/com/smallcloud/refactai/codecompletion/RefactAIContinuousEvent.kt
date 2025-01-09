@@ -22,17 +22,21 @@ class RefactAIContinuousEvent(val editor: Editor, val offset: Int) : InlineCompl
 @RequiresBlockingContext
 private fun getPsiFile(editor: Editor, project: Project): PsiFile? {
     return runReadAction {
-        val file =
-            PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return@runReadAction null
-        // * [PsiUtilBase] takes into account injected [PsiFile] (like in Jupyter Notebooks)
-        // * However, it loads a file into the memory, which is expensive
-        // * Some tests forbid loading a file when tearing down
-        // * On tearing down, Lookup Cancellation happens, which causes the event
-        // * Existence of [treeElement] guarantees that it's in the memory
-        if (file.isLoadedInMemory()) {
-            PsiUtilBase.getPsiFileInEditor(editor, project)
-        } else {
-            file
+        try {
+            val file =
+                PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return@runReadAction null
+            // * [PsiUtilBase] takes into account injected [PsiFile] (like in Jupyter Notebooks)
+            // * However, it loads a file into the memory, which is expensive
+            // * Some tests forbid loading a file when tearing down
+            // * On tearing down, Lookup Cancellation happens, which causes the event
+            // * Existence of [treeElement] guarantees that it's in the memory
+            if (file.isLoadedInMemory()) {
+                PsiUtilBase.getPsiFileInEditor(editor, project)
+            } else {
+                file
+            }
+        } catch (e: Exception) {
+            return@runReadAction null
         }
     }
 }

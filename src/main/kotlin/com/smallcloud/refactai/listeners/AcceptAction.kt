@@ -51,7 +51,7 @@ class TabPressedAction : EditorAction(InsertInlineCompletionHandler()), ActionTo
             val provider = ModeProvider.getOrCreateModeProvider(editor)
             if (provider.isInCompletionMode()) {
                 val ctx = InlineCompletionContext.getOrNull(editor) ?: return false
-                if (ctx.state.elements.size != 1) return false
+                if (ctx.state.elements.isEmpty()) return false
                 val elem = ctx.state.elements.first()
                 val isMultiline = EditorRefactLastCompletionIsMultilineKey[editor]
                 if (isMultiline && elem is InlineCompletionGrayTextElementCustom.Presentable)

@@ -3,6 +3,7 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.project.Project
+import com.smallcloud.refactai.struct.ChatMessage
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -31,8 +32,8 @@ class ChatPanes(val project: Project) : Disposable {
         return holder
     }
 
-    fun executeCodeLensCommand(command: String, sendImmediately: Boolean, openNewTab: Boolean) {
-        pane?.executeCodeLensCommand(command, sendImmediately, openNewTab)
+    fun executeCodeLensCommand(messages: Array<ChatMessage>, sendImmediately: Boolean, openNewTab: Boolean) {
+        pane?.executeCodeLensCommand(messages, sendImmediately, openNewTab)
     }
 
     fun requestFocus() {

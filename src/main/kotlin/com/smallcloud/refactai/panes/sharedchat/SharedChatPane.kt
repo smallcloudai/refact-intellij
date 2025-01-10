@@ -40,6 +40,7 @@ import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
 import com.smallcloud.refactai.settings.Host
+import com.smallcloud.refactai.struct.ChatMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,7 +56,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val editor = Editor(project)
     private var currentPage: String = ""
     private var isChatStreaming: Boolean = false
-    var id: String? = null;
+    var id: String? = null
     private val animatedFiles = mutableSetOf<String>()
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("SMCRainbowScheduler", 2)
 
@@ -98,18 +99,18 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    fun executeCodeLensCommand(command: String, sendImmediately: Boolean, openNewTab: Boolean) {
+    fun executeCodeLensCommand(messages: Array<ChatMessage>, sendImmediately: Boolean, openNewTab: Boolean) {
         if (isChatStreaming) return
         if (openNewTab || this.currentPage != "chat") {
             newChat()
         }
-        if (command.isEmpty()) {
+        if (messages.isEmpty()) {
             // Just opening a new chat, no codelens execution
             newChat()
             return
         }
         isChatStreaming = true
-        this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload(command, sendImmediately)))
+        this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload("", sendImmediately, messages)))
     }
 
     private fun sendUserConfig() {
@@ -152,7 +153,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 val out = process.getResultStdoutStr().getOrNull()
                 if (out == null) {
                     println("Save btok file output is null")
-                    return;
+                    return
                 }
                 val fileName = out.lines().last()
 

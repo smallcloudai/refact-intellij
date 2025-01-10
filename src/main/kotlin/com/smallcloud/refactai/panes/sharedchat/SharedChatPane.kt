@@ -99,7 +99,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    fun executeCodeLensCommand(command: String, messages: Array<ChatMessage>, sendImmediately: Boolean, openNewTab: Boolean) {
+    fun executeCodeLensCommand(messages: Array<ChatMessage>, sendImmediately: Boolean, openNewTab: Boolean) {
         if (isChatStreaming) return
         if (openNewTab || this.currentPage != "chat") {
             newChat()
@@ -110,7 +110,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             return
         }
         isChatStreaming = true
-        this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload(command, sendImmediately, messages)))
+        this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload("", sendImmediately, messages)))
     }
 
     private fun sendUserConfig() {

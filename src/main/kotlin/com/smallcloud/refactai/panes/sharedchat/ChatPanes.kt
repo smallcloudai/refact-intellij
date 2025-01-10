@@ -32,8 +32,8 @@ class ChatPanes(val project: Project) : Disposable {
         return holder
     }
 
-    fun executeCodeLensCommand(command: String, messages: Array<ChatMessage>, sendImmediately: Boolean, openNewTab: Boolean) {
-        pane?.executeCodeLensCommand(command, messages, sendImmediately, openNewTab)
+    fun executeCodeLensCommand(messages: Array<ChatMessage>, sendImmediately: Boolean, openNewTab: Boolean) {
+        pane?.executeCodeLensCommand(messages, sendImmediately, openNewTab)
     }
 
     fun requestFocus() {

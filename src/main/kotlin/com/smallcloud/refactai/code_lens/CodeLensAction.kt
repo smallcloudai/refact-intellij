@@ -83,7 +83,7 @@ class CodeLensAction(
 
         chat?.activate {
             RefactAIToolboxPaneFactory.chat?.requestFocus()
-            RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand("", formatMessages(), sendImmediately, openNewTab)
+            RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessages(), sendImmediately, openNewTab)
             editor.project?.service<UsageStats>()?.addChatStatistic(true, UsageStatistic("openChatByCodelens"), "")
         }
 

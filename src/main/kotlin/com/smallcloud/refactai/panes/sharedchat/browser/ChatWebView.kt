@@ -302,7 +302,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     fun postMessage(message: Events.ToChat<*>?) {
         if (message != null) {
             val json = Events.stringify(message)
-            println("post message json: $json")
+            logger.info("post message json: $json")
             this.postMessage(json)
         }
     }

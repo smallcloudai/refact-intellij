@@ -60,9 +60,6 @@ class LSPProcessHolder(val project: Project) : Disposable {
         "SMCLSPLoggerScheduler", 1
     )
     private var loggerTask: Future<*>? = null
-    private val schedulerCaps = AppExecutorUtil.createBoundedScheduledExecutorService(
-        "SMCLSPCapsRequesterScheduler", 1
-    )
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
     private var isWorking_ = false
     private val healthCheckerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
@@ -298,9 +295,8 @@ class LSPProcessHolder(val project: Project) : Disposable {
 
     override fun dispose() {
         terminate()
-        loggerScheduler.shutdown()
-        schedulerCaps.shutdown()
         healthCheckerScheduler.shutdown()
+        loggerScheduler.shutdown()
         Runtime.getRuntime().removeShutdownHook(exitThread)
     }
 

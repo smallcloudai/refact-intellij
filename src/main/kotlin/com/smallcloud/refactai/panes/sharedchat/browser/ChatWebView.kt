@@ -59,7 +59,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun setStyle() {
         val isDarkMode = LafManager.getInstance().currentUIThemeLookAndFeel.isDark
-        // println("isDark: $isDarkMode")
+
         val mode = if (isDarkMode) {
             "dark"
         } else {

@@ -229,8 +229,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         UISettings.getInstance().addUISettingsListener(
             UISettingsListener {
                 ApplicationManager.getApplication().invokeLater {
-                    println("Ui Update")
-                    // this.browser.setStyle()
                     this@SharedChatPane.setLookAndFeel()
                 }
             }, this)

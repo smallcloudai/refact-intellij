@@ -226,8 +226,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         val ef = EditorFactory.getInstance()
         ef.eventMulticaster.addSelectionListener(selectionListener, this)
 
-//        ApplicationManager.getApplication().messageBus.connect(this).subscribe(UISettingsListener.TOPIC,
-//            UISettingsListener { setLookAndFeel() })
         UISettings.getInstance().addUISettingsListener(
             UISettingsListener {
                 ApplicationManager.getApplication().invokeLater {

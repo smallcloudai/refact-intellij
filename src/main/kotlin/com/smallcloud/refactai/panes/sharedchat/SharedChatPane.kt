@@ -3,8 +3,8 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.processTools.getResultStdoutStr
 import com.intellij.ide.BrowserUtil
-import com.intellij.ide.ui.LafManager
-import com.intellij.ide.ui.LafManagerListener
+import com.intellij.ide.ui.UISettings
+import com.intellij.ide.ui.UISettingsListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.invokeLater
@@ -65,9 +65,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val workerScheduler =
         AppExecutorUtil.createBoundedScheduledExecutorService("SMCSharedChatPaneWorkerScheduler", 1)
 
-    private val uiChangeListener = LafManagerListener { _ ->
-        this.setLookAndFeel()
-    }
 
     init {
         workerFuture = workerScheduler.scheduleWithFixedDelay({
@@ -80,6 +77,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
         }, 0, 80, java.util.concurrent.TimeUnit.MILLISECONDS)
         this.addEventListeners()
+
     }
 
     private fun isReady(): Boolean {
@@ -229,8 +227,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         val ef = EditorFactory.getInstance()
         ef.eventMulticaster.addSelectionListener(selectionListener, this)
 
-        ApplicationManager.getApplication().messageBus.connect(this).subscribe(LafManagerListener.TOPIC, uiChangeListener)
-
+        UISettings.getInstance().addUISettingsListener(
+            UISettingsListener {
+                ApplicationManager.getApplication().invokeLater {
+                    this@SharedChatPane.setLookAndFeel()
+                }
+            }, this)
         // ast and vecdb settings change
         project.messageBus.connect()
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {

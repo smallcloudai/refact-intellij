@@ -6,6 +6,14 @@ on:
   # Trigger the workflow on any pull request
   pull_request:
   workflow_dispatch:
+    inputs:
+      chat_js_branch:
+        description: "Branch name of chat-js"
+        default: "main"
+        type: choice
+        options:
+          - main
+          - alpha
 
 jobs:
   build:
@@ -43,7 +51,7 @@ jobs:
           workflow: node.js.yml
           workflow_search: true
           repo: smallcloudai/refact-chat-js
-          branch: alpha
+          branch: ${{ inputs.chat_js_branch }}
           name: refact-chat-js-latest
           path: ./src/main/resources/webview/dist
 

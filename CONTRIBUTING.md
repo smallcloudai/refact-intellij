@@ -1,5 +1,26 @@
-# refact-intellij & refact-chat-js
-### Instructions for React Chat build for JetBrains IDEs (to run locally)
+# 🌟 Contribute to refact-intellij & refact-chat-js
+
+## 📚 Table of Contents
+- [❤️ Ways to Contribute](#%EF%B8%8F-ways-to-contribute)
+  - [🐛 Report Bugs](#-report-bugs)
+- [Instructions for React Chat build for JetBrains IDEs (to run locally)](#-instructions-for-react-chat-build-for-jetbrains-ides-to-run-locally)
+
+
+### ❤️ Ways to Contribute
+
+* Fork the repository
+* Create a feature branch
+* Do the work
+* Create a pull request
+* Maintainers will review it
+
+
+### 🐛 Report Bugs
+Encountered an issue? Help us improve Refact.ai by reporting bugs in issue section, make sure you label the issue with correct tag [here](https://github.com/smallcloudai/refact-intellij/issues)! 
+
+
+
+### 🔨 Instructions for React Chat build for JetBrains IDEs (to run locally)
 1. Clone the branch alpha of the repository `refact-chat-js`.
 2. Install dependencies and build the project:
    ```bash

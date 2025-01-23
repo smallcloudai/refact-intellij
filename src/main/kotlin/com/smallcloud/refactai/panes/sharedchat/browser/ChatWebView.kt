@@ -81,6 +81,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             webView.executeJavaScript("""document.body.className = "$bodyClass";""")
             webView.executeJavaScript("""document.documentElement.className = "$mode";""")
             println("updated dom")
+            webView.component.repaint()
         }
     }
 

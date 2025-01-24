@@ -57,6 +57,9 @@ class EventNames {
 
         @SerializedName("ide/toolEditResponse")
         IDE_TOOL_EDIT_RESPONSE("ide/toolEditResponse")
+        // Set current project for knowledge
+        @SerializedName("currentProjectInfo/setCurrentProjectInfo")
+        SET_CURRENT_PROJECT("currentProjectInfo/setCurrentProjectInfo")
     }
 }
 
@@ -500,6 +503,12 @@ class Events {
         class ToolCallResponse(payload: ToolCallResponsePayload): ToChat<ToolCallResponsePayload>(EventNames.ToChat.IDE_TOOL_EDIT_RESPONSE, payload)
     }
 
+
+    class CurrentProject {
+        data class SetCurrentProjectPayload(val name: String = ""): Payload()
+
+        class SetCurrentProject(name: String) : ToChat<Payload>(EventNames.ToChat.SET_CURRENT_PROJECT, SetCurrentProjectPayload(name))
+    }
 
     companion object {
 

@@ -57,7 +57,6 @@ class StatusBarState {
 class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomStatusBarWidget, WidgetPresentation {
     private var component: StatusBarComponent? = null
     private var logger: Logger = Logger.getInstance(javaClass)
-    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)!!
     private val spinIcon = AnimatedIcon.Default.INSTANCE
 
     private fun getVirtualFile(editor: Editor): VirtualFile? {
@@ -69,66 +68,43 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
 
     override fun dispose() {
         lspSyncTask?.cancel(true)
-        super<EditorBasedWidget>.dispose()
     }
 
-    private fun lspSync() {
+    private fun updateStatusBarStateAndUpdateStatusBarIfNeed(ragStatus: RagStatus) {
         try {
-            val ragStatus = lsp.getRagStatus()
-            synchronized(this) {
-                statusbarState.lastRagStatus = ragStatus
-            }
-            if (ragStatus == null) {
-                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
-                return
-            }
+            statusbarState.lastRagStatus = ragStatus
+
             if (ragStatus.ast != null && ragStatus.ast.astMaxFilesHit) {
-                synchronized(this) {
-                    statusbarState.astLimitHit = true
-                }
+                statusbarState.astLimitHit = true
                 update(null)
-                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
                 return
             }
             if (ragStatus.vecdb != null && ragStatus.vecdb.vecdbMaxFilesHit) {
-                synchronized(this) {
-                    statusbarState.vecdbLimitHit = true
-                }
+                statusbarState.vecdbLimitHit = true
                 update(null)
-                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
                 return
             }
 
-            synchronized(this) {
-                statusbarState.astLimitHit = false
-                statusbarState.vecdbLimitHit = false
-            }
+            statusbarState.astLimitHit = false
+            statusbarState.vecdbLimitHit = false
 
             if (ragStatus.vecDbError.isNotEmpty()) {
-                synchronized(this) {
-                    statusbarState.vecdbWarning = ragStatus.vecDbError
-                }
+                statusbarState.vecdbWarning = ragStatus.vecDbError
             }
 
             if ((ragStatus.ast != null && listOf("starting", "parsing", "indexing").contains(ragStatus.ast.state))
                 || (ragStatus.vecdb != null && listOf("starting", "parsing").contains(ragStatus.vecdb.state))
             ) {
                 logger.info("ast or vecdb is still indexing")
-                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 700, TimeUnit.MILLISECONDS)
             } else {
                 logger.info("ast and vecdb status complete, slowdown poll")
-                lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
             }
 
             update(null)
-        } catch (e: Exception) {
-            lspSyncTask = AppExecutorUtil.getAppScheduledExecutorService().schedule({ lspSync() }, 5000, TimeUnit.MILLISECONDS)
-        }
+        } catch (_: Exception) {}
     }
 
     init {
-        if (lsp.isWorking)
-            lspSync()
         ApplicationManager.getApplication()
             .messageBus
             .connect(this)
@@ -205,13 +181,11 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         project.messageBus.connect(PluginState.instance)
             .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
                 override fun lspIsActive(isActive: Boolean) {
-                    statusbarState = StatusBarState()
-                    lspSyncTask?.cancel(true)
-                    lspSyncTask = null
-                    if (isActive) {
-                        lspSync()
-                    }
                     update(null)
+                }
+
+                override fun ragStatusChanged(ragStatus: RagStatus) {
+                    updateStatusBarStateAndUpdateStatusBarIfNeed(ragStatus)
                 }
             })
     }
@@ -305,7 +279,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 RefactAIBundle.message("statusBar.errorWarning", InferenceGlobalContext.lastErrorMsg!!)
             }
         }
-
+        val lsp = LSPProcessHolder.getInstance(project)!!
         var msg = RefactAIBundle.message("statusBar.communicatingWith", lsp.attempingToReach())
         if (InferenceGlobalContext.lastAutoModel != null) {
             msg += "<br><br>${RefactAIBundle.message("statusBar.lastUsedModel", InferenceGlobalContext.lastAutoModel!!)}"

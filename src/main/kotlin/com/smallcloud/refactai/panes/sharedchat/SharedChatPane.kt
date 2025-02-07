@@ -470,6 +470,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handleAnimationStop(fileName: String) {
         synchronized(this) {
             animatedFiles.remove(fileName)
+            val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
+            ApplicationManager.getApplication().invokeLater {
+                val virtualFile = LocalFileSystem.getInstance().findFileByPath(sanitizedFileName)
+                virtualFile?.refresh(true, false)
+            }
         }
     }
 

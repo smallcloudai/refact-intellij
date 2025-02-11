@@ -78,8 +78,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         println("bodyClass: ${bodyClass}")
         CoroutineScope(Dispatchers.Default).launch {
             webView.executeJavaScript("""document.body.style.setProperty("background-color", "rgb($red, $green, $blue");""")
-            webView.executeJavaScript("""document.body.className = "$bodyClass";""")
-            webView.executeJavaScript("""document.documentElement.className = "$mode";""")
+            webView.executeJavaScript("""document.body.className = "$bodyClass $mode";""")
             println("updated dom")
             webView.component.repaint()
         }

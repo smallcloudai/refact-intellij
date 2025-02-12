@@ -14,6 +14,11 @@ on:
         options:
           - main
           - alpha
+      lsp_version:
+        description: "LSP version (leave empty to use version from refact_lsp file)"
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build:
@@ -41,7 +46,11 @@ jobs:
       - name: "setup vars"
         id: setupvars
         run: |
-          echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
+          if [ -n "${{ inputs.lsp_version }}" ]; then
+            echo "lsp_version=${{ inputs.lsp_version }}" >> $GITHUB_OUTPUT
+          else
+            echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
+          fi
 
       - name: Download refact-chat-js
         id: download-refact-chat-js

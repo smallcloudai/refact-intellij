@@ -218,7 +218,7 @@ class EventsTest {
         val path = "refact/refact-agent/engine/tests/emergency_frog_situation/frog.py"
         val toolCallArgs = TextDocToolCall.UpdateTextDocToolCall.Function.Arguments(path, oldStr, newStr, false)
         val toolCallFn =  TextDocToolCall.UpdateTextDocToolCall.Function("update_textdoc", toolCallArgs)
-        val toolCall = TextDocToolCall.UpdateTextDocToolCall(toolCallFn)
+        val toolCall = TextDocToolCall.UpdateTextDocToolCall("test_tool_call_id", toolCallFn)
         val chunks = listOf(
             DiffChunk(path, "edit", 32, 32, oldStr + "\n", newStr + "\n")
         )
@@ -226,8 +226,8 @@ class EventsTest {
         val edit = ToolEditResult(oldStr+"\n", newStr+"\n", chunks)
         val payload = Events.IdeAction.ToolCallPayload(toolCall, "test_chat_id", edit)
         val expected = Events.IdeAction.ToolCall(payload)
-
         assertEquals(expected, result)
+
         
     }
 

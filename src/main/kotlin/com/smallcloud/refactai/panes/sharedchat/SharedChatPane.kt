@@ -492,18 +492,47 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         when (val toolCall = payload.toolCall) {
             is TextDocToolCall.CreateTextDocToolCall -> {
                 println("Create text Doc")
-                val path = toolCall.function.arguments.path
+                val path = this.sanitizeFileNameForPosix(toolCall.function.arguments.path)
                 val content = toolCall.function.arguments.content
-                val sanitizedFileNameEdit = this.sanitizeFileNameForPosix(path)
-                logger.warn("CreateTextDocToolCall: item.fileNameAdd = $sanitizedFileNameEdit")
-                this.openNewFile(sanitizedFileNameEdit)
-                showPatch(sanitizedFileNameEdit, content)
-                // TODO: the user should be able to accept or reject by saving or closing without save
-                handleFileAction(toolCall.id, payload.chatId, true)
+                createAndSetFileContent(path, content, payload.chatId, toolCall.id)
             }
             else -> {
                 // Apply the edit to a file with diff
                 val editResult = payload.edit
+            }
+        }
+    }
+
+    private fun writeContentToVirtualFile(virtualFile: VirtualFile, content: String) {
+        return ApplicationManager.getApplication().runWriteAction {
+            val document = FileDocumentManager.getInstance().getDocument(virtualFile)
+            if (document != null) {
+                document.setText(content)
+            }
+        }
+    }
+    private fun openVirtualFileInIde(virtualFile: VirtualFile) {
+        val fileEditorManager = FileEditorManager.getInstance(project)
+        fileEditorManager.openFile(virtualFile, true)
+    }
+
+    private fun createAndSetFileContent(path: String, content: String, chatId: String, toolCallId: String) {
+        ApplicationManager.getApplication().invokeLater {
+            try {
+                val file = File(path)
+                file.parentFile.mkdirs()
+                file.createNewFile()
+                val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
+                if (virtualFile != null) {
+                    writeContentToVirtualFile(virtualFile, content)
+                    openVirtualFileInIde(virtualFile)
+                    handleFileAction(toolCallId, chatId, true)
+                } else {
+                    handleFileAction(toolCallId, chatId, false)
+                }
+            } catch (e: Exception) {
+                logger.error("Error creating or setting file content", e)
+                handleFileAction(toolCallId, chatId, false)
             }
         }
     }

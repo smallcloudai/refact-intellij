@@ -431,7 +431,7 @@ class Events {
             val toolCall: TextDocToolCall,
             val chatId: String,
             val edit: ToolEditResult
-        ) : Payload() {
+        ): Payload()  {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (javaClass != other?.javaClass) return false
@@ -453,7 +453,7 @@ class Events {
             }
         }
 
-        class ToolCall(payload: ToolCallPayload): FromChat(EventNames.FromChat.IDE_TOOL_EDIT, payload) {
+        data class ToolCall(override val payload: ToolCallPayload): FromChat(EventNames.FromChat.IDE_TOOL_EDIT, payload) {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (javaClass != other?.javaClass) return false

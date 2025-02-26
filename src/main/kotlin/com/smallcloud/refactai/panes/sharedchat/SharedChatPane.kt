@@ -478,6 +478,19 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+    private fun handleToolCall(payload: Events.IdeAction.ToolCallPayload) {
+        when(payload.toolCall) {
+            is TextDocToolCall.CreateTextDocToolCall -> {
+                // craete the file with content
+                // on save or close send ToolCallResponse
+            }
+            else -> {
+                // use the edit to edit a file with diff
+                // then send ToolCallResponse on accept or reject
+            }
+        }
+    }
+
     private suspend fun handleEvent(event: Events.FromChat) {
         logger.warn("${event.toString()} ${event.payload.toString()}")
         when (event) {
@@ -500,6 +513,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
             is Events.ChatPageChange -> {
                 currentPage = event.payload.toString()
+            }
+
+            is Events.IdeAction.ToolCall -> {
+                this.handleToolCall(event.payload)
             }
 
             else -> Unit

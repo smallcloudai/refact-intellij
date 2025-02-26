@@ -33,6 +33,7 @@ class EventNames {
         WRITE_RESULTS_TO_FILE("ide/writeResultsToFile"),
         IS_CHAT_STREAMING("ide/isChatStreaming"),
         CHAT_PAGE_CHANGE("ide/chatPageChange"),
+        IDE_TOOL_EDIT("ide/toolEdit")
     }
 
     enum class ToChat(val value: String) {
@@ -53,6 +54,9 @@ class EventNames {
         @SerializedName("textarea/replace")
         CODE_LENS_EXEC("textarea/replace"),
         // logout, open external url, setup host
+
+        @SerializedName("ide/toolEditResponse")
+        IDE_TOOL_EDIT_RESPONSE("ide/toolEditResponse")
     }
 }
 
@@ -122,6 +126,12 @@ class Events {
                     val items = p2?.deserialize(payload, results::class.java) ?: results
                     val applyPayload = Patch.ApplyPayload(items)
                     return Patch.Apply(applyPayload)
+                }
+
+                EventNames.FromChat.IDE_TOOL_EDIT.value -> {
+                    val toolCallPayload = p2?.deserialize<IdeAction.ToolCallPayload>(payload, IdeAction.ToolCallPayload::class.java)
+                        ?: return null
+                    return IdeAction.ToolCall(toolCallPayload)
                 }
 
 
@@ -385,6 +395,8 @@ class Events {
 
     class CodeLensCommand(payload: CodeLensCommandPayload) : ToChat<Payload>(EventNames.ToChat.CODE_LENS_EXEC, payload)
 
+
+
     class Config {
         abstract class BaseFeatures()
 
@@ -414,11 +426,81 @@ class Events {
 
     }
 
+    class IdeAction {
+        data class ToolCallPayload(
+            val toolCall: TextDocToolCall,
+            val chatId: String,
+            val edit: ToolEditResult
+        ) : Payload() {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (javaClass != other?.javaClass) return false
+
+                other as ToolCallPayload
+
+                if (toolCall != other.toolCall) return false
+                if (chatId != other.chatId) return false
+                if (edit != other.edit) return false
+
+                return true
+            }
+
+            override fun hashCode(): Int {
+                var result = toolCall.hashCode()
+                result = 31 * result + chatId.hashCode()
+                result = 31 * result + edit.hashCode()
+                return result
+            }
+        }
+
+        class ToolCall(payload: ToolCallPayload): FromChat(EventNames.FromChat.IDE_TOOL_EDIT, payload) {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (javaClass != other?.javaClass) return false
+                return true
+            }
+
+            override fun hashCode(): Int {
+                return javaClass.hashCode()
+            }
+        }
+
+        data class ToolCallResponsePayload(
+            val toolCallId: String,
+            val chatId: String,
+            val accepted: Boolean
+        ) : Payload() {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (javaClass != other?.javaClass) return false
+
+                other as ToolCallResponsePayload
+
+                if (accepted != other.accepted) return false
+                if (toolCallId != other.toolCallId) return false
+                if (chatId != other.chatId) return false
+
+                return true
+            }
+
+            override fun hashCode(): Int {
+                var result = accepted.hashCode()
+                result = 31 * result + toolCallId.hashCode()
+                result = 31 * result + chatId.hashCode()
+                return result
+            }
+        }
+
+        class ToolCallResponse(payload: ToolCallResponsePayload): ToChat<ToolCallResponsePayload>(EventNames.ToChat.IDE_TOOL_EDIT_RESPONSE, payload)
+    }
+
+
     companion object {
 
         val gson = GsonBuilder()
             .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
             .registerTypeAdapter(Host::class.java, HostDeserializer())
+            .registerTypeAdapter(TextDocToolCall::class.java, TextDocToolCallDeserializer())
             .create()
 
         fun parse(msg: String?): FromChat? {
@@ -428,6 +510,112 @@ class Events {
 
         fun stringify(event: ToChat<*>): String {
             return gson.toJson(event)
+        }
+    }
+}
+
+interface TextDocToolCall {
+    data class CreateTextDocToolCall(
+        val function: Function
+    ) : TextDocToolCall {
+        data class Function(
+            val name: String = "create_textdoc",
+            val arguments: Arguments
+        ) {
+            data class Arguments(
+                val path: String,
+                val content: String
+            )
+        }
+    }
+
+    data class UpdateTextDocToolCall(
+        val function: Function
+    ) : TextDocToolCall {
+        data class Function(
+            val name: String = "update_textdoc",
+            val arguments: Arguments
+        ) {
+            data class Arguments(
+                val path: String,
+                val old_str: String,
+                val replacement: String,
+                val multiple: Boolean
+            )
+        }
+    }
+
+    data class ReplaceTextDocToolCall(
+        val function: Function
+    ) : TextDocToolCall {
+        data class Function(
+            val name: String = "replace_textdoc",
+            val arguments: Arguments
+        ) {
+            data class Arguments(
+                val path: String,
+                val replacement: String
+            )
+        }
+    }
+
+    data class UpdateRegexTextDocToolCall(
+        val function: Function
+    ) : TextDocToolCall {
+        data class Function(
+            val name: String = "update_textdoc_regex",
+            val arguments: Arguments
+        ) {
+            data class Arguments(
+                val path: String,
+                val pattern: String,
+                val replacement: String,
+                val multiple: Boolean
+            )
+        }
+    }
+}
+
+data class ToolEditResult(
+    val fileBefore: String,
+    val fileAfter: String,
+    val chunks: List<DiffChunk>
+)
+data class DiffChunk(
+    val fileName: String,
+    val fileAction: String,
+    val line1: Int,
+    val line2: Int,
+    val linesRemove: String,
+    val linesAdd: String,
+    val fileNameRename: String? = null,
+    val applicationDetails: String? = null
+)
+
+private class TextDocToolCallDeserializer : JsonDeserializer<TextDocToolCall> {
+    override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): TextDocToolCall? {
+        val jsonObject = json?.asJsonObject ?: return null
+        val functionObject = jsonObject.getAsJsonObject("function")
+        val functionName = functionObject.get("name").asString
+
+        return when (functionName) {
+            "create_textdoc" -> {
+                val arguments = context?.deserialize<TextDocToolCall.CreateTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.CreateTextDocToolCall.Function.Arguments::class.java)
+                TextDocToolCall.CreateTextDocToolCall(TextDocToolCall.CreateTextDocToolCall.Function(arguments = arguments!!))
+            }
+            "update_textdoc" -> {
+                val arguments = context?.deserialize<TextDocToolCall.UpdateTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.UpdateTextDocToolCall.Function.Arguments::class.java)
+                TextDocToolCall.UpdateTextDocToolCall(TextDocToolCall.UpdateTextDocToolCall.Function(arguments = arguments!!))
+            }
+            "replace_textdoc" -> {
+                val arguments = context?.deserialize<TextDocToolCall.ReplaceTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.ReplaceTextDocToolCall.Function.Arguments::class.java)
+                TextDocToolCall.ReplaceTextDocToolCall(TextDocToolCall.ReplaceTextDocToolCall.Function(arguments = arguments!!))
+            }
+            "update_textdoc_regex" -> {
+                val arguments = context?.deserialize<TextDocToolCall.UpdateRegexTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.UpdateRegexTextDocToolCall.Function.Arguments::class.java)
+                TextDocToolCall.UpdateRegexTextDocToolCall(TextDocToolCall.UpdateRegexTextDocToolCall.Function(arguments = arguments!!))
+            }
+            else -> null
         }
     }
 }

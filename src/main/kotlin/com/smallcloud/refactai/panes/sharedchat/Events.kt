@@ -430,7 +430,7 @@ class Events {
         data class ToolCallPayload(
             val toolCall: TextDocToolCall,
             val chatId: String,
-            val edit: ToolEditResult
+            val edit: ToolEditResult,
         ): Payload()  {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
@@ -515,7 +515,9 @@ class Events {
 }
 
 interface TextDocToolCall {
+
     data class CreateTextDocToolCall(
+        val id: String,
         val function: Function
     ) : TextDocToolCall {
         data class Function(
@@ -530,6 +532,7 @@ interface TextDocToolCall {
     }
 
     data class UpdateTextDocToolCall(
+        val id: String,
         val function: Function
     ) : TextDocToolCall {
         data class Function(
@@ -546,6 +549,7 @@ interface TextDocToolCall {
     }
 
     data class ReplaceTextDocToolCall(
+        val id: String,
         val function: Function
     ) : TextDocToolCall {
         data class Function(
@@ -560,6 +564,7 @@ interface TextDocToolCall {
     }
 
     data class UpdateRegexTextDocToolCall(
+        val id: String,
         val function: Function
     ) : TextDocToolCall {
         data class Function(
@@ -597,23 +602,24 @@ private class TextDocToolCallDeserializer : JsonDeserializer<TextDocToolCall> {
         val jsonObject = json?.asJsonObject ?: return null
         val functionObject = jsonObject.getAsJsonObject("function")
         val functionName = functionObject.get("name").asString
+        val id = jsonObject.get("id").asString // seems to be nulls
 
         return when (functionName) {
             "create_textdoc" -> {
                 val arguments = context?.deserialize<TextDocToolCall.CreateTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.CreateTextDocToolCall.Function.Arguments::class.java)
-                TextDocToolCall.CreateTextDocToolCall(TextDocToolCall.CreateTextDocToolCall.Function(arguments = arguments!!))
+                TextDocToolCall.CreateTextDocToolCall(id, TextDocToolCall.CreateTextDocToolCall.Function(arguments = arguments!!))
             }
             "update_textdoc" -> {
                 val arguments = context?.deserialize<TextDocToolCall.UpdateTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.UpdateTextDocToolCall.Function.Arguments::class.java)
-                TextDocToolCall.UpdateTextDocToolCall(TextDocToolCall.UpdateTextDocToolCall.Function(arguments = arguments!!))
+                TextDocToolCall.UpdateTextDocToolCall(id, TextDocToolCall.UpdateTextDocToolCall.Function(arguments = arguments!!))
             }
             "replace_textdoc" -> {
                 val arguments = context?.deserialize<TextDocToolCall.ReplaceTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.ReplaceTextDocToolCall.Function.Arguments::class.java)
-                TextDocToolCall.ReplaceTextDocToolCall(TextDocToolCall.ReplaceTextDocToolCall.Function(arguments = arguments!!))
+                TextDocToolCall.ReplaceTextDocToolCall(id, TextDocToolCall.ReplaceTextDocToolCall.Function(arguments = arguments!!))
             }
             "update_textdoc_regex" -> {
                 val arguments = context?.deserialize<TextDocToolCall.UpdateRegexTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.UpdateRegexTextDocToolCall.Function.Arguments::class.java)
-                TextDocToolCall.UpdateRegexTextDocToolCall(TextDocToolCall.UpdateRegexTextDocToolCall.Function(arguments = arguments!!))
+                TextDocToolCall.UpdateRegexTextDocToolCall(id, TextDocToolCall.UpdateRegexTextDocToolCall.Function(arguments = arguments!!))
             }
             else -> null
         }

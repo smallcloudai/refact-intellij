@@ -9,19 +9,19 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.LogicalPosition
+import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
 import com.intellij.openapi.fileEditor.*
+import com.intellij.util.messages.MessageBusConnection
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.StandardFileSystems
-import com.intellij.openapi.vfs.VfsUtil
-import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.*
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.io.awaitExit
@@ -41,15 +41,20 @@ import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
 import com.smallcloud.refactai.settings.Host
 import com.smallcloud.refactai.struct.ChatMessage
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.jetbrains.annotations.NotNull
 import java.io.File
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 import javax.swing.JPanel
 
+
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val logger = Logger.getInstance(SharedChatPane::class.java)
@@ -187,13 +192,15 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun handleNewFile(content: String) {
+    private fun handleNewFile(content: String): LightVirtualFile {
         val vf = LightVirtualFile("Untitled", content)
         val fileDescriptor = OpenFileDescriptor(project, vf)
 
         ApplicationManager.getApplication().invokeLater {
             FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
         }
+
+        return vf
     }
 
 
@@ -351,7 +358,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         return fileName
     }
 
-    private fun openNewFile(fileName: String) {
+    private fun openNewFile(fileName: String): File {
         val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
         val file = File(sanitizedFileName)
         if (!file.exists()) {
@@ -360,6 +367,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         val fileSystem = StandardFileSystems.local()
         fileSystem.refresh(false)
         logger.warn("openNewFileWithContent: $fileName")
+
+        return file
     }
 
     private fun setContent(fileName: String, content: String) {
@@ -479,16 +488,33 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handleToolCall(payload: Events.IdeAction.ToolCallPayload) {
-        when(payload.toolCall) {
+        println("handleToolCall")
+        when (val toolCall = payload.toolCall) {
             is TextDocToolCall.CreateTextDocToolCall -> {
-                // craete the file with content
-                // on save or close send ToolCallResponse
+                println("Create text Doc")
+                val path = toolCall.function.arguments.path
+                val content = toolCall.function.arguments.content
+                val sanitizedFileNameEdit = this.sanitizeFileNameForPosix(path)
+                logger.warn("CreateTextDocToolCall: item.fileNameAdd = $sanitizedFileNameEdit")
+                this.openNewFile(sanitizedFileNameEdit)
+                showPatch(sanitizedFileNameEdit, content)
+                // TODO: the user should be able to accept or reject by saving or closing without save
+                handleFileAction(toolCall.id, payload.chatId, true)
             }
             else -> {
-                // use the edit to edit a file with diff
-                // then send ToolCallResponse on accept or reject
+                // Apply the edit to a file with diff
+                val editResult = payload.edit
             }
         }
+    }
+
+
+    private fun handleFileAction(toolCallId: String, chatId: String, saved: Boolean) {
+        println("handleFileAciton")
+        val actionPayload = Events.IdeAction.ToolCallResponsePayload(toolCallId, chatId, saved)
+        val action = Events.IdeAction.ToolCallResponse(actionPayload)
+        println(action);
+        postMessage(action)
     }
 
     private suspend fun handleEvent(event: Events.FromChat) {
@@ -539,6 +565,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun postMessage(message: Events.ToChat<*>?) {
+        println("postMessage");
+        println(message)
         synchronized(this) {
             if (message != null) {
                 messageQuery.add(message)

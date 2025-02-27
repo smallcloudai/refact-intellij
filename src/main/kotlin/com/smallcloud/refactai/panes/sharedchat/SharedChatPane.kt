@@ -6,17 +6,17 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.ui.UISettings
 import com.intellij.ide.ui.UISettingsListener
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.invokeLater
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.LogicalPosition
-import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
 import com.intellij.openapi.fileEditor.*
-import com.intellij.util.messages.MessageBusConnection
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
@@ -44,17 +44,11 @@ import com.smallcloud.refactai.struct.ChatMessage
 import kotlinx.coroutines.*
 import org.jetbrains.annotations.NotNull
 import java.io.File
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 import javax.swing.JPanel
-
-
-import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val logger = Logger.getInstance(SharedChatPane::class.java)
@@ -407,7 +401,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun showPatch(fileName: String, fileText: String) {
+    private fun showPatch(
+        fileName: String,
+        fileText: String,
+        onTab: ((com.intellij.openapi.editor.Editor, Caret?, DataContext) -> Unit)? = null,
+        onEsc: ((com.intellij.openapi.editor.Editor, Caret?, DataContext) -> Unit)? = null
+    ) {
         logger.warn("showPatch: item.fileNameEdit = $fileName")
         this.handleAnimationStop(fileName)
 
@@ -421,8 +420,14 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             val fileDescriptor = OpenFileDescriptor(project, file)
             val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
             editor?.selectionModel?.setSelection(0, editor.document.textLength)
-            if (editor != null) {
-                ModeProvider.getOrCreateModeProvider(editor).getDiffMode()
+            if (editor != null && (onTab == null || onEsc == null)) {
+                ModeProvider.getOrCreateModeProvider(editor)
+                    .getDiffMode()
+                    .actionPerformed(editor, fileText)
+            } else if(editor != null && onTab != null && onEsc != null) {
+                ModeProvider
+                    .getOrCreateModeProvider(editor)
+                    .addSideEffects(onTab, onEsc)
                     .actionPerformed(editor, fileText)
             }
         }
@@ -488,20 +493,45 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handleToolCall(payload: Events.IdeAction.ToolCallPayload) {
-        println("handleToolCall")
         when (val toolCall = payload.toolCall) {
             is TextDocToolCall.CreateTextDocToolCall -> {
-                println("Create text Doc")
                 val path = this.sanitizeFileNameForPosix(toolCall.function.arguments.path)
-                val content = toolCall.function.arguments.content
+                val content = payload.edit.fileAfter
                 createAndSetFileContent(path, content, payload.chatId, toolCall.id)
+            }
+            is TextDocToolCall.UpdateTextDocToolCall -> {
+                val path = this.sanitizeFileNameForPosix(toolCall.function.arguments.path)
+                showPatch(
+                    path,
+                    payload.edit.fileAfter,
+                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, true); },
+                    {_, _, _ ->  handleFileAction(toolCall.id, payload.chatId, false); }
+                )
+            }
+            is TextDocToolCall.ReplaceTextDocToolCall -> {
+                val path = this.sanitizeFileNameForPosix(toolCall.function.arguments.path)
+                showPatch(
+                    path,
+                    payload.edit.fileAfter,
+                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, true); },
+                    {_, _, _ ->  handleFileAction(toolCall.id, payload.chatId, false); }
+                )
+            }
+            is TextDocToolCall.UpdateRegexTextDocToolCall -> {
+                val path = this.sanitizeFileNameForPosix(toolCall.function.arguments.path)
+                showPatch(
+                    path,
+                    payload.edit.fileAfter,
+                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, true); },
+                    {_, _, _ ->  handleFileAction(toolCall.id, payload.chatId, false); }
+                )
             }
             else -> {
                 // Apply the edit to a file with diff
-                val editResult = payload.edit
             }
         }
     }
+
 
     private fun writeContentToVirtualFile(virtualFile: VirtualFile, content: String) {
         return ApplicationManager.getApplication().runWriteAction {
@@ -612,3 +642,4 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
 }
+

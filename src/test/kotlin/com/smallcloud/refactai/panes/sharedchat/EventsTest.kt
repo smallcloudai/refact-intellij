@@ -241,4 +241,33 @@ class EventsTest {
         val expected = """{"type":"ide/toolEditResponse","payload":{"toolCallId":"test_tool_call_id","chatId":"test_chat_id","accepted":true}}"""
         assertEquals(expected, result)
     }
+
+    @Test
+    fun parseToolEditUpdateTextDocType() {
+        val msg = """{
+            |"type":"ide/toolEdit",
+            |"payload":{
+                |"toolCall":{
+                    |"id":"call_8jGDwPC19TSojpzQWVi82Hpd",
+                    |"function":{
+                        |"arguments":{"path":"/Users/marc/Projects/refact-lsp/tests/emergency_frog_situation/frog.py","old_str":"class Frog:","replacement":"class Frog:\n    def swim(self, dx, dy, pond_width, pond_height):\n        self.x += dx\n        self.y += dy\n        self.x = np.clip(self.x, 0, pond_width)\n        self.y = np.clip(self.y, 0, pond_height)","multiple":false},
+                        |"name":"update_textdoc"
+                    |},
+                    |"type":"function",
+                    |"index":0
+                |},
+                |"edit":{
+                    |"file_before":"foo\n",
+                    |"file_after":"bar\n",
+                    |"chunks":[{"file_name":"/Users/marc/Projects/refact-lsp/tests/emergency_frog_situation/frog.py","file_action":"edit","line1":6,"line2":6,"lines_remove":"","lines_add":"    def swim(self, dx, dy, pond_width, pond_height):\n        self.x += dx\n        self.y += dy\n        self.x = np.clip(self.x, 0, pond_width)\n        self.y = np.clip(self.y, 0, pond_height)\n","file_name_rename":null,"application_details":""}]
+                |},
+                |"chatId":"9c374827-dc8f-4b01-9a06-d4ea6e35a228"
+            |}
+        |}""".trimMargin()
+
+        val result = Events.parse(msg) as Events.IdeAction.ToolCall;
+
+        assertEquals(result.payload.edit.fileAfter, "bar\n")
+
+    }
 }

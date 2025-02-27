@@ -131,7 +131,13 @@ class Events {
                 EventNames.FromChat.IDE_TOOL_EDIT.value -> {
                     val toolCallPayload = p2?.deserialize<IdeAction.ToolCallPayload>(payload, IdeAction.ToolCallPayload::class.java)
                         ?: return null
-                    return IdeAction.ToolCall(toolCallPayload)
+                    // Ensure that the edit field is properly deserialized
+                    val editJson = payload?.asJsonObject?.get("edit")
+                    val edit = p2.deserialize<ToolEditResult>(editJson, ToolEditResult::class.java)
+                    // Create a new ToolCallPayload with the deserialized edit
+                    val updatedPayload = IdeAction.ToolCallPayload(toolCallPayload.toolCall, toolCallPayload.chatId, edit ?: toolCallPayload.edit)
+                    return IdeAction.ToolCall(updatedPayload)
+
                 }
 
 
@@ -503,6 +509,7 @@ class Events {
             .registerTypeAdapter(TextDocToolCall::class.java, TextDocToolCallDeserializer())
             .create()
 
+
         fun parse(msg: String?): FromChat? {
             val result = gson.fromJson(msg, FromChat::class.java)
             return result
@@ -582,7 +589,9 @@ interface TextDocToolCall {
 }
 
 data class ToolEditResult(
+    @SerializedName("file_before")
     val fileBefore: String,
+    @SerializedName("file_after")
     val fileAfter: String,
     val chunks: List<DiffChunk>
 )

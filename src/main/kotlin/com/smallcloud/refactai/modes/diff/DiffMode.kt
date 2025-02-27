@@ -11,7 +11,7 @@ import com.smallcloud.refactai.modes.ModeType
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
 import dev.gitlive.difflib.DiffUtils
 
-class DiffMode(
+open class DiffMode(
     override var needToRender: Boolean = true
 ) : Mode {
     private val app = ApplicationManager.getApplication()
@@ -68,7 +68,8 @@ class DiffMode(
 
     fun actionPerformed(
         editor: Editor,
-        content: String
+        content: String,
+        modeType: ModeType = ModeType.Diff
     ) {
         val selectionModel = editor.selectionModel
         val startSelectionOffset: Int = selectionModel.selectionStart
@@ -80,7 +81,7 @@ class DiffMode(
         selectionModel.removeSelection()
         // doesn't seem to take focus
         // editor.contentComponent.requestFocus()
-        getOrCreateModeProvider(editor).switchMode(ModeType.Diff)
+        getOrCreateModeProvider(editor).switchMode(modeType)
         diffLayout?.cancelPreview()
         val diff = DiffLayout(editor, content)
         val originalText = editor.document.text
@@ -92,5 +93,25 @@ class DiffMode(
         app.invokeLater {
             editor.contentComponent.requestFocusInWindow()
         }
+    }
+}
+
+class DiffModeWithSideEffects(
+    var onTab: (editor: Editor, caret: Caret?, dataContext: DataContext) -> Unit,
+    var onEsc: (editor: Editor, caret: Caret?, dataContext: DataContext) -> Unit
+    ) : DiffMode() {
+
+    override fun onTabPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
+        super.onTabPressed(editor, caret, dataContext)
+        onTab(editor, caret, dataContext)
+    }
+
+    override fun onEscPressed(editor: Editor, caret: Caret?, dataContext: DataContext) {
+        super.onEscPressed(editor, caret, dataContext)
+        onEsc(editor, caret, dataContext)
+    }
+
+    fun actionPerformed(editor: Editor, content: String) {
+        super.actionPerformed(editor, content, ModeType.DiffWithSideEffects)
     }
 }

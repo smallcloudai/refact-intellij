@@ -2,7 +2,7 @@ name: Build
 on:
   # Trigger the workflow on pushes to only the 'main' branch (this avoids duplicate checks being run e.g. for dependabot pull requests)
   push:
-    branches: [main]
+    branches: [ main ]
   # Trigger the workflow on any pull request
   pull_request:
   workflow_dispatch:
@@ -10,15 +10,16 @@ on:
       chat_js_branch:
         description: "Branch name of chat-js"
         default: "main"
-        type: choice
-        options:
-          - main
-          - alpha
+        type: string
       lsp_version:
         description: "LSP version (leave empty to use version from refact_lsp file)"
         required: false
         type: string
         default: ''
+      force_build_lsp:
+        type: boolean
+        description: Use last version of lsp from repo or force build new(for tests only)
+        default: true
 
 jobs:
   build:
@@ -52,20 +53,29 @@ jobs:
             echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
           fi
 
-      - name: Download refact-chat-js
-        id: download-refact-chat-js
-        uses: dawidd6/action-download-artifact@v3
+      - name: Download chat artifacts
+        id: download-artifact-chat
+        uses: dawidd6/action-download-artifact@v9
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: agent_gui_build.yml
-          workflow_search: true
           repo: smallcloudai/refact
           branch: ${{ inputs.chat_js_branch }}
-          name: refact-chat-js-latest
-          path: ./src/main/resources/webview/dist
+          path: ./chat_package
+          name: lts-refact-chat-js-.*\.tgz
+          name_is_regexp: true
+
+      - name: Prepare chat package
+        shell: bash
+        run: |
+          mkdir -p ./chat_package_fixed
+          find ./chat_package -name "*.tgz" -type f -exec tar -xzf {} -C ./chat_package_fixed/ \;
+          mv ./chat_package_fixed/package/dist ./src/main/resources/webview/dist
+          rm -rf ./chat_package ./chat_package_fixed
 
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         name: "Build refact-lsp"
+        if: ${{ inputs.force_build_lsp }}
         with:
           owner: smallcloudai
           repo: refact
@@ -84,7 +94,6 @@ jobs:
           name: dist-*
           branch: ${{ steps.setupvars.outputs.lsp_version }}
           path: ./src/main/resources/bin
-
 
       # Validate wrapper
       - name: Gradle Wrapper Validation

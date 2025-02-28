@@ -12,6 +12,10 @@ on:
         description: "lsp_branch"
         default: "main"
         type: string
+      chat_js_branch:
+        description: "Branch name of chat-js"
+        default: "main"
+        type: string
 jobs:
 
   # Run Gradle Wrapper Validation Action to verify the wrapper's checksum
@@ -63,17 +67,25 @@ jobs:
           echo "plugin_version=$(./gradlew properties -q | awk '/^version:/ {print $2}')" >> $GITHUB_OUTPUT
           echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
 
-      - name: Download refact-chat-js
-        id: download-refact-chat-js
-        uses: dawidd6/action-download-artifact@v3
+      - name: Download chat artifacts
+        id: download-artifact-chat
+        uses: dawidd6/action-download-artifact@v9
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: node.js.yml
-          workflow_search: true
-          repo: smallcloudai/refact-chat-js
-          branch: main
-          name: refact-chat-js-latest
-          path: ./src/main/resources/webview/dist
+          workflow: agent_gui_build.yml
+          repo: smallcloudai/refact
+          branch: ${{ inputs.chat_js_branch }}
+          path: ./chat_package
+          name: lts-refact-chat-js-.*\.tgz
+          name_is_regexp: true
+
+      - name: Prepare chat package
+        shell: bash
+        run: |
+          mkdir -p ./chat_package_fixed
+          find ./chat_package -name "*.tgz" -type f -exec tar -xzf {} -C ./chat_package_fixed/ \;
+          mv ./chat_package_fixed/package/dist ./src/main/resources/webview/dist
+          rm -rf ./chat_package ./chat_package_fixed
 
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         name: "Build refact-lsp"

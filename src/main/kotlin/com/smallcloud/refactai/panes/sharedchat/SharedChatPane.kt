@@ -17,6 +17,8 @@ import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.project.ProjectManagerListener
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.StandardFileSystems
@@ -122,6 +124,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             val message = ActiveFileToChat(file)
             this.postMessage(message)
         }
+    }
+
+    private fun sendCurrentProjectInfo(p: Project = project) {
+        val message = Events.CurrentProject.SetCurrentProject(p.name)
+        this.postMessage(message)
     }
 
     private suspend fun handleSetupHost(host: Host) {
@@ -233,6 +240,13 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     this@SharedChatPane.setLookAndFeel()
                 }
             }, this)
+
+        project.messageBus.connect().subscribe(ProjectManager.TOPIC, object: ProjectManagerListener {
+            override fun projectOpened(project: Project) {
+                this@SharedChatPane.sendCurrentProjectInfo(project)
+            }
+        })
+
         // ast and vecdb settings change
         project.messageBus.connect()
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {

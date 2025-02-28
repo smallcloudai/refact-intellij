@@ -16,6 +16,7 @@ on:
         description: "Branch name of chat-js"
         default: "main"
         type: string
+        required: true
 jobs:
 
   # Run Gradle Wrapper Validation Action to verify the wrapper's checksum

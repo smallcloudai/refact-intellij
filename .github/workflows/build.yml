@@ -18,8 +18,9 @@ on:
         default: ''
       force_build_lsp:
         type: boolean
-        description: Use last version of lsp from repo or force build new(for tests only)
+        description: force build new lsp(for tests only)
         default: true
+        required: true
 
 jobs:
   build:
@@ -29,6 +30,18 @@ jobs:
       version: ${{ steps.properties.outputs.version }}
       changelog: ${{ steps.properties.outputs.changelog }}
     steps:
+      # Set up conditional variables first
+      - name: Set build flag
+        id: set_build_flag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_build=${{ inputs.force_build_lsp }}" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Debug force_build_lsp
+        run: echo "force_build_lsp is set to ${{ steps.set_build_flag.outputs.should_build }}"
 
       # Free GitHub Actions Environment Disk Space
       - name: Maximize Build Space
@@ -60,7 +73,7 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: agent_gui_build.yml
           repo: smallcloudai/refact
-          branch: ${{ inputs.chat_js_branch }}
+          branch: ${{ inputs.chat_js_branch || 'main' }}
           path: ./chat_package
           name: lts-refact-chat-js-.*\.tgz
           name_is_regexp: true
@@ -75,7 +88,7 @@ jobs:
 
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         name: "Build refact-lsp"
-        if: ${{ inputs.force_build_lsp }}
+        if: ${{ steps.set_build_flag.outputs.should_build == 'true' }}
         with:
           owner: smallcloudai
           repo: refact
@@ -144,7 +157,6 @@ jobs:
         with:
           name: pluginVerifier-result
           path: ${{ github.workspace }}/build/reports/pluginVerifier
-
 
       - name: Prepare Plugin Artifact
         id: artifact

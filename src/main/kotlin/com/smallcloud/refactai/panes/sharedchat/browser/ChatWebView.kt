@@ -262,6 +262,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         RefactChat.render(element, config);
                     };
                     
+                    document.body.className = config.appearance === "dark" ? "vscode-dark" : "vscode-light";
+                                       
                     const script = document.createElement("script");
                     script.onload = loadChatJs;
                     script.src = "http://refactai/dist/chat/index.umd.cjs";

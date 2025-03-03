@@ -391,7 +391,7 @@ class Events {
         data class Features(val ast: Boolean, val vecdb: Boolean, val images: Boolean? = true) : BaseFeatures()
 
         data class ThemeProps(
-            val mode: String,
+            val appearance: String,
             val hasBackground: Boolean = false,
             val scale: String = "90%",
             val accentColor: String = "gray"

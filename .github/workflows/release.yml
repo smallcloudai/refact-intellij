@@ -92,8 +92,8 @@ jobs:
         name: "Build refact-lsp"
         with:
           owner: smallcloudai
-          repo: refact-lsp
-          workflow_file_name: build.yml
+          repo: refact
+          workflow_file_name: agent_engine_build.yml
           github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           ref: ${{ steps.setupvars.outputs.lsp_version }}
 
@@ -102,8 +102,8 @@ jobs:
         uses: dawidd6/action-download-artifact@v3
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build.yml
-          repo: smallcloudai/refact-lsp
+          workflow: agent_engine_build.yml
+          repo: smallcloudai/refact
           name_is_regexp: true
           name: dist-*
           branch: ${{ steps.setupvars.outputs.lsp_version }}

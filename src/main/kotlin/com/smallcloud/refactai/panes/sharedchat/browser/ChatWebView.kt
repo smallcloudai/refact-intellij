@@ -262,7 +262,11 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         RefactChat.render(element, config);
                     };
                     
-                    document.body.className = config.appearance === "dark" ? "vscode-dark" : "vscode-light";
+                    if(config.themeProps.appearance === "dark") {
+                      document.body.className = "vscode-dark";
+                    } else if (config.themeProps.appearance === "light") {
+                      document.body.className = "vscode-light";
+                    }
                                        
                     const script = document.createElement("script");
                     script.onload = loadChatJs;

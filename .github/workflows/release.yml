@@ -18,12 +18,34 @@ on:
         type: string
         required: true
 jobs:
+  # Set default values for inputs or use provided ones
+  set-defaults:
+    runs-on: ubuntu-latest
+    outputs:
+      lsp_branch: ${{ steps.set-defaults.outputs.lsp_branch }}
+      chat_js_branch: ${{ steps.set-defaults.outputs.chat_js_branch }}
+    steps:
+      # Check out current repository to read refact_lsp file
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - id: set-defaults
+        run: |
+          echo "chat_js_branch=${{ github.event.inputs.chat_js_branch || 'main' }}" >> $GITHUB_OUTPUT
+          if [ -n "${{ github.event.inputs.lsp_version }}" ]; then
+            echo "lsp_version=${{ github.event.inputs.lsp_version }}" >> $GITHUB_OUTPUT
+          else
+            echo "lsp_version=$(cat refact_lsp)" >> $GITHUB_OUTPUT
+          fi
 
   # Run Gradle Wrapper Validation Action to verify the wrapper's checksum
   # Run verifyPlugin, IntelliJ Plugin Verifier, and test Gradle tasks
   # Build plugin and provide the artifact for the next workflow jobs
   release:
     name: Release
+    needs: set-defaults
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.properties.outputs.version }}
@@ -75,7 +97,7 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: agent_gui_build.yml
           repo: smallcloudai/refact
-          branch: ${{ inputs.chat_js_branch }}
+          branch: ${{ needs.set-defaults.outputs.chat_js_branch }}
           path: ./chat_package
           name: lts-refact-chat-js-.*\.tgz
           name_is_regexp: true
@@ -95,7 +117,7 @@ jobs:
           repo: refact
           workflow_file_name: agent_engine_build.yml
           github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          ref: ${{ steps.setupvars.outputs.lsp_version }}
+          ref: ${{ needs.set-defaults.outputs.lsp_branch }}
 
       - name: Download artifact
         id: download-artifact

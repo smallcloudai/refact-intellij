@@ -172,10 +172,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun handleForceReloadFileByPath(fileName: String) {
         ApplicationManager.getApplication().invokeLater {
+            val sanitizedFileName = this.sanitizeFileNameForPosix(fileName);
             val virtualFile: VirtualFile? =
-                LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(fileName))
+                LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(sanitizedFileName))
             if (virtualFile == null) {
-                logger.warn("handleForceReloadFileByPath: File not found: $fileName")
+                logger.warn("handleForceReloadFileByPath: File not found: $fileName (sanitized: $sanitizedFileName)")
                 return@invokeLater
             }
             VfsUtil.markDirtyAndRefresh(false, false, true, virtualFile)

@@ -170,6 +170,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+    private fun handleForceReloadFileByPath(fileName: String) {
+        ApplicationManager.getApplication().invokeLater {
+            val virtualFile: VirtualFile? =
+                LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(fileName))
+            if (virtualFile == null) {
+                logger.warn("handleForceReloadFileByPath: File not found: $fileName")
+            }
+        }
+    }
+
     private fun openExternalUrl(url: String) {
         BrowserUtil.browse(url)
     }
@@ -602,6 +612,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
             is Events.IdeAction.ToolCall -> {
                 this.handleToolCall(event.payload)
+            }
+            is Events.Editor.ForceReloadFileByPath -> {
+                this.handleForceReloadFileByPath(event.path)
             }
 
             else -> Unit

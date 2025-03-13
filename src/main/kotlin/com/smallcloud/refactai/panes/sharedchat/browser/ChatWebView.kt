@@ -235,6 +235,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun addMessageHandler(myJSQueryOpenInBrowser: JBCefJSQuery) {
         myJSQueryOpenInBrowser.addHandler { msg ->
+            logger.warn("msg = ${msg}")
             val event = Events.parse(msg)
 
             if (event != null) {

@@ -176,7 +176,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(fileName))
             if (virtualFile == null) {
                 logger.warn("handleForceReloadFileByPath: File not found: $fileName")
+                return@invokeLater
             }
+            VfsUtil.markDirtyAndRefresh(false, false, true, virtualFile)
+            logger.warn("handleForceReloadFileByPath: done for $fileName")
         }
     }
 

@@ -56,7 +56,7 @@ class EventNames {
         // logout, open external url, setup host
 
         @SerializedName("ide/toolEditResponse")
-        IDE_TOOL_EDIT_RESPONSE("ide/toolEditResponse")
+        IDE_TOOL_EDIT_RESPONSE("ide/toolEditResponse"),
         // Set current project for knowledge
         @SerializedName("currentProjectInfo/setCurrentProjectInfo")
         SET_CURRENT_PROJECT("currentProjectInfo/setCurrentProjectInfo")

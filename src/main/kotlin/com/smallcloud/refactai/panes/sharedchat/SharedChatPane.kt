@@ -638,8 +638,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun postMessage(message: Events.ToChat<*>?) {
-        println("postMessage");
-        println(message)
         synchronized(this) {
             if (message != null) {
                 messageQuery.add(message)

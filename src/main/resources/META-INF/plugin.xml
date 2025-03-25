@@ -2,77 +2,58 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin require-restart="true">
     <id>com.smallcloud.codify</id>
-    <name>Refact.ai</name>
+    <name><![CDATA[Refact – Open-Source AI Agent, Code Generator & Chat]]></name>
     <vendor email="info@smallcloud.ai"
             url="https://refact.ai/?utm_source=jb&amp;utm_medium=marketplace&amp;utm_campaign=plugin">smallcloudai
     </vendor>
 
     <description><![CDATA[
-<h2>Refact – Open-Source AI Agent, Code Generator & Chat for JavaScript, Python, TypeScript, Java, PHP, Go, and more.</h2>
-<p>
-    Refact.ai is a free, open-source AI Agent that adapts to your workflow.
-    It tracks your cursor to provide instant assistance, connects with tools, databases and browsers,
-    works with debuggers, and runs shell commands. As your AI copilot, it handles code generation, testing, review, and refactoring.
-</p>
-
 <h2>Refact.ai – Your Customizable Open-Source AI Software Engineering Agent</h2>
 <p>
     Refact.ai is a free, <b>open-source</b> AI Agent that handles engineering tasks end-to-end.
     It deeply understands your codebases and integrates with your tools, databases, and browsers to automate complex, multi-step tasks.
 </p>
 
-<ul style="margin-top:5">
+<ul>
     <li>Integrate AI Agent with the tools you already use, allowing it to complete tasks for you end-to-end.</li>
-    <br>
     <li>Deploy Refact.ai on-premise and maintain <b>100% control over your codebase.</b></li>
-    <br>
     <li>Access State-of-the-Art Models (Claude 3.5 Sonnet, GPT-4o, o3-mini, etc.)</li>
-    <br>
     <li>Bring your own key (BYOK) – Use your own API keys for external LLMs.</li>
-    <br>
     <li>Stop switching between your IDE and chat—Refact.ai has an integrated chat right in your IDE.</li>
-    <br>
     <li>Get free, unlimited, context-aware auto-completion.</li>
-    <br>
 </ul>
 
 <p>
-    We can’t say it better than our users: <i>'Refact.ai understands me better than my human coworkers. It's like working in perfect sync with an ideal partner.'</i>
+   Suitable for both individual and enterprise use, supporting 25+ programming languages, including Python,
+   JavaScript, Java, Rust, TypeScript, PHP, C++, C#, Go, and more.
+</p>
+
+<p>
+    We can’t say it better than our users: <i>'Refact.ai understands me better than my human coworkers.
+    It's like working in perfect sync with an ideal partner.'</i>
 </p>
 
 <h2>How does Refact.ai Agent empower developers?</h2>
-<ul style="margin-top:5">
+<ul>
     <li><b>Unlimited accurate auto-completion with context awareness for free</b> – Powered by Qwen2.5-Coder-1.5B,
     Refact.ai uses Retrieval-Augmented Generation (RAG) to provide precise, context-aware code suggestions.
     By retrieving relevant snippets and project-specific insights, it ensures completions that align with your coding style and architecture.</li>
-    <br>
     <li><b>Integrated in-IDE Chat</b> – By deeply understanding your codebases, Refact.ai provides relevant,
     intelligent answers to your questions—right inside your development environment.</li>
-    <br>
     <li><b>Integrated with the tools</b> – Refact.ai goes beyond codebases, connecting with GitHub, GitLab,
     databases (PostgreSQL, MySQL), Pdb, Docker, and any shell command, so AI Agent can autonomously complete tasks—from code generation to deployment.</li>
-    <br>
     <li><b>State-of-the-Art Models</b> – Refact.ai supports <b>Claude 3.5 Sonnet, GPT-4o, and o3-mini</b>,
     allowing you to choose the best model for each task based on its complexity.</li>
-    <br>
     <li><b>Bring your own key (BYOK)</b> – Use your own API keys for external LLMs,
     ensuring flexibility and control over your AI infrastructure.</li>
-    <br>
     <li>Use <b>@-commands</b>  to control what context to use to answer your question:</li>
-    <br>
-    <ul style="margin-top:5">
+    <ul>
         <li><b>@web</b> – define a webpage.</li>
-        <br>
         <li><b>@file</b> – upload and attach a single file.</li>
-        <br>
         <li><b>@definition</b> – find and attach a definition.</li>
-        <br>
         <li><b>@references</b> – locate all references and attach them.</li>
-        <br>
         <li><b>@tree</b> – display the workspace directory and files tree.</li>
-        <br>
         <li>Create your own <b>custom system prompt</b> for a more personalized workflow.</li>
-        <br>
     </ul>
 </ul>
 
@@ -83,28 +64,22 @@
     adapts to your workflows, accelerates development from day one, and becomes a shared knowledge base for your entire team.
 </p>
 
-<ul style="margin-top:5">
+<ul>
     <li><b>Refact.ai already understands your company's context:</b> AI Agent captures the unique structure, tools,
     and workflows of your organization, using your company's databases, documentation, and code architecture to deliver customized solutions.</li>
-    <br>
     <li><b>Gets smarter over time:</b> With each interaction and feedback, Refact.ai Agent adapts to your organization's needs, becoming more accurate and powerful.</li>
-    <br>
     <li><b>Organizes experience into the knowledge base:</b> Refact.ai Agent captures and shares knowledge from
     interactions with each team member. It not only streamlines workflows but also supports faster onboarding and
     smoother cross-functional collaboration across projects.</li>
-    <br>
 </ul>
 <h2>Take full control of your AI Agent, tailored to your company:</h2>
 
-<ul style="margin-top:5">
+<ul>
     <li><b>Deploy Refact.ai on-premise:</b> on your own servers or private cloud. Your data never leaves your control.
     Telemetry from the plugins goes to your server and nowhere else. You can verify what the code does, it's open source.</li>
-    <br>
     <li><b>Fine-tune a model on your codebase:</b> A fine-tuned code completion model will provide you with
     more relevant suggestions: it can memorize your coding style, the right way to use your internal APIs, and the tech stack you use.</li>
-    <br>
     <li><b>Priority Support:</b> Our engineers are always available to assist you at every stage, from setup to fine-tuning and beyond.</li>
-    <br>
 </ul>
 
 <p>
@@ -112,24 +87,17 @@
 </p>
 
 <h2>Which tasks can Refact.ai help me with?</h2>
-<ul style="margin-top:5">
+<ul>
     <li><b>Generate code from natural language prompts (even if you make typos)</b> –
     Instantly turn ideas into functional code, accelerating development and eliminating the blank-screen problem.</li>
-    <br>
+
     <li><b>Refactor code</b> - Improve code quality, readability, and efficiency with automated refactoring that aligns with best practices.</li>
-    <br>
     <li><b>Explain code</b> - Quickly understand complex or unfamiliar code with AI-generated explanations, making collaboration and onboarding faster.</li>
-    <br>
     <li><b>Debug code</b> - Detect and fix errors faster with intelligent debugging, reducing time spent troubleshooting issues.</li>
-    <br>
     <li><b>Generate unit tests</b> - Ensure code reliability by automatically creating comprehensive unit tests.</li>
-    <br>
     <li><b>Code Review</b> - Get AI-assisted code reviews for cleaner, more secure, and more efficient code, addressing developers' top concern: accuracy.</li>
-    <br>
     <li><b>Create Documentation</b> - Automate documentation generation to keep knowledge accessible and up to date.</li>
-    <br>
     <li><b>Generate Docstrings</b> - Enhance maintainability with clear, structured documentation generated for functions and classes in seconds.</li>
-    <br>
 </ul>
 
 <h2>Which tasks can Refact.ai help me with?</h2>
@@ -141,8 +109,6 @@
     <change-notes><![CDATA[
 <p>Refact.ai is an AI coding assistant, available for JetBrains IDEs and Visual Studio Code.</p>
 
-<p>In this major release, we introduce:</p>
-<ul>
 <li>RustRover support.</li>
 <li>All new plugins are powered by <a href="https://github.com/smallcloudai/refact-lsp">Refact LSP</a>, our new open-source server written in Rust! Refact LSP converts high-level code completion, or chat requests into low-level LLM prompts and converts results back. </li>
 <li>Bugfixes and performance improvements</li>

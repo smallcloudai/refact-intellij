@@ -46,15 +46,16 @@
     allowing you to choose the best model for each task based on its complexity.</li>
     <li><b>Bring your own key (BYOK)</b> – Use your own API keys for external LLMs,
     ensuring flexibility and control over your AI infrastructure.</li>
-    <li>Use <b>@-commands</b>  to control what context to use to answer your question:</li>
-    <ul>
-        <li><b>@web</b> – define a webpage.</li>
-        <li><b>@file</b> – upload and attach a single file.</li>
-        <li><b>@definition</b> – find and attach a definition.</li>
-        <li><b>@references</b> – locate all references and attach them.</li>
-        <li><b>@tree</b> – display the workspace directory and files tree.</li>
-        <li>Create your own <b>custom system prompt</b> for a more personalized workflow.</li>
-    </ul>
+    <li>Use <b>@-commands</b>  to control what context to use to answer your question:
+        <ul>
+            <li><b>@web</b> – define a webpage.</li>
+            <li><b>@file</b> – upload and attach a single file.</li>
+            <li><b>@definition</b> – find and attach a definition.</li>
+            <li><b>@references</b> – locate all references and attach them.</li>
+            <li><b>@tree</b> – display the workspace directory and files tree.</li>
+            <li>Create your own <b>custom system prompt</b> for a more personalized workflow.</li>
+        </ul>
+    </li>
 </ul>
 
 <h2>Refact.ai Agent For Enterprise</h2>
@@ -102,7 +103,7 @@
 
 <h2>Which tasks can Refact.ai help me with?</h2>
 <p>
-    <b>Connect with other developers in our <a href="https://www.smallcloud.ai/discord">Discord community</a>. Ask questions, share your opinion, propose new features.
+    Connect with other developers in our <b><a href="https://www.smallcloud.ai/discord">Discord community</a></b>. Ask questions, share your opinion, propose new features.
 </p>
 ]]></description>
 

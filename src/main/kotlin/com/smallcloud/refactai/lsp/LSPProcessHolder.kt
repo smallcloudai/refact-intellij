@@ -49,7 +49,7 @@ interface LSPProcessHolderChangedNotifier {
 
     companion object {
         val TOPIC = Topic.create(
-            "Connection Changed Notifier", LSPProcessHolderChangedNotifier::class.java
+            "Refact.ai LSP Process Notifier", LSPProcessHolderChangedNotifier::class.java
         )
     }
 }
@@ -79,10 +79,10 @@ class LSPProcessHolder(val project: Project) : Disposable {
         get() = isWorking_
         set(newValue) {
             if (isWorking_ == newValue) return
+            isWorking_ = newValue
             if (!project.isDisposed) {
                 project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).lspIsActive(newValue)
             }
-            isWorking_ = newValue
         }
 
     init {

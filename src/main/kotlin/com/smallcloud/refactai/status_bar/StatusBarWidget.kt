@@ -22,6 +22,7 @@ import com.smallcloud.refactai.RefactAIBundle
 import com.smallcloud.refactai.Resources.Icons.HAND_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_RED_16x16
+import com.smallcloud.refactai.Resources.titleStr
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.ConnectionChangedNotifier
 import com.smallcloud.refactai.io.ConnectionStatus
@@ -64,7 +65,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private var statusbarState: StatusBarState = StatusBarState()
-    private var lspSyncTask: Future<*>? =null
+    private var lspSyncTask: Future<*>? = null
 
     override fun dispose() {
         lspSyncTask?.cancel(true)
@@ -199,7 +200,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         val component = StatusBarComponent()
         component.icon = getIcon()
         component.text = getText()
-        component.toolTipText = getTooltipText()
+        component.toolTipText = titleStr
         component.bottomLineColor = getBackgroundColor()
         component.addMouseListener(
             object : MouseAdapter() {
@@ -385,6 +386,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         } else {
             getIcon()
         }
+        val tooltip = getTooltipText()
         ApplicationManager.getApplication()
             .invokeLater(
                 {
@@ -396,7 +398,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     }
                     component!!.icon = icon
                     component!!.text = getText()
-                    component!!.toolTipText = newMsg ?: getTooltipText()
+                    component!!.toolTipText = newMsg ?: tooltip
                     component!!.bottomLineColor = getBackgroundColor()
                     myStatusBar!!.updateWidget(ID())
                     val statusBar = WindowManager.getInstance().getStatusBar(project)

@@ -60,7 +60,6 @@ private fun getBinPrefix(): String {
 object Resources {
     val binPrefix: String = getBinPrefix()
 
-    const val defaultCloudAuthLink: String = "https://refact.smallcloud.ai/authentication?token=%s&utm_source=plugin&utm_medium=jetbrains&utm_campaign=login"
     val defaultCloudUrl: URI = URI("https://www.smallcloud.ai")
     val defaultCodeCompletionUrlSuffix = URI("v1/code-completion")
     val cloudUserMessage: URI = defaultCloudUrl.resolve("/v1/user-message")

@@ -179,7 +179,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 logger.warn("handleForceReloadFileByPath: File not found: $fileName (sanitized: $sanitizedFileName)")
                 return@invokeLater
             }
-            VfsUtil.markDirtyAndRefresh(false, false, true, virtualFile)
+            VfsUtil.markDirtyAndRefresh(true, false, true, virtualFile)
             logger.warn("handleForceReloadFileByPath: done for $fileName")
         }
     }

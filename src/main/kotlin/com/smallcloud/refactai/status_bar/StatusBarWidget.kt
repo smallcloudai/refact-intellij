@@ -389,7 +389,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         } else {
             getIcon()
         }
-        val tooltip = getTooltipText()
         ApplicationManager.getApplication()
             .invokeLater(
                 {
@@ -401,9 +400,24 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     }
                     component!!.icon = icon
                     component!!.text = getText()
-                    component!!.toolTipText = newMsg ?: tooltip
+                    component!!.toolTipText = newMsg ?: "Loading..."
                     component!!.bottomLineColor = getBackgroundColor()
                     myStatusBar!!.updateWidget(ID())
+
+                    AppExecutorUtil.getAppExecutorService().submit {
+                        try {
+                            val realTooltip = getTooltipText()
+                            ApplicationManager.getApplication().invokeLater({
+                                if (!project.isDisposed && myStatusBar != null) {
+                                    component!!.toolTipText = newMsg ?: realTooltip
+                                    myStatusBar!!.updateWidget(ID())
+                                }
+                            }, ModalityState.any())
+                        } catch (e: Exception) {
+                            logger.warn("Error updating status bar", e)
+                        }
+                    }
+
                     val statusBar = WindowManager.getInstance().getStatusBar(project)
                     statusBar?.component?.updateUI()
                 },

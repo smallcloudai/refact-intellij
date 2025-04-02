@@ -54,7 +54,7 @@ interface LSPProcessHolderChangedNotifier {
     }
 }
 
-class LSPProcessHolder(val project: Project) : Disposable {
+open class LSPProcessHolder(val project: Project) : Disposable {
     private var process: Process? = null
     private var lastConfig: LSPConfig? = null
     private val loggerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
@@ -158,7 +158,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 1000, TimeUnit.MILLISECONDS)
     }
 
-    private fun settingsChanged() {
+    fun settingsChanged() {
         synchronized(this) {
             terminate()
             if (InferenceGlobalContext.xDebugLSPPort != null) {
@@ -178,7 +178,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).capabilitiesChanged(field)
         }
 
-    private fun startProcess() {
+    open fun startProcess() {
         val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
         val newConfig = LSPConfig(
             address = address,
@@ -375,7 +375,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             return URI("http://127.0.0.1:${port}/")
         }
 
-    fun getCaps(): LSPCapabilities {
+    open fun getCaps(): LSPCapabilities {
         var res = LSPCapabilities()
         InferenceGlobalContext.connection.get(url.resolve("/v1/caps"), dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED

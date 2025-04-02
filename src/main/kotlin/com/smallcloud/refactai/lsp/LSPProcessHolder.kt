@@ -54,7 +54,10 @@ interface LSPProcessHolderChangedNotifier {
     }
 }
 
-class LSPProcessHolder(val project: Project) : Disposable {
+open class LSPProcessHolder(val project: Project) : Disposable {
+    // Flag to track if this instance has been disposed
+    @Volatile
+    private var isDisposed = false
     private var process: Process? = null
     private var lastConfig: LSPConfig? = null
     private val loggerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
@@ -149,25 +152,67 @@ class LSPProcessHolder(val project: Project) : Disposable {
         settingsChanged()
 
         healthCheckerScheduler.scheduleWithFixedDelay({
-            if (lastConfig == null) return@scheduleWithFixedDelay
-            if (InferenceGlobalContext.xDebugLSPPort != null) return@scheduleWithFixedDelay
-            if (process?.isAlive == false) {
-                startProcess()
+            try {
+                // Check if we're already disposed before proceeding
+                if (isDisposed || project.isDisposed) {
+                    logger.info("Skipping health check for disposed LSPProcessHolder or project")
+                    return@scheduleWithFixedDelay
+                }
+                
+                if (lastConfig == null) return@scheduleWithFixedDelay
+                if (InferenceGlobalContext.xDebugLSPPort != null) return@scheduleWithFixedDelay
+                if (process?.isAlive == false) {
+                    startProcess()
+                }
+            } catch (e: java.util.concurrent.RejectedExecutionException) {
+                // This exception can occur during shutdown when schedulers are already closed
+                if (e.message?.contains("Already shutdown") == true) {
+                    logger.info("Ignoring RejectedExecutionException during health check: ${e.message}")
+                } else {
+                    // Log but don't rethrow other types of RejectedExecutionException
+                    logger.warn("Unexpected RejectedExecutionException during health check: ${e.message}")
+                }
+            } catch (e: Exception) {
+                // Log any other exceptions but don't let them crash the scheduler
+                logger.warn("Exception during health check: ${e.message}")
             }
         }, 1, 1, TimeUnit.SECONDS)
         ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 1000, TimeUnit.MILLISECONDS)
     }
 
-    private fun settingsChanged() {
-        synchronized(this) {
-            terminate()
-            if (InferenceGlobalContext.xDebugLSPPort != null) {
-                capabilities = getCaps()
-                isWorking = true
-                lspProjectInitialize(this, project)
+    fun settingsChanged() {
+        try {
+            // Check if we're already disposed before proceeding
+            if (isDisposed || project.isDisposed) {
+                logger.info("Skipping settings change for disposed LSPProcessHolder or project")
                 return
             }
-            startProcess()
+            
+            synchronized(this) {
+                // Double-check inside the synchronized block
+                if (isDisposed || project.isDisposed) {
+                    logger.info("Skipping settings change for disposed LSPProcessHolder or project")
+                    return
+                }
+                
+                terminate()
+                if (InferenceGlobalContext.xDebugLSPPort != null) {
+                    capabilities = getCaps()
+                    isWorking = true
+                    lspProjectInitialize(this, project)
+                    return
+                }
+                startProcess()
+            }
+        } catch (e: java.util.concurrent.RejectedExecutionException) {
+            // This exception can occur during shutdown when schedulers are already closed
+            // but there are still pending tasks trying to use them
+            if (e.message?.contains("Already shutdown") == true) {
+                logger.info("Ignoring RejectedExecutionException during shutdown: ${e.message}")
+            } else {
+                // Rethrow other types of RejectedExecutionException
+                throw e
+            }
         }
     }
 
@@ -178,7 +223,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).capabilitiesChanged(field)
         }
 
-    private fun startProcess() {
+    open fun startProcess() {
         val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
         val newConfig = LSPConfig(
             address = address,
@@ -340,11 +385,20 @@ class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     override fun dispose() {
-        ragStatusCheckerScheduler.shutdown()
-        terminate()
-        healthCheckerScheduler.shutdown()
-        loggerScheduler.shutdown()
-        Runtime.getRuntime().removeShutdownHook(exitThread)
+        // Set the disposed flag to prevent race conditions
+        isDisposed = true
+        
+        // Shutdown all schedulers and terminate the process
+        try {
+            ragStatusCheckerScheduler.shutdown()
+            terminate()
+            healthCheckerScheduler.shutdown()
+            loggerScheduler.shutdown()
+            Runtime.getRuntime().removeShutdownHook(exitThread)
+        } catch (e: Exception) {
+            // Log any exceptions during disposal but don't let them propagate
+            logger.warn("Exception during LSPProcessHolder disposal: ${e.message}")
+        }
     }
 
     private fun getBuildInfo(): String {
@@ -375,7 +429,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
             return URI("http://127.0.0.1:${port}/")
         }
 
-    fun getCaps(): LSPCapabilities {
+    open fun getCaps(): LSPCapabilities {
         var res = LSPCapabilities()
         InferenceGlobalContext.connection.get(url.resolve("/v1/caps"), dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED

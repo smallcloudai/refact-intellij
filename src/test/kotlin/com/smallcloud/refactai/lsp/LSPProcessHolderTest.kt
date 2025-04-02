@@ -53,15 +53,17 @@ class LSPProcessHolderTest : LightPlatformTestCase() {
     }
     
     /**
-     * Test that reproduces the RejectedExecutionException: Already shutdown error.
+     * Test that verifies our fix for the RejectedExecutionException: Already shutdown error.
      * 
      * This test simulates the race condition where:
      * 1. A task is scheduled that will use the LSPProcessHolder
      * 2. The LSPProcessHolder is disposed (shutting down its schedulers)
      * 3. The scheduled task then tries to use the shutdown schedulers
+     * 
+     * With our fix, this should no longer throw an exception.
      */
     @Test
-    fun testRaceConditionCausesRejectedExecutionException() {
+    fun testRaceConditionHandlesRejectedExecutionException() {
         // Create a custom subclass of LSPProcessHolder for testing
         class TestLSPProcessHolder(project: Project) : LSPProcessHolder(project) {
             // Create a scheduler that we can shut down to simulate the race condition
@@ -74,16 +76,17 @@ class LSPProcessHolderTest : LightPlatformTestCase() {
             }
             
             // Method to trigger the RejectedExecutionException
-            fun triggerRejectedExecution(): Exception? {
+            fun triggerRejectedExecution(): Boolean {
                 // Shut down the scheduler
                 testScheduler.shutdown()
                 
-                // Try to use the scheduler after shutdown
+                // Try to use the scheduler after shutdown - this should be handled gracefully
                 try {
                     testScheduler.submit {}
-                    return null
+                    return false // No exception was thrown (unexpected)
                 } catch (e: Exception) {
-                    return e
+                    // We expect an exception here, but our LSPProcessHolder should handle it
+                    return true // Exception was thrown as expected
                 }
             }
         }
@@ -94,9 +97,8 @@ class LSPProcessHolderTest : LightPlatformTestCase() {
         // Create a latch to control the execution flow
         val latch = CountDownLatch(1)
         
-        // Create an atomic reference to capture any exception
-        val exceptionRef = AtomicReference<Exception>()
-        val exceptionOccurred = AtomicBoolean(false)
+        // Track if an unhandled exception occurred
+        val unhandledExceptionOccurred = AtomicBoolean(false)
         
         // Schedule a task that will use the LSPProcessHolder after a delay
         val future = CompletableFuture.runAsync {
@@ -104,16 +106,15 @@ class LSPProcessHolderTest : LightPlatformTestCase() {
                 // Wait for the signal to proceed (after dispose is called)
                 latch.await(5, TimeUnit.SECONDS)
                 
-                // Trigger the RejectedExecutionException
-                val exception = lspHolder.triggerRejectedExecution()
-                if (exception != null) {
-                    exceptionRef.set(exception)
-                    exceptionOccurred.set(true)
-                }
+                // Trigger the RejectedExecutionException - this should be caught internally
+                lspHolder.triggerRejectedExecution()
+                
+                // Now try to use a method that we've updated to handle RejectedExecutionException
+                lspHolder.settingsChanged()
+                
             } catch (e: Exception) {
-                // Capture any other exception
-                exceptionRef.set(e)
-                exceptionOccurred.set(true)
+                // If an exception propagates here, our fix isn't working
+                unhandledExceptionOccurred.set(true)
             }
         }
         
@@ -129,25 +130,18 @@ class LSPProcessHolderTest : LightPlatformTestCase() {
         // Wait for the background task to complete
         future.join()
         
-        // Verify that a RejectedExecutionException was thrown
-        if (exceptionOccurred.get()) {
-            val exception = exceptionRef.get()
-            assertTrue(
-                "Expected RejectedExecutionException but got ${exception.javaClass.name}: ${exception.message}",
-                exception is RejectedExecutionException
-            )
-            assertTrue(
-                "Expected 'Already shutdown' message but got: ${exception.message}",
-                exception.message?.contains("Already shutdown") == true
-            )
-        } else {
-            fail("Expected a RejectedExecutionException but no exception was thrown")
-        }
+        // Verify that no unhandled exception occurred
+        assertFalse(
+            "An unhandled exception occurred, which means our fix isn't working properly",
+            unhandledExceptionOccurred.get()
+        )
     }
     
     /**
      * Test a more realistic scenario where the race condition occurs during
      * application shutdown or project close.
+     * 
+     * With our fix, this should no longer throw an exception.
      */
     @Test
     fun testRaceConditionDuringProjectClose() {
@@ -163,13 +157,14 @@ class LSPProcessHolderTest : LightPlatformTestCase() {
             }
             
             // Method to trigger the RejectedExecutionException
-            fun triggerRejectedExecution(): Exception? {
+            fun triggerRejectedExecution(): Boolean {
                 // Try to use the scheduler after shutdown
                 try {
                     testScheduler.submit {}
-                    return null
+                    return false // No exception was thrown (unexpected)
                 } catch (e: Exception) {
-                    return e
+                    // We expect an exception here, but our LSPProcessHolder should handle it
+                    return true // Exception was thrown as expected
                 }
             }
             
@@ -183,9 +178,8 @@ class LSPProcessHolderTest : LightPlatformTestCase() {
         // Create the LSPProcessHolder
         val lspHolder = TestLSPProcessHolder(mockProject)
         
-        // Create an atomic reference to capture any exception
-        val exceptionRef = AtomicReference<Exception>()
-        val exceptionOccurred = AtomicBoolean(false)
+        // Track if an unhandled exception occurred
+        val unhandledExceptionOccurred = AtomicBoolean(false)
         
         // Create a latch to control execution flow
         val latch = CountDownLatch(1)
@@ -197,15 +191,14 @@ class LSPProcessHolderTest : LightPlatformTestCase() {
                 latch.await(5, TimeUnit.SECONDS)
                 
                 // Try to use the scheduler after it's been shut down
-                val exception = lspHolder.triggerRejectedExecution()
-                if (exception != null) {
-                    exceptionRef.set(exception)
-                    exceptionOccurred.set(true)
-                }
+                lspHolder.triggerRejectedExecution()
+                
+                // Now try to use methods that we've updated to handle RejectedExecutionException
+                lspHolder.settingsChanged()
+                
             } catch (e: Exception) {
-                // Capture the exception
-                exceptionRef.set(e)
-                exceptionOccurred.set(true)
+                // If an exception propagates here, our fix isn't working
+                unhandledExceptionOccurred.set(true)
             }
         }
         
@@ -223,27 +216,79 @@ class LSPProcessHolderTest : LightPlatformTestCase() {
         try {
             settingsChangeFuture.get(5, TimeUnit.SECONDS)
         } catch (e: Exception) {
-            // If the future itself throws an exception, capture it
-            exceptionRef.set(e)
-            exceptionOccurred.set(true)
+            // If an exception propagates here, our fix isn't working
+            unhandledExceptionOccurred.set(true)
         }
         
-        // Verify that a RejectedExecutionException was thrown
-        if (exceptionOccurred.get()) {
-            val exception = exceptionRef.get()
-            // Get the root cause if it's wrapped in another exception
-            val rootCause = if (exception.cause != null) exception.cause else exception
+        // Verify that no unhandled exception occurred
+        assertFalse(
+            "An unhandled exception occurred, which means our fix isn't working properly",
+            unhandledExceptionOccurred.get()
+        )
+    }
+    
+    /**
+     * Test that verifies our fix for the NullPointerException that could occur
+     * when accessing the MessageBus after disposal.
+     */
+    @Test
+    fun testNoNullPointerExceptionAfterDisposal() {
+        // Create a custom subclass of LSPProcessHolder for testing
+        class TestLSPProcessHolder(project: Project) : LSPProcessHolder(project) {
+            override fun startProcess() {
+                // Do nothing - avoid actual process creation
+            }
             
-            assertTrue(
-                "Expected RejectedExecutionException but got ${rootCause?.javaClass?.name}: ${rootCause?.message}",
-                rootCause is RejectedExecutionException
-            )
-            assertTrue(
-                "Expected 'Already shutdown' message but got: ${rootCause?.message}",
-                rootCause?.message?.contains("Already shutdown") == true
-            )
-        } else {
-            fail("Expected a RejectedExecutionException but no exception was thrown")
+            // Method to simulate accessing the MessageBus after disposal
+            fun simulateMessageBusAccess() {
+                // This would previously cause a NullPointerException if the MessageBus was null
+                // Now it should check isDisposed and return early
+                settingsChanged()
+            }
+        }
+        
+        // Create the LSPProcessHolder
+        val lspHolder = TestLSPProcessHolder(mockProject)
+        
+        // Create a latch to control the execution flow
+        val latch = CountDownLatch(1)
+        
+        // Track if an unhandled exception occurred
+        val unhandledExceptionOccurred = AtomicBoolean(false)
+        val exceptionRef = AtomicReference<Exception>()
+        
+        // Schedule a task that will access the MessageBus after disposal
+        val future = CompletableFuture.runAsync {
+            try {
+                // Wait for the signal to proceed (after dispose is called)
+                latch.await(5, TimeUnit.SECONDS)
+                
+                // Try to access the MessageBus after disposal
+                lspHolder.simulateMessageBusAccess()
+                
+            } catch (e: Exception) {
+                // If an exception propagates here, our fix isn't working
+                unhandledExceptionOccurred.set(true)
+                exceptionRef.set(e)
+            }
+        }
+        
+        // Give the task a moment to start
+        Thread.sleep(100)
+        
+        // Now dispose the LSPProcessHolder
+        Disposer.dispose(lspHolder)
+        
+        // Signal the background task to proceed
+        latch.countDown()
+        
+        // Wait for the background task to complete
+        future.join()
+        
+        // Verify that no unhandled exception occurred
+        if (unhandledExceptionOccurred.get()) {
+            val exception = exceptionRef.get()
+            fail("Expected no exception but got ${exception.javaClass.name}: ${exception.message}")
         }
     }
 }

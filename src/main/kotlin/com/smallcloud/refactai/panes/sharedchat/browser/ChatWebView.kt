@@ -248,6 +248,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     fun setUpReact(browser: CefBrowser) {
         val config = this.editor.getUserConfig()
         val configJson = Gson().toJson(config)
+        val currentProject = """{name: "${editor.project.name}"}"""
         this.editor.getActiveFileInfo { file ->
             val fileJson = Gson().toJson(file)
             this.editor.getSelectedSnippet { snippet ->
@@ -256,7 +257,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                     const config = ${configJson};
                     const active_file = ${fileJson};
                     const selected_snippet = ${snippetJson};
-                    window.__INITIAL_STATE__ = { config, active_file, selected_snippet };
+                    const current_project = ${currentProject};
+                    window.__INITIAL_STATE__ = { config, active_file, selected_snippet, current_project };
                     
                     function loadChatJs() {
                         const element = document.getElementById("refact-chat");

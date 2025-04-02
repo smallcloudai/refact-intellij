@@ -38,7 +38,7 @@ class EventsTest {
             Events.Config.KeyBindings("foo"))
         val message = Events.Config.Update(payload)
         val result = Events.stringify(message)
-        val expected = """{"type":"config/update","payload":{"features":{"ast":true,"vecdb":false,"images":true},"themeProps":{"appearance":"light","hasBackground":false,"scale":"90%","accentColor":"gray"},"lspPort":8001,"apiKey":"apiKey","addressURL":"http://127.0.0.1;8001","keyBindings":{"completeManual":"foo"},"tabbed":false,"host":"jetbrains"}}"""
+        val expected = """{"type":"config/update","payload":{"features":{"ast":true,"vecdb":false,"images":true,"statistics":true,"knowledge":false},"themeProps":{"appearance":"light","hasBackground":false,"scale":"90%","accentColor":"gray"},"lspPort":8001,"apiKey":"apiKey","addressURL":"http://127.0.0.1;8001","keyBindings":{"completeManual":"foo"},"tabbed":false,"host":"jetbrains"}}"""
         assertEquals(expected, result)
     }
 
@@ -155,7 +155,7 @@ class EventsTest {
     }
 
     @Test
-    fun parseeAnimationStart() {
+    fun parseAnimationStart() {
         val message = """{"type": "ide/animateFile/start", "payload": "path/to/file.txt"}"""
         val expected = Events.Animation.Start("path/to/file.txt")
         val result = Events.parse(message)
@@ -268,6 +268,14 @@ class EventsTest {
         val result = Events.parse(msg) as Events.IdeAction.ToolCall;
 
         assertEquals(result.payload.edit.fileAfter, "bar\n")
+    }
+
+    @Test
+    fun formatCurrentProjectPayload() {
+        val message = Events.CurrentProject.SetCurrentProject("foo")
+        val result = Events.stringify(message)
+        val expected = """{"type":"currentProjectInfo/setCurrentProjectInfo","payload":{"name":"foo"}}"""
+        assertEquals(expected, result)
 
     }
 }

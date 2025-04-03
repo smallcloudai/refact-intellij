@@ -2,9 +2,12 @@ package com.smallcloud.refactai.lsp
 
 import com.intellij.openapi.project.Project
 import com.intellij.testFramework.LightPlatformTestCase
+import com.intellij.util.messages.MessageBus
+import com.intellij.util.messages.MessageBusFactory
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import java.net.URI
@@ -13,38 +16,27 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito
+
 /**
  * This test demonstrates the HTTP timeout issue in LSPProcessHolder.fetchCustomization()
  * by directly testing the method with mocked components.
  */
 class LSPProcessHolderTimeoutTest : LightPlatformTestCase() {
     private lateinit var mockWebServer: MockWebServer
-    private lateinit var httpClient: HttpClient
     private lateinit var baseUrl: String
-    private lateinit var mockProject: Project
 
     override fun setUp() {
         super.setUp()
-        
-        // Start the mock server
         mockWebServer = MockWebServer()
+        mockWebServer.protocolNegotiationEnabled = true
+        // println("protocals: ${mockWebServer.protocols}")
         mockWebServer.start()
-
-        // Get the base URL of the mock server
         baseUrl = mockWebServer.url("/").toString()
-
-        // Create a standard HttpClient
-        httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build()
-
-        mockProject = Mockito.mock(Project::class.java)
-        `when`(mockProject.isDisposed).thenReturn(false)
     }
 
     override fun tearDown() {
-        // Shutdown the mock server after each test
-        mockWebServer.shutdown()
+         //  the mock server after each test
+         mockWebServer.shutdown()
         super.tearDown()
     }
 
@@ -59,23 +51,33 @@ class LSPProcessHolderTimeoutTest : LightPlatformTestCase() {
         override var isWorking: Boolean
             get() = true
             set(value) { /* Do nothing */ }
+            
+        // Override other methods that might cause issues in testing
+        override fun startProcess() {
+            // Do nothing to avoid actual process starting
+        }
     }
     
-    fun testFetchCustomizationTimeout() {
-        // Create a response that will take more than 30 seconds to complete
-        // This simulates a server that's taking too long to respond
-        val delayedResponse = MockResponse()
+    fun testFetchCustomization() {
+        // Create a successful response
+        val response = MockResponse()
             .setResponseCode(200)
-            .setHeadersDelay(35, TimeUnit.SECONDS) // Delay the headers by 35 seconds
+            .setHeader("Content-Type", "application/json")
             .setBody("{\"result\": \"delayed response\"}")
         
-        // Queue the delayed response
-        mockWebServer.enqueue(delayedResponse)
+        // Queue the response
+        mockWebServer.enqueue(response)
         
         // Create the test LSP process holder
-        val lspProcessHolder = TestLSPProcessHolder(mockProject, baseUrl)
+        val lspProcessHolder = TestLSPProcessHolder(this.project, baseUrl)
         
-        // The test will now time out when fetchCustomization() is called
-        // because the server takes too long to respond
+        // Call fetchCustomization and verify it returns the expected result
+        val result = lspProcessHolder.fetchCustomization()
+
+        val recordedRequest = mockWebServer.takeRequest(5, TimeUnit.SECONDS)
+        assertNotNull(recordedRequest)
+        // Verify the result is not null and contains the expected data
+        assertNotNull("Result should not be null", result)
+        assertEquals("{\"result\":\"delayed response\"}", result.toString())
     }
 }

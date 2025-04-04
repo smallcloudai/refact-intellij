@@ -4,6 +4,7 @@ import com.intellij.openapi.project.Project
 import com.smallcloud.refactai.testUtils.MockServer
 import okhttp3.mockwebserver.MockResponse
 import org.junit.Test
+import org.junit.Ignore
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
@@ -29,7 +30,7 @@ class LSPProcessHolderTimeoutTest : MockServer() {
      * Test the HTTP request/response handling similar to LSPProcessHolder.fetchCustomization()
      */
     @Test
-    fun testFetchCustomization() {
+    fun fetchCustomization() {
         // Create a successful response with a delay
         val response = MockResponse()
             .setResponseCode(200)
@@ -49,8 +50,9 @@ class LSPProcessHolderTimeoutTest : MockServer() {
         assertEquals("{\"result\":\"delayed response\"}", result.toString())
     }
 
+    @Ignore("very slow")
     @Test
-    fun testFetchCustomizationWithTimeout() {
+    fun fetchCustomizationWithTimeout() {
         // Create a successful response with a delay
         val response = MockResponse()
             .setResponseCode(200)

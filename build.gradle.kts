@@ -37,8 +37,6 @@ dependencies {
 
     // test libraries
     testImplementation(kotlin("test"))
-    testImplementation("org.mockito:mockito-core:5.10.0")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("org.bouncycastle:bcpkix-jdk15on:1.68")
 

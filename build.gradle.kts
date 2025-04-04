@@ -37,6 +37,10 @@ dependencies {
 
     // test libraries
     testImplementation(kotlin("test"))
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.bouncycastle:bcpkix-jdk15on:1.68")
+
+    
     intellijPlatform {
         create(providers.gradleProperty("platformType"), providers.gradleProperty("platformVersion"))
 

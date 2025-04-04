@@ -11,9 +11,8 @@ import java.util.concurrent.TimeUnit
 
 
 
-class MockWebServerDemoTest: MockServer() {
+class AsyncConnectionTest: MockServer() {
 
-    @Test
     fun testBasicGetRequest() {
         val httpClient = AsyncConnection()
         // Prepare a mock response

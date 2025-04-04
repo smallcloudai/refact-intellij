@@ -1,8 +1,7 @@
 package com.smallcloud.refactai.testUtils
 
+import com.intellij.testFramework.LightPlatformTestCase
 import okhttp3.mockwebserver.MockWebServer
-import org.junit.After
-import org.junit.Before
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.PrivateKey
@@ -81,20 +80,19 @@ fun generateSelfSignedCertificate(
 }
 
 
-public abstract class MockServer {
+public abstract class MockServer: LightPlatformTestCase() {
     lateinit var server: MockWebServer
     lateinit var baseUrl: String
 
-    @Before
-    fun setup() {
+    override fun setUp() {
         server = MockWebServer()
         server.useHttps(sslContext.socketFactory, false)
         server.start()
         baseUrl = server.url("/").toString()
     }
 
-    @After
-    fun teardown() {
+
+    override fun tearDown() {
         server.shutdown()
     }
 

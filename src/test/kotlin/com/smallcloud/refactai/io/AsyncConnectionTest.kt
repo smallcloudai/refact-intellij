@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.smallcloud.refactai.testUtils.MockServer
 import okhttp3.mockwebserver.MockResponse
-import org.junit.Assert.*
 import org.junit.Test
 import java.net.URI
 import java.util.concurrent.TimeUnit
@@ -13,6 +12,7 @@ import java.util.concurrent.TimeUnit
 
 class AsyncConnectionTest: MockServer() {
 
+    @Test
     fun testBasicGetRequest() {
         val httpClient = AsyncConnection()
         // Prepare a mock response

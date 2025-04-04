@@ -178,7 +178,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).capabilitiesChanged(field)
         }
 
-    private fun startProcess() {
+    open fun startProcess() {
         val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
         val newConfig = LSPConfig(
             address = address,

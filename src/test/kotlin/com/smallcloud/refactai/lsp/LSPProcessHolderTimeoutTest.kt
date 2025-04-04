@@ -29,7 +29,7 @@ class LSPProcessHolderTimeoutTest : MockServer() {
      * Test the HTTP request/response handling similar to LSPProcessHolder.fetchCustomization()
      */
     @Test
-    fun testHttpRequestWithTimeout() {
+    fun testFetchCustomization() {
         // Create a successful response with a delay
         val response = MockResponse()
             .setResponseCode(200)
@@ -47,5 +47,25 @@ class LSPProcessHolderTimeoutTest : MockServer() {
         assertNotNull("Request should have been recorded", recordedRequest)
         assertNotNull("Result should not be null", result)
         assertEquals("{\"result\":\"delayed response\"}", result.toString())
+    }
+
+    @Test
+    fun testFetchCustomizationWithTimeout() {
+        // Create a successful response with a delay
+        val response = MockResponse()
+            .setResponseCode(200)
+            .setHeader("Content-Type", "application/json")
+            .setBody("{\"result\": \"delayed response\"}")
+            .setHeadersDelay(60, TimeUnit.SECONDS)
+
+        // Queue the response
+        this.server.enqueue(response)
+
+        val lspProcessHolder = TestLSPProcessHolder(this.project, baseUrl)
+        val result = lspProcessHolder.fetchCustomization()
+        val recordedRequest = this.server.takeRequest()
+
+        assertNotNull("Request should have been recorded", recordedRequest)
+        assertNull("Result should not be null", result)
     }
 }

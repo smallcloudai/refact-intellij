@@ -22,9 +22,7 @@ import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
-import com.smallcloud.refactai.utils.isBrowserInitialized
 import com.smallcloud.refactai.utils.safeExecuteJavaScript
-import com.smallcloud.refactai.utils.safePostMessage
 import org.cef.CefApp
 import org.cef.CefSettings
 import org.cef.browser.CefBrowser

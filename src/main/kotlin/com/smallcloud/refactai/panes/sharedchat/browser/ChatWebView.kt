@@ -69,24 +69,17 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             val red = backgroundColour.red
             val green = backgroundColour.green
             val blue = backgroundColour.blue
-            val webView = this.webView
-            
+
             logger.info("Setting style: bodyClass=$bodyClass, mode=$mode")
-            
-            // Use safe JavaScript execution from JCefUtils
-            if (isBrowserInitialized(webView)) {
-                safeExecuteJavaScript(
-                    webView,
-                    webView.cefBrowser,
-                    """
-                    document.body.style.setProperty("background-color", "rgb($red, $green, $blue)");
-                    document.body.className = "$bodyClass $mode";
-                    """.trimIndent()
-                )
-                webView.component.repaint()
-            } else {
-                logger.warn("Cannot set style: JCEF browser not initialized")
-            }
+
+            executeJavaScript(
+                """
+                document.body.style.setProperty("background-color", "rgb($red, $green, $blue)");
+                document.body.className = "$bodyClass $mode";
+                """.trimIndent(),
+                true
+            )
+
         } catch (e: Exception) {
             logger.warn("Error setting style: ${e.message}", e)
         }
@@ -285,7 +278,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                     """.trimIndent()
                 logger.info("Setting up React")
                 try {
-                    safeExecuteJavaScript(webView, browser, script)
+                    executeJavaScript(script)
                     // browser.executeJavaScript(script, browser.url, 0)
                 } catch (e: Exception) {
                     logger.warn("Error setting up React: ${e.message}", e)
@@ -307,7 +300,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         
         try {
             if (browser != null) {
-                safeExecuteJavaScript(webView, browser, script)
+                executeJavaScript(script)
             } else {
                 logger.warn("Cannot set up JavaScript message bus redirect hyperlink: browser is null")
             }
@@ -323,7 +316,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         }""".trimIndent()
 
         try {
-            safeExecuteJavaScript(webView, browser, script)
+            executeJavaScript(script)
             return true
         } catch (e: Exception) {
             logger.warn("Error setting up JavaScript message bus: ${e.message}", e)
@@ -341,19 +334,16 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun postMessage(message: String) {
         logger.info("Posting message to browser")
-        try {
-            if (isBrowserInitialized(webView)) {
-                safePostMessage(webView.cefBrowser, message)
-            } else {
-                logger.warn("Cannot post message: JCEF browser not initialized")
-            }
-        } catch (e: Exception) {
-            logger.warn("Error posting message: ${e.message}", e)
-        }
+        val script = """window.postMessage($message, "*");"""
+        executeJavaScript(script)
     }
 
     fun getComponent(): JComponent {
         return webView.component
+    }
+
+    private fun executeJavaScript(script: String, repaint: Boolean = false) {
+        safeExecuteJavaScript(webView, script, repaint)
     }
 
     override fun dispose() {

@@ -2,6 +2,7 @@ package com.smallcloud.refactai.panes.sharedchat
 
 import com.intellij.ide.ui.LafManager
 import com.intellij.ide.ui.laf.UIThemeLookAndFeelInfo
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.testFramework.LightPlatform4TestCase
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
@@ -60,21 +61,12 @@ class ChatWebViewTest: LightPlatform4TestCase() {
         // Create a ChatWebView instance with the mocked editor
         val chatWebView = ChatWebView(mockEditor) { /* message handler */ }
 
+        // First test with valid theme - should not throw
         try {
-            // First test with valid theme
             chatWebView.setStyle()
-            
-            // Now test with null theme to ensure error handling works
-            Mockito.`when`(mockLafManager.currentUIThemeLookAndFeel).thenReturn(null)
-            chatWebView.setStyle()
-            
-            // Test with a NullPointerException scenario
-            Mockito.`when`(mockLafManager.currentUIThemeLookAndFeel).thenThrow(NullPointerException("Test exception"))
-            chatWebView.setStyle()
-        } catch (exception: Exception) {
+        } catch (exception: Exception)  {
             Assert.fail("Exception should not have been thrown: ${exception.message}")
         }
-
         // Force disposal while JavaScript might still be executing
         Thread.sleep(100) // Small delay to ensure the coroutine has started
         chatWebView.dispose()

@@ -62,24 +62,14 @@ class ChatWebViewTest: LightPlatform4TestCase() {
         // Create a ChatWebView instance with the mocked editor
         val chatWebView = ChatWebView(mockEditor) { /* message handler */ }
 
-        // We need to modify our approach since the exception happens in a background thread
-        // Let's intentionally cause the exception by setting up our mock to return null
-        
-        // First, let's reset our mock to return null for currentUIThemeLookAndFeel
         Mockito.`when`(mockLafManager.currentUIThemeLookAndFeel).thenReturn(null)
-        
-        // Now when we call setStyle(), it should throw a NullPointerException in the main thread
-        val exception = Assert.assertThrows(NullPointerException::class.java) {
+
+        try {
             chatWebView.setStyle()
+        } catch (exception: Exception) {
+            Assert.fail("Exception should not have been thrown")
         }
-        
-        // Verify the exception message matches what we expect
-        Assert.assertTrue(
-            "Exception message should mention that currentUIThemeLookAndFeel is null",
-            exception.message?.contains("currentUIThemeLookAndFeel") == true || 
-            exception.message?.contains("isDark") == true
-        )
-        
+
         // Force disposal while JavaScript might still be executing
         Thread.sleep(100) // Small delay to ensure the coroutine has started
         chatWebView.dispose()

@@ -12,7 +12,6 @@ import kotlinx.coroutines.withTimeout
 import org.cef.browser.CefBrowser
 
 private val logger = Logger.getInstance("com.smallcloud.refactai.utils.JCefUtils")
-private const val JS_EXECUTION_TIMEOUT_MS = 5000L
 
 /**
  * Checks if JCEF can start
@@ -34,7 +33,9 @@ fun isJcefCanStart(): Boolean {
  * @param scope The coroutine scope to use for execution
  */
 fun safeExecuteJavaScript(
+
     browser: JBCefBrowser?,
+    cefBrowser: CefBrowser?,
     script: String,
     scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
@@ -43,25 +44,27 @@ fun safeExecuteJavaScript(
         return
     }
 
+    println("safeExecuteJavaScript")
+    println(script)
+
     scope.launch {
         try {
-            withTimeout(JS_EXECUTION_TIMEOUT_MS) {
-                withContext(Dispatchers.Default) {
-                    try {
-                        if (browser?.cefBrowser != null) {
-                            browser.cefBrowser.executeJavaScript(script, browser.cefBrowser.url, 0)
-                        } else {
-                            logger.warn("Cannot execute JavaScript: CefBrowser is null")
-                        }
-                    } catch (e: IllegalStateException) {
-                        logger.warn("Failed to execute JavaScript: ${e.message}")
-                    } catch (e: Exception) {
-                        if (e !is CancellationException) {
-                            logger.warn("Error executing JavaScript: ${e.message}", e)
-                        }
+            withContext(Dispatchers.Default) {
+                try {
+                    if (cefBrowser != null) {
+                        cefBrowser.executeJavaScript(script, cefBrowser.url, 0)
+                    } else {
+                        logger.warn("Cannot execute JavaScript: CefBrowser is null")
+                    }
+                } catch (e: IllegalStateException) {
+                    logger.warn("Failed to execute JavaScript: ${e.message}")
+                } catch (e: Exception) {
+                    if (e !is CancellationException) {
+                        logger.warn("Error executing JavaScript: ${e.message}", e)
                     }
                 }
             }
+
         } catch (e: Exception) {
             if (e !is CancellationException) {
                 logger.warn("JavaScript execution timed out or was cancelled: ${e.message}")
@@ -97,6 +100,8 @@ fun isBrowserInitialized(browser: JBCefBrowser?): Boolean {
  * @return True if the message was posted successfully, false otherwise
  */
 fun safePostMessage(browser: CefBrowser?, message: String): Boolean {
+    println("safePostMessage")
+    println(message)
     if (browser == null) {
         logger.warn("Cannot post message: CefBrowser is null")
         return false

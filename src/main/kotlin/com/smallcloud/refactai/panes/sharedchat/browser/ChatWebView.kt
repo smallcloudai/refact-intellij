@@ -77,6 +77,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             if (isBrowserInitialized(webView)) {
                 safeExecuteJavaScript(
                     webView,
+                    webView.cefBrowser,
                     """
                     document.body.style.setProperty("background-color", "rgb($red, $green, $blue)");
                     document.body.className = "$bodyClass $mode";
@@ -267,6 +268,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                     
                     function loadChatJs() {
                         const element = document.getElementById("refact-chat");
+                        console.log(RefactChat);
                         RefactChat.render(element, config);
                     };
                     
@@ -283,7 +285,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                     """.trimIndent()
                 logger.info("Setting up React")
                 try {
-                    safePostMessage(browser, script)
+                    safeExecuteJavaScript(webView, browser, script)
+                    // browser.executeJavaScript(script, browser.url, 0)
                 } catch (e: Exception) {
                     logger.warn("Error setting up React: ${e.message}", e)
                 }
@@ -304,7 +307,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         
         try {
             if (browser != null) {
-                safePostMessage(browser, script)
+                safeExecuteJavaScript(webView, browser, script)
             } else {
                 logger.warn("Cannot set up JavaScript message bus redirect hyperlink: browser is null")
             }
@@ -318,14 +321,10 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
              const msg = JSON.stringify(event);
              ${myJSQueryOpenInBrowser.inject("msg")}
         }""".trimIndent()
-        
+
         try {
-            if (browser != null) {
-                safePostMessage(browser, script)
-                return true
-            } else {
-                logger.warn("Cannot set up JavaScript message bus: browser is null")
-            }
+            safeExecuteJavaScript(webView, browser, script)
+            return true
         } catch (e: Exception) {
             logger.warn("Error setting up JavaScript message bus: ${e.message}", e)
         }
@@ -342,8 +341,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun postMessage(message: String) {
         logger.info("Posting message to browser")
-        val script = """window.postMessage($message, "*");"""
-        
         try {
             if (isBrowserInitialized(webView)) {
                 safePostMessage(webView.cefBrowser, message)

@@ -2,15 +2,12 @@ package com.smallcloud.refactai.panes.sharedchat
 
 import com.intellij.ide.ui.LafManager
 import com.intellij.ide.ui.laf.UIThemeLookAndFeelInfo
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import com.intellij.testFramework.LightPlatform4TestCase
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
-import com.smallcloud.refactai.panes.sharedchat.Events
 import org.junit.Test
 import org.junit.Assert
 import org.mockito.Mockito
-import org.mockito.ArgumentMatchers.any
 import org.mockito.MockedStatic
 
 /**
@@ -25,7 +22,8 @@ class ChatWebViewTest: LightPlatform4TestCase() {
     private lateinit var mockLafManager: LafManager
     private lateinit var mockTheme: UIThemeLookAndFeelInfo
     private lateinit var mockLafManagerStatic: MockedStatic<LafManager>
-    
+
+
     override fun setUp() {
         super.setUp()
         mockProject = Mockito.mock(Project::class.java)
@@ -50,7 +48,7 @@ class ChatWebViewTest: LightPlatform4TestCase() {
         val mockConfig = Mockito.mock(Events.Config.UpdatePayload::class.java)
         Mockito.`when`(mockEditor.getUserConfig()).thenReturn(mockConfig)
     }
-    
+
     override fun tearDown() {
         // Close the static mock to prevent memory leaks
         mockLafManagerStatic.close()
@@ -62,15 +60,48 @@ class ChatWebViewTest: LightPlatform4TestCase() {
         // Create a ChatWebView instance with the mocked editor
         val chatWebView = ChatWebView(mockEditor) { /* message handler */ }
 
-        Mockito.`when`(mockLafManager.currentUIThemeLookAndFeel).thenReturn(null)
-
         try {
+            // First test with valid theme
+            chatWebView.setStyle()
+            
+            // Now test with null theme to ensure error handling works
+            Mockito.`when`(mockLafManager.currentUIThemeLookAndFeel).thenReturn(null)
+            chatWebView.setStyle()
+            
+            // Test with a NullPointerException scenario
+            Mockito.`when`(mockLafManager.currentUIThemeLookAndFeel).thenThrow(NullPointerException("Test exception"))
             chatWebView.setStyle()
         } catch (exception: Exception) {
-            Assert.fail("Exception should not have been thrown")
+            Assert.fail("Exception should not have been thrown: ${exception.message}")
         }
 
         // Force disposal while JavaScript might still be executing
+        Thread.sleep(100) // Small delay to ensure the coroutine has started
+        chatWebView.dispose()
+    }
+
+    @Test
+    fun testSetupReactRaceCondition() {
+        val chatWebView = ChatWebView(mockEditor) { /* message handler */ }
+        try {
+            chatWebView.setUpReact(chatWebView.webView.cefBrowser)
+        } catch (exception: Exception) {
+            Assert.fail("Exception should not have been thrown: ${exception.message}")
+        }
+        Thread.sleep(100) // Small delay to ensure the coroutine has started
+        chatWebView.dispose()
+    }
+
+    @Test
+    fun testPostMessageRaceCondition() {
+        val chatWebView = ChatWebView(mockEditor) { /* message handler */ }
+        try {
+            chatWebView.postMessage("hello")
+            // Just test with a string message
+            chatWebView.postMessage("{\"type\": \"chat_message\", \"payload\": {\"message\": \"test message\"}}")
+        } catch (exception: Exception) {
+            Assert.fail("Exception should not have been thrown: ${exception.message}")
+        }
         Thread.sleep(100) // Small delay to ensure the coroutine has started
         chatWebView.dispose()
     }

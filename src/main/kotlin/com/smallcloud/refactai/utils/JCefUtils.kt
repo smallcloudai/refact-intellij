@@ -91,31 +91,3 @@ fun isBrowserInitialized(browser: JBCefBrowser?): Boolean {
         false
     }
 }
-
-/**
- * Safely posts a message to the browser
- *
- * @param browser The CefBrowser instance
- * @param message The message to post
- * @return True if the message was posted successfully, false otherwise
- */
-fun safePostMessage(browser: CefBrowser?, message: String): Boolean {
-    println("safePostMessage")
-    println(message)
-    if (browser == null) {
-        logger.warn("Cannot post message: CefBrowser is null")
-        return false
-    }
-    
-    return try {
-        val script = """window.postMessage($message, "*");"""
-        browser.executeJavaScript(script, browser.url, 0)
-        true
-    } catch (e: IllegalStateException) {
-        logger.warn("Failed to post message: ${e.message}")
-        false
-    } catch (e: Exception) {
-        logger.warn("Error posting message: ${e.message}", e)
-        false
-    }
-}

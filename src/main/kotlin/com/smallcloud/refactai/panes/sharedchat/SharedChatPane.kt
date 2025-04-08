@@ -415,7 +415,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun showPatch(
+    fun showPatch(
         fileName: String,
         fileText: String,
         onTab: ((com.intellij.openapi.editor.Editor, Caret?, DataContext) -> Unit)? = null,
@@ -446,6 +446,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
         }
     }
+
 
     private fun handlePatchShow(payload: Events.Patch.ShowPayload) {
         payload.results.forEach { result ->

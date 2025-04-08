@@ -14,47 +14,73 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Test for SharedChatPane to verify the deadlock issue with file system refresh under read lock
+ * Test for SharedChatPane to verify the fix for the deadlock issue with file system refresh under read lock
  */
 class SharedChatPaneTest : BasePlatformTestCase() {
     private val logger = Logger.getInstance(SharedChatPaneTest::class.java)
+    private lateinit var tempDir: File
+    private lateinit var tempFile: File
+    
+    override fun setUp() {
+        super.setUp()
+        // Create a temporary directory and file for testing
+        tempDir = createTempDirectory()
+        tempFile = File(tempDir, "test-file.txt")
+        tempFile.writeText("Test content")
+    }
+    
+    override fun tearDown() {
+        try {
+            // Clean up
+            tempFile.delete()
+            tempDir.delete()
+        } finally {
+            super.tearDown()
+        }
+    }
+    
+    private fun createTempDirectory(): File {
+        val tempDir = Files.createTempDirectory("refact-test").toFile()
+        tempDir.deleteOnExit()
+        return tempDir
+    }
 
     /**
-     * Test that recreates the issue reported in GitHub issue #192
+     * Test that verifies the fixed showPatch method in SharedChatPane
      * 
-     * This test simulates the problematic code path in SharedChatPane.showPatch() method
-     * where refreshAndFindFileByPath is called while holding a read lock.
-     * 
-     * The test should fail with an error about performing synchronous refresh under read lock.
+     * This test confirms that the method now properly separates the file refresh operation
+     * from the file lookup, avoiding the deadlock issue reported in GitHub issue #192.
      */
     @Test
-    fun testDeadlockInShowPatch() {
-        // Create a temporary directory and file for testing
-        val tempDir = Files.createTempDirectory("refact-test")
-        val tempFile = tempDir.resolve("test-file.txt").toFile()
-        tempFile.writeText("Test content")
+    fun testFixedShowPatchMethod() {
         val filePath = tempFile.absolutePath
+        
+        // Create a SharedChatPane instance
+        val sharedChatPane = SharedChatPane(project)
         
         // Create a latch to wait for the operation to complete
         val latch = CountDownLatch(1)
         val exceptionRef = AtomicReference<Throwable>()
+        val fileRef = AtomicReference<VirtualFile>()
         
-        // Execute the test in a background thread to simulate what happens in the actual code
+        // Execute the test in a background thread
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
-                // Simulate the problematic code in SharedChatPane.showPatch
-                // This is where the deadlock can occur - calling refreshAndFindFileByPath under read lock
+                // We need to wrap this in a ReadAction to simulate the conditions
+                // under which the error used to occur
                 ReadAction.run<Throwable> {
-                    logger.info("About to call refreshAndFindFileByPath under read lock")
+                    // Call the fixed showPatch method
+                    // This should no longer throw an exception about performing synchronous refresh under read lock
+                    sharedChatPane.showPatch(
+                        filePath,
+                        "Test content",
+                        null,
+                        null
+                    )
                     
-                    // Force a refresh to ensure we're testing the actual refresh behavior
-                    // This should throw an exception about performing synchronous refresh under read lock
-                    LocalFileSystem.getInstance().refresh(false)
-                    
-                    // This is the problematic call that can cause deadlocks
-                    val file = LocalFileSystem.getInstance().refreshAndFindFileByPath(filePath)
-                    
-                    logger.info("Called refreshAndFindFileByPath under read lock, file: $file")
+                    // Verify that the file can be found after the refresh
+                    val file = LocalFileSystem.getInstance().findFileByPath(filePath)
+                    fileRef.set(file)
                 }
             } catch (e: Throwable) {
                 logger.info("Caught exception: ${e.message}")
@@ -67,17 +93,10 @@ class SharedChatPaneTest : BasePlatformTestCase() {
         // Wait for the operation to complete
         assertTrue("Test timed out", latch.await(5, TimeUnit.SECONDS))
         
-        // We must get an exception about synchronous refresh under read lock
-        val exception = exceptionRef.get()
-        assertNotNull("Should have received an exception", exception)
-        assertTrue(
-            "Exception should be about synchronous refresh under read lock",
-            exception.message?.contains("Do not perform a synchronous refresh under read lock") == true
-        )
+        // Verify that we didn't get an exception
+        assertNull("Should not have received an exception: ${exceptionRef.get()?.message}", exceptionRef.get())
         
-        // Clean up
-        tempFile.delete()
-        tempDir.toFile().delete()
+        // Verify that the file was found
+        assertNotNull("File should be found", fileRef.get())
     }
-
 }

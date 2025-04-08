@@ -65,16 +65,25 @@ class ModeProvider(
 
     fun beforeDocumentChangeNonBulk(event: DocumentEvent?, editor: Editor) {
         if (event?.newFragment.toString() == DUMMY_IDENTIFIER) return
-        activeMode?.beforeDocumentChangeNonBulk(DocumentEventExtra(event, editor, currentTimeMillis()))
+        // Ensure we're on EDT for UI operations
+        ApplicationManager.getApplication().invokeLater {
+            activeMode?.beforeDocumentChangeNonBulk(DocumentEventExtra(event, editor, currentTimeMillis()))
+        }
     }
 
     fun onTextChange(event: DocumentEvent?, editor: Editor, force: Boolean) {
         if (event?.newFragment.toString() == DUMMY_IDENTIFIER) return
-        activeMode?.onTextChange(DocumentEventExtra(event, editor, currentTimeMillis(), force))
+        // Ensure we're on EDT for UI operations
+        ApplicationManager.getApplication().invokeLater {
+            activeMode?.onTextChange(DocumentEventExtra(event, editor, currentTimeMillis(), force))
+        }
     }
 
     fun onCaretChange(event: CaretEvent) {
-        activeMode?.onCaretChange(event)
+        // Ensure we're on EDT for UI operations
+        ApplicationManager.getApplication().invokeLater {
+            activeMode?.onCaretChange(event)
+        }
     }
 
     fun focusGained() {}

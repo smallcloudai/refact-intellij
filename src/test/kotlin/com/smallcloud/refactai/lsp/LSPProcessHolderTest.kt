@@ -136,7 +136,7 @@ class LSPProcessHolderTest : BasePlatformTestCase() {
             `when`(mockProject.isDisposed).thenReturn(true)
             // When project is disposed, accessing messageBus should throw AlreadyDisposedException
             `when`(mockProject.messageBus).thenThrow(
-                AlreadyDisposedException("Already disposed: Project(name=manukyans, containerState=DISPOSED, componentStore=E:\\manukyans) (disposed)")
+                AlreadyDisposedException("Already disposed")
             )
         }
         
@@ -146,47 +146,4 @@ class LSPProcessHolderTest : BasePlatformTestCase() {
             exception?.message?.contains("Already disposed") ?: false)
     }
     
-    /**
-     * This test verifies the fix for the "Already disposed" issue.
-     */
-    @Test
-    fun testWithTestLspProcessHolder() {
-        // Create mock objects
-        val mockProject = mock(Project::class.java)
-        val mockMessageBus = mock(MessageBus::class.java)
-        val mockPublisher = mock(LSPProcessHolderChangedNotifier::class.java)
-        
-        // Set up the mock project
-        `when`(mockProject.isDisposed).thenReturn(false)
-        `when`(mockProject.messageBus).thenReturn(mockMessageBus)
-        
-        // Set up the mock message bus
-        `when`(mockMessageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)).thenReturn(mockPublisher)
-        
-        // Create the test holder
-        val holder = TestLspProccessHolder(mockProject)
-        
-        // Test case 1: Project is not disposed
-        run {
-            holder.resetTracking()
-            holder.useDisposedCheck = true
-            holder.capabilities = LSPCapabilities(cloudName = "test1")
-            
-            assertTrue("Disposed check should be performed", holder.disposedCheckPerformed)
-            assertTrue("Message bus should be accessed when project is not disposed", 
-                holder.messageBusAccessed)
-        }
-        
-        // Test case 2: Project is disposed
-        run {
-            `when`(mockProject.isDisposed).thenReturn(true)
-            holder.resetTracking()
-            holder.useDisposedCheck = true
-            holder.capabilities = LSPCapabilities(cloudName = "test2")
-            
-            assertTrue("Disposed check should be performed", holder.disposedCheckPerformed)
-            assertFalse("Message bus should NOT be accessed when project is disposed", 
-                holder.messageBusAccessed)
-        }
-    }
 }

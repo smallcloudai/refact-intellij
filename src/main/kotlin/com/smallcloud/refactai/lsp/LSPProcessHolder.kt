@@ -54,7 +54,7 @@ interface LSPProcessHolderChangedNotifier {
     }
 }
 
-class LSPProcessHolder(val project: Project) : Disposable {
+open class LSPProcessHolder(val project: Project) : Disposable {
     private var process: Process? = null
     private var lastConfig: LSPConfig? = null
     private val loggerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
@@ -171,7 +171,7 @@ class LSPProcessHolder(val project: Project) : Disposable {
         }
     }
 
-    var capabilities: LSPCapabilities = LSPCapabilities()
+    open var capabilities: LSPCapabilities = LSPCapabilities()
         set(newValue) {
             if (newValue == field) return
             field = newValue

@@ -171,11 +171,13 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         }
     }
 
-    var capabilities: LSPCapabilities = LSPCapabilities()
+    open var capabilities: LSPCapabilities = LSPCapabilities()
         set(newValue) {
             if (newValue == field) return
             field = newValue
-            project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).capabilitiesChanged(field)
+            if(!project.isDisposed) {
+                project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).capabilitiesChanged(field)
+            }
         }
 
     open fun startProcess() {

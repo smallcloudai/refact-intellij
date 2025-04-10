@@ -14,7 +14,6 @@ import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.initialize
 import com.smallcloud.refactai.notifications.emitInfo
 import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeAction
-import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.settingsStartup
 import com.smallcloud.refactai.utils.isJcefCanStart
@@ -43,7 +42,6 @@ class Initializer : ProjectActivity, Disposable {
         }
         getLSPProcessHolder(project)
         project.getService(LSPActiveDocNotifierService::class.java)
-        PrivacyService.instance.projectOpened(project)
     }
 
     override fun dispose() {

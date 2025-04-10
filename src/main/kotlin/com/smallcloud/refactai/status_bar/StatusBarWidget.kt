@@ -33,9 +33,6 @@ import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.lsp.RagStatus
 import com.smallcloud.refactai.notifications.emitRegular
 import com.smallcloud.refactai.notifications.emitWarning
-import com.smallcloud.refactai.privacy.Privacy
-import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
-import com.smallcloud.refactai.privacy.PrivacyService
 import java.awt.Color
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -106,14 +103,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     init {
-        ApplicationManager.getApplication()
-            .messageBus
-            .connect(this)
-            .subscribe(PrivacyChangesNotifier.TOPIC, object : PrivacyChangesNotifier {
-                override fun privacyChanged() {
-                    update(null)
-                }
-            })
         ApplicationManager.getApplication()
             .messageBus
             .connect(this)
@@ -240,17 +229,8 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         return when (InferenceGlobalContext.status) {
             ConnectionStatus.DISCONNECTED -> AllIcons.Debugger.ThreadStates.Socket
             ConnectionStatus.ERROR -> AllIcons.Debugger.ThreadStates.Socket
-            ConnectionStatus.CONNECTED -> if (isPrivacyDisabled()) HAND_12x12 else LOGO_RED_16x16
+            ConnectionStatus.CONNECTED -> LOGO_RED_16x16
             ConnectionStatus.PENDING -> spinIcon
-        }
-    }
-
-    private fun isPrivacyDisabled(): Boolean {
-        val editor = getEditor()
-        return if (editor == null) {
-            false
-        } else {
-            PrivacyService.instance.getPrivacy(getVirtualFile(editor)) == Privacy.DISABLED
         }
     }
 
@@ -262,10 +242,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     override fun getTooltipText(): String? {
         if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud) {
             return null
-        }
-
-        if (isPrivacyDisabled()) {
-            return RefactAIBundle.message("statusBar.tooltipIfPrivacyDisabled")
         }
 
         if (statusbarState.vecdbWarning.isNotEmpty()) {

@@ -78,7 +78,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         terminate()
     }
 
-    var isWorking: Boolean
+    open var isWorking: Boolean
         get() = isWorking_
         set(newValue) {
             if (isWorking_ == newValue) return
@@ -158,7 +158,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                     logger.info("Skipping health check for disposed LSPProcessHolder or project")
                     return@scheduleWithFixedDelay
                 }
-                
+
                 if (lastConfig == null) return@scheduleWithFixedDelay
                 if (InferenceGlobalContext.xDebugLSPPort != null) return@scheduleWithFixedDelay
                 if (process?.isAlive == false) {
@@ -187,14 +187,14 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 logger.info("Skipping settings change for disposed LSPProcessHolder or project")
                 return
             }
-            
+
             synchronized(this) {
                 // Double-check inside the synchronized block
                 if (isDisposed || project.isDisposed) {
                     logger.info("Skipping settings change for disposed LSPProcessHolder or project")
                     return
                 }
-                
+
                 terminate()
                 if (InferenceGlobalContext.xDebugLSPPort != null) {
                     capabilities = getCaps()
@@ -216,11 +216,13 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         }
     }
 
-    var capabilities: LSPCapabilities = LSPCapabilities()
+    open var capabilities: LSPCapabilities = LSPCapabilities()
         set(newValue) {
             if (newValue == field) return
             field = newValue
-            project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).capabilitiesChanged(field)
+            if(!project.isDisposed) {
+                project.messageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC).capabilitiesChanged(field)
+            }
         }
 
     open fun startProcess() {
@@ -387,7 +389,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     override fun dispose() {
         // Set the disposed flag to prevent race conditions
         isDisposed = true
-        
+
         // Shutdown all schedulers and terminate the process
         try {
             ragStatusCheckerScheduler.shutdown()
@@ -422,7 +424,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         return res
     }
 
-    val url: URI
+    open val url: URI
         get() {
             val port = InferenceGlobalContext.xDebugLSPPort ?: lastConfig?.port ?: return URI("")
 

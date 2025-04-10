@@ -11,6 +11,7 @@ import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.EditorAction
 import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
+import com.intellij.openapi.util.TextRange
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.codecompletion.EditorRefactLastCompletionIsMultilineKey
 import com.smallcloud.refactai.codecompletion.EditorRefactLastSnippetTelemetryIdKey
@@ -54,8 +55,11 @@ class TabPressedAction : EditorAction(InsertInlineCompletionHandler()), ActionTo
                 if (ctx.state.elements.isEmpty()) return false
                 val elem = ctx.state.elements.first()
                 val isMultiline = EditorRefactLastCompletionIsMultilineKey[editor]
-                if (isMultiline && elem is InlineCompletionGrayTextElementCustom.Presentable)
-                    return elem.delta == caret.logicalPosition.column
+                if (isMultiline && elem is InlineCompletionGrayTextElementCustom.Presentable) {
+                    val prefixOffset = editor.document.getLineStartOffset(caret.logicalPosition.line)
+                    // logicalPosition doesn't show real offset, tab is 4 chars in logicalPosition
+                    return elem.delta == (caret.offset - prefixOffset)
+                }
                 return true
             } else {
                 return ModeProvider.getOrCreateModeProvider(editor).modeInActiveState()

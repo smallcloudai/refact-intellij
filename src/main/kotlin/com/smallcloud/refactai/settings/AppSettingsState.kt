@@ -168,5 +168,4 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
 fun settingsStartup() {
     AppSettingsState.instance
     AccountManager.startup()
-    PrivacyState.instance
 }

@@ -31,8 +31,6 @@ import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.modes.completion.CompletionTracker
 import com.smallcloud.refactai.modes.completion.prompt.RequestCreator
 import com.smallcloud.refactai.modes.completion.structs.Completion
-import com.smallcloud.refactai.privacy.Privacy
-import com.smallcloud.refactai.privacy.PrivacyService
 import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.utils.getExtension
@@ -158,9 +156,6 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
 
     private fun makeContext(request: InlineCompletionRequest): Context? {
         val fileName = getActiveFile(request.document) ?: return null
-        if (PrivacyService.instance.getPrivacy(FileDocumentManager.getInstance().getFile(request.document))
-            == Privacy.DISABLED && !InferenceGlobalContext.isSelfHosted
-        ) return null
         if (InferenceGlobalContext.status == ConnectionStatus.DISCONNECTED) return null
         val editor = request.editor
         val logicalPos = editor.caretModel.logicalPosition

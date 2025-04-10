@@ -24,8 +24,6 @@ import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.refactAIAdvancedSettingsID
 import com.smallcloud.refactai.Resources.refactAIRootSettingsID
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
-import com.smallcloud.refactai.privacy.Privacy
-import com.smallcloud.refactai.privacy.PrivacyChangesNotifier
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.acceptedCompletionCounter
 import com.smallcloud.refactai.utils.getLastUsedProject
 import java.awt.event.FocusEvent
@@ -36,7 +34,6 @@ import java.util.concurrent.TimeUnit
 import javax.swing.event.HyperlinkEvent
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
-import com.smallcloud.refactai.privacy.PrivacyService.Companion.instance as PrivacyServiceInstance
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
 
 private var lastNotification: Notification? = null
@@ -58,14 +55,6 @@ private fun removeLastRegularNotification() {
 }
 
 fun startup() {
-    ApplicationManager.getApplication().messageBus.connect(PluginState.instance)
-        .subscribe(PrivacyChangesNotifier.TOPIC, object : PrivacyChangesNotifier {
-            override fun privacyChanged() {
-                removeLastRegularNotification()
-            }
-        })
-
-
     val focusListener = object : FocusListener {
         override fun focusGained(e: FocusEvent?) {}
         override fun focusLost(e: FocusEvent?) {
@@ -123,45 +112,11 @@ private fun getVirtualFile(editor: Editor): VirtualFile? {
     return FileDocumentManager.getInstance().getFile(editor.document)
 }
 
-private fun addDisableEnablePrivacy(
-    notification: Notification, virtualFile: VirtualFile, currentPrivacy: Privacy
-) {
-    if (currentPrivacy != Privacy.DISABLED) {
-        notification.addAction(NotificationAction.createSimple(
-            RefactAIBundle.message("notifications.disableAccess")
-        ) {
-            PrivacyServiceInstance.setPrivacy(virtualFile, Privacy.DISABLED)
-            notification.expire()
-        })
-    }
-    if (currentPrivacy == Privacy.DISABLED) {
-        notification.addAction(NotificationAction.createSimple(
-            RefactAIBundle.message("notifications.enableAccess", Resources.titleStr)
-        ) {
-            PrivacyServiceInstance.setPrivacy(virtualFile, Privacy.ENABLED)
-            notification.expire()
-        })
-    }
-}
-
-private fun getStatusPrivacyString(currentPrivacy: Privacy): String {
-    return when (currentPrivacy) {
-        Privacy.DISABLED -> RefactAIBundle.message("privacy.level0Status")
-        Privacy.ENABLED -> RefactAIBundle.message("privacy.level1Name")
-        Privacy.THIRDPARTY -> RefactAIBundle.message("privacy.level2Name")
-    }
-}
-
 fun emitRegular(project: Project, editor: Editor) {
     removeLastRegularNotification()
-    val file = getVirtualFile(editor)
-    val currentPrivacy = PrivacyServiceInstance.getPrivacy(file)
     val notification =
         NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
-            Resources.titleStr, if (InferenceGlobalContext.isCloud) RefactAIBundle.message(
-                "notifications.filePrivacy", getStatusPrivacyString(currentPrivacy)
-            )
-            else RefactAIBundle.message("notifications.selfHostedIsEnabled"), NotificationType.INFORMATION
+            Resources.titleStr, NotificationType.INFORMATION
         )
     notification.icon = Resources.Icons.LOGO_RED_16x16
 

@@ -34,7 +34,8 @@ class EventNames {
         IS_CHAT_STREAMING("ide/isChatStreaming"),
         CHAT_PAGE_CHANGE("ide/chatPageChange"),
         IDE_TOOL_EDIT("ide/toolEdit"),
-        FORCE_RELOAD_FILE_BY_PATH("ide/forceReloadFileByPath")
+        FORCE_RELOAD_FILE_BY_PATH("ide/forceReloadFileByPath"),
+        FORCE_RELOAD("ide/forceReload"),
     }
 
     enum class ToChat(val value: String) {
@@ -143,6 +144,10 @@ class Events {
                 EventNames.FromChat.FORCE_RELOAD_FILE_BY_PATH.value -> {
                     val filePath = payload?.asString ?: return null
                     return Editor.ForceReloadFileByPath(filePath)
+                }
+
+                EventNames.FromChat.FORCE_RELOAD.value -> {
+                    return Editor.ForceReload()
                 }
 
                 else -> null
@@ -382,6 +387,7 @@ class Events {
 
         class SetSnippetToChat(payload: Snippet) : ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
         class ForceReloadFileByPath(val path: String) : FromChat(EventNames.FromChat.FORCE_RELOAD_FILE_BY_PATH, path)
+        class ForceReload(): FromChat(EventNames.FromChat.FORCE_RELOAD, null)
     }
 
     object NewChat : ToChat<Unit>(EventNames.ToChat.NEW_CHAT, Unit)

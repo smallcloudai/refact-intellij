@@ -621,6 +621,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 this.handleForceReloadFileByPath(event.path)
             }
 
+            is Events.Editor.ForceReload -> {
+                // TODO: handle force reload event.
+            }
+
             else -> Unit
         }
     }

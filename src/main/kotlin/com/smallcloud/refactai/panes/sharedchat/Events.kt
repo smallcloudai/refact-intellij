@@ -58,7 +58,10 @@ class EventNames {
         // logout, open external url, setup host
 
         @SerializedName("ide/toolEditResponse")
-        IDE_TOOL_EDIT_RESPONSE("ide/toolEditResponse")
+        IDE_TOOL_EDIT_RESPONSE("ide/toolEditResponse"),
+        // Set current project for knowledge
+        @SerializedName("currentProjectInfo/setCurrentProjectInfo")
+        SET_CURRENT_PROJECT("currentProjectInfo/setCurrentProjectInfo")
     }
 }
 
@@ -417,7 +420,7 @@ class Events {
     class Config {
         abstract class BaseFeatures()
 
-        data class Features(val ast: Boolean, val vecdb: Boolean, val images: Boolean? = true) : BaseFeatures()
+        data class Features(val ast: Boolean, val vecdb: Boolean, val images: Boolean? = true, val statistics: Boolean? = true, val knowledge: Boolean? = false) : BaseFeatures()
 
         data class ThemeProps(
             val appearance: String,
@@ -511,6 +514,12 @@ class Events {
         class ToolCallResponse(payload: ToolCallResponsePayload): ToChat<ToolCallResponsePayload>(EventNames.ToChat.IDE_TOOL_EDIT_RESPONSE, payload)
     }
 
+
+    class CurrentProject {
+        data class SetCurrentProjectPayload(val name: String = ""): Payload()
+
+        class SetCurrentProject(name: String) : ToChat<Payload>(EventNames.ToChat.SET_CURRENT_PROJECT, SetCurrentProjectPayload(name))
+    }
 
     companion object {
 

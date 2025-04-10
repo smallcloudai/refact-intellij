@@ -83,10 +83,6 @@ fun startup() {
         }
 
     }, PluginState.instance)
-    if (AppSettingsState.embeddedWarningShowed < 1) {
-        emitInfo(RefactAIBundle.message("notifications.embeddedWarning"))
-        AppSettingsState.embeddedWarningShowed = 1
-    }
 
     if (!AppSettingsState.rateUsNotification) {
         rateUsFuture = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(

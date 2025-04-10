@@ -1,13 +1,11 @@
 package com.smallcloud.refactai.lsp
 
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.LightPlatformTestCase
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
-import com.smallcloud.refactai.io.InferenceGlobalContext
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -15,8 +13,6 @@ import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -25,7 +21,7 @@ import java.util.concurrent.atomic.AtomicReference
  * Test class for LSPProcessHolder that focuses on race conditions
  * that can cause RejectedExecutionException.
  */
-class LSPProcessHolderTest : LightPlatformTestCase() {
+class LSPProcessHolderRaceTest : LightPlatformTestCase() {
     
     private lateinit var mockProject: Project
     private lateinit var disposable: Disposable

@@ -70,9 +70,9 @@ class OpenedConnection(private val connection: URLConnection?) :
             if (connection != null) {
                 val url = connection.url.toString()
                 when {
-                    url.contains("css") -> cefResponse.mimeType = "text/css"
-                    url.contains("js") -> cefResponse.mimeType = "text/javascript"
-                    url.contains("html") -> cefResponse.mimeType = "text/html"
+                    url.contains(".css") -> cefResponse.mimeType = "text/css"
+                    url.contains(".js") -> cefResponse.mimeType = "text/javascript"
+                    url.contains(".html") -> cefResponse.mimeType = "text/html"
                     else -> cefResponse.mimeType = connection.contentType
                 }
                 responseLength.set(inputStream?.available() ?: 0)
@@ -142,11 +142,11 @@ class RefactChatResourceHandler : CefResourceHandler, DumbAware {
         responseLength: IntRef,
         redirectUrl: StringRef
     ) {
-        if (currentUrl !== null) {
+        if (currentUrl != null) {
             when {
-                currentUrl!!.contains("css") -> cefResponse.mimeType = "text/css"
-                currentUrl!!.contains("js") -> cefResponse.mimeType = "text/javascript"
-                currentUrl!!.contains("html") -> cefResponse.mimeType = "text/html"
+                currentUrl!!.contains(".css") -> cefResponse.mimeType = "text/css"
+                currentUrl!!.contains(".js") -> cefResponse.mimeType = "text/javascript"
+                currentUrl!!.contains(".html") -> cefResponse.mimeType = "text/html"
                 else -> {}
             }
         }

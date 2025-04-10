@@ -75,7 +75,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         terminate()
     }
 
-    var isWorking: Boolean
+    open var isWorking: Boolean
         get() = isWorking_
         set(newValue) {
             if (isWorking_ == newValue) return
@@ -180,7 +180,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             }
         }
 
-    private fun startProcess() {
+    open fun startProcess() {
         val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
         val newConfig = LSPConfig(
             address = address,
@@ -370,7 +370,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         return res
     }
 
-    val url: URI
+    open val url: URI
         get() {
             val port = InferenceGlobalContext.xDebugLSPPort ?: lastConfig?.port ?: return URI("")
 

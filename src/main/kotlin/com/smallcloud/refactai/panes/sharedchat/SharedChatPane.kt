@@ -9,7 +9,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.invokeLater
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.EditorFactory
@@ -49,6 +48,7 @@ import javax.swing.JPanel
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.roots.ProjectRootManager
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val logger = Logger.getInstance(SharedChatPane::class.java)
@@ -179,7 +179,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 logger.warn("handleForceReloadFileByPath: File not found: $fileName (sanitized: $sanitizedFileName)")
                 return@invokeLater
             }
-            VfsUtil.markDirtyAndRefresh(true, false, true, virtualFile)
+            VfsUtil.markDirtyAndRefresh(true, true, true, virtualFile)
             logger.warn("handleForceReloadFileByPath: done for $fileName")
         }
     }
@@ -619,6 +619,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
             is Events.Editor.ForceReloadFileByPath -> {
                 this.handleForceReloadFileByPath(event.path)
+            }
+
+            is Events.Editor.ForceReloadProjectTreeFiles -> {
+                ProjectRootManager.getInstance(project).contentRoots.forEach {
+                    this.handleForceReloadFileByPath(it.path)
+                }
             }
 
             else -> Unit

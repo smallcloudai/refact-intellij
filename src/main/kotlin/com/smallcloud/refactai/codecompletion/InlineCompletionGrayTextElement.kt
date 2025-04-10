@@ -30,7 +30,7 @@ class InlineBlockElementRenderer(private val editor: Editor, lines: List<String>
     private val width = editor
         .contentComponent
         .getFontMetrics(font)
-        .stringWidth(lines.maxBy { it.length })
+        .stringWidth(lines.map { it.replace("\t", " ".repeat(editor.settings.getTabSize(editor.project))) }.maxBy { it.length })
 
     val lines = lines.map { it.formatBeforeRendering(editor) }
 
@@ -47,7 +47,7 @@ class InlineBlockElementRenderer(private val editor: Editor, lines: List<String>
 
 class InlineSuffixRenderer(private val editor: Editor, suffix: String) : EditorCustomElementRenderer {
     private val font = InlineCompletionFontUtils.font(editor)
-    private val width = editor.contentComponent.getFontMetrics(font).stringWidth(suffix)
+    private val width = editor.contentComponent.getFontMetrics(font).stringWidth(suffix.replace("\t", " ".repeat(editor.settings.getTabSize(editor.project))))
 
     val suffix = suffix.formatBeforeRendering(editor)
 
@@ -67,7 +67,7 @@ class InlineSuffixRenderer(private val editor: Editor, suffix: String) : EditorC
 class InlineCompletionGrayTextElementCustom(override val text: String, private val delta: Int = 0) :
     InlineCompletionElement {
 
-    override fun toPresentable(): InlineCompletionElement.Presentable = Presentable(this, delta)
+    override fun toPresentable(): Presentable = Presentable(this, delta)
 
     open class Presentable(override val element: InlineCompletionElement, val delta: Int = 0) :
         InlineCompletionElement.Presentable {

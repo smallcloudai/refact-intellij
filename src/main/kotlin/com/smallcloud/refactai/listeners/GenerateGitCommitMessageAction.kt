@@ -10,6 +10,8 @@ import com.intellij.openapi.diff.impl.patch.UnifiedDiffWriter
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.VcsDataKeys
 import com.intellij.openapi.vcs.VcsException
+import com.intellij.openapi.vcs.changes.Change
+import com.intellij.openapi.vcs.changes.CurrentContentRevision
 import com.intellij.ui.AnimatedIcon
 import com.intellij.vcsUtil.VcsUtil
 import com.smallcloud.refactai.RefactAIBundle
@@ -85,10 +87,18 @@ class GenerateGitCommitMessageAction : AnAction(
             val projectFileVcsRoot = VcsUtil.getVcsRootFor(project, projectFile) ?: return null
 
             try {
-                val includedChanges = commitWorkflowUi.getIncludedChanges()
+                val includedChanges = commitWorkflowUi.getIncludedChanges().toMutableList()
+                val includedUnversionedFiles = commitWorkflowUi.getIncludedUnversionedFiles()
+                if (!includedUnversionedFiles.isEmpty()) {
+                    for (filePath in includedUnversionedFiles) {
+                        val change: Change = Change(null, CurrentContentRevision(filePath))
+                        includedChanges.add(change)
+                    }
+                }
                 val filePatches = IdeaTextPatchBuilder.buildPatch(
                     project, includedChanges, projectFileVcsRoot.toNioPath(), false, true
                 )
+
                 val diffWriter = StringWriter()
                 UnifiedDiffWriter.write(
                     null,

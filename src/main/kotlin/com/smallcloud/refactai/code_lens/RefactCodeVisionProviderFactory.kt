@@ -3,6 +3,7 @@ package com.smallcloud.refactai.code_lens
 import com.intellij.codeInsight.codeVision.CodeVisionProvider
 import com.intellij.codeInsight.codeVision.CodeVisionProviderFactory
 import com.intellij.codeInsight.codeVision.settings.CodeVisionGroupSettingProvider
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.smallcloud.refactai.RefactAIBundle
@@ -33,6 +34,7 @@ class RefactOpenExplainSettingProvider : CodeVisionGroupSettingProvider {
 
 class RefactCodeVisionProviderFactory : CodeVisionProviderFactory {
     override fun createProviders(project: Project): Sequence<CodeVisionProvider<*>> {
+        if (ApplicationManager.getApplication().isUnitTestMode) return emptySequence()
         initialize()
         val customization = getLSPProcessHolder(project)?.fetchCustomization() ?: return emptySequence()
         if (customization.has("code_lens")) {

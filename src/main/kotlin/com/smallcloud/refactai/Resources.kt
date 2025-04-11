@@ -1,6 +1,7 @@
 package com.smallcloud.refactai
 
-import com.intellij.ide.plugins.PluginManager
+import com.intellij.ide.plugins.IdeaPluginDescriptor
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
@@ -12,7 +13,14 @@ import javax.swing.Icon
 import javax.swing.UIManager
 
 
-fun getThisPlugin() = PluginManager.getPlugins().find { it.name == "Refact.ai" }
+fun getThisPlugin(): IdeaPluginDescriptor? {
+    val thisPluginById = PluginManagerCore.getPlugin(PluginId.getId("com.smallcloud.codify"))
+    if (thisPluginById != null) {
+        return thisPluginById
+    }
+    return null
+}
+
 
 private fun getHomePath(): File {
     return getThisPlugin()!!.pluginPath.toFile()

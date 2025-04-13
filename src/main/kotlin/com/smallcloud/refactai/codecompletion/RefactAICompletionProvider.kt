@@ -21,7 +21,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.application
-import com.intellij.util.ui.JBFont
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.streamedInferenceFetch
@@ -292,7 +291,20 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
         completionData: Completion,
         editorState: EditorTextState
     ): List<InlineCompletionElement> {
-        return listOf(InlineCompletionGrayTextElementCustom(completionData.completion, (editorState.offsetByCurrentLine)))
+        return if (completionData.completion.startsWith(editorState.currentLine)) {
+            listOf(
+                InlineCompletionGrayTextElementCustom(
+                    completionData.completion.substring(editorState.currentLine.length)
+                )
+            )
+        } else {
+            listOf(
+                InlineCompletionGrayTextElementCustom(
+                    completionData.completion,
+                    (editorState.offsetByCurrentLine)
+                )
+            )
+        }
     }
 
     override fun isEnabled(event: InlineCompletionEvent): Boolean {

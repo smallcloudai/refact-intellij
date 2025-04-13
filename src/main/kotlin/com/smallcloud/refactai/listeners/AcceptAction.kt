@@ -18,6 +18,7 @@ import com.smallcloud.refactai.codecompletion.EditorRefactLastSnippetTelemetryId
 import com.smallcloud.refactai.codecompletion.InlineCompletionGrayTextElementCustom
 import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.statistic.UsageStats
+import kotlin.math.absoluteValue
 
 const val ACTION_ID_ = "TabPressedAction"
 
@@ -56,9 +57,8 @@ class TabPressedAction : EditorAction(InsertInlineCompletionHandler()), ActionTo
                 val elem = ctx.state.elements.first()
                 val isMultiline = EditorRefactLastCompletionIsMultilineKey[editor]
                 if (isMultiline && elem is InlineCompletionGrayTextElementCustom.Presentable) {
-                    val prefixOffset = editor.document.getLineStartOffset(caret.logicalPosition.line)
-                    // logicalPosition doesn't show real offset, tab is 4 chars in logicalPosition
-                    return elem.delta == (caret.offset - prefixOffset)
+                    val startOffset = elem.startOffset() ?: return false
+                    return elem.delta == (caret.offset - startOffset).absoluteValue
                 }
                 return true
             } else {

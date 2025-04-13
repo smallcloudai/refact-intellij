@@ -111,7 +111,7 @@ private class InsertHandler : DefaultInlineCompletionInsertHandler() {
     }
 }
 
-private val specialSymbolsRegex = "^[:\\s\\t\\n\\r(){},.\"'\\];]*\$".toRegex()
+private val specialSymbolsRegex = "^[:\\s\\t\\n\\r(){},.<>\"'\\];]*\$".toRegex()
 
 class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
     private val logger = Logger.getInstance("inlineCompletion")

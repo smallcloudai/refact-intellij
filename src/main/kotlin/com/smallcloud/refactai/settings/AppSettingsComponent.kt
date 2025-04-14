@@ -50,7 +50,7 @@ class AppSettingsComponent {
     private val myAstFileLimitText = JBTextField()
     private val myVecdbFileLimitText = JBTextField()
     private val insecureSSLCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.insecureSSL"))
-    private val telemetrySnippetCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.telemetryCodeSnippets"))
+    private val experimentalCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.experimentalLspFlag"))
     private val pauseCompletionCheckBox = JCheckBox(RefactAIBundle.message("advancedSettings.pauseCompletion"))
     private val completionMaxTokenText = JBTextField()
     val astCheckbox = JCheckBox(RefactAIBundle.message("advancedSettings.useMultipleFilesCompletion")).apply {
@@ -138,16 +138,6 @@ class AppSettingsComponent {
                     UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
                 ), 0
             )
-
-//            addComponent(telemetrySnippetCheckBox, UIUtil.LARGE_VGAP)
-//            addComponent(
-//                JBLabel(
-//                    RefactAIBundle.message("advancedSettings.telemetryCodeSnippetsDesc"),
-//                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-//                ).apply {
-//                    setCopyable(true)
-//                }, 0
-//            )
             addComponent(pauseCompletionCheckBox, UIUtil.LARGE_VGAP)
             addComponent(
                 JBLabel(
@@ -198,15 +188,23 @@ class AppSettingsComponent {
                 isVisible = openCustomizationButton.isVisible
             }, openCustomizationButton, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
 
+            addComponent(experimentalCheckBox, UIUtil.LARGE_VGAP)
+            addComponent(
+                JBLabel(
+                    RefactAIBundle.message("advancedSettings.experimentalLspFlagDesc"),
+                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
+                ).apply {
+                    setCopyable(true)
+                }, 0
+            )
+
             addComponentFillVertically(JPanel(), 0)
         }.panel
 
         experimentalPanel = FormBuilder.createFormBuilder().run {
             addComponent(TitledSeparator(RefactAIBundle.message("advancedSettings.experimentalFeatures")))
 
-//            addComponent(developerModeCheckBox, UIUtil.LARGE_VGAP)
             addLabeledComponent(myXDebugLSPPortLabel, myXDebugLSPPort, UIUtil.LARGE_VGAP)
-//            addLabeledComponent(myStagingVersionLabel, myStagingVersionText, UIUtil.LARGE_VGAP)
             addComponentFillVertically(JPanel(), 0)
         }.panel
         experimentalPanel.isVisible = false
@@ -275,10 +273,10 @@ class AppSettingsComponent {
             completionMaxTokenText.text = newVal.toString()
         }
 
-    var telemetrySnippetsEnabled: Boolean
-        get() = telemetrySnippetCheckBox.isSelected
+    var experimentalLspFlagEnabled: Boolean
+        get() = experimentalCheckBox.isSelected
         set(newVal) {
-            telemetrySnippetCheckBox.isSelected = newVal
+            experimentalCheckBox.isSelected = newVal
         }
 
     var pauseCompletion: Boolean

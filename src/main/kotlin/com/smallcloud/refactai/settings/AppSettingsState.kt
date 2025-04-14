@@ -54,6 +54,7 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var insecureSSL: Boolean = false
     var telemetrySnippetsEnabled: Boolean = false
     var isFirstStart: Boolean = true
+    var experimentalLspFlagEnabled: Boolean = false
 
     @Transient
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
@@ -128,6 +129,10 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     }
                     override fun telemetrySnippetsEnabledChanged(newValue: Boolean) {
                         instance.telemetrySnippetsEnabled = newValue
+                    }
+
+                    override fun experimentalLspFlagEnabledChanged(newValue: Boolean) {
+                        instance.experimentalLspFlagEnabled = newValue
                     }
                 })
         messageBus

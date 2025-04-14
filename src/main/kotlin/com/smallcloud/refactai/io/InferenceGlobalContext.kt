@@ -162,13 +162,13 @@ class InferenceGlobalContext : Disposable {
               .completionMaxTokensChanged(newValue)
         }
 
-    var telemetrySnippetsEnabled: Boolean
-        get() { return AppSettingsState.telemetrySnippetsEnabled }
+    var experimentalLspFlagEnabled: Boolean
+        get() { return AppSettingsState.experimentalLspFlagEnabled }
         set(newValue) {
-            if (newValue == telemetrySnippetsEnabled) return
+            if (newValue == experimentalLspFlagEnabled) return
             messageBus
               .syncPublisher(InferenceGlobalContextChangedNotifier.TOPIC)
-              .telemetrySnippetsEnabledChanged(newValue)
+              .experimentalLspFlagEnabledChanged(newValue)
         }
 
     var xDebugLSPPort: Int?

@@ -21,6 +21,7 @@ interface InferenceGlobalContextChangedNotifier {
     fun insecureSSLChanged(newValue: Boolean) {}
     fun completionMaxTokensChanged(newMaxTokens: Int) {}
     fun telemetrySnippetsEnabledChanged(newValue: Boolean) {}
+    fun experimentalLspFlagEnabledChanged(newValue: Boolean) {}
 
     companion object {
         val TOPIC = Topic.create(

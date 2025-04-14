@@ -146,6 +146,12 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                         settingsChanged()
                     }
                 }
+
+                override fun experimentalLspFlagEnabledChanged(newValue: Boolean) {
+                    AppExecutorUtil.getAppScheduledExecutorService().submit {
+                        settingsChanged()
+                    }
+                }
             })
 
         Runtime.getRuntime().addShutdownHook(exitThread)
@@ -239,6 +245,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             vecdb = InferenceGlobalContext.vecdbIsEnabled,
             vecdbFileLimit = InferenceGlobalContext.vecdbFileLimit,
             insecureSSL = InferenceGlobalContext.insecureSSL,
+            experimental = InferenceGlobalContext.experimentalLspFlagEnabled,
         )
 
         val processIsAlive = process?.isAlive == true

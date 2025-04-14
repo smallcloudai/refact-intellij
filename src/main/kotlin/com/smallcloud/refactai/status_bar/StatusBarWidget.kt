@@ -166,7 +166,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
 
             })
 
-        ApplicationManager.getApplication()
+        project
             .messageBus
             .connect(this)
             .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {

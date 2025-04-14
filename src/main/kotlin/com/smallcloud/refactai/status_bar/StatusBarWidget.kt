@@ -348,7 +348,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
 
         if (lastRagStatusMb != null) {
             val lastRagStatus = lastRagStatusMb!!
-            if (lastRagStatus.vecdb != null && !listOf("done", "idle").contains(lastRagStatus.vecdb.state)) {
+            if (lastRagStatus.vecdb != null && !listOf("done", "idle", "cooldown").contains(lastRagStatus.vecdb.state)) {
                 val vecdbParsedQty = lastRagStatus.vecdb.filesTotal - lastRagStatus.vecdb.filesUnprocessed
                 return RefactAIBundle.message("statusBar.vecDBProgress", vecdbParsedQty, lastRagStatus.vecdb.filesTotal)
             }

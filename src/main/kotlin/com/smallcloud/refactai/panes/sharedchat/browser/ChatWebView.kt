@@ -27,6 +27,7 @@ import org.cef.CefApp
 import org.cef.CefSettings
 import org.cef.browser.CefBrowser
 import org.cef.handler.*
+import java.awt.Cursor
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JComponent
@@ -168,7 +169,14 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 logger.warn("CONSOLE: ${logSeverityToString(level)} $message $source $line")
                 return super.onConsoleMessage(browser, level, message, source, line)
             }
+
+            override fun onCursorChange(browser: CefBrowser?, cursorType: Int): Boolean {
+                val cursor = Cursor.getPredefinedCursor(cursorType)
+                browser?.uiComponent?.cursor = cursor
+                return super.onCursorChange(browser, cursorType)
+            }
         }, browser.cefBrowser)
+
         if (SystemInfo.isLinux) {
             browser.jbCefClient.addDialogHandler({ cefBrowser, mode, title, defaultFilePath, filters, callback ->
                 val filePath = showFileChooserDialog(

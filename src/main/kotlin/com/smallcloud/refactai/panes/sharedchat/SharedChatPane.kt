@@ -13,6 +13,8 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.LogicalPosition
+import com.intellij.openapi.editor.colors.EditorColorsListener
+import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
 import com.intellij.openapi.fileEditor.*
@@ -249,12 +251,15 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         val ef = EditorFactory.getInstance()
         ef.eventMulticaster.addSelectionListener(selectionListener, this)
 
-        UISettings.getInstance().addUISettingsListener(
-            UISettingsListener {
-                ApplicationManager.getApplication().invokeLater {
+        project.messageBus.connect().subscribe(
+            EditorColorsManager.TOPIC,
+            EditorColorsListener {
+            ApplicationManager.getApplication().invokeLater {
+                if(!project.isDisposed) {
                     this@SharedChatPane.setLookAndFeel()
                 }
-            }, this)
+            }
+        })
 
         project.messageBus.connect().subscribe(ProjectManager.TOPIC, object: ProjectManagerListener {
             override fun projectOpened(project: Project) {

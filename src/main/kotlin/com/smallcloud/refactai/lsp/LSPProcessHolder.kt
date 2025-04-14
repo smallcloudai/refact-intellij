@@ -69,7 +69,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     private val healthCheckerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "SMCLSPHealthCheckerScheduler", 1
     )
-    private var ragStatusCache: RagStatus? = null
+    var ragStatusCache: RagStatus? = null
     private val ragStatusCheckerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "SMCLSPRagStatusCheckerScheduler", 1
     )

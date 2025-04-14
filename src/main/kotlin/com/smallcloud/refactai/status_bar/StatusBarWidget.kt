@@ -17,9 +17,7 @@ import com.intellij.ui.JBColor
 import com.intellij.util.Consumer
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.ExtraInfoChangedNotifier
-import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.RefactAIBundle
-import com.smallcloud.refactai.Resources.Icons.HAND_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_RED_16x16
 import com.smallcloud.refactai.Resources.titleStr
@@ -39,7 +37,6 @@ import java.awt.event.MouseEvent
 import java.net.URI
 import java.util.*
 import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 import javax.swing.Icon
 import javax.swing.JComponent
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
@@ -181,6 +178,22 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     updateStatusBarStateAndUpdateStatusBarIfNeed(ragStatus)
                 }
             })
+        AppExecutorUtil.getAppExecutorService().submit {
+            try {
+                val lsp = LSPProcessHolder.getInstance(project)!!
+                while (true) {
+                    val ragStatus = lsp.ragStatusCache
+                    if (ragStatus != null) {
+                        updateStatusBarStateAndUpdateStatusBarIfNeed(ragStatus)
+                        break
+                    }
+                    Thread.sleep(150)
+                }
+
+            } catch (e: Exception) {
+                logger.error("Failed to update status bar", e)
+            }
+        }
     }
 
     override fun ID(): String {

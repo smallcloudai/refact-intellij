@@ -54,7 +54,8 @@ class Editor (val project: Project) {
     fun getUserConfig(): Events.Config.UpdatePayload {
         val hasAst = AppSettingsState.instance.astIsEnabled
         val hasVecdb = AppSettingsState.instance.vecdbIsEnabled
-        val features = Events.Config.Features(hasAst, hasVecdb)
+        val hasExperimental = AppSettingsState.instance.experimentalLspFlagEnabled
+        val features = Events.Config.Features(hasAst, hasVecdb, knowledge = hasExperimental)
         val isDarkMode = LafManager.getInstance().currentUIThemeLookAndFeel.isDark
         val mode = if (isDarkMode) "dark" else "light"
         val themeProps = Events.Config.ThemeProps(mode)

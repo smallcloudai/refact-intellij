@@ -108,19 +108,12 @@
 ]]></description>
 
     <change-notes><![CDATA[
-<p>Refact.ai is an AI coding assistant, available for JetBrains IDEs and Visual Studio Code.</p>
-
-<li>RustRover support.</li>
-<li>All new plugins are powered by <a href="https://github.com/smallcloudai/refact-lsp">Refact LSP</a>, our new open-source server written in Rust! Refact LSP converts high-level code completion, or chat requests into low-level LLM prompts and converts results back. </li>
-<li>Bugfixes and performance improvements</li>
+<ul>
+    <li>More efficient and faster code suggestion system</li>
+    <li>Enhanced performance for large codebases and extended AI sessions</li>
+    <li>New "Xperimental" settings section to access features in Beta</li>
+    <li>Stability & UI/UX improvements</li>
 </ul>
-
-<p>Our code completion is now faster and more responsive with improved indentation, multiline code completion and chat responsiveness.</p>
-
-<p>In the Pro version, you can enjoy all of those AI features,
-integrated into a single package that follows your privacy settings.</p>
-
-<p>Check out our Trial version, ready to start working for you in seconds!</p>
 ]]></change-notes>
 
 

@@ -332,6 +332,9 @@ open class LSPProcessHolder(val project: Project) : Disposable {
 
     private fun lspRagStatusSync() {
         try {
+            if (ragStatusCheckerScheduler.isShutdown || ragStatusCheckerScheduler.isTerminated) {
+                return
+            }
             if (!isWorking) {
                 ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
                 return

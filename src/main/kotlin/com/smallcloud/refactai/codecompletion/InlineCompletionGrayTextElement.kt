@@ -131,7 +131,7 @@ class InlineCompletionGrayTextElementCustom(override val text: String, private v
                 return
             }
             editor.inlayModel.execute(true) {
-                val element = editor.inlayModel.addInlineElement(offset, true, InlineSuffixRenderer(editor, line))
+                val element = editor.inlayModel.addInlineElement(offset, false, InlineSuffixRenderer(editor, line))
                     ?: return@execute
                 element.addActionAvailabilityHint(
                     EditorActionAvailabilityHint(

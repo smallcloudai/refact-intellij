@@ -58,7 +58,12 @@ class TabPressedAction : EditorAction(InsertInlineCompletionHandler()), ActionTo
                 val isMultiline = EditorRefactLastCompletionIsMultilineKey[editor]
                 if (isMultiline && elem is InlineCompletionGrayTextElementCustom.Presentable) {
                     val startOffset = elem.startOffset() ?: return false
-                    return elem.delta == (caret.offset - startOffset).absoluteValue
+                    if (elem.delta == 0)
+                        return elem.delta == (caret.offset - startOffset).absoluteValue
+                    else {
+                        val prefixOffset = editor.document.getLineStartOffset(caret.logicalPosition.line)
+                        return elem.delta == (caret.offset - prefixOffset)
+                    }
                 }
                 return true
             } else {

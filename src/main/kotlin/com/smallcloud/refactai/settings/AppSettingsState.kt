@@ -26,20 +26,16 @@ import com.smallcloud.refactai.account.AccountManager.Companion.instance as Acco
     Storage("SMCSettings.xml"),
 ])
 class AppSettingsState : PersistentStateComponent<AppSettingsState> {
-    var embeddedWarningShowed: Int = 0
     var apiKey: String? = null
     var temperature: Float? = null
     var model: String? = null
     var userLoggedIn: String? = null
-    var streamlinedLoginTicket: String? = null
-    var streamlinedLoginTicketWasCreatedTs: Long? = null
     var inferenceUri: String? = null
     var userInferenceUri: String? = null
     var loginMessage: String? = null
     var tooltipMessage: String? = null
     var inferenceMessage: String? = null
     var useAutoCompletion: Boolean = true
-    var startupLoggedIn: Boolean = false
     var developerModeEnabled: Boolean = false
     var xDebugLSPPort: Int? = null
     var stagingVersion: String = ""
@@ -63,10 +59,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
         messageBus
             .connect(PluginState.instance)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun ticketChanged(newTicket: String?) {
-                    instance.streamlinedLoginTicket = newTicket
-                }
-
                 override fun userChanged(newUser: String?) {
                     instance.userLoggedIn = newUser
                 }

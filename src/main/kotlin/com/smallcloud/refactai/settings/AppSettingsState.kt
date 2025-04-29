@@ -11,8 +11,12 @@ import com.smallcloud.refactai.ExtraInfoChangedNotifier
 import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
+import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance
+import java.io.File
 import java.net.URI
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.io.path.Path
+import kotlin.io.path.exists
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 
 /**
@@ -163,6 +167,10 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
 }
 
 fun settingsStartup() {
-    AppSettingsState.instance
+    instance.userInferenceUri?.let {
+        if (File(it).exists()) {
+            instance.userInferenceUri = null
+        }
+    }
     AccountManager.startup()
 }

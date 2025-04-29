@@ -646,6 +646,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 }
             }
 
+            is Editor.SetCodeCompletionModel -> {
+                InferenceGlobalContext.instance.model = event.model
+            }
+
             else -> Unit
         }
     }

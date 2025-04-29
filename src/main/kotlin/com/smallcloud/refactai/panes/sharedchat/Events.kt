@@ -36,6 +36,7 @@ class EventNames {
         IDE_TOOL_EDIT("ide/toolEdit"),
         FORCE_RELOAD_FILE_BY_PATH("ide/forceReloadFileByPath"),
         FORCE_RELOAD_PROJECT_TREE_FILES("ide/forceReloadProjectTreeFiles"),
+        SET_CODE_COMPLETION_MODEL("ide/setCodeCompletionModel")
     }
 
     enum class ToChat(val value: String) {
@@ -151,6 +152,11 @@ class Events {
 
                 EventNames.FromChat.FORCE_RELOAD_PROJECT_TREE_FILES.value -> {
                     return Editor.ForceReloadProjectTreeFiles()
+                }
+
+                EventNames.FromChat.SET_CODE_COMPLETION_MODEL.value -> {
+                    val model = payload?.asString ?: return null
+                    return Editor.SetCodeCompletionModel(model)
                 }
 
                 else -> null
@@ -391,6 +397,7 @@ class Events {
         class SetSnippetToChat(payload: Snippet) : ToChat<Payload>(EventNames.ToChat.SET_SELECTED_SNIPPET, payload)
         class ForceReloadFileByPath(val path: String) : FromChat(EventNames.FromChat.FORCE_RELOAD_FILE_BY_PATH, path)
         class ForceReloadProjectTreeFiles(): FromChat(EventNames.FromChat.FORCE_RELOAD_PROJECT_TREE_FILES, null)
+        class SetCodeCompletionModel(val model: String): FromChat(EventNames.FromChat.SET_CODE_COMPLETION_MODEL, model)
     }
 
     object NewChat : ToChat<Unit>(EventNames.ToChat.NEW_CHAT, Unit)

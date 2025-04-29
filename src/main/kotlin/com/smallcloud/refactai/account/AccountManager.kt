@@ -8,22 +8,6 @@ import com.smallcloud.refactai.settings.AppSettingsState
 class AccountManager: Disposable {
     private var previousLoggedInState: Boolean = false
 
-    var ticket: String?
-        get() = AppSettingsState.instance.streamlinedLoginTicket
-        set(newTicket) {
-            if (newTicket == ticket) return
-            ApplicationManager.getApplication()
-                    .messageBus
-                    .syncPublisher(AccountManagerChangedNotifier.TOPIC)
-                    .ticketChanged(newTicket)
-            AppSettingsState.instance.streamlinedLoginTicketWasCreatedTs = if (newTicket == null) null else
-                System.currentTimeMillis()
-            checkLoggedInAndNotifyIfNeed()
-        }
-
-    val ticketCreatedTs: Long?
-        get() = AppSettingsState.instance.streamlinedLoginTicketWasCreatedTs
-
     var user: String?
         get() = AppSettingsState.instance.userLoggedIn
         set(newUser) {

@@ -33,7 +33,7 @@ jobs:
           
       - id: set-defaults
         run: |
-          echo "chat_js_branch=${{ github.event.inputs.chat_js_branch || 'main' }}" >> $GITHUB_OUTPUT
+          echo "chat_js_branch=${{ github.event.inputs.chat_js_branch || 'dev' }}" >> $GITHUB_OUTPUT
           if [ -n "${{ github.event.inputs.lsp_version }}" ]; then
             echo "lsp_version=${{ github.event.inputs.lsp_version }}" >> $GITHUB_OUTPUT
           else

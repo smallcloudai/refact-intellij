@@ -10,11 +10,11 @@ on:
       lsp_branch:
         required: true
         description: "lsp_branch"
-        default: "main"
+        default: "dev"
         type: string
       chat_js_branch:
         description: "Branch name of chat-js"
-        default: "main"
+        default: "dev"
         type: string
         required: true
 jobs:
@@ -22,7 +22,7 @@ jobs:
   set-defaults:
     runs-on: ubuntu-latest
     outputs:
-      lsp_branch: ${{ steps.set-defaults.outputs.lsp_branch }}
+      lsp_version: ${{ steps.set-defaults.outputs.lsp_version }}
       chat_js_branch: ${{ steps.set-defaults.outputs.chat_js_branch }}
     steps:
       # Check out current repository to read refact_lsp file
@@ -97,8 +97,7 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: agent_gui_build.yml
           repo: smallcloudai/refact
-#          branch: ${{ needs.set-defaults.outputs.chat_js_branch }}
-          commit: 0b99b8a73918e4dfaf41387419f19a6dd97969d7
+          branch: ${{ needs.set-defaults.outputs.chat_js_branch }}
           path: ./chat_package
           name: lts-refact-chat-js-.*\.tgz
           name_is_regexp: true
@@ -118,7 +117,7 @@ jobs:
           repo: refact
           workflow_file_name: agent_engine_build.yml
           github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          ref: ${{ needs.set-defaults.outputs.lsp_branch }}
+          ref: ${{ needs.set-defaults.outputs.lsp_version }}
 
       - name: Download artifact
         id: download-artifact
@@ -129,7 +128,7 @@ jobs:
           repo: smallcloudai/refact
           name_is_regexp: true
           name: dist-*
-          branch: ${{ steps.setupvars.outputs.lsp_version }}
+          branch: ${{ needs.set-defaults.outputs.lsp_version }}
           path: ./src/main/resources/bin
 
       # Validate wrapper

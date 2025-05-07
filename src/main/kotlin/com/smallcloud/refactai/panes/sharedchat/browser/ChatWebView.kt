@@ -335,13 +335,13 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     fun postMessage(message: Events.ToChat<*>?) {
         if (message != null) {
             val json = Events.stringify(message)
-            logger.info("post message json: $json")
+//            logger.info("post message json: $json")
             this.postMessage(json)
         }
     }
 
     fun postMessage(message: String) {
-        logger.info("Posting message to browser")
+//        logger.info("Posting message to browser")
         val script = """window.postMessage($message, "*");"""
         executeJavaScript(script)
     }

@@ -361,10 +361,8 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             if ((ragStatus.ast != null && listOf("starting", "parsing", "indexing").contains(ragStatus.ast.state))
                 || (ragStatus.vecdb != null && listOf("starting", "parsing").contains(ragStatus.vecdb.state))
             ) {
-                logger.info("ast or vecdb is still indexing")
                 ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 700, TimeUnit.MILLISECONDS)
             } else {
-                logger.info("ast and vecdb status complete, slowdown poll")
                 ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
             }
         } catch (e: Exception) {

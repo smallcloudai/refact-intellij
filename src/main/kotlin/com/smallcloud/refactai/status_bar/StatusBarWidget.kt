@@ -91,8 +91,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                 || (ragStatus.vecdb != null && listOf("starting", "parsing").contains(ragStatus.vecdb.state))
             ) {
                 logger.info("ast or vecdb is still indexing")
-            } else {
-                logger.info("ast and vecdb status complete, slowdown poll")
             }
 
             update(null)

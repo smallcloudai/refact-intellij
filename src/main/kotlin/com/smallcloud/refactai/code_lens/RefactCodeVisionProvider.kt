@@ -94,15 +94,15 @@ class RefactCodeVisionProvider(
     }
 
     override fun computeCodeVision(editor: Editor, uiData: Unit): CodeVisionState {
-        Logger.getInstance(RefactCodeVisionProvider::class.java).warn("computeCodeVision $commandKey start")
+//        Logger.getInstance(RefactCodeVisionProvider::class.java).warn("computeCodeVision $commandKey start")
         val lsp = editor.project?.let { getInstance(it) } ?: return CodeVisionState.NotReady
         if (!lsp.isWorking) return CodeVisionState.NotReady
 
         try {
             val codeLens = getCodeLens(editor)
             val result = ArrayList<Pair<TextRange, CodeVisionEntry>>()
-            Logger.getInstance(RefactCodeVisionProvider::class.java)
-                .warn("computeCodeVision $commandKey ${codeLens.size}")
+//            Logger.getInstance(RefactCodeVisionProvider::class.java)
+//                .warn("computeCodeVision $commandKey ${codeLens.size}")
             for (codeLen in codeLens) {
                 result.add(codeLen.range to ClickableTextCodeVisionEntry(codeLen.label, id, { _, _ ->
                     codeLen.action.actionPerformed()

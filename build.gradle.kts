@@ -1,3 +1,4 @@
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 
@@ -87,6 +88,11 @@ intellijPlatform {
             recommended()
         }
     }
+}
+
+val runIdeWith2025 by intellijPlatformTesting.runIde.registering {
+    type = IntelliJPlatformType.PyCharmProfessional // or IdeaUltimate if you use IU
+    version = "2025.1"
 }
 
 tasks {

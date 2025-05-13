@@ -91,8 +91,9 @@ intellijPlatform {
 }
 
 val runIdeWith2025 by intellijPlatformTesting.runIde.registering {
-    type = IntelliJPlatformType.PyCharmProfessional // or IdeaUltimate if you use IU
+    type = IntelliJPlatformType.PyCharmCommunity // or IdeaUltimate if you use IU
     version = "2025.1"
+    useInstaller = false
 }
 
 tasks {

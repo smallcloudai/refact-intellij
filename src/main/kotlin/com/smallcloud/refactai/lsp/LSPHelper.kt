@@ -6,12 +6,35 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.workspaceModel.ide.impl.legacyBridge.project.ProjectRootManagerBridge
 import com.smallcloud.refactai.io.ConnectionStatus
+import java.nio.file.Paths
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
+fun findRoots(paths: List<String>): List<String> {
+    val sortedPaths = paths.map { Paths.get(it).normalize() }.sortedBy { it.nameCount }
+
+    val roots = mutableSetOf<String>()
+
+    for (path in sortedPaths) {
+        val pathStr = path.toString()
+        if (roots.none { pathStr.startsWith("$it/") || pathStr == it }) {
+            roots.add(pathStr)
+        }
+    }
+    return roots.toList()
+}
+
 fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
-    val projectRoots = ProjectRootManager.getInstance(project).contentRoots.map { it.toString() }
+    val projectRootManager = ProjectRootManager.getInstance(project)
+    val projectRoots = projectRootManager.contentRoots.map { it.toString() }.ifEmpty {
+        if (projectRootManager is ProjectRootManagerBridge) {
+            return@ifEmpty findRoots(projectRootManager.rootsToWatch.map { it.rootPath })
+        } else {
+            return@ifEmpty emptyList()
+        }
+    }.ifEmpty { listOf(project.basePath) }
     val url = lsp.url.resolve("/v1/lsp-initialize")
     val data = Gson().toJson(
         mapOf(
@@ -19,7 +42,7 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
         )
     )
 
-    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED
         InferenceGlobalContext.lastErrorMsg = null
     }, failedDataReceiveEnded = {
@@ -39,7 +62,7 @@ fun lspDocumentDidChanged(project: Project, docUrl: String, text: String) {
         )
     )
 
-    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED
         InferenceGlobalContext.lastErrorMsg = null
     }, failedDataReceiveEnded = {
@@ -66,7 +89,7 @@ fun lspSetActiveDocument(editor: Editor) {
         )
     )
 
-    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED
         InferenceGlobalContext.lastErrorMsg = null
     }, failedDataReceiveEnded = {
@@ -87,7 +110,7 @@ fun lspGetCodeLens(editor: Editor): String {
         )
     )
 
-    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED
         InferenceGlobalContext.lastErrorMsg = null
     }, failedDataReceiveEnded = {
@@ -109,7 +132,7 @@ fun lspGetCommitMessage(project: Project, diff: String, currentMessage: String):
             "text" to currentMessage,
         )
     )
-    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded={
+    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED
         InferenceGlobalContext.lastErrorMsg = null
     }, failedDataReceiveEnded = {

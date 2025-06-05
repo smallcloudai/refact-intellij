@@ -5,8 +5,8 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diff.impl.patch.IdeaTextPatchBuilder
-import com.intellij.openapi.diff.impl.patch.UnifiedDiffWriter
+//import com.intellij.openapi.diff.impl.patch.IdeaTextPatchBuilder
+//import com.intellij.openapi.diff.impl.patch.UnifiedDiffWriter
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.VcsDataKeys
 import com.intellij.openapi.vcs.VcsException
@@ -95,20 +95,20 @@ class GenerateGitCommitMessageAction : AnAction(
                         includedChanges.add(change)
                     }
                 }
-                val filePatches = IdeaTextPatchBuilder.buildPatch(
-                    project, includedChanges, projectFileVcsRoot.toNioPath(), false, true
-                )
+//                val filePatches = IdeaTextPatchBuilder.buildPatch(
+//                    project, includedChanges, projectFileVcsRoot.toNioPath(), false, true
+//                )
 
                 val diffWriter = StringWriter()
-                UnifiedDiffWriter.write(
-                    null,
-                    projectFileVcsRoot.toNioPath(),
-                    filePatches,
-                    diffWriter,
-                    "\n",
-                    null,
-                    null
-                )
+//                UnifiedDiffWriter.write(
+//                    null,
+//                    projectFileVcsRoot.toNioPath(),
+//                    filePatches,
+//                    diffWriter,
+//                    "\n",
+//                    null,
+//                    null
+//                )
                 return diffWriter.toString()
             } catch (e: VcsException) {
                 throw RuntimeException("Unable to create git diff", e)

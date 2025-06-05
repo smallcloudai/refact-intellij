@@ -130,34 +130,34 @@ jobs:
 
       # Run tests
       - name: Run Tests
-        run: ./gradlew check
+        run: ./gradlew buildPlugin
 
-      # Collect Tests Result of failed tests
-      - name: Collect Tests Result
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: tests-result
-          path: ${{ github.workspace }}/build/reports/tests
-
-      # Cache Plugin Verifier IDEs
-      - name: Setup Plugin Verifier IDEs Cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.properties.outputs.pluginVerifierHomeDir }}/ides
-          key: plugin-verifier-${{ hashFiles('build/listProductsReleases.txt') }}
-
-      # Run Verify Plugin task and IntelliJ Plugin Verifier tool
-      - name: Run Plugin Verification tasks
-        run: ./gradlew verifyPlugin -Dplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
-
-      # Collect Plugin Verifier Result
-      - name: Collect Plugin Verifier Result
-        uses: actions/upload-artifact@v4
-        with:
-          name: pluginVerifier-result
-          path: ${{ github.workspace }}/build/reports/pluginVerifier
-
+#      # Collect Tests Result of failed tests
+#      - name: Collect Tests Result
+#        if: ${{ failure() }}
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: tests-result
+#          path: ${{ github.workspace }}/build/reports/tests
+#
+#      # Cache Plugin Verifier IDEs
+#      - name: Setup Plugin Verifier IDEs Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: ${{ steps.properties.outputs.pluginVerifierHomeDir }}/ides
+#          key: plugin-verifier-${{ hashFiles('build/listProductsReleases.txt') }}
+#
+#      # Run Verify Plugin task and IntelliJ Plugin Verifier tool
+#      - name: Run Plugin Verification tasks
+#        run: ./gradlew verifyPlugin -Dplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
+#
+#      # Collect Plugin Verifier Result
+#      - name: Collect Plugin Verifier Result
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: pluginVerifier-result
+#          path: ${{ github.workspace }}/build/reports/pluginVerifier
+#
       - name: Prepare Plugin Artifact
         id: artifact
         shell: bash

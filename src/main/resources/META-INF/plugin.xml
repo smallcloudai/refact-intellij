@@ -17,7 +17,7 @@
 <ul>
     <li>Integrate AI Agent with the tools you already use, allowing it to complete tasks for you end-to-end.</li>
     <li>Deploy Refact.ai on-premise and maintain <b>100% control over your codebase.</b></li>
-    <li>Access State-of-the-Art Models (Claude 3.7 Sonnet, GPT-4o, o3-mini, etc.)</li>
+    <li>Access State-of-the-Art Models (Claude 4, GPT-4o, o3-mini, etc.)</li>
     <li>Bring your own key (BYOK) – Use your own API keys for external LLMs.</li>
     <li>Stop switching between your IDE and chat—Refact.ai has an integrated chat right in your IDE.</li>
     <li>Get free, unlimited, context-aware auto-completion.</li>
@@ -42,7 +42,7 @@
     intelligent answers to your questions—right inside your development environment.</li>
     <li><b>Integrated with the tools</b> – Refact.ai goes beyond codebases, connecting with GitHub, GitLab,
     databases (PostgreSQL, MySQL), Pdb, Docker, and any shell command, so AI Agent can autonomously complete tasks—from code generation to deployment.</li>
-    <li><b>State-of-the-Art Models</b> – Refact.ai supports <b>Claude 3.7 Sonnet, GPT-4o, and o3-mini</b>,
+    <li><b>State-of-the-Art Models</b> – Refact.ai supports <b>Claude 4, GPT-4o, and o3-mini</b>,
     allowing you to choose the best model for each task based on its complexity.</li>
     <li><b>Bring your own key (BYOK)</b> – Use your own API keys for external LLMs,
     ensuring flexibility and control over your AI infrastructure.</li>

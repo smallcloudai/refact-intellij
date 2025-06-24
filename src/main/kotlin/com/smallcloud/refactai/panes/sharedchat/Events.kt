@@ -36,7 +36,8 @@ class EventNames {
         IDE_TOOL_EDIT("ide/toolEdit"),
         FORCE_RELOAD_FILE_BY_PATH("ide/forceReloadFileByPath"),
         FORCE_RELOAD_PROJECT_TREE_FILES("ide/forceReloadProjectTreeFiles"),
-        SET_CODE_COMPLETION_MODEL("ide/setCodeCompletionModel")
+        SET_CODE_COMPLETION_MODEL("ide/setCodeCompletionModel"),
+        TOUR_GUIDE_STATE("ide/tourGuideState")
     }
 
     enum class ToChat(val value: String) {
@@ -157,6 +158,11 @@ class Events {
                 EventNames.FromChat.SET_CODE_COMPLETION_MODEL.value -> {
                     val model = payload?.asString ?: return null
                     return Editor.SetCodeCompletionModel(model)
+                }
+
+                EventNames.FromChat.TOUR_GUIDE_STATE.value -> {
+                    val tourGuidePayload = p2?.deserialize<TourGuide.StatePayload>(payload, TourGuide.StatePayload::class.java) ?: return null
+                    return TourGuide.State(tourGuidePayload)
                 }
 
                 else -> null
@@ -398,6 +404,15 @@ class Events {
         class ForceReloadFileByPath(val path: String) : FromChat(EventNames.FromChat.FORCE_RELOAD_FILE_BY_PATH, path)
         class ForceReloadProjectTreeFiles(): FromChat(EventNames.FromChat.FORCE_RELOAD_PROJECT_TREE_FILES, null)
         class SetCodeCompletionModel(val model: String): FromChat(EventNames.FromChat.SET_CODE_COMPLETION_MODEL, model)
+    }
+
+    class TourGuide {
+        data class StatePayload(
+            val hasGif: Boolean = false,
+            val tourActive: Boolean = false
+        ) : Payload()
+
+        class State(override val payload: StatePayload) : FromChat(EventNames.FromChat.TOUR_GUIDE_STATE, payload)
     }
 
     object NewChat : ToChat<Unit>(EventNames.ToChat.NEW_CHAT, Unit)

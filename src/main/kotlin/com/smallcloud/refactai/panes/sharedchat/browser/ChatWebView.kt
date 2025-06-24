@@ -6,6 +6,7 @@ import com.intellij.ide.ui.LafManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
@@ -19,6 +20,9 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.UIUtil
+import java.awt.event.FocusEvent
+import java.awt.event.FocusListener
+import java.util.concurrent.atomic.AtomicBoolean
 import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
@@ -50,8 +54,14 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     private val jsPoolSize = "200"
     private val logger = Logger.getInstance(ChatWebView::class.java)
 
+    // Modal dialog state management
+    private val isModalActive = AtomicBoolean(false)
+    private val isTourGuideActive = AtomicBoolean(false)
+    private var pendingContextMenuCleanup: (() -> Unit)? = null
+
     init {
         System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
+        setupModalDialogDetection()
     }
 
     fun setStyle() {
@@ -81,6 +91,172 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         } catch (e: Exception) {
             logger.warn("Error setting style: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets up modal dialog detection to handle browser interactions properly
+     */
+    private fun setupModalDialogDetection() {
+        try {
+            // Monitor application modality state
+            ApplicationManager.getApplication().invokeLater({
+                detectModalDialogState()
+            }, ModalityState.any())
+        } catch (e: Exception) {
+            logger.warn("Error setting up modal dialog detection: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Detects if a modal dialog is currently active
+     */
+    private fun detectModalDialogState() {
+        try {
+            val currentModalityState = ModalityState.current()
+            val wasModalActive = isModalActive.get()
+            val isCurrentlyModalActive = !currentModalityState.equals(ModalityState.nonModal())
+
+            if (wasModalActive != isCurrentlyModalActive) {
+                isModalActive.set(isCurrentlyModalActive)
+                handleModalStateChange(isCurrentlyModalActive)
+            }
+
+            // Continue monitoring if not disposed
+            if (!webView.isDisposed) {
+                ApplicationManager.getApplication().invokeLater({
+                    detectModalDialogState()
+                }, ModalityState.any())
+            }
+        } catch (e: Exception) {
+            logger.warn("Error detecting modal dialog state: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Handles modal dialog state changes
+     */
+    private fun handleModalStateChange(modalActive: Boolean) {
+        try {
+            if (modalActive) {
+                logger.info("Modal dialog detected - preparing browser for modal state")
+                onModalDialogOpened()
+            } else {
+                logger.info("Modal dialog closed - restoring browser state")
+                onModalDialogClosed()
+            }
+        } catch (e: Exception) {
+            logger.warn("Error handling modal state change: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Called when a modal dialog is opened
+     */
+    private fun onModalDialogOpened() {
+        try {
+            // Clean up any existing context menus or dropdowns
+            cleanupContextMenus()
+
+            // Disable browser interactions temporarily
+            disableBrowserInteractions()
+        } catch (e: Exception) {
+            logger.warn("Error handling modal dialog opened: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Called when a modal dialog is closed
+     */
+    private fun onModalDialogClosed() {
+        try {
+            // Restore browser interactions
+            enableBrowserInteractions()
+
+            // Execute any pending cleanup
+            pendingContextMenuCleanup?.invoke()
+            pendingContextMenuCleanup = null
+        } catch (e: Exception) {
+            logger.warn("Error handling modal dialog closed: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Cleans up any stuck context menus or dropdowns
+     */
+    private fun cleanupContextMenus() {
+        try {
+            val script = """
+                // Close any open context menus or dropdowns
+                if (document.activeElement) {
+                    document.activeElement.blur();
+                }
+
+                // Close any modal dialogs in the browser content
+                const modals = document.querySelectorAll('[role="dialog"], .modal, .dropdown-menu');
+                modals.forEach(modal => {
+                    if (modal.style.display !== 'none') {
+                        modal.style.display = 'none';
+                    }
+                });
+
+                // Dispatch escape key to close any remaining dropdowns
+                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape' }));
+            """.trimIndent()
+
+            executeJavaScript(script)
+        } catch (e: Exception) {
+            logger.warn("Error cleaning up context menus: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Temporarily disables browser interactions
+     */
+    private fun disableBrowserInteractions() {
+        try {
+            val script = """
+                // Create overlay to prevent interactions
+                if (!document.getElementById('modal-overlay')) {
+                    const overlay = document.createElement('div');
+                    overlay.id = 'modal-overlay';
+                    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; pointer-events: auto; background: transparent;';
+                    document.body.appendChild(overlay);
+                }
+            """.trimIndent()
+
+            executeJavaScript(script)
+        } catch (e: Exception) {
+            logger.warn("Error disabling browser interactions: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Re-enables browser interactions
+     */
+    private fun enableBrowserInteractions() {
+        try {
+            val script = """
+                // Remove interaction overlay
+                const overlay = document.getElementById('modal-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+            """.trimIndent()
+
+            executeJavaScript(script)
+        } catch (e: Exception) {
+            logger.warn("Error enabling browser interactions: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Detects if tour guide with GIF is active
+     */
+    fun setTourGuideActive(active: Boolean) {
+        isTourGuideActive.set(active)
+        if (active) {
+            logger.info("Tour guide with GIF detected - enhanced modal detection active")
         }
     }
 
@@ -145,6 +321,23 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         if (System.getenv("REFACT_DEBUG") != "1") {
             browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
         }
+
+        // Add focus listener to detect tour guide interactions
+        browser.component.addFocusListener(object : FocusListener {
+            override fun focusGained(e: FocusEvent?) {
+                if (isModalActive.get()) {
+                    logger.debug("Focus gained while modal active - checking for tour guide")
+                    checkForTourGuideWithGif()
+                }
+            }
+
+            override fun focusLost(e: FocusEvent?) {
+                if (isModalActive.get() && isTourGuideActive.get()) {
+                    logger.debug("Focus lost during modal with tour guide - scheduling cleanup")
+                    scheduleContextMenuCleanup()
+                }
+            }
+        })
 
         browser.jbCefClient.addDisplayHandler(object : CefDisplayHandlerAdapter() {
             private fun logSeverityToString(severity: CefSettings.LogSeverity?): String {
@@ -300,23 +493,9 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
              ${myJSQueryOpenInBrowser.inject("href")}
         }
         document.addEventListener('click', function(event) {
-            // Walk up to find the actual anchor element
-            var target = event.target;
-            while (target && target.tagName.toLowerCase() !== 'a') {
-                target = target.parentElement;
-            }
-
-            if (target && target.tagName.toLowerCase() === 'a') {
-                var href = target.getAttribute('href') || target.href || '';
-
-                // Only intercept external links (http/https) that are not same origin
-                // Let internal navigation (hash links, javascript:, empty hrefs, same origin) work normally
-                if (href && (href.startsWith('http://') || href.startsWith('https://')) &&
-                    !href.startsWith(window.location.origin)) {
-                    event.preventDefault();
-                    window.openLink(href);
-                }
-                // For internal links, hash links, javascript:, or same-origin links, let them work normally
+            if (event.target.tagName.toLowerCase() === 'a') {
+                event.preventDefault();
+                window.openLink(event.target.href);
             }
         });""".trimIndent()
         
@@ -368,9 +547,56 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         safeExecuteJavaScript(webView, script, repaint)
     }
 
+    /**
+     * Checks for tour guide with GIF elements in the browser
+     */
+    private fun checkForTourGuideWithGif() {
+        try {
+            val script = """
+                // Check for tour guide elements with GIF content
+                const tourElements = document.querySelectorAll('[class*="tour"], [class*="guide"], [class*="walkthrough"], [data-tour]');
+                let hasGif = false;
+
+                tourElements.forEach(element => {
+                    const gifs = element.querySelectorAll('img[src*=".gif"], video, [style*="gif"]');
+                    if (gifs.length > 0) {
+                        hasGif = true;
+                    }
+                });
+
+                // Return result to Java
+                window.postIntellijMessage({
+                    type: 'ide/tourGuideState',
+                    payload: { hasGif: hasGif, tourActive: tourElements.length > 0 }
+                });
+            """.trimIndent()
+
+            executeJavaScript(script)
+        } catch (e: Exception) {
+            logger.warn("Error checking for tour guide with GIF: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Schedules context menu cleanup for later execution
+     */
+    private fun scheduleContextMenuCleanup() {
+        pendingContextMenuCleanup = {
+            ApplicationManager.getApplication().invokeLater({
+                cleanupContextMenus()
+            }, ModalityState.nonModal())
+        }
+    }
+
     override fun dispose() {
         try {
             logger.info("Disposing ChatWebView")
+
+            // Clean up modal state detection
+            isModalActive.set(false)
+            isTourGuideActive.set(false)
+            pendingContextMenuCleanup = null
+
             if (!webView.isDisposed) {
                 webView.dispose()
             }

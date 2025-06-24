@@ -649,7 +649,27 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 InferenceGlobalContext.instance.model = event.model
             }
 
+            is Events.TourGuide.State -> {
+                this.handleTourGuideState(event.payload)
+            }
+
             else -> Unit
+        }
+    }
+
+    /**
+     * Handles tour guide state changes
+     */
+    private fun handleTourGuideState(payload: Events.TourGuide.StatePayload) {
+        try {
+            if (payload.tourActive && payload.hasGif) {
+                logger.info("Tour guide with GIF detected")
+                browser.setTourGuideActive(true)
+            } else {
+                browser.setTourGuideActive(false)
+            }
+        } catch (e: Exception) {
+            logger.warn("Error handling tour guide state: ${e.message}", e)
         }
     }
 

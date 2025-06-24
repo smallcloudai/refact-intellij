@@ -98,4 +98,24 @@ class ChatWebViewTest: LightPlatform4TestCase() {
         Thread.sleep(100) // Small delay to ensure the coroutine has started
         chatWebView.dispose()
     }
+
+    @Test
+    fun testOpenFileMessageHandling() {
+        val openFileMessageReceived = mutableListOf<Events.FromChat>()
+        val chatWebView = ChatWebView(mockEditor) { event ->
+            openFileMessageReceived.add(event)
+        }
+
+        // Test that the OpenFile message is properly parsed and handled
+        val openFileMessage = """{"type":"ide/openFile","payload":{"file_path":"/home/mitya/.config/refact/customization.yaml"}}"""
+        val parsedEvent = Events.parse(openFileMessage)
+
+        Assert.assertNotNull("OpenFile message should be parsed successfully", parsedEvent)
+        Assert.assertTrue("Parsed event should be OpenFile type", parsedEvent is Events.OpenFile)
+
+        val openFileEvent = parsedEvent as Events.OpenFile
+        Assert.assertEquals("File path should match", "/home/mitya/.config/refact/customization.yaml", openFileEvent.payload.filePath)
+
+        chatWebView.dispose()
+    }
 }

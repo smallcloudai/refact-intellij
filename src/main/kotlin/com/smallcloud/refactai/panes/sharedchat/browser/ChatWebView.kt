@@ -296,41 +296,15 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     fun setUpJavaScriptMessageBusRedirectHyperlink(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery) {
-        val script = """
-        // expose a function to send URLs back to the IDE
-        window.openLink = function(href) {
-            ${myJSQueryOpenInBrowser.inject("href")}
-        };
-
+        val script = """window.openLink = function(href) {
+             ${myJSQueryOpenInBrowser.inject("href")}
+        }
         document.addEventListener('click', function(event) {
-            // walk up to the nearest <a> tag
-            var el = event.target;
-            while (el && el.tagName.toLowerCase() !== 'a') {
-                el = el.parentElement;
-            }
-            if (!el) return;
-
-            // get the raw href
-            var href = el.getAttribute('href') || '';
-            if (!href) return;
-
-            // build an absolute URL
-            var url;
-            try {
-                url = new URL(href, window.location.href);
-            } catch (e) {
-                // invalid URL → bail out
-                return;
-            }
-
-            // if it's truly external (origin differs), intercept it
-            if (url.origin !== window.location.origin) {
+            if (event.target.tagName.toLowerCase() === 'a') {
                 event.preventDefault();
-                window.openLink(url.href);
+                window.openLink(event.target.href);
             }
-            // otherwise allow the default for internal links (#-routes, close buttons, etc.)
-        });
-        """.trimIndent()
+        });""".trimIndent()
         
         try {
             if (browser != null) {

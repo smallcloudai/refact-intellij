@@ -657,7 +657,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         ChatWebView(
             this.editor
         ) { event ->
-            runBlocking {
+            // Use coroutine scope instead of runBlocking to avoid blocking the UI thread
+            CoroutineScope(Dispatchers.Main).launch {
                 handleEvent(event)
             }
         }

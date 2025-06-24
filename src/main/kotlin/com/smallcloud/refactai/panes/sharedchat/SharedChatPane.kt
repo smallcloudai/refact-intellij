@@ -619,7 +619,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.Setup.LogOut -> this.logOut()
             is Events.Fim.Request -> this.handleFimRequest()
             is Events.OpenHotKeys -> this.handleOpenHotKeys()
-            is Events.OpenFile -> this.handleOpenFile(event.payload.fileName, event.payload.line)
+            is Events.OpenFile -> this.handleOpenFile(event.payload.filePath, event.payload.line)
             is Events.Patch.Apply -> this.handlePatchApply(event.payload)
             is Events.Patch.Show -> this.handlePatchShow(event.payload)
             is Events.Animation.Start -> this.handleAnimationStart(event.fileName)

@@ -300,9 +300,23 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
              ${myJSQueryOpenInBrowser.inject("href")}
         }
         document.addEventListener('click', function(event) {
-            if (event.target.tagName.toLowerCase() === 'a') {
-                event.preventDefault();
-                window.openLink(event.target.href);
+            // Walk up to find the actual anchor element
+            var target = event.target;
+            while (target && target.tagName.toLowerCase() !== 'a') {
+                target = target.parentElement;
+            }
+
+            if (target && target.tagName.toLowerCase() === 'a') {
+                var href = target.getAttribute('href') || target.href || '';
+
+                // Only intercept external links (http/https) that are not same origin
+                // Let internal navigation (hash links, javascript:, empty hrefs, same origin) work normally
+                if (href && (href.startsWith('http://') || href.startsWith('https://')) &&
+                    !href.startsWith(window.location.origin)) {
+                    event.preventDefault();
+                    window.openLink(href);
+                }
+                // For internal links, hash links, javascript:, or same-origin links, let them work normally
             }
         });""".trimIndent()
         

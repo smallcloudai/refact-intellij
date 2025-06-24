@@ -423,48 +423,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         safeExecuteJavaScript(webView, script, repaint)
     }
 
-    /**
-     * Checks for tour guide with GIF elements in the browser
-     */
-    private fun checkForTourGuideWithGif() {
-        try {
-            val script = """
-                // Check for tour guide elements with GIF content
-                const tourElements = document.querySelectorAll('[class*="tour"], [class*="guide"], [class*="walkthrough"], [data-tour]');
-                let hasGif = false;
 
-                tourElements.forEach(element => {
-                    const gifs = element.querySelectorAll('img[src*=".gif"], video, [style*="gif"]');
-                    if (gifs.length > 0) {
-                        hasGif = true;
-                    }
-                });
-
-                // Return result to Java
-                window.postIntellijMessage({
-                    type: 'ide/tourGuideState',
-                    payload: { hasGif: hasGif, tourActive: tourElements.length > 0 }
-                });
-            """.trimIndent()
-
-            executeJavaScript(script)
-        } catch (e: Exception) {
-            logger.warn("Error checking for tour guide with GIF: ${e.message}", e)
-        }
-    }
-
-
-
-    /**
-     * Schedules context menu cleanup for later execution
-     */
-    private fun scheduleContextMenuCleanup() {
-        pendingContextMenuCleanup = {
-            ApplicationManager.getApplication().invokeLater({
-                cleanupContextMenus()
-            }, ModalityState.nonModal())
-        }
-    }
 
     override fun dispose() {
         try {

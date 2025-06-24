@@ -271,6 +271,28 @@ class EventsTest {
     }
 
     @Test
+    fun parseOpenFileMessage() {
+        val message = """{"type":"ide/openFile","payload":{"file_path":"/home/mitya/.config/refact/customization.yaml","line":10}}"""
+        val result = Events.parse(message)
+        assertNotNull(result)
+        assertTrue(result is Events.OpenFile)
+        val openFileEvent = result as Events.OpenFile
+        assertEquals("/home/mitya/.config/refact/customization.yaml", openFileEvent.payload.filePath)
+        assertEquals(10, openFileEvent.payload.line)
+    }
+
+    @Test
+    fun parseOpenFileMessageWithoutLine() {
+        val message = """{"type":"ide/openFile","payload":{"file_path":"/home/mitya/.config/refact/customization.yaml"}}"""
+        val result = Events.parse(message)
+        assertNotNull(result)
+        assertTrue(result is Events.OpenFile)
+        val openFileEvent = result as Events.OpenFile
+        assertEquals("/home/mitya/.config/refact/customization.yaml", openFileEvent.payload.filePath)
+        assertNull(openFileEvent.payload.line)
+    }
+
+    @Test
     fun formatCurrentProjectPayload() {
         val message = Events.CurrentProject.SetCurrentProject("foo")
         val result = Events.stringify(message)

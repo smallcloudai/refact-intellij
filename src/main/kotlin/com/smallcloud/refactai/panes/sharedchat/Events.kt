@@ -334,8 +334,8 @@ class Events {
     class OpenHotKeys : FromChat(EventNames.FromChat.OPEN_HOTKEYS, null)
 
     data class OpenFilePayload(
-        @SerializedName("file_name")
-        val fileName: String,
+        @SerializedName("file_path")
+        val filePath: String,
         val line: Int?
     ) : Payload()
 

@@ -48,6 +48,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.annotations.NotNull
 import java.io.File
 import java.util.concurrent.Future
+
 import javax.swing.JPanel
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent

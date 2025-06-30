@@ -86,28 +86,36 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun showFileChooserDialog(project: Project?, title: String?, isMultiple: Boolean, filters: Vector<String>): String {
         val filePath: AtomicReference<String> = AtomicReference("")
-        ApplicationManager.getApplication().invokeAndWait {
-            var fileChooserDescriptor =
-                FileChooserDescriptor(true, false, false, false, false, false)
-            fileChooserDescriptor.title = if (title.isNullOrEmpty() || title.isBlank()) "Choose File" else title
-            fileChooserDescriptor =
-                fileChooserDescriptor.withFileFilter { file -> filters.any { filter -> file.name.endsWith(filter) } }
-            val file = FileChooser.chooseFile(fileChooserDescriptor, project, null)
-            if (file != null) {
-                filePath.set(file.canonicalPath)
+        // Avoid blocking UI thread: use invokeLater instead of invokeAndWait
+        ApplicationManager.getApplication().invokeLater {
+            try {
+                var fileChooserDescriptor =
+                    FileChooserDescriptor(true, false, false, false, false, false)
+                fileChooserDescriptor.title = if (title.isNullOrEmpty() || title.isBlank()) "Choose File" else title
+                fileChooserDescriptor =
+                    fileChooserDescriptor.withFileFilter { file -> filters.any { filter -> file.name.endsWith(filter) } }
+                val file = FileChooser.chooseFile(fileChooserDescriptor, project, null)
+                if (file != null) {
+                    filePath.set(file.canonicalPath)
+                }
+            } catch (e: Exception) {
+                logger.warn("File chooser dialog error: ${e.message}", e)
             }
         }
+        // NOTE: This is now async, so return may be empty if called synchronously
         return filePath.get()
     }
 
 
     val webView by lazy {
+        // OSR rendering mode: add logging to confirm which mode is active
         val isOSREnable = when {
             SystemInfo.isWindows -> false
             SystemInfo.isMac -> false
-            SystemInfo.isLinux -> true
+            SystemInfo.isLinux -> false // TEST: disable OSR on Linux for troubleshooting
             else -> false
         }
+        logger.info("[ChatWebView] OSR enabled:  (OS: )")
         val browser = JBCefBrowser
             .createBuilder()
             .setEnableOpenDevToolsMenuItem(true)
@@ -120,6 +128,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
 
         if (!isOSREnable) {
+            logger.info("[ChatWebView] Installing custom keyboard handler (OSR disabled)")
             val onTabHandler: CefKeyboardHandler = object : CefKeyboardHandlerAdapter() {
                 override fun onKeyEvent(browser: CefBrowser?, event: CefKeyboardHandler.CefKeyEvent?): Boolean {
                     val wasTabPressed =
@@ -194,6 +203,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             }, browser.cefBrowser)
         }
 
+        logger.info("[ChatWebView] Registering custom scheme handler for http://refactai/*")
         CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
 
         val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
@@ -297,7 +307,11 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun setUpJavaScriptMessageBusRedirectHyperlink(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery) {
         val script = """window.openLink = function(href) {
-             ${myJSQueryOpenInBrowser.inject("href")}
+             try {
+                 ${myJSQueryOpenInBrowser.inject("href")}
+             } catch (e) {
+                 console.error('openLink error', e);
+             }
         }
         document.addEventListener('click', function(event) { 
             if (event.target.tagName.toLowerCase() === 'a') { 
@@ -319,8 +333,12 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun setUpJavaScriptMessageBus(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery): Boolean {
         val script = """window.postIntellijMessage = function(event) {
-             const msg = JSON.stringify(event);
-             ${myJSQueryOpenInBrowser.inject("msg")}
+             try {
+                 const msg = JSON.stringify(event);
+                 ${myJSQueryOpenInBrowser.inject("msg")}
+             } catch (e) {
+                 console.error('postIntellijMessage error', e);
+             }
         }""".trimIndent()
 
         try {
@@ -342,7 +360,13 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun postMessage(message: String) {
 //        logger.info("Posting message to browser")
-        val script = """window.postMessage($message, "*");"""
+        val script = """
+            try {
+                window.postMessage($message, "*");
+            } catch (e) {
+                console.error('postMessage error', e);
+            }
+        """.trimIndent()
         executeJavaScript(script)
     }
 
@@ -351,7 +375,11 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     private fun executeJavaScript(script: String, repaint: Boolean = false) {
-        safeExecuteJavaScript(webView, script, repaint)
+        try {
+            safeExecuteJavaScript(webView, script, repaint)
+        } catch (e: Exception) {
+            logger.warn("Error executing JavaScript: ${e.message}", e)
+        }
     }
 
     override fun dispose() {
@@ -362,6 +390,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             }
         } catch (e: Exception) {
             logger.warn("Error disposing ChatWebView: ${e.message}", e)
+        } finally {
+            logger.info("ChatWebView disposed.")
         }
     }
 

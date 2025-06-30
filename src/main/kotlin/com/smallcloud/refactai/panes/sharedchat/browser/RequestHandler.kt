@@ -66,6 +66,7 @@ class OpenedConnection(private val connection: URLConnection?) :
         responseLength: IntRef,
         redirectUrl: StringRef
     ) {
+        val startTime = System.nanoTime()
         try {
             if (connection != null) {
                 val url = connection.url.toString()
@@ -84,10 +85,13 @@ class OpenedConnection(private val connection: URLConnection?) :
                 cefResponse.status = 500
             }
         } catch (e: IOException) {
-            println("Error: $e");
+            System.err.println("[RefactChatResourceHandler] Error in getResponseHeaders: $e");
             cefResponse.error = CefLoadHandler.ErrorCode.ERR_FILE_NOT_FOUND
             cefResponse.statusText = e.localizedMessage
             cefResponse.status = 404
+        } finally {
+            val elapsedMs = (System.nanoTime() - startTime) / 1_000_000
+            println("[RefactChatResourceHandler] getResponseHeaders took ${elapsedMs}ms for ${connection?.url}")
         }
     }
 
@@ -98,9 +102,10 @@ class OpenedConnection(private val connection: URLConnection?) :
         bytesRead: IntRef,
         callback: CefCallback
     ): Boolean {
-        return inputStream?.let { inputStream ->
+        val startTime = System.nanoTime()
+        val result = inputStream?.let { inputStream ->
             val availableSize = inputStream.available()
-            return if (availableSize > 0) {
+            if (availableSize > 0) {
                 val maxBytesToRead = minOf(availableSize, bytesToRead)
                 val realBytesRead = inputStream.read(dataOut, 0, maxBytesToRead)
                 bytesRead.set(realBytesRead)
@@ -110,10 +115,17 @@ class OpenedConnection(private val connection: URLConnection?) :
                 false
             }
         } ?: false
+        val elapsedMs = (System.nanoTime() - startTime) / 1_000_000
+        println("[RefactChatResourceHandler] readResponse took ${elapsedMs}ms, result=$result")
+        return result
     }
 
     override fun close() {
-        inputStream?.close()
+        try {
+            inputStream?.close()
+        } catch (e: Exception) {
+            System.err.println("[RefactChatResourceHandler] Error closing inputStream: $e")
+        }
     }
 }
 

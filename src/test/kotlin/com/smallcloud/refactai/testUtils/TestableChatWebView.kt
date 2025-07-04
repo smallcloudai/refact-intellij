@@ -25,6 +25,7 @@ class TestableChatWebView(
     
     // Mock component instead of real browser
     private val mockComponent = JPanel()
+    private val componentValid = AtomicBoolean(true)
     
     // Test tracking properties
     var messageCount = AtomicInteger(0)
@@ -47,7 +48,13 @@ class TestableChatWebView(
     }
     
     fun getComponent(): JComponent {
+        // Return the same component instance to maintain consistency
         return mockComponent
+    }
+    
+    // Add method to check component validity for tests
+    fun isComponentValid(): Boolean {
+        return componentValid.get() && !_isDisposed.get()
     }
     
     fun postMessage(message: Events.ToChat<*>?) {
@@ -126,6 +133,9 @@ class TestableChatWebView(
     
     override fun dispose() {
         if (_isDisposed.compareAndSet(false, true)) {
+            // Mark component as invalid
+            componentValid.set(false)
+            
             // Simulate disposal cleanup
             Thread {
                 try {

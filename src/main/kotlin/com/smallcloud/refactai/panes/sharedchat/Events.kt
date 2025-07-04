@@ -36,7 +36,8 @@ class EventNames {
         IDE_TOOL_EDIT("ide/toolEdit"),
         FORCE_RELOAD_FILE_BY_PATH("ide/forceReloadFileByPath"),
         FORCE_RELOAD_PROJECT_TREE_FILES("ide/forceReloadProjectTreeFiles"),
-        SET_CODE_COMPLETION_MODEL("ide/setCodeCompletionModel")
+        SET_CODE_COMPLETION_MODEL("ide/setCodeCompletionModel"),
+        DROPDOWN_STATE_CHANGED("ide/dropdownStateChanged")
     }
 
     enum class ToChat(val value: String) {
@@ -157,6 +158,11 @@ class Events {
                 EventNames.FromChat.SET_CODE_COMPLETION_MODEL.value -> {
                     val model = payload?.asString ?: return null
                     return Editor.SetCodeCompletionModel(model)
+                }
+
+                EventNames.FromChat.DROPDOWN_STATE_CHANGED.value -> {
+                    val isOpen = payload?.asJsonObject?.get("isOpen")?.asBoolean ?: false
+                    return DropdownStateChanged(isOpen)
                 }
 
                 else -> null
@@ -332,6 +338,8 @@ class Events {
     class OpenSettings : FromChat(EventNames.FromChat.OPEN_SETTINGS, null)
 
     class OpenHotKeys : FromChat(EventNames.FromChat.OPEN_HOTKEYS, null)
+    
+    data class DropdownStateChanged(val isOpen: Boolean) : FromChat(EventNames.FromChat.DROPDOWN_STATE_CHANGED, isOpen)
 
     data class OpenFilePayload(
         @SerializedName("file_path")

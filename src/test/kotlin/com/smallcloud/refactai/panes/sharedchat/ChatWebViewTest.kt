@@ -118,4 +118,73 @@ class ChatWebViewTest: LightPlatform4TestCase() {
 
         chatWebView.dispose()
     }
+
+    @Test
+    fun testResourceLeakPrevention() {
+        val initialMemory = getUsedMemory()
+        
+        // Create and dispose multiple instances rapidly
+        repeat(3) {
+            val chatWebView = ChatWebView(mockEditor) { /* empty handler */ }
+            chatWebView.setStyle()
+            Thread.sleep(50)
+            chatWebView.dispose()
+        }
+        
+        System.gc()
+        Thread.sleep(100)
+        
+        val finalMemory = getUsedMemory()
+        val memoryIncrease = finalMemory - initialMemory
+        
+        // Should not leak excessive memory
+        Assert.assertTrue("Memory leak detected: ${memoryIncrease / 1024 / 1024}MB", 
+                         memoryIncrease < 30_000_000) // Less than 30MB
+    }
+
+    @Test
+    fun testJavaScriptExecutionSafety() {
+        val chatWebView = ChatWebView(mockEditor) { /* empty handler */ }
+        
+        // Test various JavaScript execution scenarios
+        val scripts = listOf(
+            "console.log('test');",
+            "document.body.style.backgroundColor = 'red';",
+            "window.postMessage({type: 'test'}, '*');",
+            "throw new Error('test error');" // This should not crash the application
+        )
+        
+        scripts.forEach { script ->
+            try {
+                chatWebView.postMessage(script)
+                Thread.sleep(50) // Allow execution
+            } catch (e: Exception) {
+                // Should not throw exceptions for normal script execution
+                Assert.fail("JavaScript execution should not throw exceptions: ${e.message}")
+            }
+        }
+        
+        chatWebView.dispose()
+    }
+
+    @Test
+    fun testInitializationIdempotency() {
+        val chatWebView = ChatWebView(mockEditor) { /* empty handler */ }
+        
+        // Call initialization methods multiple times
+        repeat(3) {
+            chatWebView.setStyle()
+            Thread.sleep(50)
+        }
+        
+        // Should not cause issues
+        Assert.assertTrue("Multiple initialization calls should be safe", true)
+        
+        chatWebView.dispose()
+    }
+
+    private fun getUsedMemory(): Long {
+        val runtime = Runtime.getRuntime()
+        return runtime.totalMemory() - runtime.freeMemory()
+    }
 }

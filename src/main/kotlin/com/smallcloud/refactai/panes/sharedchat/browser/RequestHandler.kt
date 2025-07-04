@@ -71,26 +71,27 @@ class OpenedConnection(private val connection: URLConnection?) :
                 val url = connection.url.toString()
                 when {
                     url.contains(".css") -> cefResponse.mimeType = "text/css"
-                    url.contains(".js") -> cefResponse.mimeType = "text/javascript"
+                    url.contains(".js") -> cefResponse.mimeType = "application/javascript"
                     url.contains(".html") -> cefResponse.mimeType = "text/html"
                     else -> cefResponse.mimeType = connection.contentType
                 }
                 responseLength.set(inputStream?.available() ?: 0)
                 cefResponse.status = 200
+                println("SUCCESS: Serving ${url} with MIME ${cefResponse.mimeType}")
             } else {
                 // Handle the case where connection is null
                 cefResponse.error = CefLoadHandler.ErrorCode.ERR_FAILED
                 cefResponse.statusText = "Connection is null"
                 cefResponse.status = 500
+                println("ERROR: Connection is null")
             }
         } catch (e: IOException) {
-            println("Error: $e");
+            println("ERROR: Failed to serve resource: $e")
             cefResponse.error = CefLoadHandler.ErrorCode.ERR_FILE_NOT_FOUND
             cefResponse.statusText = e.localizedMessage
             cefResponse.status = 404
         }
     }
-
 
     override fun readResponse(
         dataOut: ByteArray,
@@ -117,22 +118,117 @@ class OpenedConnection(private val connection: URLConnection?) :
     }
 }
 
+class OpenedStream(private val inputStream: InputStream, private val url: String) :
+    ResourceHandlerState() {
+
+    override fun getResponseHeaders(
+        cefResponse: CefResponse,
+        responseLength: IntRef,
+        redirectUrl: StringRef
+    ) {
+        try {
+            cefResponse.mimeType = when {
+                url.endsWith(".css") -> "text/css"
+                url.endsWith(".js") || url.endsWith(".cjs") -> "application/javascript"
+                url.endsWith(".html") -> "text/html"
+                url.endsWith(".json") -> "application/json"
+                else -> URLConnection.guessContentTypeFromName(url) ?: "application/octet-stream"
+            }
+            
+            try {
+                responseLength.set(inputStream.available())
+            } catch (_: Exception) {
+                responseLength.set(-1) // Unknown length
+            }
+            
+            cefResponse.status = 200
+            println("SUCCESS: Serving $url with MIME ${cefResponse.mimeType}")
+        } catch (e: Exception) {
+            println("ERROR: Failed to set headers for $url: $e")
+            cefResponse.status = 500
+        }
+    }
+
+    override fun readResponse(
+        dataOut: ByteArray,
+        bytesToRead: Int,
+        bytesRead: IntRef,
+        callback: CefCallback
+    ): Boolean {
+        return try {
+            val read = inputStream.read(dataOut, 0, bytesToRead)
+            if (read >= 0) {
+                bytesRead.set(read)
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            println("ERROR: Failed to read from stream: $e")
+            false
+        }
+    }
+
+    override fun close() {
+        try {
+            inputStream.close()
+        } catch (e: Exception) {
+            println("ERROR: Failed to close stream: $e")
+        }
+    }
+}
+
 class RefactChatResourceHandler : CefResourceHandler, DumbAware {
     private var state: ResourceHandlerState = ClosedConnection
     private var currentUrl: String? = null
+    
     override fun processRequest(
         cefRequest: CefRequest,
         cefCallback: CefCallback
     ): Boolean {
         val url = cefRequest.url
         return if (url != null) {
-            val pathToResource = url.replace("http://refactai/", "webview/")
-            val newUrl = javaClass.classLoader.getResource(pathToResource)
-            state = OpenedConnection(newUrl?.openConnection())
+            println("REQUEST: $url")
+            
+            // Remove the scheme and host to get the path
+            val path = url.removePrefix("http://refactai/")
+            println("LOOKING FOR: $path")
+            
+            // Try multiple possible locations for the resource
+            val resourceStream = when {
+                // First try direct path (for dist/chat/ files)
+                path.startsWith("dist/") -> {
+                    println("Trying direct path: $path")
+                    javaClass.classLoader.getResourceAsStream(path)
+                }
+                // Then try under webview/ (for index.html)
+                else -> {
+                    val webviewPath = "webview/$path"
+                    println("Trying webview path: $webviewPath")
+                    javaClass.classLoader.getResourceAsStream(webviewPath)
+                }
+            }
+            
+            state = if (resourceStream != null) {
+                println("FOUND: Resource stream for $path")
+                OpenedStream(resourceStream, url)
+            } else {
+                // Fallback: try the old URLConnection method
+                println("FALLBACK: Trying URLConnection for webview/$path")
+                val fallbackUrl = javaClass.classLoader.getResource("webview/$path")
+                if (fallbackUrl != null) {
+                    OpenedConnection(fallbackUrl.openConnection())
+                } else {
+                    println("NOT FOUND: $path")
+                    ClosedConnection
+                }
+            }
+            
             currentUrl = url
             cefCallback.Continue()
             true
         } else {
+            println("ERROR: URL is null")
             false
         }
     }
@@ -142,12 +238,14 @@ class RefactChatResourceHandler : CefResourceHandler, DumbAware {
         responseLength: IntRef,
         redirectUrl: StringRef
     ) {
+        // Set MIME type based on URL
         if (currentUrl != null) {
-            when {
-                currentUrl!!.contains(".css") -> cefResponse.mimeType = "text/css"
-                currentUrl!!.contains(".js") -> cefResponse.mimeType = "text/javascript"
-                currentUrl!!.contains(".html") -> cefResponse.mimeType = "text/html"
-                else -> {}
+            cefResponse.mimeType = when {
+                currentUrl!!.endsWith(".css") -> "text/css"
+                currentUrl!!.endsWith(".js") || currentUrl!!.endsWith(".cjs") -> "application/javascript"
+                currentUrl!!.endsWith(".html") -> "text/html"
+                currentUrl!!.endsWith(".json") -> "application/json"
+                else -> "application/octet-stream"
             }
         }
         state.getResponseHeaders(cefResponse, responseLength, redirectUrl)

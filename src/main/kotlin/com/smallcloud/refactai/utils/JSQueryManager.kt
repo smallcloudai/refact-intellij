@@ -1,0 +1,115 @@
+package com.smallcloud.refactai.utils
+
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.ui.jcef.JBCefBrowser
+import com.intellij.ui.jcef.JBCefBrowserBase
+import com.intellij.ui.jcef.JBCefJSQuery
+
+/**
+ * Manages JavaScript query objects to ensure proper disposal and prevent memory leaks.
+ * This class tracks all created JS queries and provides centralized disposal.
+ */
+class JSQueryManager(private val browser: JBCefBrowser) : Disposable {
+    private val logger = Logger.getInstance(JSQueryManager::class.java)
+    private val queries = mutableListOf<JBCefJSQuery>()
+    private var disposed = false
+    
+    /**
+     * Creates a new JavaScript query with automatic disposal tracking.
+     * @param handler The query response handler
+     * @return The created JBCefJSQuery instance
+     */
+    fun createQuery(handler: (String) -> JBCefJSQuery.Response?): JBCefJSQuery {
+        if (disposed) {
+            throw IllegalStateException("JSQueryManager has been disposed")
+        }
+        
+        try {
+            val query = JBCefJSQuery.create(browser as JBCefBrowserBase)
+            query.addHandler(handler)
+            
+            synchronized(queries) {
+                queries.add(query)
+            }
+            
+            logger.info("Created JS query. Total queries: ${queries.size}")
+            return query
+        } catch (e: Exception) {
+            logger.error("Failed to create JS query", e)
+            throw e
+        }
+    }
+    
+    /**
+     * Creates a simple string-based query handler.
+     * @param handler The string handler function
+     * @return The created JBCefJSQuery instance
+     */
+    fun createStringQuery(handler: (String) -> Unit): JBCefJSQuery {
+        return createQuery { msg ->
+            try {
+                handler(msg)
+                null // No response needed
+            } catch (e: Exception) {
+                logger.warn("Error in JS query handler", e)
+                null
+            }
+        }
+    }
+    
+    /**
+     * Gets the number of active queries.
+     * Useful for testing and monitoring.
+     */
+    fun getActiveQueryCount(): Int {
+        synchronized(queries) {
+            return queries.size
+        }
+    }
+    
+    /**
+     * Disposes a specific query and removes it from tracking.
+     * @param query The query to dispose
+     */
+    fun disposeQuery(query: JBCefJSQuery) {
+        synchronized(queries) {
+            if (queries.remove(query)) {
+                try {
+                    query.dispose()
+                    logger.info("Disposed JS query. Remaining queries: ${queries.size}")
+                } catch (e: Exception) {
+                    logger.warn("Error disposing JS query", e)
+                }
+            }
+        }
+    }
+    
+    override fun dispose() {
+        if (disposed) {
+            return
+        }
+        
+        disposed = true
+        
+        synchronized(queries) {
+            logger.info("Disposing JSQueryManager with ${queries.size} queries")
+            
+            queries.forEach { query ->
+                try {
+                    query.dispose()
+                } catch (e: Exception) {
+                    logger.warn("Error disposing JS query during cleanup", e)
+                }
+            }
+            
+            queries.clear()
+            logger.info("JSQueryManager disposal completed")
+        }
+    }
+    
+    /**
+     * Checks if this manager has been disposed.
+     */
+    fun isDisposed(): Boolean = disposed
+}

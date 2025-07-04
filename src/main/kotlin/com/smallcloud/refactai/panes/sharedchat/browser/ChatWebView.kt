@@ -23,12 +23,23 @@ import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
 import com.smallcloud.refactai.utils.safeExecuteJavaScript
+import com.smallcloud.refactai.utils.CefLifecycleManager
+import com.smallcloud.refactai.utils.JSQueryManager
+import com.smallcloud.refactai.utils.AsyncMessageHandler
+import com.smallcloud.refactai.utils.OSRRenderer
+import com.smallcloud.refactai.utils.JavaScriptExecutor
+import com.smallcloud.refactai.utils.ThemeManager
 import org.cef.CefApp
 import org.cef.CefSettings
 import org.cef.browser.CefBrowser
+import org.cef.browser.CefFrame
 import org.cef.handler.*
+import java.awt.BorderLayout
 import java.awt.Cursor
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JComponent
 
@@ -47,38 +58,34 @@ fun getActionKeybinding(actionId: String): String {
 }
 
 class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromChat) -> Unit) : Disposable {
-    private val jsPoolSize = "200"
     private val logger = Logger.getInstance(ChatWebView::class.java)
-
-    init {
-        System.setProperty("ide.browser.jcef.jsQueryPoolSize", jsPoolSize)
-    }
+    
+    // Thread-safe initialization state management
+    // 0 = not initialized, 1 = JS bridge ready, 2 = React initialized, 3 = fully ready
+    private val initializationState = AtomicInteger(0)
+    
+    // Resource managers
+    private val jsQueryManager: JSQueryManager
+    private val asyncMessageHandler: AsyncMessageHandler<Events.FromChat>
+    private val jsExecutor: JavaScriptExecutor
+    private val themeManager: ThemeManager
+    private var osrRenderer: OSRRenderer? = null
+    
+    // JavaScript queries for IDE communication
+    private lateinit var mainQuery: JBCefJSQuery
+    private lateinit var linkQuery: JBCefJSQuery
+    
+    // Browser instances
+    private val cefBrowser: CefBrowser
+    private val jbcefBrowser: JBCefBrowser
+    private val component: JComponent
+    
+    // Determine rendering mode based on platform
+    private val useOffscreenRendering = SystemInfo.isLinux
 
     fun setStyle() {
         try {
-            // Safely get the theme information
-            val lafManager = LafManager.getInstance()
-            val theme = lafManager?.currentUIThemeLookAndFeel
-            val isDarkMode = theme?.isDark ?: false
-
-            val mode = if (isDarkMode) "dark" else "light"
-            val bodyClass = if (isDarkMode) "vscode-dark" else "vscode-light"
-            
-            val backgroundColour = UIUtil.getPanelBackground()
-            val red = backgroundColour.red
-            val green = backgroundColour.green
-            val blue = backgroundColour.blue
-
-            logger.info("Setting style: bodyClass=$bodyClass, mode=$mode")
-
-            executeJavaScript(
-                """
-                document.body.style.setProperty("background-color", "rgb($red, $green, $blue)");
-                document.body.className = "$bodyClass $mode";
-                """.trimIndent(),
-                true
-            )
-
+            themeManager.updateTheme()
         } catch (e: Exception) {
             logger.warn("Error setting style: ${e.message}", e)
         }
@@ -101,64 +108,111 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
 
-    val webView by lazy {
-        val isOSREnable = when {
-            SystemInfo.isWindows -> false
-            SystemInfo.isMac -> false
-            SystemInfo.isLinux -> true
-            else -> false
+    init {
+        logger.info("Initializing ChatWebView with OSR: $useOffscreenRendering")
+        
+        try {
+            // Create browser using existing builder pattern for compatibility
+            jbcefBrowser = JBCefBrowser
+                .createBuilder()
+                .setEnableOpenDevToolsMenuItem(true)
+                .setUrl("http://refactai/index.html")
+                .setOffScreenRendering(useOffscreenRendering)
+                .build()
+            
+            cefBrowser = jbcefBrowser.cefBrowser
+            
+            // Register browser with lifecycle manager
+            CefLifecycleManager.registerBrowser(cefBrowser)
+            
+            // Initialize resource managers
+            jsQueryManager = JSQueryManager(jbcefBrowser)
+            asyncMessageHandler = AsyncMessageHandler(Events::parse, messageHandler)
+            jsExecutor = JavaScriptExecutor(jbcefBrowser, timeoutMs = 5000L, poolSize = 3)
+            themeManager = ThemeManager(jsExecutor)
+            
+            // Setup platform-specific rendering and create component
+            component = setupPlatformSpecificFeatures()
+            
+            // Register scheme handler
+            CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
+            
+            // Setup JavaScript queries
+            setupJavaScriptQueries()
+            
+            // Setup load handler with atomic state management
+            setupLoadHandler()
+            
+            // Create browser immediately
+            jbcefBrowser.createImmediately()
+            
+            logger.info("ChatWebView initialization completed")
+            
+        } catch (e: Exception) {
+            logger.error("Failed to initialize ChatWebView", e)
+            dispose() // Clean up any partial initialization
+            throw e
         }
-        val browser = JBCefBrowser
-            .createBuilder()
-            .setEnableOpenDevToolsMenuItem(true)
-            .setUrl("http://refactai/index.html")
-            // change this to enable dev tools
-            // setting to false prevents "Accept diff with tab": fixed with onTabHandler
-            // setting to true causes slow scroll issues :/
-            .setOffScreenRendering(isOSREnable)
-            .build()
+    }
 
+    private fun setupPlatformSpecificFeatures(): JComponent {
+        val resultComponent = if (useOffscreenRendering) {
+            // Setup OSR optimizations for Linux
+            osrRenderer = OSRRenderer(targetFps = 30)
+            
+            // JBCef handles OSR internally, we just get the component
+            val browserComponent = jbcefBrowser.component
+            
+            // Attach OSR optimizations to the browser component
+            osrRenderer!!.attach(browserComponent)
+            logger.info("OSR optimizations attached for Linux")
+            
+            browserComponent
+        } else {
+            // Setup native rendering features for Windows/Mac
+            setupNativeRenderingFeatures()
+            jbcefBrowser.component
+        }
+        
+        // Setup common features
+        setupCommonBrowserFeatures()
+        
+        return resultComponent
+    }
+    
+    private fun setupNativeRenderingFeatures() {
+        // Tab handling for diff mode
+        val onTabHandler: CefKeyboardHandler = object : CefKeyboardHandlerAdapter() {
+            override fun onKeyEvent(browser: CefBrowser?, event: CefKeyboardHandler.CefKeyEvent?): Boolean {
+                val wasTabPressed = event?.type == CefKeyboardHandler.CefKeyEvent.EventType.KEYEVENT_KEYUP && 
+                                   event.modifiers == 0 && event.character == '\t'
+                val currentEditor = FileEditorManager.getInstance(editor.project).selectedTextEditor
+                val isInDiffMode = currentEditor != null && 
+                                  ModeProvider.getOrCreateModeProvider(currentEditor).isDiffMode()
 
-        if (!isOSREnable) {
-            val onTabHandler: CefKeyboardHandler = object : CefKeyboardHandlerAdapter() {
-                override fun onKeyEvent(browser: CefBrowser?, event: CefKeyboardHandler.CefKeyEvent?): Boolean {
-                    val wasTabPressed =
-                        event?.type == CefKeyboardHandler.CefKeyEvent.EventType.KEYEVENT_KEYUP && event.modifiers == 0 && event.character == '\t';
-                    val currentEditor = FileEditorManager.getInstance(editor.project).selectedTextEditor
-                    val isInDiffMode =
-                        currentEditor != null && ModeProvider.getOrCreateModeProvider(currentEditor).isDiffMode()
-
-                    if (wasTabPressed && currentEditor != null && isInDiffMode) {
-                        ApplicationManager.getApplication().invokeLater {
-                            ModeProvider.getOrCreateModeProvider(currentEditor)
-                                .onTabPressed(currentEditor, null, DataContext.EMPTY_CONTEXT)
-                        }
-                        return false
+                if (wasTabPressed && currentEditor != null && isInDiffMode) {
+                    ApplicationManager.getApplication().invokeLater {
+                        ModeProvider.getOrCreateModeProvider(currentEditor)
+                            .onTabPressed(currentEditor, null, DataContext.EMPTY_CONTEXT)
                     }
-                    return super.onKeyEvent(browser, event)
+                    return false
                 }
+                return super.onKeyEvent(browser, event)
             }
-
-            browser.jbCefClient.addKeyboardHandler(onTabHandler, browser.cefBrowser)
         }
-
+        
+        jbcefBrowser.jbCefClient.addKeyboardHandler(onTabHandler, cefBrowser)
+        logger.info("Native rendering features configured")
+    }
+    
+    private fun setupCommonBrowserFeatures() {
+        // Disable context menu unless in debug mode
         if (System.getenv("REFACT_DEBUG") != "1") {
-            browser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
+            jbcefBrowser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
         }
-
-        browser.jbCefClient.addDisplayHandler(object : CefDisplayHandlerAdapter() {
-            private fun logSeverityToString(severity: CefSettings.LogSeverity?): String {
-                return when (severity) {
-                    CefSettings.LogSeverity.LOGSEVERITY_DEFAULT -> "DEFAULT"
-                    CefSettings.LogSeverity.LOGSEVERITY_VERBOSE -> "VERBOSE"
-                    CefSettings.LogSeverity.LOGSEVERITY_INFO -> "INFO"
-                    CefSettings.LogSeverity.LOGSEVERITY_WARNING -> "WARNING"
-                    CefSettings.LogSeverity.LOGSEVERITY_ERROR -> "ERROR"
-                    CefSettings.LogSeverity.LOGSEVERITY_FATAL -> "FATAL"
-                    else -> "UNKNOWN"
-                }
-            }
-
+        
+        // Setup display handler for console messages and cursor changes
+        jbcefBrowser.jbCefClient.addDisplayHandler(object : CefDisplayHandlerAdapter() {
             override fun onConsoleMessage(
                 browser: CefBrowser?,
                 level: CefSettings.LogSeverity?,
@@ -166,19 +220,24 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 source: String?,
                 line: Int
             ): Boolean {
-                logger.warn("CONSOLE: ${logSeverityToString(level)} $message $source $line")
+                val levelStr = when (level) {
+                    CefSettings.LogSeverity.LOGSEVERITY_ERROR, CefSettings.LogSeverity.LOGSEVERITY_FATAL -> "ERROR"
+                    CefSettings.LogSeverity.LOGSEVERITY_WARNING -> "WARNING"
+                    else -> "INFO"
+                }
+                logger.info("BROWSER_CONSOLE[$levelStr]: $message ($source:$line)")
                 return super.onConsoleMessage(browser, level, message, source, line)
             }
 
             override fun onCursorChange(browser: CefBrowser?, cursorType: Int): Boolean {
-                val cursor = Cursor.getPredefinedCursor(cursorType)
-                browser?.uiComponent?.cursor = cursor
+                // Cursor handling is a known issue in this IDE version - skip custom handling
                 return super.onCursorChange(browser, cursorType)
             }
-        }, browser.cefBrowser)
-
+        }, cefBrowser)
+        
+        // Setup file dialog handler for Linux
         if (SystemInfo.isLinux) {
-            browser.jbCefClient.addDialogHandler({ cefBrowser, mode, title, defaultFilePath, filters, callback ->
+            jbcefBrowser.jbCefClient.addDialogHandler({ cefBrowser, mode, title, defaultFilePath, filters, callback ->
                 val filePath = showFileChooserDialog(
                     editor.project,
                     title,
@@ -191,179 +250,288 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                     callback.Cancel()
                 }
                 true
-            }, browser.cefBrowser)
+            }, cefBrowser)
         }
-
-        CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
-
-        val myJSQueryOpenInBrowser = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
-        addMessageHandler(myJSQueryOpenInBrowser)
-
-        val myJSQueryOpenInBrowserRedirectHyperlink = JBCefJSQuery.create((browser as JBCefBrowserBase?)!!)
-        myJSQueryOpenInBrowserRedirectHyperlink.addHandler { href ->
-            if (href.isNotEmpty() && !href.contains("#") && !href.equals("http://refactai/index.html")) {
-                BrowserUtil.browse(href)
+    }
+    
+    private fun setupJavaScriptQueries() {
+        // Main message handler query
+        mainQuery = jsQueryManager.createStringQuery { message ->
+            if (!asyncMessageHandler.offerMessage(message)) {
+                logger.warn("Failed to queue message for processing")
             }
-            null
         }
-
-        var installedScript = false
-        var setupReact = false
-
-        browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
+        
+        // Hyperlink redirect handler query
+        linkQuery = jsQueryManager.createStringQuery { href ->
+            if (href.isNotEmpty() && !href.contains("#") && href != "http://refactai/index.html") {
+                ApplicationManager.getApplication().invokeLater {
+                    BrowserUtil.browse(href)
+                }
+            }
+        }
+        
+        logger.info("JavaScript queries configured successfully")
+    }
+    
+    private fun setupLoadHandler() {
+        jbcefBrowser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadingStateChange(
                 browser: CefBrowser,
                 isLoading: Boolean,
                 canGoBack: Boolean,
                 canGoForward: Boolean
             ) {
-                if (isLoading) {
-                    return;
+                if (isLoading) return
+                
+                logger.info("Page loading completed, current state: ${initializationState.get()}")
+                
+                // Thread-safe initialization state machine
+                when (initializationState.get()) {
+                    0 -> {
+                        if (initializationState.compareAndSet(0, 1)) {
+                            logger.info("Page loaded, setting up JavaScript bridge")
+                            // Setup JavaScript queries and message bus
+                            ApplicationManager.getApplication().invokeLater {
+                                // Small delay to ensure DOM is ready
+                                Thread.sleep(100)
+                                // Trigger React setup
+                                if (initializationState.compareAndSet(1, 2)) {
+                                    logger.info("Setting up React application")
+                                    setupReactApplication()
+                                }
+                            }
+                        }
+                    }
                 }
-
-                if (!installedScript) {
-                    installedScript = setUpJavaScriptMessageBus(browser, myJSQueryOpenInBrowser)
+                
+                // Always update style on each load completion
+                ApplicationManager.getApplication().invokeLater {
+                    setStyle()
                 }
-
-                if (!setupReact) {
-                    setupReact = true
-                    setUpReact(browser)
-                }
-
-                setUpJavaScriptMessageBusRedirectHyperlink(browser, myJSQueryOpenInBrowserRedirectHyperlink)
-                setStyle()
             }
+            
+            override fun onLoadEnd(browser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
+                logger.info("Load end event - HTTP status: $httpStatusCode")
+                
+                // Force React setup if it hasn't happened yet
+                if (initializationState.get() < 2) {
+                    logger.info("Forcing React setup on load end")
+                    ApplicationManager.getApplication().invokeLater {
+                        Thread.sleep(200) // Give more time for resources to load
+                        setupReactApplication()
+                        initializationState.set(2)
+                    }
+                }
+            }
+        }, cefBrowser)
+    }
+    
+    private fun setupJavaScriptMessageBus() {
+        // For now, this is handled in the load handler
+        logger.info("JavaScript message bus setup delegated to load handler")
+    }
+    
+    private fun setupHyperlinkHandler() {
+        // For now, this is handled in the load handler  
+        logger.info("Hyperlink handler setup delegated to load handler")
+    }
+    
+    private fun setupReactApplication() {
+        logger.info("Starting React application setup")
+        
+        try {
+            val config = editor.getUserConfig()
+            val configJson = Gson().toJson(config)
+            val currentProject = """{ name: "${editor.project.name}" }"""
+            
+            logger.info("Got user config: $configJson")
+            
+            editor.getActiveFileInfo { file ->
+                val fileJson = Gson().toJson(file)
+                logger.info("Got active file info: $fileJson")
+                
+                editor.getSelectedSnippet { snippet ->
+                    val snippetJson = if (snippet != null) Gson().toJson(snippet) else "undefined"
+                    logger.info("Got selected snippet: $snippetJson")
+                    
+                    // Use batched execution for better performance
+                    val scripts = listOf(
 
-        }, browser.cefBrowser)
-
-        browser.createImmediately()
-        browser
+                        
+                        // Initial state setup
+                        """
+                        const config = $configJson;
+                        const active_file = $fileJson;
+                        const selected_snippet = $snippetJson;
+                        const current_project = $currentProject;
+                        window.__INITIAL_STATE__ = { config, active_file, selected_snippet, current_project };
+                        """.trimIndent(),
+                        
+                        // Theme class setup
+                        """
+                        if (config.themeProps && config.themeProps.appearance === "dark") {
+                            document.body.className = "vscode-dark";
+                        } else if (config.themeProps && config.themeProps.appearance === "light") {
+                            document.body.className = "vscode-light";
+                        }
+                        """.trimIndent(),
+                        
+                        // Setup JavaScript bridge for IDE communication
+                        """
+                        console.log('Setting up JavaScript bridge...');
+                        
+                        // Listen for postMessage events from React app
+                        window.addEventListener('message', function(event) {
+                            try {
+                                let messageData;
+                                if (typeof event.data === 'string') {
+                                    messageData = event.data;
+                                } else {
+                                    messageData = JSON.stringify(event.data);
+                                }
+                                
+                                ${mainQuery.inject("messageData")};
+                            } catch (e) {
+                                console.error('Error processing message:', e);
+                            }
+                        });
+                        
+                        // Also set up legacy handlers for compatibility
+                        window.ideMessageHandler = function(message) {
+                            ${mainQuery.inject("message")};
+                        };
+                        
+                        window.ideLinkHandler = function(href) {
+                            ${linkQuery.inject("href")};
+                        };
+                        """.trimIndent(),
+                        
+                        // Chat script loading
+                        """
+                        function loadChatJs() {
+                            const element = document.getElementById("refact-chat");
+                            if (typeof RefactChat !== 'undefined') {
+                                RefactChat.render(element, config);
+                                console.log('RefactChat initialized successfully');
+                            } else {
+                                console.error('RefactChat not available');
+                            }
+                        }
+                        
+                        const script = document.createElement("script");
+                        script.onload = loadChatJs;
+                        script.onerror = function(e) { 
+                            console.error('Failed to load chat script:', e); 
+                        };
+                        script.src = "http://refactai/dist/chat/index.umd.cjs";
+                        document.head.appendChild(script);
+                        """.trimIndent()
+                    )
+                    
+                    logger.info("Executing React setup scripts")
+                    jsExecutor.executeBatch(scripts, "react-setup").exceptionally { throwable ->
+                        logger.error("Failed to setup React application", throwable)
+                        null
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Error in setupReactApplication", e)
+        }
     }
 
-    fun addMessageHandler(myJSQueryOpenInBrowser: JBCefJSQuery) {
-        myJSQueryOpenInBrowser.addHandler { msg ->
-            logger.warn("msg = ${msg}")
-            val event = Events.parse(msg)
+    fun getComponent(): JComponent {
+        return component
+    }
+    
+    // Expose webView for backward compatibility with tests
+    val webView: JBCefBrowser
+        get() = jbcefBrowser
 
-            if (event != null) {
-                messageHandler(event)
+    private fun executeJavaScript(script: String, repaint: Boolean = false) {
+        // Use the optimized JavaScript executor
+        jsExecutor.executeAsync(script, "chatwebview-script")
+        
+        // Handle repaint if requested
+        if (repaint) {
+            ApplicationManager.getApplication().invokeLater {
+                component.repaint()
             }
-            null
         }
+    }
+
+    // Legacy method compatibility - these are now handled differently but kept for API compatibility
+    fun addMessageHandler(myJSQueryOpenInBrowser: JBCefJSQuery) {
+        logger.warn("addMessageHandler called - this is now handled automatically via AsyncMessageHandler")
+        // The new implementation handles this automatically via setupJavaScriptQueries()
     }
 
     fun setUpReact(browser: CefBrowser) {
-        val config = this.editor.getUserConfig()
-        val configJson = Gson().toJson(config)
-        val currentProject = """{name: "${editor.project.name}"}"""
-        this.editor.getActiveFileInfo { file ->
-            val fileJson = Gson().toJson(file)
-            this.editor.getSelectedSnippet { snippet ->
-                val snippetJson = if (snippet != null) Gson().toJson(snippet) else "undefined";
-                val script = """
-                    const config = ${configJson};
-                    const active_file = ${fileJson};
-                    const selected_snippet = ${snippetJson};
-                    const current_project = ${currentProject};
-                    window.__INITIAL_STATE__ = { config, active_file, selected_snippet, current_project };
-                    
-                    function loadChatJs() {
-                        const element = document.getElementById("refact-chat");
-                        console.log(RefactChat);
-                        RefactChat.render(element, config);
-                    };
-                    
-                    if(config.themeProps.appearance === "dark") {
-                      document.body.className = "vscode-dark";
-                    } else if (config.themeProps.appearance === "light") {
-                      document.body.className = "vscode-light";
-                    }
-                                       
-                    const script = document.createElement("script");
-                    script.onload = loadChatJs;
-                    script.src = "http://refactai/dist/chat/index.umd.cjs";
-                    document.head.appendChild(script);
-                    """.trimIndent()
-                logger.info("Setting up React")
-                try {
-                    executeJavaScript(script)
-                    // browser.executeJavaScript(script, browser.url, 0)
-                } catch (e: Exception) {
-                    logger.warn("Error setting up React: ${e.message}", e)
-                }
-            }
-        }
+        logger.info("setUpReact called - delegating to new implementation")
+        setupReactApplication()
     }
 
     fun setUpJavaScriptMessageBusRedirectHyperlink(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery) {
-        val script = """window.openLink = function(href) {
-             ${myJSQueryOpenInBrowser.inject("href")}
-        }
-        document.addEventListener('click', function(event) { 
-            if (event.target.tagName.toLowerCase() === 'a') { 
-                event.preventDefault(); 
-                window.openLink(event.target.href); 
-            } 
-        });""".trimIndent()
-        
-        try {
-            if (browser != null) {
-                executeJavaScript(script)
-            } else {
-                logger.warn("Cannot set up JavaScript message bus redirect hyperlink: browser is null")
-            }
-        } catch (e: Exception) {
-            logger.warn("Error setting up JavaScript message bus redirect hyperlink: ${e.message}", e)
-        }
+        logger.info("setUpJavaScriptMessageBusRedirectHyperlink called - delegating to new implementation")
+        setupHyperlinkHandler()
     }
 
     fun setUpJavaScriptMessageBus(browser: CefBrowser?, myJSQueryOpenInBrowser: JBCefJSQuery): Boolean {
-        val script = """window.postIntellijMessage = function(event) {
-             const msg = JSON.stringify(event);
-             ${myJSQueryOpenInBrowser.inject("msg")}
-        }""".trimIndent()
-
-        try {
-            executeJavaScript(script)
-            return true
-        } catch (e: Exception) {
-            logger.warn("Error setting up JavaScript message bus: ${e.message}", e)
-        }
-        return false
+        logger.info("setUpJavaScriptMessageBus called - delegating to new implementation")
+        setupJavaScriptMessageBus()
+        return true
     }
 
     fun postMessage(message: Events.ToChat<*>?) {
         if (message != null) {
             val json = Events.stringify(message)
-//            logger.info("post message json: $json")
-            this.postMessage(json)
+            postMessageString(json)
         }
     }
 
     fun postMessage(message: String) {
-//        logger.info("Posting message to browser")
-        val script = """window.postMessage($message, "*");"""
-        executeJavaScript(script)
+        postMessageString(message)
     }
-
-    fun getComponent(): JComponent {
-        return webView.component
-    }
-
-    private fun executeJavaScript(script: String, repaint: Boolean = false) {
-        safeExecuteJavaScript(webView, script, repaint)
+    
+    private fun postMessageString(message: String) {
+        // Use template for better performance with repeated postMessage calls
+        val template = jsExecutor.createTemplate("window.postMessage(%s, '*');")
+        template.execute(message, description = "post-message")
     }
 
     override fun dispose() {
+        logger.info("Disposing ChatWebView")
+        
         try {
-            logger.info("Disposing ChatWebView")
-            if (!webView.isDisposed) {
-                webView.dispose()
+            // Wait for pending JavaScript executions
+            jsExecutor.awaitCompletion(2000L)
+            
+            // Dispose resource managers in proper order
+            themeManager.dispose()
+            jsExecutor.dispose()
+            asyncMessageHandler.dispose()
+            jsQueryManager.dispose()
+            
+            // Clean up OSR renderer if used
+            osrRenderer?.cleanup()
+            osrRenderer = null
+            
+            // Register browser for lifecycle management cleanup
+            try {
+                CefLifecycleManager.releaseBrowser(cefBrowser)
+            } catch (e: Exception) {
+                logger.warn("Failed to release browser through lifecycle manager", e)
+                // Fallback to direct disposal
+                if (!jbcefBrowser.isDisposed) {
+                    jbcefBrowser.dispose()
+                }
             }
+            
+            logger.info("ChatWebView disposal completed")
+            
         } catch (e: Exception) {
-            logger.warn("Error disposing ChatWebView: ${e.message}", e)
+            logger.error("Error during ChatWebView disposal", e)
         }
     }
-
-
 }

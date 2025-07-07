@@ -67,7 +67,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     
     // UI dropdown state tracking
     private var isDropdownOpen = false
-    private val dropdownStateCheckAlarm = Alarm()
+    private val dropdownStateCheckAlarm = Alarm(this)
 
     private val messageQuery: ArrayDeque<Events.ToChat<*>> = ArrayDeque<Events.ToChat<*>>()
     private var workerFuture: Future<*>? = null
@@ -457,7 +457,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         """.trimIndent()
         
         // Execute the tracking script after DOM is ready
-        val setupAlarm = Alarm()
+        val setupAlarm = Alarm(this)
         setupAlarm.addRequest({
             try {
                 browser.webView.cefBrowser.executeJavaScript(trackingScript, null, 0)
@@ -599,7 +599,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         
         waitForDropdownClose {
             // Small additional delay to ensure repaint completes
-            val finalAlarm = Alarm()
+            val finalAlarm = Alarm(this)
             finalAlarm.addRequest({
                 ApplicationManager.getApplication().invokeLater({
                     logger.info("Opening settings dialog")
@@ -631,7 +631,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         
         waitForDropdownClose {
             // Small additional delay to ensure repaint completes
-            val finalAlarm = Alarm()
+            val finalAlarm = Alarm(this)
             finalAlarm.addRequest({
                 ApplicationManager.getApplication().invokeLater({
                     logger.info("Opening hotkeys dialog")

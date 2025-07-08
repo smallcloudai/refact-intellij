@@ -3,6 +3,8 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.processTools.getResultStdoutStr
 import com.intellij.ide.BrowserUtil
+import com.intellij.ide.ui.UISettings
+import com.intellij.ide.ui.UISettingsListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
@@ -84,6 +86,17 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }, 0, 80, java.util.concurrent.TimeUnit.MILLISECONDS)
         this.addEventListeners()
         this.setupDropdownStateTracking()
+
+        // Add UISettingsListener for theme changes
+        ApplicationManager.getApplication().messageBus.connect(this).subscribe(
+            UISettingsListener.TOPIC,
+            UISettingsListener {
+                logger.info("UI settings changed, updating theme")
+                ApplicationManager.getApplication().invokeLater {
+                    setLookAndFeel()
+                }
+            }
+        )
     }
 
     private fun isReady(): Boolean {

@@ -2,6 +2,8 @@ package com.smallcloud.refactai.testUtils
 
 import com.intellij.openapi.Disposable
 import com.smallcloud.refactai.panes.sharedchat.Events
+import com.smallcloud.refactai.utils.ThreadSafeInitializer
+import com.smallcloud.refactai.utils.BrowserStateManager
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -18,10 +20,13 @@ class TestableChatWebView(
     private val messageHandler: (event: Events.FromChat) -> Unit
 ) : Disposable {
     
-    private val initializationLatch = CountDownLatch(1)
-    private val disposalLatch = CountDownLatch(1)
+    // Use the same thread-safe initializer as the real implementation
+    private val initializer = ThreadSafeInitializer()
     private val _isDisposed = AtomicBoolean(false)
-    private val isInitialized = AtomicBoolean(false)
+    
+    // Mock browser identifier for state management integration
+    // We'll use a simple object that can be used as a key in the BrowserStateManager
+    private val mockBrowserId = "test-browser-${hashCode()}"
     
     // Mock component instead of real browser
     private val mockComponent = JPanel()
@@ -30,19 +35,38 @@ class TestableChatWebView(
     // Test tracking properties
     var messageCount = AtomicInteger(0)
     var styleUpdateCount = AtomicInteger(0)
+    private val jsExecutionActive = AtomicBoolean(false)
     
     // Public properties for tests
     val isDisposed: Boolean get() = _isDisposed.get()
     
     init {
+        // For testing, we'll simulate browser state management without actual CEF integration
+        
         // Simulate initialization in background thread
         Thread {
             try {
-                Thread.sleep(100) // Simulate initialization time
-                isInitialized.set(true)
-                initializationLatch.countDown()
+                // Simulate the same initialization sequence as real ChatWebView
+                initializer.transitionTo(ThreadSafeInitializer.State.NOT_STARTED, 
+                                       ThreadSafeInitializer.State.INITIALIZING)
+                Thread.sleep(50) // Simulate DOM loading
+                
+                initializer.transitionTo(ThreadSafeInitializer.State.INITIALIZING, 
+                                       ThreadSafeInitializer.State.JS_BRIDGE_READY)
+                Thread.sleep(50) // Simulate JS bridge setup
+                
+                initializer.transitionTo(ThreadSafeInitializer.State.JS_BRIDGE_READY, 
+                                       ThreadSafeInitializer.State.REACT_INITIALIZING)
+                Thread.sleep(50) // Simulate React initialization
+                
+                initializer.transitionTo(ThreadSafeInitializer.State.REACT_INITIALIZING, 
+                                       ThreadSafeInitializer.State.FULLY_READY)
+                
             } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
+                initializer.markFailed(e)
+            } catch (e: Exception) {
+                initializer.markFailed(e)
             }
         }.start()
     }
@@ -58,8 +82,13 @@ class TestableChatWebView(
     }
     
     fun postMessage(message: Events.ToChat<*>?) {
-        if (_isDisposed.get()) {
+        if (initializer.isDisposedOrDisposing()) {
             throw IllegalStateException("ChatWebView is disposed")
+        }
+        
+        // For testing, we'll simulate browser safety checks
+        if (jsExecutionActive.get()) {
+            throw IllegalStateException("Browser is not safe for operations")
         }
         
         // Simulate message posting
@@ -72,8 +101,13 @@ class TestableChatWebView(
     }
     
     fun postMessage(message: String) {
-        if (_isDisposed.get()) {
+        if (initializer.isDisposedOrDisposing()) {
             throw IllegalStateException("ChatWebView is disposed")
+        }
+        
+        // For testing, we'll simulate browser safety checks
+        if (jsExecutionActive.get()) {
+            throw IllegalStateException("Browser is not safe for operations")
         }
         
         // Simulate string message posting
@@ -85,8 +119,8 @@ class TestableChatWebView(
     }
     
     fun setStyle() {
-        if (_isDisposed.get()) {
-            throw IllegalStateException("ChatWebView is disposed")
+        if (initializer.isDisposedOrDisposing()) {
+            return // Silently ignore like the real implementation
         }
         
         // Simulate style setting
@@ -96,30 +130,27 @@ class TestableChatWebView(
     
     // Test utility methods
     fun waitForInitialization(timeoutMs: Long = 5000): Boolean {
-        return try {
-            initializationLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            false
-        }
+        return initializer.waitForInitialization(timeoutMs)
     }
     
     fun waitForDisposal(timeoutMs: Long = 5000): Boolean {
-        return try {
-            disposalLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            false
-        }
+        return initializer.waitForDisposal(timeoutMs)
     }
     
-    fun isInitialized(): Boolean = isInitialized.get()
+    fun isInitialized(): Boolean = initializer.isReady()
+    
+    // Test-specific methods for simulating browser state
+    fun simulateJavaScriptExecution(active: Boolean) {
+        jsExecutionActive.set(active)
+    }
+    
+    fun isJavaScriptExecuting(): Boolean = jsExecutionActive.get()
     
 
     
     // Simulate receiving a message from browser (for testing)
     fun simulateMessageFromBrowser(message: String) {
-        if (_isDisposed.get()) return
+        if (initializer.isDisposedOrDisposing()) return
         
         try {
             val event = Events.parse(message)
@@ -132,6 +163,11 @@ class TestableChatWebView(
     }
     
     override fun dispose() {
+        // Use the same disposal logic as the real implementation
+        if (!initializer.startDisposal()) {
+            return // Already disposing or disposed
+        }
+        
         if (_isDisposed.compareAndSet(false, true)) {
             // Mark component as invalid
             componentValid.set(false)
@@ -140,10 +176,15 @@ class TestableChatWebView(
             Thread {
                 try {
                     Thread.sleep(50) // Simulate cleanup time
-                    disposalLatch.countDown()
+                    
+                    // Mark disposal complete
+                    initializer.transitionTo(ThreadSafeInitializer.State.DISPOSING, 
+                                           ThreadSafeInitializer.State.DISPOSED)
                 } catch (e: InterruptedException) {
                     Thread.currentThread().interrupt()
-                    disposalLatch.countDown()
+                    initializer.forceDisposed()
+                } catch (e: Exception) {
+                    initializer.forceDisposed()
                 }
             }.start()
         }

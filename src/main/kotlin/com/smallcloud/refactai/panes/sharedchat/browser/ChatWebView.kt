@@ -29,6 +29,8 @@ import com.smallcloud.refactai.utils.AsyncMessageHandler
 import com.smallcloud.refactai.utils.OSRRenderer
 import com.smallcloud.refactai.utils.JavaScriptExecutor
 import com.smallcloud.refactai.utils.ThemeManager
+import com.smallcloud.refactai.utils.ThreadSafeInitializer
+import com.smallcloud.refactai.utils.BrowserStateManager
 import org.cef.CefApp
 import org.cef.CefSettings
 import org.cef.browser.CefBrowser
@@ -61,8 +63,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     private val logger = Logger.getInstance(ChatWebView::class.java)
     
     // Thread-safe initialization state management
-    // 0 = not initialized, 1 = JS bridge ready, 2 = React initialized, 3 = fully ready
-    private val initializationState = AtomicInteger(0)
+    private val initializer = ThreadSafeInitializer()
     
     // Resource managers
     private val jsQueryManager: JSQueryManager
@@ -84,6 +85,12 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     private val useOffscreenRendering = SystemInfo.isLinux
 
     fun setStyle() {
+        // Don't update style if we're disposing or not ready
+        if (initializer.isDisposedOrDisposing()) {
+            logger.debug("Skipping style update: component is disposing")
+            return
+        }
+        
         try {
             themeManager.updateTheme()
         } catch (e: Exception) {
@@ -122,8 +129,9 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             
             cefBrowser = jbcefBrowser.cefBrowser
             
-            // Register browser with lifecycle manager
+            // Register browser with lifecycle manager and state manager
             CefLifecycleManager.registerBrowser(cefBrowser)
+            BrowserStateManager.registerBrowser(cefBrowser)
             
             // Initialize resource managers
             jsQueryManager = JSQueryManager(jbcefBrowser)
@@ -150,6 +158,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             
         } catch (e: Exception) {
             logger.error("Failed to initialize ChatWebView", e)
+            initializer.markFailed(e)
             dispose() // Clean up any partial initialization
             throw e
         }
@@ -284,43 +293,63 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             ) {
                 if (isLoading) return
                 
-                logger.info("Page loading completed, current state: ${initializationState.get()}")
+                logger.info("Page loading completed, current state: ${initializer.getCurrentState()}")
                 
                 // Thread-safe initialization state machine
-                when (initializationState.get()) {
-                    0 -> {
-                        if (initializationState.compareAndSet(0, 1)) {
+                when (initializer.getCurrentState()) {
+                    ThreadSafeInitializer.State.NOT_STARTED -> {
+                        if (initializer.transitionTo(ThreadSafeInitializer.State.NOT_STARTED, ThreadSafeInitializer.State.INITIALIZING)) {
                             logger.info("Page loaded, setting up JavaScript bridge")
-                            // Setup JavaScript queries and message bus
                             ApplicationManager.getApplication().invokeLater {
-                                // Small delay to ensure DOM is ready
-                                Thread.sleep(100)
-                                // Trigger React setup
-                                if (initializationState.compareAndSet(1, 2)) {
-                                    logger.info("Setting up React application")
-                                    setupReactApplication()
+                                try {
+                                    // Small delay to ensure DOM is ready
+                                    Thread.sleep(100)
+                                    
+                                    if (initializer.transitionTo(ThreadSafeInitializer.State.INITIALIZING, ThreadSafeInitializer.State.JS_BRIDGE_READY)) {
+                                        logger.info("JavaScript bridge ready, setting up React")
+                                        if (initializer.transitionTo(ThreadSafeInitializer.State.JS_BRIDGE_READY, ThreadSafeInitializer.State.REACT_INITIALIZING)) {
+                                            setupReactApplication()
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    logger.error("Error during initialization", e)
+                                    initializer.markFailed(e)
                                 }
                             }
                         }
                     }
+                    else -> {
+                        logger.debug("Page loaded but initialization already in progress or complete")
+                    }
                 }
                 
-                // Always update style on each load completion
+                // Always update style on each load completion (but don't block on it)
                 ApplicationManager.getApplication().invokeLater {
-                    setStyle()
+                    try {
+                        setStyle()
+                    } catch (e: Exception) {
+                        logger.warn("Error updating style", e)
+                    }
                 }
             }
             
             override fun onLoadEnd(browser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
                 logger.info("Load end event - HTTP status: $httpStatusCode")
                 
-                // Force React setup if it hasn't happened yet
-                if (initializationState.get() < 2) {
+                // Force React setup if it hasn't happened yet and we're not disposing
+                if (!initializer.isDisposedOrDisposing() && 
+                    initializer.getCurrentState() == ThreadSafeInitializer.State.NOT_STARTED) {
                     logger.info("Forcing React setup on load end")
                     ApplicationManager.getApplication().invokeLater {
-                        Thread.sleep(200) // Give more time for resources to load
-                        setupReactApplication()
-                        initializationState.set(2)
+                        try {
+                            Thread.sleep(200) // Give more time for resources to load
+                            if (initializer.transitionTo(ThreadSafeInitializer.State.NOT_STARTED, ThreadSafeInitializer.State.REACT_INITIALIZING)) {
+                                setupReactApplication()
+                            }
+                        } catch (e: Exception) {
+                            logger.error("Error during forced React setup", e)
+                            initializer.markFailed(e)
+                        }
                     }
                 }
             }
@@ -430,9 +459,16 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                     )
                     
                     logger.info("Executing React setup scripts")
-                    jsExecutor.executeBatch(scripts, "react-setup").exceptionally { throwable ->
-                        logger.error("Failed to setup React application", throwable)
-                        null
+                    jsExecutor.executeBatch(scripts, "react-setup").whenComplete { _, throwable ->
+                        if (throwable != null) {
+                            logger.error("Failed to setup React application", throwable)
+                            initializer.markFailed(Exception("React setup failed", throwable))
+                        } else {
+                            // Mark as fully ready
+                            if (initializer.transitionTo(ThreadSafeInitializer.State.REACT_INITIALIZING, ThreadSafeInitializer.State.FULLY_READY)) {
+                                logger.info("ChatWebView fully initialized and ready")
+                            }
+                        }
                     }
                 }
             }
@@ -501,21 +537,61 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     override fun dispose() {
+        // Start disposal process atomically
+        if (!initializer.startDisposal()) {
+            logger.debug("Disposal already in progress or completed")
+            return
+        }
+        
         logger.info("Disposing ChatWebView")
         
         try {
-            // Wait for pending JavaScript executions
+            // Mark browser as disposing to prevent new operations
+            BrowserStateManager.markDisposing(cefBrowser)
+            
+            // Wait for pending JavaScript executions with timeout
+            if (!BrowserStateManager.waitForJavaScriptCompletion(cefBrowser, 2000L)) {
+                logger.warn("Some JavaScript operations may not have completed before disposal")
+            }
+            
+            // Wait for JavaScript executor to complete pending operations
             jsExecutor.awaitCompletion(2000L)
             
             // Dispose resource managers in proper order
-            themeManager.dispose()
-            jsExecutor.dispose()
-            asyncMessageHandler.dispose()
-            jsQueryManager.dispose()
+            try {
+                themeManager.dispose()
+            } catch (e: Exception) {
+                logger.warn("Error disposing theme manager", e)
+            }
+            
+            try {
+                jsExecutor.dispose()
+            } catch (e: Exception) {
+                logger.warn("Error disposing JavaScript executor", e)
+            }
+            
+            try {
+                asyncMessageHandler.dispose()
+            } catch (e: Exception) {
+                logger.warn("Error disposing async message handler", e)
+            }
+            
+            try {
+                jsQueryManager.dispose()
+            } catch (e: Exception) {
+                logger.warn("Error disposing JS query manager", e)
+            }
             
             // Clean up OSR renderer if used
-            osrRenderer?.cleanup()
-            osrRenderer = null
+            try {
+                osrRenderer?.cleanup()
+                osrRenderer = null
+            } catch (e: Exception) {
+                logger.warn("Error cleaning up OSR renderer", e)
+            }
+            
+            // Unregister from state manager
+            BrowserStateManager.unregisterBrowser(cefBrowser)
             
             // Register browser for lifecycle management cleanup
             try {
@@ -523,15 +599,24 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             } catch (e: Exception) {
                 logger.warn("Failed to release browser through lifecycle manager", e)
                 // Fallback to direct disposal
-                if (!jbcefBrowser.isDisposed) {
-                    jbcefBrowser.dispose()
+                try {
+                    if (!jbcefBrowser.isDisposed) {
+                        jbcefBrowser.dispose()
+                    }
+                } catch (e2: Exception) {
+                    logger.warn("Failed to dispose browser directly", e2)
                 }
             }
+            
+            // Mark disposal as complete
+            initializer.transitionTo(ThreadSafeInitializer.State.DISPOSING, ThreadSafeInitializer.State.DISPOSED)
             
             logger.info("ChatWebView disposal completed")
             
         } catch (e: Exception) {
             logger.error("Error during ChatWebView disposal", e)
+            // Force disposal state even if there were errors
+            initializer.forceDisposed()
         }
     }
 }

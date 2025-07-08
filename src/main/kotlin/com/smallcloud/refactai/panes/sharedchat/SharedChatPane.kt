@@ -46,6 +46,7 @@ import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
 import com.smallcloud.refactai.settings.Host
 import com.smallcloud.refactai.struct.ChatMessage
+import com.smallcloud.refactai.utils.BrowserStateManager
 import kotlinx.coroutines.*
 import org.jetbrains.annotations.NotNull
 import java.io.File
@@ -578,18 +579,57 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handleOpenSettings() {
         logger.info("Settings button clicked - ensuring UI is ready for modal")
         
-        // Force a repaint to ensure any visual artifacts are cleared
-        browser.getComponent().repaint()
-        
-        waitForDropdownClose {
-            // Small additional delay to ensure repaint completes
-            val finalAlarm = Alarm(this)
-            finalAlarm.addRequest({
+        // Check if any browsers have pending operations
+        if (BrowserStateManager.hasAnyPendingOperations()) {
+            logger.info("Waiting for browser operations to complete before opening settings")
+            
+            // Wait for operations to complete with timeout
+            ApplicationManager.getApplication().executeOnPooledThread {
+                val startTime = System.currentTimeMillis()
+                val maxWaitTime = 3000L // 3 seconds max wait
+                
+                while (BrowserStateManager.hasAnyPendingOperations() && 
+                       (System.currentTimeMillis() - startTime) < maxWaitTime) {
+                    try {
+                        Thread.sleep(50)
+                    } catch (e: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        break
+                    }
+                }
+                
+                // Proceed with opening settings on EDT
                 ApplicationManager.getApplication().invokeLater({
-                    logger.info("Opening settings dialog")
-                    ShowSettingsUtil.getInstance().showSettingsDialog(project, AppSettingsConfigurable::class.java)
+                    openSettingsDialog()
                 }, ModalityState.defaultModalityState())
-            }, 25) // Small delay to ensure repaint completes
+            }
+        } else {
+            // No pending operations, proceed immediately
+            openSettingsDialog()
+        }
+    }
+    
+    private fun openSettingsDialog() {
+        try {
+            // Force a repaint to ensure any visual artifacts are cleared
+            browser.getComponent().repaint()
+            
+            waitForDropdownClose {
+                // Small additional delay to ensure repaint completes
+                val finalAlarm = Alarm(this)
+                finalAlarm.addRequest({
+                    ApplicationManager.getApplication().invokeLater({
+                        logger.info("Opening settings dialog")
+                        try {
+                            ShowSettingsUtil.getInstance().showSettingsDialog(project, AppSettingsConfigurable::class.java)
+                        } catch (e: Exception) {
+                            logger.error("Failed to open settings dialog", e)
+                        }
+                    }, ModalityState.defaultModalityState())
+                }, 25) // Small delay to ensure repaint completes
+            }
+        } catch (e: Exception) {
+            logger.error("Error in openSettingsDialog", e)
         }
     }
 
@@ -610,20 +650,59 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handleOpenHotKeys() {
         logger.info("Hotkeys button clicked - ensuring UI is ready for modal")
         
-        // Force a repaint to ensure any visual artifacts are cleared
-        browser.getComponent().repaint()
-        
-        waitForDropdownClose {
-            // Small additional delay to ensure repaint completes
-            val finalAlarm = Alarm(this)
-            finalAlarm.addRequest({
-                ApplicationManager.getApplication().invokeLater({
-                    logger.info("Opening hotkeys dialog")
-                    ShowSettingsUtil.getInstance().showSettingsDialog(project, KeymapPanel::class.java) {
-                        it.enableSearch("Refact.ai")
+        // Check if any browsers have pending operations
+        if (BrowserStateManager.hasAnyPendingOperations()) {
+            logger.info("Waiting for browser operations to complete before opening hotkeys")
+            
+            // Wait for operations to complete with timeout
+            ApplicationManager.getApplication().executeOnPooledThread {
+                val startTime = System.currentTimeMillis()
+                val maxWaitTime = 3000L // 3 seconds max wait
+                
+                while (BrowserStateManager.hasAnyPendingOperations() && 
+                       (System.currentTimeMillis() - startTime) < maxWaitTime) {
+                    try {
+                        Thread.sleep(50)
+                    } catch (e: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        break
                     }
+                }
+                
+                // Proceed with opening hotkeys on EDT
+                ApplicationManager.getApplication().invokeLater({
+                    openHotkeysDialog()
                 }, ModalityState.defaultModalityState())
-            }, 25) // Small delay to ensure repaint completes
+            }
+        } else {
+            // No pending operations, proceed immediately
+            openHotkeysDialog()
+        }
+    }
+    
+    private fun openHotkeysDialog() {
+        try {
+            // Force a repaint to ensure any visual artifacts are cleared
+            browser.getComponent().repaint()
+            
+            waitForDropdownClose {
+                // Small additional delay to ensure repaint completes
+                val finalAlarm = Alarm(this)
+                finalAlarm.addRequest({
+                    ApplicationManager.getApplication().invokeLater({
+                        logger.info("Opening hotkeys dialog")
+                        try {
+                            ShowSettingsUtil.getInstance().showSettingsDialog(project, KeymapPanel::class.java) {
+                                it.enableSearch("Refact.ai")
+                            }
+                        } catch (e: Exception) {
+                            logger.error("Failed to open hotkeys dialog", e)
+                        }
+                    }, ModalityState.defaultModalityState())
+                }, 25) // Small delay to ensure repaint completes
+            }
+        } catch (e: Exception) {
+            logger.error("Error in openHotkeysDialog", e)
         }
     }
 

@@ -31,7 +31,7 @@ class JavaScriptExecutor(
     }
     
     /**
-     * Executes JavaScript with timeout protection.
+     * Executes JavaScript with timeout protection and browser state management.
      * @param script The JavaScript code to execute
      * @param description Optional description for logging
      * @return CompletableFuture that completes when execution finishes
@@ -43,15 +43,27 @@ class JavaScriptExecutor(
             }
         }
         
+        val cefBrowser = browser.cefBrowser
+        if (cefBrowser == null || !BrowserStateManager.isSafeForJavaScript(cefBrowser)) {
+            return CompletableFuture<Void>().apply {
+                completeExceptionally(IllegalStateException("Browser is not safe for JavaScript execution"))
+            }
+        }
+        
         pendingExecutions.incrementAndGet()
         
         return CompletableFuture.runAsync({
             try {
+                if (!BrowserStateManager.markExecutingJavaScript(cefBrowser)) {
+                    throw IllegalStateException("Cannot execute JavaScript: browser state conflict")
+                }
+                
                 executeWithTimeout(script, timeoutMs, description)
             } catch (e: Exception) {
                 logger.warn("JavaScript execution failed for $description", e)
                 throw e
             } finally {
+                BrowserStateManager.markJavaScriptComplete(cefBrowser)
                 pendingExecutions.decrementAndGet()
             }
         }, executor)
@@ -84,8 +96,19 @@ class JavaScriptExecutor(
     /**
      * Executes JavaScript synchronously with timeout.
      * Blocks the calling thread until completion or timeout.
+     * WARNING: Use sparingly to avoid EDT blocking.
      */
     fun executeSync(script: String, description: String = "sync-script"): Boolean {
+        if (disposed) {
+            logger.warn("Cannot execute sync JavaScript: executor is disposed")
+            return false
+        }
+        
+        // Check if we're on EDT and warn
+        if (com.intellij.openapi.application.ApplicationManager.getApplication().isDispatchThread) {
+            logger.warn("Synchronous JavaScript execution on EDT for $description - this may cause UI freezes")
+        }
+        
         return try {
             executeJavaScript(script, description).get(timeoutMs, TimeUnit.MILLISECONDS)
             true
@@ -107,26 +130,21 @@ class JavaScriptExecutor(
     }
     
     private fun executeWithTimeout(script: String, timeoutMs: Long, description: String) {
-        val future = CompletableFuture.runAsync {
-            try {
-                if (!browser.isDisposed && browser.cefBrowser != null) {
-                    browser.cefBrowser.executeJavaScript(script, browser.cefBrowser.url, 0)
-                } else {
-                    throw IllegalStateException("Browser is disposed or null")
-                }
-            } catch (e: Exception) {
-                logger.warn("CEF JavaScript execution failed for $description", e)
-                throw e
-            }
-        }
-        
         try {
-            future.get(timeoutMs, TimeUnit.MILLISECONDS)
-        } catch (e: TimeoutException) {
-            future.cancel(true)
-            throw RuntimeException("JavaScript execution timed out after ${timeoutMs}ms for $description")
-        } catch (e: ExecutionException) {
-            throw e.cause ?: e
+            if (browser.isDisposed || browser.cefBrowser == null) {
+                throw IllegalStateException("Browser is disposed or null")
+            }
+            
+            val cefBrowser = browser.cefBrowser
+            
+            // Use non-blocking execution - CEF handles this asynchronously
+            cefBrowser.executeJavaScript(script, cefBrowser.url, 0)
+            
+            logger.debug("JavaScript execution queued for $description")
+            
+        } catch (e: Exception) {
+            logger.warn("CEF JavaScript execution failed for $description", e)
+            throw e
         }
     }
     

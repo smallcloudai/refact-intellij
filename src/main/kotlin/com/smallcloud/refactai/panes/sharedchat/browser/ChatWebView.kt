@@ -20,12 +20,13 @@ import com.intellij.ui.jcef.JBCefJSQuery
 import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.panes.sharedchat.Editor
 import com.smallcloud.refactai.panes.sharedchat.Events
+import com.intellij.ide.ui.LafManager
+import com.intellij.util.ui.UIUtil
 import com.smallcloud.refactai.utils.CefLifecycleManager
 import com.smallcloud.refactai.utils.JSQueryManager
 import com.smallcloud.refactai.utils.AsyncMessageHandler
 import com.smallcloud.refactai.utils.OSRRenderer
 import com.smallcloud.refactai.utils.JavaScriptExecutor
-import com.smallcloud.refactai.utils.ThemeManager
 import org.cef.CefApp
 import org.cef.CefSettings
 import org.cef.browser.CefBrowser
@@ -61,7 +62,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     private val jsQueryManager: JSQueryManager
     private val asyncMessageHandler: AsyncMessageHandler<Events.FromChat>
     private val jsExecutor: JavaScriptExecutor
-    private val themeManager: ThemeManager
     private var osrRenderer: OSRRenderer? = null
 
     // JavaScript queries for IDE communication
@@ -78,7 +78,28 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun setStyle() {
         try {
-            themeManager.updateTheme()
+            // Safely get the theme information
+            val lafManager = LafManager.getInstance()
+            val theme = lafManager?.currentUIThemeLookAndFeel
+            val isDarkMode = theme?.isDark ?: false
+
+            val mode = if (isDarkMode) "dark" else "light"
+            val bodyClass = if (isDarkMode) "vscode-dark" else "vscode-light"
+
+            val backgroundColour = UIUtil.getPanelBackground()
+            val red = backgroundColour.red
+            val green = backgroundColour.green
+            val blue = backgroundColour.blue
+
+            logger.info("Setting style: bodyClass=$bodyClass, mode=$mode")
+
+            jsExecutor.executeAsync(
+                """
+                document.body.style.setProperty("background-color", "rgb($red, $green, $blue)");
+                document.body.className = "$bodyClass $mode";
+                """.trimIndent(),
+                "set-style"
+            )
         } catch (e: Exception) {
             logger.warn("Error setting style: ${e.message}", e)
         }
@@ -121,7 +142,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             jsQueryManager = JSQueryManager(jbcefBrowser)
             asyncMessageHandler = AsyncMessageHandler(Events::parse, messageHandler)
             jsExecutor = JavaScriptExecutor(jbcefBrowser, timeoutMs = 5000L, poolSize = 3)
-            themeManager = ThemeManager(jsExecutor)
 
             // Setup platform-specific rendering and create component
             component = setupPlatformSpecificFeatures()
@@ -347,12 +367,12 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         window.__INITIAL_STATE__ = { config, active_file, selected_snippet, current_project };
                         """.trimIndent(),
 
-                        // Theme class setup
+                        // Theme class setup - apply both vscode-* and plain mode classes
                         """
                         if (config.themeProps && config.themeProps.appearance === "dark") {
-                            document.body.className = "vscode-dark";
+                            document.body.className = "vscode-dark dark";
                         } else if (config.themeProps && config.themeProps.appearance === "light") {
-                            document.body.className = "vscode-light";
+                            document.body.className = "vscode-light light";
                         }
                         """.trimIndent(),
 
@@ -449,7 +469,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             jsExecutor.awaitCompletion(2000L)
 
             // Dispose resource managers in proper order
-            themeManager.dispose()
             jsExecutor.dispose()
             asyncMessageHandler.dispose()
             jsQueryManager.dispose()

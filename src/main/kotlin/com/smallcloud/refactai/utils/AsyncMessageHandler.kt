@@ -16,7 +16,7 @@ class AsyncMessageHandler<T>(
     private val dispatcher: (T) -> Unit,
     queueSize: Int = 1000
 ) : Disposable {
-    
+
     private val logger = Logger.getInstance(AsyncMessageHandler::class.java)
     private val messageQueue = ArrayBlockingQueue<String>(queueSize)
     private val executor = Executors.newSingleThreadExecutor { runnable: Runnable ->
@@ -25,11 +25,11 @@ class AsyncMessageHandler<T>(
         }
     }
     private val disposed = AtomicBoolean(false)
-    
+
     init {
         startMessageProcessor()
     }
-    
+
     /**
      * Offers a message for asynchronous processing.
      * @param rawMessage The raw message string to process
@@ -40,25 +40,16 @@ class AsyncMessageHandler<T>(
             logger.warn("Attempted to offer message to disposed handler")
             return false
         }
-        
+
         val offered = messageQueue.offer(rawMessage)
         if (!offered) {
             logger.warn("Message queue full, dropping message: ${rawMessage.take(100)}...")
         }
-        
+
         return offered
     }
-    
-    /**
-     * Gets the current queue size.
-     * Useful for monitoring and testing.
-     */
+
     fun getQueueSize(): Int = messageQueue.size
-    
-    /**
-     * Gets the maximum queue capacity.
-     */
-    fun getQueueCapacity(): Int = messageQueue.remainingCapacity() + messageQueue.size
     
     private fun startMessageProcessor() {
         executor.submit {
@@ -68,7 +59,7 @@ class AsyncMessageHandler<T>(
                 try {
                     // Take message from queue (blocks until available)
                     val rawMessage = messageQueue.take()
-                    
+
                     // Parse message on background thread
                     val parsedMessage = try {
                         parser(rawMessage)
@@ -76,7 +67,7 @@ class AsyncMessageHandler<T>(
                         logger.warn("Error parsing message: ${rawMessage.take(100)}...", e)
                         null
                     }
-                    
+
                     // Dispatch on EDT if parsing succeeded
                     if (parsedMessage != null) {
                         ApplicationManager.getApplication().invokeLater {
@@ -89,7 +80,7 @@ class AsyncMessageHandler<T>(
                             }
                         }
                     }
-                    
+
                 } catch (e: InterruptedException) {
                     logger.info("AsyncMessageHandler interrupted")
                     break
@@ -97,7 +88,7 @@ class AsyncMessageHandler<T>(
                     logger.error("Unexpected error in message processor", e)
                 }
             }
-            
+
             logger.info("AsyncMessageHandler stopped")
         }
     }
@@ -105,19 +96,11 @@ class AsyncMessageHandler<T>(
     override fun dispose() {
         if (disposed.compareAndSet(false, true)) {
             logger.info("Disposing AsyncMessageHandler with ${messageQueue.size} pending messages")
-            
-            // Clear the queue
             messageQueue.clear()
-            
-            // Shutdown executor
             executor.shutdownNow()
-            
             logger.info("AsyncMessageHandler disposal completed")
         }
     }
-    
-    /**
-     * Checks if this handler has been disposed.
-     */
+
     fun isDisposed(): Boolean = disposed.get()
 }

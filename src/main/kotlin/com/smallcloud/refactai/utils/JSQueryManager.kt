@@ -14,7 +14,7 @@ class JSQueryManager(private val browser: JBCefBrowser) : Disposable {
     private val logger = Logger.getInstance(JSQueryManager::class.java)
     private val queries = mutableListOf<JBCefJSQuery>()
     private var disposed = false
-    
+
     /**
      * Creates a new JavaScript query with automatic disposal tracking.
      * @param handler The query response handler
@@ -24,15 +24,13 @@ class JSQueryManager(private val browser: JBCefBrowser) : Disposable {
         if (disposed) {
             throw IllegalStateException("JSQueryManager has been disposed")
         }
-        
+
         try {
             val query = JBCefJSQuery.create(browser as JBCefBrowserBase)
             query.addHandler(handler)
-            
             synchronized(queries) {
                 queries.add(query)
             }
-            
             logger.info("Created JS query. Total queries: ${queries.size}")
             return query
         } catch (e: Exception) {
@@ -40,7 +38,7 @@ class JSQueryManager(private val browser: JBCefBrowser) : Disposable {
             throw e
         }
     }
-    
+
     /**
      * Creates a simple string-based query handler.
      * @param handler The string handler function
@@ -57,44 +55,14 @@ class JSQueryManager(private val browser: JBCefBrowser) : Disposable {
             }
         }
     }
-    
-    /**
-     * Gets the number of active queries.
-     * Useful for testing and monitoring.
-     */
-    fun getActiveQueryCount(): Int {
-        synchronized(queries) {
-            return queries.size
-        }
-    }
-    
-    /**
-     * Disposes a specific query and removes it from tracking.
-     * @param query The query to dispose
-     */
-    fun disposeQuery(query: JBCefJSQuery) {
-        synchronized(queries) {
-            if (queries.remove(query)) {
-                try {
-                    query.dispose()
-                    logger.info("Disposed JS query. Remaining queries: ${queries.size}")
-                } catch (e: Exception) {
-                    logger.warn("Error disposing JS query", e)
-                }
-            }
-        }
-    }
-    
+
     override fun dispose() {
         if (disposed) {
             return
         }
-        
         disposed = true
-        
         synchronized(queries) {
             logger.info("Disposing JSQueryManager with ${queries.size} queries")
-            
             queries.forEach { query ->
                 try {
                     query.dispose()
@@ -102,12 +70,11 @@ class JSQueryManager(private val browser: JBCefBrowser) : Disposable {
                     logger.warn("Error disposing JS query during cleanup", e)
                 }
             }
-            
             queries.clear()
             logger.info("JSQueryManager disposal completed")
         }
     }
-    
+
     /**
      * Checks if this manager has been disposed.
      */

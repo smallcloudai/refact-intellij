@@ -3,7 +3,6 @@ package com.smallcloud.refactai.utils
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.ui.jcef.JBCefBrowser
-import org.cef.browser.CefBrowser
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -16,7 +15,7 @@ class JavaScriptExecutor(
     private val timeoutMs: Long = 5000L,
     private val poolSize: Int = 5
 ) : Disposable {
-    
+
     private val logger = Logger.getInstance(JavaScriptExecutor::class.java)
     private val executor = Executors.newFixedThreadPool(poolSize) { runnable ->
         Thread(runnable, "JS-Executor-${threadCounter.incrementAndGet()}").apply {
@@ -25,11 +24,11 @@ class JavaScriptExecutor(
     }
     private val pendingExecutions = AtomicInteger(0)
     private var disposed = false
-    
+
     companion object {
         private val threadCounter = AtomicInteger(0)
     }
-    
+
     /**
      * Executes JavaScript with timeout protection.
      * @param script The JavaScript code to execute
@@ -42,9 +41,9 @@ class JavaScriptExecutor(
                 completeExceptionally(IllegalStateException("JavaScriptExecutor is disposed"))
             }
         }
-        
+
         pendingExecutions.incrementAndGet()
-        
+
         return CompletableFuture.runAsync({
             try {
                 executeWithTimeout(script, timeoutMs, description)
@@ -56,7 +55,7 @@ class JavaScriptExecutor(
             }
         }, executor)
     }
-    
+
     /**
      * Executes multiple JavaScript statements as a single batch.
      * More efficient than individual executions for multiple operations.
@@ -65,11 +64,11 @@ class JavaScriptExecutor(
         if (scripts.isEmpty()) {
             return CompletableFuture.completedFuture(null)
         }
-        
+
         val combinedScript = scripts.joinToString(";\n") { it.trimEnd(';') }
         return executeJavaScript(combinedScript, "$description (${scripts.size} statements)")
     }
-    
+
     /**
      * Executes JavaScript with immediate return (fire-and-forget).
      * Useful for non-critical operations where you don't need to wait.
@@ -80,7 +79,7 @@ class JavaScriptExecutor(
             null
         }
     }
-    
+
     /**
      * Executes JavaScript synchronously with timeout.
      * Blocks the calling thread until completion or timeout.
@@ -97,7 +96,7 @@ class JavaScriptExecutor(
             false
         }
     }
-    
+
     /**
      * Creates a reusable script template for better performance.
      * Useful for scripts that are executed repeatedly with different parameters.
@@ -105,7 +104,7 @@ class JavaScriptExecutor(
     fun createTemplate(template: String): JavaScriptTemplate {
         return JavaScriptTemplate(template, this)
     }
-    
+
     private fun executeWithTimeout(script: String, timeoutMs: Long, description: String) {
         val future = CompletableFuture.runAsync {
             try {
@@ -119,7 +118,7 @@ class JavaScriptExecutor(
                 throw e
             }
         }
-        
+
         try {
             future.get(timeoutMs, TimeUnit.MILLISECONDS)
         } catch (e: TimeoutException) {
@@ -129,17 +128,7 @@ class JavaScriptExecutor(
             throw e.cause ?: e
         }
     }
-    
-    /**
-     * Gets the number of pending JavaScript executions.
-     */
-    fun getPendingExecutionCount(): Int = pendingExecutions.get()
-    
-    /**
-     * Checks if the executor is currently busy.
-     */
-    fun isBusy(): Boolean = pendingExecutions.get() > 0
-    
+
     /**
      * Waits for all pending executions to complete.
      * @param timeoutMs Maximum time to wait
@@ -152,19 +141,15 @@ class JavaScriptExecutor(
         }
         return pendingExecutions.get() == 0
     }
-    
+
     override fun dispose() {
         if (disposed) return
         disposed = true
-        
         logger.info("Disposing JavaScriptExecutor with ${pendingExecutions.get()} pending executions")
-        
-        // Wait briefly for pending executions
+
         awaitCompletion(2000L)
-        
-        // Shutdown executor
         executor.shutdownNow()
-        
+
         try {
             if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                 logger.warn("JavaScriptExecutor did not terminate gracefully")
@@ -172,7 +157,7 @@ class JavaScriptExecutor(
         } catch (e: InterruptedException) {
             logger.warn("Interrupted while waiting for JavaScriptExecutor termination")
         }
-        
+
         logger.info("JavaScriptExecutor disposal completed")
     }
 }
@@ -191,13 +176,5 @@ class JavaScriptTemplate(
     fun execute(vararg params: Any, description: String = "template"): CompletableFuture<Void> {
         val script = String.format(template, *params)
         return executor.executeJavaScript(script, description)
-    }
-    
-    /**
-     * Executes the template synchronously.
-     */
-    fun executeSync(vararg params: Any, description: String = "template-sync"): Boolean {
-        val script = String.format(template, *params)
-        return executor.executeSync(script, description)
     }
 }

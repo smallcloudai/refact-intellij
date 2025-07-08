@@ -3,8 +3,6 @@ package com.smallcloud.refactai.panes.sharedchat
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.processTools.getResultStdoutStr
 import com.intellij.ide.BrowserUtil
-import com.intellij.ide.ui.UISettings
-import com.intellij.ide.ui.UISettingsListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
@@ -64,8 +62,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     var id: String? = null
     private val animatedFiles = mutableSetOf<String>()
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("SMCRainbowScheduler", 2)
-    
-    // UI dropdown state tracking
+
     private var isDropdownOpen = false
     private val dropdownStateCheckAlarm = Alarm(this)
 
@@ -324,17 +321,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         this.sendUserConfig()
     }
 
-    /**
-     * Sets up tracking of dropdown menu state via JavaScript communication.
-     * Uses a more aggressive approach to detect React-based dropdowns.
-     */
     private fun setupDropdownStateTracking() {
         val trackingScript = """
-            // Enhanced dropdown tracker
             window.refactDropdownTracker = {
                 isOpen: false,
                 lastCheck: 0,
-                
+
                 onDropdownOpen: function() {
                     if (!this.isOpen) {
                         this.isOpen = true;
@@ -344,7 +336,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                         }, '*');
                     }
                 },
-                
+
                 onDropdownClose: function() {
                     if (this.isOpen) {
                         this.isOpen = false;
@@ -354,14 +346,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                         }, '*');
                     }
                 },
-                
-                // Force check for dropdowns
+
                 checkDropdownState: function() {
                     const now = Date.now();
-                    if (now - this.lastCheck < 50) return; // Throttle checks
+                    if (now - this.lastCheck < 50) return;
                     this.lastCheck = now;
-                    
-                    // Check for various dropdown indicators
+
                     const dropdownSelectors = [
                         '[role="menu"]',
                         '[role="listbox"]', 
@@ -373,7 +363,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                         '[aria-hidden="false"][role="dialog"]',
                         '.visible[role="menu"]'
                     ];
-                    
+
                     let foundOpen = false;
                     for (const selector of dropdownSelectors) {
                         const elements = document.querySelectorAll(selector);
@@ -390,7 +380,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                         }
                         if (foundOpen) break;
                     }
-                    
+
                     if (foundOpen && !this.isOpen) {
                         this.onDropdownOpen();
                     } else if (!foundOpen && this.isOpen) {
@@ -398,10 +388,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     }
                 }
             };
-            
-            // Multiple detection strategies
-            
-            // 1. DOM Mutation Observer
+
             const observer = new MutationObserver(function(mutations) {
                 let shouldCheck = false;
                 mutations.forEach(function(mutation) {
@@ -413,38 +400,33 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     setTimeout(() => window.refactDropdownTracker.checkDropdownState(), 10);
                 }
             });
-            
+
             observer.observe(document.body, {
                 attributes: true,
                 childList: true,
                 subtree: true,
                 attributeFilter: ['class', 'style', 'aria-hidden', 'data-state', 'aria-expanded']
             });
-            
-            // 2. Click event monitoring
+
             document.addEventListener('click', function(e) {
                 setTimeout(() => window.refactDropdownTracker.checkDropdownState(), 50);
             }, true);
-            
-            // 3. Focus/blur monitoring
+
             document.addEventListener('focusin', function(e) {
                 setTimeout(() => window.refactDropdownTracker.checkDropdownState(), 50);
             }, true);
-            
+
             document.addEventListener('focusout', function(e) {
                 setTimeout(() => window.refactDropdownTracker.checkDropdownState(), 100);
             }, true);
-            
-            // 4. Periodic checking as fallback
+
             setInterval(() => window.refactDropdownTracker.checkDropdownState(), 100);
-            
-            // 5. Override common dropdown methods if they exist
+
             setTimeout(() => {
                 window.refactDropdownTracker.checkDropdownState();
             }, 500);
         """.trimIndent()
-        
-        // Execute the tracking script after DOM is ready
+
         val setupAlarm = Alarm(this)
         setupAlarm.addRequest({
             try {
@@ -453,24 +435,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             } catch (e: Exception) {
                 logger.warn("Failed to inject dropdown tracking script", e)
             }
-        }, 1500) // Longer delay to ensure React is loaded
+        }, 1500)
     }
-    
-    /**
-     * Waits for dropdown to close before executing callback.
-     * Uses multiple strategies for maximum reliability.
-     */
+
     private fun waitForDropdownClose(callback: () -> Unit) {
-        logger.info("Checking dropdown state before opening modal")
-        
-        // Strategy 1: If we know dropdown is closed, execute immediately
         if (!isDropdownOpen) {
             logger.info("Dropdown state indicates closed, executing immediately")
             callback()
             return
         }
-        
-        // Strategy 2: Force a dropdown state check via JavaScript
+
         try {
             browser.webView.cefBrowser.executeJavaScript(
                 "window.refactDropdownTracker && window.refactDropdownTracker.checkDropdownState();", 
@@ -479,10 +453,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         } catch (e: Exception) {
             logger.debug("Could not execute dropdown state check: ${e.message}")
         }
-        
-        logger.info("Dropdown appears open, waiting for it to close...")
-        
-        // Strategy 3: Smart polling with fallback to simple delay
+
         dropdownStateCheckAlarm.cancelAllRequests()
         
         fun checkDropdownState(attempt: Int = 0) {
@@ -491,105 +462,40 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             if (!isDropdownOpen) {
                 logger.info("Dropdown closed after ${elapsedMs}ms, executing callback")
                 callback()
-            } else if (attempt < 31) { // First 500ms: fast polling
+            } else if (attempt < 31) {
                 dropdownStateCheckAlarm.addRequest({
                     checkDropdownState(attempt + 1)
                 }, 16)
-            } else if (attempt < 62) { // Next 500ms: medium polling  
+            } else if (attempt < 62) {
                 dropdownStateCheckAlarm.addRequest({
                     checkDropdownState(attempt + 1)
                 }, 32)
-            } else if (attempt < 93) { // Next 500ms: slow polling
+            } else if (attempt < 93) {
                 dropdownStateCheckAlarm.addRequest({
                     checkDropdownState(attempt + 1)
                 }, 50)
             } else {
-                // Strategy 4: Fallback - assume dropdown detection failed, use simple delay
                 logger.warn("Dropdown detection may have failed after ${elapsedMs}ms, using fallback delay")
                 dropdownStateCheckAlarm.addRequest({
                     logger.info("Fallback delay completed, executing callback")
                     callback()
-                }, 100) // Simple 100ms delay as final fallback
+                }, 100)
             }
         }
-        
+
         checkDropdownState()
     }
 
-    /**
-     * Forces a complete browser refresh to fix rendering corruption.
-     * This is a more aggressive approach for when normal repaints don't work.
-     */
-    private fun forceBrowserRefresh() {
-        logger.info("Forcing browser refresh to fix rendering issues")
-        ApplicationManager.getApplication().invokeLater {
-            try {
-                browser.setStyle() // This triggers a style refresh
-                browser.getComponent().let { component ->
-                    component.invalidate()
-                    component.repaint()
-                    component.revalidate()
-                }
-            } catch (e: Exception) {
-                logger.error("Failed to force browser refresh", e)
-            }
-        }
-    }
-    
-    /**
-     * Debug method to check dropdown state and UI status.
-     * Useful for troubleshooting timing issues.
-     */
-    fun debugDropdownState(): String {
-        val component = browser.getComponent()
-        
-        val info = buildString {
-            appendLine("=== Dropdown State Debug Info ===")
-            appendLine("Dropdown Open: $isDropdownOpen")
-            appendLine("Component Valid: ${component.isValid}")
-            appendLine("Component Showing: ${component.isShowing}")
-            appendLine("Component Displayable: ${component.isDisplayable}")
-            appendLine("Component Size: ${component.size}")
-            appendLine("Current Page: $currentPage")
-            appendLine("Chat Streaming: $isChatStreaming")
-        }
-        
-        logger.info(info)
-        return info
-    }
-    
-    /**
-     * Forces a refresh of dropdown state from JavaScript.
-     * Useful for debugging when dropdown detection seems stuck.
-     */
-    fun refreshDropdownState() {
-        logger.info("Manually refreshing dropdown state")
-        try {
-            browser.webView.cefBrowser.executeJavaScript("""
-                if (window.refactDropdownTracker) {
-                    window.refactDropdownTracker.checkDropdownState();
-                }
-            """.trimIndent(), null, 0)
-        } catch (e: Exception) {
-            logger.warn("Failed to refresh dropdown state", e)
-        }
-    }
-
     private fun handleOpenSettings() {
-        logger.info("Settings button clicked - ensuring UI is ready for modal")
-        
-        // Force a repaint to ensure any visual artifacts are cleared
         browser.getComponent().repaint()
-        
         waitForDropdownClose {
-            // Small additional delay to ensure repaint completes
             val finalAlarm = Alarm(this)
             finalAlarm.addRequest({
                 ApplicationManager.getApplication().invokeLater({
                     logger.info("Opening settings dialog")
                     ShowSettingsUtil.getInstance().showSettingsDialog(project, AppSettingsConfigurable::class.java)
                 }, ModalityState.defaultModalityState())
-            }, 25) // Small delay to ensure repaint completes
+            }, 25)
         }
     }
 
@@ -609,12 +515,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun handleOpenHotKeys() {
         logger.info("Hotkeys button clicked - ensuring UI is ready for modal")
-        
-        // Force a repaint to ensure any visual artifacts are cleared
+
         browser.getComponent().repaint()
         
         waitForDropdownClose {
-            // Small additional delay to ensure repaint completes
             val finalAlarm = Alarm(this)
             finalAlarm.addRequest({
                 ApplicationManager.getApplication().invokeLater({
@@ -623,7 +527,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                         it.enableSearch("Refact.ai")
                     }
                 }, ModalityState.defaultModalityState())
-            }, 25) // Small delay to ensure repaint completes
+            }, 25)
         }
     }
 
@@ -938,8 +842,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             else -> Unit
         }
     }
-    
-
 
     private val browser by lazy {
         ChatWebView(

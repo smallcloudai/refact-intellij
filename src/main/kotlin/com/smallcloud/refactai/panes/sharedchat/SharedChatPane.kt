@@ -330,8 +330,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
      */
     private fun setupDropdownStateTracking() {
         val trackingScript = """
-            console.log('Setting up enhanced dropdown tracking...');
-            
             // Enhanced dropdown tracker
             window.refactDropdownTracker = {
                 isOpen: false,
@@ -340,7 +338,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 onDropdownOpen: function() {
                     if (!this.isOpen) {
                         this.isOpen = true;
-                        console.log('Dropdown opened');
                         window.postMessage({
                             type: 'ide/dropdownStateChanged',
                             payload: { isOpen: true }
@@ -351,7 +348,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 onDropdownClose: function() {
                     if (this.isOpen) {
                         this.isOpen = false;
-                        console.log('Dropdown closed');
                         window.postMessage({
                             type: 'ide/dropdownStateChanged', 
                             payload: { isOpen: false }
@@ -444,16 +440,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             
             // 5. Override common dropdown methods if they exist
             setTimeout(() => {
-                // Try to hook into React state changes
-                if (window.React && window.React.version) {
-                    console.log('React detected, attempting to hook state changes');
-                }
-                
-                // Initial check
                 window.refactDropdownTracker.checkDropdownState();
             }, 500);
-            
-            console.log('Enhanced dropdown tracking initialized');
         """.trimIndent()
         
         // Execute the tracking script after DOM is ready
@@ -579,11 +567,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         try {
             browser.webView.cefBrowser.executeJavaScript("""
                 if (window.refactDropdownTracker) {
-                    console.log('Forcing dropdown state check...');
                     window.refactDropdownTracker.checkDropdownState();
-                    console.log('Current dropdown state:', window.refactDropdownTracker.isOpen);
-                } else {
-                    console.log('Dropdown tracker not available');
                 }
             """.trimIndent(), null, 0)
         } catch (e: Exception) {

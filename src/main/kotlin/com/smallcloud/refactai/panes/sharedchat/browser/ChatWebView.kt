@@ -132,7 +132,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 .setUrl("http://refactai/index.html")
                 .setOffScreenRendering(useOffscreenRendering)
                 .build()
-            
+
             cefBrowser = jbcefBrowser.cefBrowser
 
             // Register browser with lifecycle manager
@@ -196,10 +196,10 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         // Tab handling for diff mode
         val onTabHandler: CefKeyboardHandler = object : CefKeyboardHandlerAdapter() {
             override fun onKeyEvent(browser: CefBrowser?, event: CefKeyboardHandler.CefKeyEvent?): Boolean {
-                val wasTabPressed = event?.type == CefKeyboardHandler.CefKeyEvent.EventType.KEYEVENT_KEYUP && 
+                val wasTabPressed = event?.type == CefKeyboardHandler.CefKeyEvent.EventType.KEYEVENT_KEYUP &&
                                    event.modifiers == 0 && event.character == '\t'
                 val currentEditor = FileEditorManager.getInstance(editor.project).selectedTextEditor
-                val isInDiffMode = currentEditor != null && 
+                val isInDiffMode = currentEditor != null &&
                                   ModeProvider.getOrCreateModeProvider(currentEditor).isDiffMode()
 
                 if (wasTabPressed && currentEditor != null && isInDiffMode) {
@@ -294,7 +294,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 canGoForward: Boolean
             ) {
                 if (isLoading) return
-                
+
                 logger.info("Page loading completed, current state: ${initializationState.get()}")
 
                 // Thread-safe initialization state machine
@@ -379,7 +379,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         // Setup JavaScript bridge for IDE communication
                         """
                         console.log('Setting up JavaScript bridge...');
-                        
+
                         // Listen for postMessage events from React app
                         window.addEventListener('message', function(event) {
                             try {
@@ -389,7 +389,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                                 } else {
                                     messageData = JSON.stringify(event.data);
                                 }
-                                
+
                                 ${mainQuery.inject("messageData")};
                             } catch (e) {
                                 console.error('Error processing message:', e);
@@ -420,8 +420,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
                         const script = document.createElement("script");
                         script.onload = loadChatJs;
-                        script.onerror = function(e) { 
-                            console.error('Failed to load chat script:', e); 
+                        script.onerror = function(e) {
+                            console.error('Failed to load chat script:', e);
                         };
                         script.src = "http://refactai/dist/chat/index.umd.cjs";
                         document.head.appendChild(script);

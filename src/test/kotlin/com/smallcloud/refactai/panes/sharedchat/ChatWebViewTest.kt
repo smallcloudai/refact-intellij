@@ -124,7 +124,7 @@ class ChatWebViewTest: LightPlatform4TestCase() {
         val memoryIncrease = finalMemory - initialMemory
 
         // Should not leak excessive memory (testable version should use much less)
-        Assert.assertTrue("Memory leak detected: ${memoryIncrease / 1024 / 1024}MB", 
+        Assert.assertTrue("Memory leak detected: ${memoryIncrease / 1024 / 1024}MB",
                          memoryIncrease < 10_000_000) // Less than 10MB for testable version
     }
 

@@ -27,7 +27,7 @@ object CefLifecycleManager {
 
                 System.setProperty("ide.browser.jcef.jsQueryPoolSize", "200")
                 System.setProperty("ide.browser.jcef.gpu.disable", "false") // Enable GPU acceleration by default
-                
+
                 try {
                     cefApp = CefApp.getInstance()
                     cefClient = cefApp!!.createClient()
@@ -82,7 +82,7 @@ object CefLifecycleManager {
             }
         }
     }
-    
+
     /**
      * Gets the current number of active browsers.
      * Useful for monitoring and testing.
@@ -96,13 +96,13 @@ object CefLifecycleManager {
     private fun cleanupCef() {
         try {
             logger.info("Cleaning up CEF resources")
-            
+
             cefClient?.dispose()
             cefApp?.dispose()
-            
+
             cefClient = null
             cefApp = null
-            
+
             logger.info("CEF cleanup completed")
         } catch (e: Exception) {
             logger.error("Error during CEF cleanup", e)

@@ -74,7 +74,7 @@ class WorkingValidationTest : LightPlatform4TestCase() {
         println("Memory test: ${memoryIncrease / 1024 / 1024}MB increase")
 
         // Should not leak excessive memory (less than 20MB for 5 instances)
-        assertTrue("Memory leak detected: ${memoryIncrease / 1024 / 1024}MB", 
+        assertTrue("Memory leak detected: ${memoryIncrease / 1024 / 1024}MB",
                   memoryIncrease < 20_000_000)
     }
 
@@ -107,7 +107,7 @@ class WorkingValidationTest : LightPlatform4TestCase() {
         println("AsyncMessageHandler test: processed $processedCount out of $messageCount messages")
 
         // Verify that messages were processed (some might fail parsing, which is OK)
-        assertTrue("Should have processed some messages (got $processedCount out of $messageCount)", 
+        assertTrue("Should have processed some messages (got $processedCount out of $messageCount)",
                   processedCount >= 0)
 
         chatWebView.dispose()
@@ -218,7 +218,7 @@ class WorkingValidationTest : LightPlatform4TestCase() {
         println("Performance test: ${totalTime}ms total, ${avgTimePerOperation}ms avg")
 
         // Performance should be reasonable
-        assertTrue("Operations too slow: ${avgTimePerOperation}ms per operation", 
+        assertTrue("Operations too slow: ${avgTimePerOperation}ms per operation",
                   avgTimePerOperation < 100) // 100ms per operation max
 
         chatWebView.dispose()
@@ -348,9 +348,9 @@ class WorkingValidationTest : LightPlatform4TestCase() {
         assertFalse("Should not be disposed under load", chatWebView.isDisposed)
         assertTrue("Should process reasonable number of operations (got $processed)", processed >= 0)
         assertTrue("Should send reasonable number of messages (got $messagesSent)", messagesSent > 0)
-        assertTrue("Error rate should be reasonable (errors: $errors, processed: $processed)", 
+        assertTrue("Error rate should be reasonable (errors: $errors, processed: $processed)",
                   errors == 0 || processed == 0 || errors < processed * 0.5) // Less than 50% errors
-        
+
         chatWebView.dispose()
         chatWebView.waitForDisposal()
     }

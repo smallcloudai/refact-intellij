@@ -354,7 +354,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     if (this.isOpen) {
                         this.isOpen = false;
                         window.postMessage({
-                            type: 'ide/dropdownStateChanged', 
+                            type: 'ide/dropdownStateChanged',
                             payload: { isOpen: false }
                         }, '*');
                     }
@@ -367,7 +367,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
                     const dropdownSelectors = [
                         '[role="menu"]',
-                        '[role="listbox"]', 
+                        '[role="listbox"]',
                         '[role="combobox"][aria-expanded="true"]',
                         '.dropdown-menu:not(.hidden)',
                         '.menu:not(.hidden)',
@@ -382,7 +382,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                         const elements = document.querySelectorAll(selector);
                         for (const el of elements) {
                             const rect = el.getBoundingClientRect();
-                            const isVisible = rect.width > 0 && rect.height > 0 && 
+                            const isVisible = rect.width > 0 && rect.height > 0 &&
                                             el.offsetParent !== null &&
                                             getComputedStyle(el).display !== 'none' &&
                                             getComputedStyle(el).visibility !== 'hidden';
@@ -460,7 +460,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
         try {
             browser.webView.cefBrowser.executeJavaScript(
-                "window.refactDropdownTracker && window.refactDropdownTracker.checkDropdownState();", 
+                "window.refactDropdownTracker && window.refactDropdownTracker.checkDropdownState();",
                 null, 0
             )
         } catch (e: Exception) {
@@ -468,10 +468,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
 
         dropdownStateCheckAlarm.cancelAllRequests()
-        
+
         fun checkDropdownState(attempt: Int = 0) {
             val elapsedMs = attempt * 16
-            
+
             if (!isDropdownOpen) {
                 logger.info("Dropdown closed after ${elapsedMs}ms, executing callback")
                 callback()
@@ -530,7 +530,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         logger.info("Hotkeys button clicked - ensuring UI is ready for modal")
 
         browser.getComponent().repaint()
-        
+
         waitForDropdownClose {
             val finalAlarm = Alarm(this)
             finalAlarm.addRequest({

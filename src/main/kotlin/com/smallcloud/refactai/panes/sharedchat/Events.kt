@@ -338,7 +338,7 @@ class Events {
     class OpenSettings : FromChat(EventNames.FromChat.OPEN_SETTINGS, null)
 
     class OpenHotKeys : FromChat(EventNames.FromChat.OPEN_HOTKEYS, null)
-    
+
     data class DropdownStateChanged(val isOpen: Boolean) : FromChat(EventNames.FromChat.DROPDOWN_STATE_CHANGED, isOpen)
 
     data class OpenFilePayload(

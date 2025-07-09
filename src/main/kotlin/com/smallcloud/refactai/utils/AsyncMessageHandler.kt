@@ -50,11 +50,11 @@ class AsyncMessageHandler<T>(
     }
 
     fun getQueueSize(): Int = messageQueue.size
-    
+
     private fun startMessageProcessor() {
         executor.submit {
             logger.info("AsyncMessageHandler started")
-            
+
             while (!disposed.get() && !Thread.currentThread().isInterrupted) {
                 try {
                     // Take message from queue (blocks until available)
@@ -92,7 +92,7 @@ class AsyncMessageHandler<T>(
             logger.info("AsyncMessageHandler stopped")
         }
     }
-    
+
     override fun dispose() {
         if (disposed.compareAndSet(false, true)) {
             logger.info("Disposing AsyncMessageHandler with ${messageQueue.size} pending messages")

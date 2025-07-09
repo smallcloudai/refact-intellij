@@ -132,13 +132,13 @@ class OpenedStream(private val inputStream: InputStream, private val url: String
                 url.endsWith(".json") -> "application/json"
                 else -> URLConnection.guessContentTypeFromName(url) ?: "application/octet-stream"
             }
-            
+
             try {
                 responseLength.set(inputStream.available())
             } catch (_: Exception) {
                 responseLength.set(-1) // Unknown length
             }
-            
+
             cefResponse.status = 200
             println("SUCCESS: Serving $url with MIME ${cefResponse.mimeType}")
         } catch (e: Exception) {
@@ -179,7 +179,7 @@ class OpenedStream(private val inputStream: InputStream, private val url: String
 class RefactChatResourceHandler : CefResourceHandler, DumbAware {
     private var state: ResourceHandlerState = ClosedConnection
     private var currentUrl: String? = null
-    
+
     override fun processRequest(
         cefRequest: CefRequest,
         cefCallback: CefCallback

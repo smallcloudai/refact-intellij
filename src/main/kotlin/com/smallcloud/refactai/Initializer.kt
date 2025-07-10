@@ -1,5 +1,6 @@
 package com.smallcloud.refactai
 
+import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ide.plugins.PluginInstaller
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -16,7 +17,6 @@ import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeAction
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.settingsStartup
-import com.smallcloud.refactai.utils.isJcefCanStart
 import java.util.concurrent.atomic.AtomicBoolean
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
@@ -36,7 +36,7 @@ class Initializer : ProjectActivity, Disposable {
             UpdateChecker.instance
 
             ApplicationManager.getApplication().getService(CloudMessageService::class.java)
-            if (!isJcefCanStart()) {
+            if (!JBCefApp.isSupported()) {
                 emitInfo(RefactAIBundle.message("notifications.chatCanNotStartWarning"), false)
             }
         }

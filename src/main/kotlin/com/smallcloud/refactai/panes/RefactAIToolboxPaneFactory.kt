@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.panes
 
+import com.intellij.ui.jcef.JBCefApp
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
@@ -11,7 +12,6 @@ import com.intellij.ui.content.ContentFactory
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.sharedchat.ChatPanes
 import com.smallcloud.refactai.utils.getLastUsedProject
-import com.smallcloud.refactai.utils.isJcefCanStart
 
 
 class RefactAIToolboxPaneFactory : ToolWindowFactory {
@@ -20,7 +20,7 @@ class RefactAIToolboxPaneFactory : ToolWindowFactory {
         super.init(toolWindow)
     }
 
-    override suspend fun isApplicableAsync(project: Project): Boolean = isJcefCanStart()
+    override suspend fun isApplicableAsync(project: Project): Boolean = JBCefApp.isSupported()
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()

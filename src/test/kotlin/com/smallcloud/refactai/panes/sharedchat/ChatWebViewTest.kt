@@ -1,16 +1,10 @@
 package com.smallcloud.refactai.panes.sharedchat
 
-import com.intellij.ide.ui.LafManager
-import com.intellij.ide.ui.laf.UIThemeLookAndFeelInfo
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
 import com.intellij.testFramework.LightPlatform4TestCase
 import com.smallcloud.refactai.testUtils.TestableChatWebView
 import org.junit.Test
 import org.junit.Assert
 import org.junit.Ignore
-import org.mockito.Mockito
-import org.mockito.MockedStatic
 
 /**
  * Test for ChatWebView to verify it handles race conditions properly using testable implementation.

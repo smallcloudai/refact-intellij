@@ -15,11 +15,6 @@ class JSQueryManager(private val browser: JBCefBrowser) : Disposable {
     private val queries = mutableListOf<JBCefJSQuery>()
     private var disposed = false
 
-    /**
-     * Creates a new JavaScript query with automatic disposal tracking.
-     * @param handler The query response handler
-     * @return The created JBCefJSQuery instance
-     */
     fun createQuery(handler: (String) -> JBCefJSQuery.Response?): JBCefJSQuery {
         if (disposed) {
             throw IllegalStateException("JSQueryManager has been disposed")
@@ -39,11 +34,6 @@ class JSQueryManager(private val browser: JBCefBrowser) : Disposable {
         }
     }
 
-    /**
-     * Creates a simple string-based query handler.
-     * @param handler The string handler function
-     * @return The created JBCefJSQuery instance
-     */
     fun createStringQuery(handler: (String) -> Unit): JBCefJSQuery {
         return createQuery { msg ->
             try {
@@ -75,8 +65,5 @@ class JSQueryManager(private val browser: JBCefBrowser) : Disposable {
         }
     }
 
-    /**
-     * Checks if this manager has been disposed.
-     */
     fun isDisposed(): Boolean = disposed
 }

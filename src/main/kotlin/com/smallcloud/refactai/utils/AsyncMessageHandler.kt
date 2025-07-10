@@ -20,7 +20,7 @@ class AsyncMessageHandler<T>(
     private val logger = Logger.getInstance(AsyncMessageHandler::class.java)
     private val messageQueue = ArrayBlockingQueue<String>(queueSize)
     private val executor = Executors.newSingleThreadExecutor { runnable: Runnable ->
-        Thread(runnable, "ChatWebView-AsyncMessageHandler").apply {
+        Thread(runnable, "SMC-AsyncMessageHandler").apply {
             isDaemon = true
         }
     }

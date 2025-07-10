@@ -108,10 +108,6 @@ jobs:
           branch: ${{ steps.setupvars.outputs.lsp_version }}
           path: ./src/main/resources/bin
 
-      # Validate wrapper
-      - name: Gradle Wrapper Validation
-        uses: gradle/actions/wrapper-validation@v3
-
       # Setup Java 17 environment for the next steps
       - name: Setup Java
         uses: actions/setup-java@v4

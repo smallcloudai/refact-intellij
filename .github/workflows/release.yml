@@ -131,10 +131,6 @@ jobs:
           branch: ${{ needs.set-defaults.outputs.lsp_version }}
           path: ./src/main/resources/bin
 
-      # Validate wrapper
-      - name: Gradle Wrapper Validation
-        uses: gradle/actions/wrapper-validation@v3
-
       # Set environment variables
       - name: Export Properties
         id: properties

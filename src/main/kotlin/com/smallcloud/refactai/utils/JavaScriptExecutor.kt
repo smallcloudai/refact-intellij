@@ -18,7 +18,7 @@ class JavaScriptExecutor(
 
     private val logger = Logger.getInstance(JavaScriptExecutor::class.java)
     private val executor = Executors.newFixedThreadPool(poolSize) { runnable ->
-        Thread(runnable, "JS-Executor-${threadCounter.incrementAndGet()}").apply {
+        Thread(runnable, "SMC-JS-Executor-${threadCounter.incrementAndGet()}").apply {
             isDaemon = true
         }
     }

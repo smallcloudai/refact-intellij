@@ -264,6 +264,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         })
 
         project.messageBus.connect().subscribe(ProjectManager.TOPIC, object: ProjectManagerListener {
+            @Deprecated("deprecation")
             override fun projectOpened(project: Project) {
                 this@SharedChatPane.sendCurrentProjectInfo(project)
             }

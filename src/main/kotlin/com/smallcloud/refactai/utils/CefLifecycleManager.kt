@@ -16,10 +16,6 @@ object CefLifecycleManager {
     private var cefClient: CefClient? = null
     private val browsers = mutableSetOf<CefBrowser>()
 
-    /**
-     * Initializes CEF if not already initialized.
-     * Must be called before any browser creation.
-     */
     fun initIfNeeded() {
         synchronized(lock) {
             if (cefApp == null) {
@@ -40,10 +36,6 @@ object CefLifecycleManager {
         }
     }
 
-    /**
-     * Registers an existing browser for lifecycle management.
-     * Useful for browsers created outside the lifecycle manager.
-     */
     fun registerBrowser(browser: CefBrowser) {
         synchronized(lock) {
             browsers.add(browser)
@@ -51,11 +43,6 @@ object CefLifecycleManager {
         }
     }
 
-    /**
-     * Properly closes and releases a browser instance.
-     * If this was the last browser, considers tearing down CEF entirely.
-     * @param browser The browser to release
-     */
     fun releaseBrowser(browser: CefBrowser) {
         synchronized(lock) {
             if (browsers.remove(browser)) {
@@ -83,10 +70,6 @@ object CefLifecycleManager {
         }
     }
 
-    /**
-     * Gets the current number of active browsers.
-     * Useful for monitoring and testing.
-     */
     fun getActiveBrowserCount(): Int {
         synchronized(lock) {
             return browsers.size

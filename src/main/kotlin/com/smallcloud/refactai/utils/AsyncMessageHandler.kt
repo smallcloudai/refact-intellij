@@ -30,11 +30,6 @@ class AsyncMessageHandler<T>(
         startMessageProcessor()
     }
 
-    /**
-     * Offers a message for asynchronous processing.
-     * @param rawMessage The raw message string to process
-     * @return true if the message was queued, false if the queue is full
-     */
     fun offerMessage(rawMessage: String): Boolean {
         if (disposed.get()) {
             logger.warn("Attempted to offer message to disposed handler")

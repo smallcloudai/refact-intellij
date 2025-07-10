@@ -16,11 +16,6 @@ class OSRRenderer(
     private var lastOptimizationTime = 0L
     private lateinit var hostComponent: JComponent
 
-    /**
-     * Attaches OSR optimizations to the host component.
-     * Note: JBCef handles the actual OSR internally, this just adds optimizations.
-     * @param host The host component that displays the rendered content
-     */
     fun attach(host: JComponent) {
         this.hostComponent = host
         logger.info("OSR optimizations attached (target ${targetFps}fps)")
@@ -31,9 +26,6 @@ class OSRRenderer(
         })
     }
 
-    /**
-     * Optimizes rendering performance when component is resized.
-     */
     private fun optimizeForResize() {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastOptimizationTime < frameInterval) {
@@ -44,9 +36,6 @@ class OSRRenderer(
         hostComponent.repaint()
     }
 
-    /**
-     * Cleans up the OSR renderer resources.
-     */
     fun cleanup() {
         logger.info("Cleaning up OSR renderer optimizations")
         lastOptimizationTime = 0L

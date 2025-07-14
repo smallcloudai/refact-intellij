@@ -1,5 +1,7 @@
 package com.smallcloud.refactai
 
+import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ide.plugins.PluginInstaller
 import com.intellij.openapi.Disposable
@@ -38,6 +40,21 @@ class Initializer : ProjectActivity, Disposable {
             ApplicationManager.getApplication().getService(CloudMessageService::class.java)
             if (!JBCefApp.isSupported()) {
                 emitInfo(RefactAIBundle.message("notifications.chatCanNotStartWarning"), false)
+            }
+
+            // notifications.chatCanFreezeWarning
+            // Show warning for 2025.* IDE versions with JCEF out-of-process enabled
+            if (JBCefApp.isSupported()) {
+                val appInfo = ApplicationInfo.getInstance()
+                val is2025 = appInfo.majorVersion == "2025"
+                val outOfProc = try {
+                    Registry.get("ide.browser.jcef.out-of-process.enabled").asBoolean()
+                } catch (_: Throwable) {
+                    false
+                }
+                if (is2025 && outOfProc) {
+                    emitInfo(RefactAIBundle.message("notifications.chatCanFreezeWarning"), false)
+                }
             }
         }
         getLSPProcessHolder(project)

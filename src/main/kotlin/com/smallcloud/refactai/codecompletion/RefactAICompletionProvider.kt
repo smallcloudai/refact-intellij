@@ -308,22 +308,17 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
     }
 
     override fun isEnabled(event: InlineCompletionEvent): Boolean {
-        val isRelevantEvent = event is InlineCompletionEvent.DirectCall || event is InlineCompletionEvent.DocumentChange
+        // Check by class name to avoid internal API type check (DirectCall implements internal Builtin interface)
+        val isDirectCall = event::class.simpleName == "DirectCall"
         var isInCompletionMode = true
 
-        if (isRelevantEvent) {
-            val editor = when (event) {
-                is InlineCompletionEvent.DirectCall -> event.editor
-                is InlineCompletionEvent.DocumentChange -> event.editor
-                else -> null
-            }
-
-            editor?.let {
-                val provider = ModeProvider.getOrCreateModeProvider(it)
-                isInCompletionMode = provider.isInCompletionMode()
-            }
+        // Try to get editor from the event's request
+        val request = event.toRequest()
+        request?.editor?.let { editor ->
+            val provider = ModeProvider.getOrCreateModeProvider(editor)
+            isInCompletionMode = provider.isInCompletionMode()
         }
 
-        return isInCompletionMode && (InferenceGlobalContext.useAutoCompletion || event is InlineCompletionEvent.DirectCall)
+        return isInCompletionMode && (InferenceGlobalContext.useAutoCompletion || isDirectCall)
     }
 }

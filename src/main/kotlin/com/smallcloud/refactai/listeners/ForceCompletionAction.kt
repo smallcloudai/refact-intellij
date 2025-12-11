@@ -12,8 +12,7 @@ import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
 import com.smallcloud.refactai.Resources
 
 
-// copy code from https://github.com/JetBrains/intellij-community/blob/97f1fa8169ce800fd5bfecccb07ccc869d827a4c/platform/platform-impl/src/com/intellij/codeInsight/inline/completion/InlineCompletionActions.kt#L130
-// CallInlineCompletionHandler became internal
+// DirectCall is required by InlineCompletionHandler.invoke() API
 class CallInlineCompletionHandler : EditorWriteActionHandler() {
     override fun doExecute(editor: Editor, caret: Caret?, dataContext: DataContext?) {
         val curCaret = caret ?: editor.caretModel.currentCaret

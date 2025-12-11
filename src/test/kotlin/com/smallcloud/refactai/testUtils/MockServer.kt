@@ -1,7 +1,9 @@
+@file:OptIn(okhttp3.ExperimentalOkHttpApi::class)
+
 package com.smallcloud.refactai.testUtils
 
 import com.intellij.testFramework.LightPlatform4TestCase
-import okhttp3.mockwebserver.MockWebServer
+import mockwebserver3.MockWebServer
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.PrivateKey
@@ -89,7 +91,7 @@ abstract class MockServer: LightPlatform4TestCase() {
     @Before
     fun setup() {
         server = MockWebServer()
-        server.useHttps(sslContext.socketFactory, false)
+        server.useHttps(sslContext.socketFactory)
         server.start()
         baseUrl = server.url("/").toString()
     }

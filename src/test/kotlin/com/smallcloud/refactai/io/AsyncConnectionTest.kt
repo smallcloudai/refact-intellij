@@ -1,9 +1,11 @@
+@file:OptIn(okhttp3.ExperimentalOkHttpApi::class)
+
 package com.smallcloud.refactai.io
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.smallcloud.refactai.testUtils.MockServer
-import okhttp3.mockwebserver.MockResponse
+import mockwebserver3.MockResponse
 import org.junit.Test
 import java.net.URI
 import java.util.concurrent.TimeUnit
@@ -18,10 +20,11 @@ class AsyncConnectionTest: MockServer() {
         // Prepare a mock response
         val responseBody = """{"status":"success","data":"test data"}"""
         this.server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody(responseBody)
+            MockResponse.Builder()
+                .code(200)
+                .addHeader("Content-Type", "application/json")
+                .body(responseBody)
+                .build()
         )
 
         val response = httpClient.get(URI.create(this.baseUrl + "api/test")).join().get().toString()

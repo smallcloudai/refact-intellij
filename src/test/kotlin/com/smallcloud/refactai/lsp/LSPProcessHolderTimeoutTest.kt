@@ -1,8 +1,10 @@
+@file:OptIn(okhttp3.ExperimentalOkHttpApi::class)
+
 package com.smallcloud.refactai.lsp
 
 import com.intellij.openapi.project.Project
 import com.smallcloud.refactai.testUtils.MockServer
-import okhttp3.mockwebserver.MockResponse
+import mockwebserver3.MockResponse
 import org.junit.Test
 import org.junit.Ignore
 import java.net.URI
@@ -32,11 +34,12 @@ class LSPProcessHolderTimeoutTest : MockServer() {
     @Test
     fun fetchCustomization() {
         // Create a successful response with a delay
-        val response = MockResponse()
-            .setResponseCode(200)
-            .setHeader("Content-Type", "application/json")
-            .setBody("{\"result\": \"delayed response\"}")
-            .setBodyDelay(100, TimeUnit.MILLISECONDS) // Add a small delay
+        val response = MockResponse.Builder()
+            .code(200)
+            .addHeader("Content-Type", "application/json")
+            .body("{\"result\": \"delayed response\"}")
+            .bodyDelay(100, TimeUnit.MILLISECONDS) // Add a small delay
+            .build()
         
         // Queue the response
         this.server.enqueue(response)
@@ -54,11 +57,12 @@ class LSPProcessHolderTimeoutTest : MockServer() {
     @Test
     fun fetchCustomizationWithTimeout() {
         // Create a successful response with a delay
-        val response = MockResponse()
-            .setResponseCode(200)
-            .setHeader("Content-Type", "application/json")
-            .setBody("{\"result\": \"delayed response\"}")
-            .setHeadersDelay(60, TimeUnit.SECONDS)
+        val response = MockResponse.Builder()
+            .code(200)
+            .addHeader("Content-Type", "application/json")
+            .body("{\"result\": \"delayed response\"}")
+            .headersDelay(60, TimeUnit.SECONDS)
+            .build()
 
         // Queue the response
         this.server.enqueue(response)

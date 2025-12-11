@@ -2,13 +2,13 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin require-restart="true">
     <id>com.smallcloud.codify</id>
-    <name><![CDATA[Refact – Open-Source AI Agent, Code Generator & Chat]]></name>
+    <name><![CDATA[Refact - Open-Source AI Agent, Code Generator & Chat]]></name>
     <vendor email="info@smallcloud.ai"
             url="https://refact.ai/?utm_source=jb&amp;utm_medium=marketplace&amp;utm_campaign=plugin">smallcloudai
     </vendor>
 
     <description><![CDATA[
-<h2>Refact.ai – Your Customizable Open-Source AI Software Engineering Agent</h2>
+<h2>Refact.ai - Your Customizable Open-Source AI Software Engineering Agent</h2>
 <p>
     Refact.ai is a free, <b>open-source</b> AI Agent that handles engineering tasks end-to-end.
     It deeply understands your codebases and integrates with your tools, databases, and browsers to automate complex, multi-step tasks.

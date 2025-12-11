@@ -258,7 +258,9 @@ class AsyncConnection : Disposable {
     }
 
     override fun dispose() {
-        client.close()
+        client.close(org.apache.hc.core5.io.CloseMode.GRACEFUL)
+        // Wait for I/O reactor threads to terminate
+        client.awaitShutdown(org.apache.hc.core5.util.TimeValue.ofSeconds(5))
     }
 
 }

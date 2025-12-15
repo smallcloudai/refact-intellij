@@ -147,7 +147,13 @@ fun lspGetCodeLens(editor: Editor): String {
 }
 
 fun lspGetCommitMessage(project: Project, diff: String, currentMessage: String): String {
-    val url = getLSPProcessHolder(project)?.url?.resolve("/v1/commit-message-from-diff") ?: return ""
+    val lsp = getLSPProcessHolder(project) ?: return ""
+    if (!lsp.isWorking) return ""
+
+    val baseUrl = lsp.url
+    if (baseUrl.toString().isBlank()) return ""
+
+    val url = baseUrl.resolve("/v1/commit-message-from-diff")
     val data = Gson().toJson(
         mapOf(
             "diff" to diff,

@@ -23,7 +23,8 @@ fun getThisPlugin(): IdeaPluginDescriptor? {
 
 
 private fun getHomePath(): File {
-    return getThisPlugin()!!.pluginPath.toFile()
+    return getThisPlugin()?.pluginPath?.toFile()
+        ?: throw IllegalStateException("Plugin not found")
 }
 
 private fun getVersion(): String {

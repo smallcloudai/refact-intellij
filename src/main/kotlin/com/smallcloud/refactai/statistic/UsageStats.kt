@@ -120,7 +120,8 @@ class UsageStats(private val project: Project): Disposable {
                 "scope" to scopeJson,
             )
         )
-        val url = getLSPProcessHolder(project)!!.url.resolve(defaultChatReportUrlSuffix)
+        val lspHolder = getLSPProcessHolder(project) ?: return
+        val url = lspHolder.url.resolve(defaultChatReportUrlSuffix)
         execService.submit {
             try {
                 val res = sendRequest(url, "POST", body=body)

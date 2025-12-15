@@ -20,25 +20,32 @@ private fun lookForCommonErrors(json: JsonObject, request: SMCRequest): String? 
         return detail
     }
     if (json.has("retcode") && json.get("retcode").asString != "OK") {
-        UsageStats?.addStatistic(
-            false, request.stat,
-            request.uri.toString(), json.get("human_readable_message").asString
-        )
-        return json.get("human_readable_message").asString
+        val message = if (json.has("human_readable_message")) {
+            json.get("human_readable_message").asString
+        } else {
+            "Unknown error"
+        }
+        UsageStats?.addStatistic(false, request.stat, request.uri.toString(), message)
+        return message
     }
     if (json.has("status") && json.get("status").asString == "error") {
-        UsageStats?.addStatistic(
-            false, request.stat,
-            request.uri.toString(), json.get("human_readable_message").asString
-        )
-        return json.get("human_readable_message").asString
+        val message = if (json.has("human_readable_message")) {
+            json.get("human_readable_message").asString
+        } else {
+            "Unknown error"
+        }
+        UsageStats?.addStatistic(false, request.stat, request.uri.toString(), message)
+        return message
     }
     if (json.has("error")) {
-        UsageStats?.addStatistic(
-            false, request.stat,
-            request.uri.toString(), json.get("error").asJsonObject.get("message").asString
-        )
-        return json.get("error").asJsonObject.get("message").asString
+        val errorObj = json.get("error").asJsonObject
+        val message = if (errorObj.has("message")) {
+            errorObj.get("message").asString
+        } else {
+            "Unknown error"
+        }
+        UsageStats?.addStatistic(false, request.stat, request.uri.toString(), message)
+        return message
     }
     return null
 }

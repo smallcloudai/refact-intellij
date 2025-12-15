@@ -140,8 +140,8 @@ class Inlayer(val editor: Editor, private val intent: String) : Disposable {
                     val smallPatches: MutableList<Patch<Char>> = emptyList<Patch<Char>>().toMutableList()
                     for (i in 0 until minOf(det.target.size(), det.source.size())) {
                         val srcLine = det.source.lines?.get(i)
-                        val tgtLine = det.target.lines!![i]
-                        if (srcLine == null) break
+                        val tgtLine = det.target.lines?.get(i)
+                        if (srcLine == null || tgtLine == null) break
 
                         val smallPatch = DiffUtils.diff(srcLine.toList(), tgtLine.toList())
                         smallPatches.add(smallPatch)

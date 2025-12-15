@@ -198,6 +198,13 @@
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <separator/>
         </group>
+
+        <action id="RefactAI.GenerateCommitMessage"
+                class="com.smallcloud.refactai.vcs.RefactCommitAction"
+                text="Generate Commit Message with Refact AI"
+                description="Generate a commit message using Refact AI based on staged changes">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
+        </action>
     </actions>
     <resource-bundle>bundles.RefactAI</resource-bundle>
     <applicationListeners>

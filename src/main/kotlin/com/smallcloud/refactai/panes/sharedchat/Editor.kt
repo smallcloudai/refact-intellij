@@ -73,15 +73,16 @@ class Editor (val project: Project) {
                 val fileEditorManager = FileEditorManager.getInstance(project)
                 val editor = fileEditorManager.selectedTextEditor
 
-                val cursor = editor?.caretModel?.offset
+                val cursorOffset = editor?.caretModel?.offset
+                val cursor = cursorOffset?.let { editor.offsetToLogicalPosition(it).line + 1 }
                 val virtualFile = fileEditorManager.selectedFiles[0]
                 val filePath = virtualFile.path
                 val fileName = virtualFile.name
 
                 val selection = editor?.caretModel?.currentCaret?.selectionRange
                 val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
-                val line1 = selection?.startOffset?.let { editor.offsetToLogicalPosition(it).line } ?: 0
-                val line2 = selection?.endOffset?.let { editor.offsetToLogicalPosition(it).line } ?: 0
+                val line1 = selection?.startOffset?.let { editor.offsetToLogicalPosition(it).line + 1 } ?: 0
+                val line2 = selection?.endOffset?.let { editor.offsetToLogicalPosition(it).line + 1 } ?: 0
 
                 val code = editor?.document?.getText(range)
                 val canPaste = selection != null && !selection.isEmpty

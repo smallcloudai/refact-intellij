@@ -10,11 +10,11 @@ on:
       lsp_branch:
         required: true
         description: "lsp_branch"
-        default: "dev"
+        default: "main"
         type: string
       chat_js_branch:
         description: "Branch name of chat-js"
-        default: "dev"
+        default: "main-stable"
         type: string
         required: true
 jobs:

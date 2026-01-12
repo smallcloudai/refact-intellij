@@ -55,6 +55,7 @@ import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.roots.ProjectRootManager
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
+    private val paneScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val logger = Logger.getInstance(SharedChatPane::class.java)
     private val editor = Editor(project)
     private var currentPage: String = ""
@@ -248,12 +249,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
         }
 
-        project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, listener)
+        project.messageBus.connect(this).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, listener)
 
         val ef = EditorFactory.getInstance()
         ef.eventMulticaster.addSelectionListener(selectionListener, this)
 
-        project.messageBus.connect().subscribe(
+        project.messageBus.connect(this).subscribe(
             EditorColorsManager.TOPIC,
             EditorColorsListener {
             ApplicationManager.getApplication().invokeLater {
@@ -263,15 +264,14 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
         })
 
-        project.messageBus.connect().subscribe(ProjectManager.TOPIC, object: ProjectManagerListener {
+        project.messageBus.connect(this).subscribe(ProjectManager.TOPIC, object: ProjectManagerListener {
             @Deprecated("deprecation")
             override fun projectOpened(project: Project) {
                 this@SharedChatPane.sendCurrentProjectInfo(project)
             }
         })
 
-        // ast and vecdb settings change
-        project.messageBus.connect()
+        project.messageBus.connect(this)
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                 override fun astFlagChanged(newValue: Boolean) {
                     logger.info("ast changed to: $newValue")
@@ -284,7 +284,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 }
             })
 
-        editor.project.messageBus.connect(PluginState.instance)
+        editor.project.messageBus.connect(this)
             .subscribe(
                 InferenceGlobalContextChangedNotifier.TOPIC,
                 object : InferenceGlobalContextChangedNotifier {
@@ -293,7 +293,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                     }
                 })
         editor.project.messageBus
-            .connect(PluginState.instance)
+            .connect(this)
             .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
                 override fun apiKeyChanged(newApiKey: String?) {
                     this@SharedChatPane.sendUserConfig()
@@ -301,18 +301,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             })
 
         editor.project.messageBus
-            .connect(PluginState.instance)
+            .connect(this)
             .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
                 override fun lspIsActive(isActive: Boolean) {
                     this@SharedChatPane.sendUserConfig()
                 }
             })
 
-        ApplicationManager.getApplication().invokeLater {
-            CoroutineScope(Dispatchers.Main).launch {
-                FimCache.subscribe { data ->
-                    this@SharedChatPane.sendFimData(data)
-                }
+        paneScope.launch {
+            FimCache.subscribe { data ->
+                this@SharedChatPane.sendFimData(data)
             }
         }
     }
@@ -323,116 +321,75 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun setupDropdownStateTracking() {
+        // Optimized dropdown tracking - uses MutationObserver only, no polling interval
+        // This reduces CPU usage significantly while still detecting dropdown state changes
         val trackingScript = """
-            window.refactDropdownTracker = {
-                isOpen: false,
-                lastCheck: 0,
+            (function() {
+                if (window.__refactDropdownTrackerInstalled) return;
+                window.__refactDropdownTrackerInstalled = true;
 
-                onDropdownOpen: function() {
-                    if (!this.isOpen) {
-                        this.isOpen = true;
-                        window.postMessage({
-                            type: 'ide/dropdownStateChanged',
-                            payload: { isOpen: true }
-                        }, '*');
-                    }
-                },
+                window.refactDropdownTracker = {
+                    isOpen: false,
+                    checkPending: false,
 
-                onDropdownClose: function() {
-                    if (this.isOpen) {
-                        this.isOpen = false;
-                        window.postMessage({
-                            type: 'ide/dropdownStateChanged',
-                            payload: { isOpen: false }
-                        }, '*');
-                    }
-                },
-
-                checkDropdownState: function() {
-                    const now = Date.now();
-                    if (now - this.lastCheck < 50) return;
-                    this.lastCheck = now;
-
-                    const dropdownSelectors = [
-                        '[role="menu"]',
-                        '[role="listbox"]',
-                        '[role="combobox"][aria-expanded="true"]',
-                        '.dropdown-menu:not(.hidden)',
-                        '.menu:not(.hidden)',
-                        '.popover:not(.hidden)',
-                        '[data-state="open"]',
-                        '[aria-hidden="false"][role="dialog"]',
-                        '.visible[role="menu"]'
-                    ];
-
-                    let foundOpen = false;
-                    for (const selector of dropdownSelectors) {
-                        const elements = document.querySelectorAll(selector);
-                        for (const el of elements) {
-                            const rect = el.getBoundingClientRect();
-                            const isVisible = rect.width > 0 && rect.height > 0 &&
-                                            el.offsetParent !== null &&
-                                            getComputedStyle(el).display !== 'none' &&
-                                            getComputedStyle(el).visibility !== 'hidden';
-                            if (isVisible) {
-                                foundOpen = true;
-                                break;
-                            }
+                    notifyStateChange: function(isOpen) {
+                        if (this.isOpen !== isOpen) {
+                            this.isOpen = isOpen;
+                            window.postMessage({
+                                type: 'ide/dropdownStateChanged',
+                                payload: { isOpen: isOpen }
+                            }, '*');
                         }
-                        if (foundOpen) break;
-                    }
+                    },
 
-                    if (foundOpen && !this.isOpen) {
-                        this.onDropdownOpen();
-                    } else if (!foundOpen && this.isOpen) {
-                        this.onDropdownClose();
-                    }
-                }
-            };
+                    checkDropdownState: function() {
+                        if (this.checkPending) return;
+                        this.checkPending = true;
 
-            const observer = new MutationObserver(function(mutations) {
-                let shouldCheck = false;
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'attributes' || mutation.type === 'childList') {
-                        shouldCheck = true;
+                        requestAnimationFrame(() => {
+                            this.checkPending = false;
+                            const selectors = [
+                                '[role="menu"]',
+                                '[role="listbox"]',
+                                '[data-state="open"]',
+                                '[aria-expanded="true"]'
+                            ];
+
+                            let foundOpen = false;
+                            for (const selector of selectors) {
+                                const el = document.querySelector(selector);
+                                if (el && el.offsetParent !== null) {
+                                    foundOpen = true;
+                                    break;
+                                }
+                            }
+                            this.notifyStateChange(foundOpen);
+                        });
                     }
+                };
+
+                const observer = new MutationObserver(function() {
+                    window.refactDropdownTracker.checkDropdownState();
                 });
-                if (shouldCheck) {
-                    setTimeout(() => window.refactDropdownTracker.checkDropdownState(), 10);
-                }
-            });
 
-            observer.observe(document.body, {
-                attributes: true,
-                childList: true,
-                subtree: true,
-                attributeFilter: ['class', 'style', 'aria-hidden', 'data-state', 'aria-expanded']
-            });
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['data-state', 'aria-expanded', 'aria-hidden']
+                });
 
-            document.addEventListener('click', function(e) {
-                setTimeout(() => window.refactDropdownTracker.checkDropdownState(), 50);
-            }, true);
-
-            document.addEventListener('focusin', function(e) {
-                setTimeout(() => window.refactDropdownTracker.checkDropdownState(), 50);
-            }, true);
-
-            document.addEventListener('focusout', function(e) {
-                setTimeout(() => window.refactDropdownTracker.checkDropdownState(), 100);
-            }, true);
-
-            setInterval(() => window.refactDropdownTracker.checkDropdownState(), 100);
-
-            setTimeout(() => {
-                window.refactDropdownTracker.checkDropdownState();
-            }, 500);
+                document.addEventListener('click', function() {
+                    setTimeout(() => window.refactDropdownTracker.checkDropdownState(), 50);
+                }, true);
+            })();
         """.trimIndent()
 
         val setupAlarm = Alarm(this)
         setupAlarm.addRequest({
             try {
                 browser.webView.cefBrowser.executeJavaScript(trackingScript, null, 0)
-                logger.info("Enhanced dropdown state tracking script injected")
+                logger.debug("Dropdown state tracking script injected")
             } catch (e: Exception) {
                 logger.warn("Failed to inject dropdown tracking script", e)
             }
@@ -548,9 +505,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun deleteFile(fileName: String) {
-        logger.warn("deleteFile: $fileName")
+        val validatedPath = validateAndSanitizePath(fileName, "deleteFile") ?: return
+        logger.warn("deleteFile: $validatedPath")
         ApplicationManager.getApplication().invokeLater {
-            LocalFileSystem.getInstance().findFileByPath(fileName)?.delete(this.project)
+            ApplicationManager.getApplication().runWriteAction {
+                LocalFileSystem.getInstance().findFileByPath(validatedPath)?.delete(this.project)
+            }
         }
     }
 
@@ -562,59 +522,101 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             Regex("""^\\\?\\.*""") to 3        // '\?\' prefix
         )
 
+        var result = fileName
         for ((pattern, length) in patterns) {
-            if (pattern.containsMatchIn(fileName))
-                return fileName.substring(length)
+            if (pattern.containsMatchIn(result)) {
+                result = result.substring(length)
+                break
+            }
         }
 
-        return fileName
+        return result
     }
 
-    private fun openNewFile(fileName: String): File {
-        val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
-        val file = File(sanitizedFileName)
+    private fun isPathWithinProject(path: String): Boolean {
+        val canonicalPath = try {
+            File(path).canonicalPath
+        } catch (e: Exception) {
+            logger.warn("Failed to canonicalize path: $path", e)
+            return false
+        }
+
+        val projectBasePath = project.basePath ?: return false
+        val canonicalProjectPath = try {
+            File(projectBasePath).canonicalPath
+        } catch (e: Exception) {
+            logger.warn("Failed to canonicalize project path: $projectBasePath", e)
+            return false
+        }
+
+        return canonicalPath.startsWith(canonicalProjectPath + File.separator) ||
+               canonicalPath == canonicalProjectPath
+    }
+
+    private fun validateAndSanitizePath(fileName: String, operation: String): String? {
+        val sanitized = sanitizeFileNameForPosix(fileName)
+
+        if (sanitized.contains("..")) {
+            logger.warn("$operation blocked: path contains '..': $fileName")
+            return null
+        }
+
+        if (!isPathWithinProject(sanitized)) {
+            logger.warn("$operation blocked: path outside project: $fileName (project: ${project.basePath})")
+            return null
+        }
+
+        return sanitized
+    }
+
+    private fun openNewFile(fileName: String): File? {
+        val validatedPath = validateAndSanitizePath(fileName, "openNewFile") ?: return null
+        val file = File(validatedPath)
         if (!file.exists()) {
+            file.parentFile?.mkdirs()
             file.createNewFile()
         }
         val fileSystem = StandardFileSystems.local()
         fileSystem.refresh(false)
-        logger.warn("openNewFileWithContent: $fileName")
+        logger.warn("openNewFileWithContent: $validatedPath")
 
         return file
     }
 
     private fun setContent(fileName: String, content: String) {
-        logger.warn("setContent: item.fileNameEdit = $fileName")
+        val validatedPath = validateAndSanitizePath(fileName, "setContent") ?: return
+        logger.warn("setContent: item.fileNameEdit = $validatedPath")
         ApplicationManager.getApplication().invokeLater {
-            val file = LocalFileSystem.getInstance().refreshAndFindFileByPath(fileName)
+            val file = LocalFileSystem.getInstance().refreshAndFindFileByPath(validatedPath)
             if (file == null) {
-                logger.warn("setContent: item.fileNameEdit = $fileName is null")
+                logger.warn("setContent: item.fileNameEdit = $validatedPath is null")
                 return@invokeLater
             }
 
-            FileDocumentManager.getInstance().getDocument(file)?.setText(content)
+            ApplicationManager.getApplication().runWriteAction {
+                FileDocumentManager.getInstance().getDocument(file)?.setText(content)
+            }
         }
     }
 
     private fun handlePatchApply(payload: Events.Patch.ApplyPayload) {
         payload.items.forEach { item ->
             if (item.fileNameAdd != null) {
-                val fileName = this.sanitizeFileNameForPosix(item.fileNameAdd)
-                logger.warn("handlePatchApply: item.fileNameAdd = $fileName")
-                this.openNewFile(fileName)
-                setContent(fileName, item.fileText)
+                val file = this.openNewFile(item.fileNameAdd)
+                if (file != null) {
+                    logger.warn("handlePatchApply: item.fileNameAdd = ${file.path}")
+                    setContent(file.path, item.fileText)
+                }
             }
 
             if (item.fileNameDelete != null) {
-                val fileName = this.sanitizeFileNameForPosix(item.fileNameDelete)
-                logger.warn("handlePatchApply: item.fileNameDelete = $fileName")
-                this.deleteFile(fileName)
+                logger.warn("handlePatchApply: item.fileNameDelete = ${item.fileNameDelete}")
+                this.deleteFile(item.fileNameDelete)
             }
 
             if (item.fileNameEdit != null) {
-                val fileName = this.sanitizeFileNameForPosix(item.fileNameEdit)
-                logger.warn("handlePatchApply: item.fileNameEdit = $fileName")
-                setContent(fileName, item.fileText)
+                logger.warn("handlePatchApply: item.fileNameEdit = ${item.fileNameEdit}")
+                setContent(item.fileNameEdit, item.fileText)
             }
         }
     }
@@ -654,20 +656,23 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handlePatchShow(payload: Events.Patch.ShowPayload) {
         payload.results.forEach { result ->
             if (result.fileNameAdd != null) {
-                val sanitizedFileNameEdit = this.sanitizeFileNameForPosix(result.fileNameAdd)
-                logger.warn("handlePatchShow: item.fileNameAdd = $sanitizedFileNameEdit")
-                this.openNewFile(sanitizedFileNameEdit)
-                showPatch(sanitizedFileNameEdit, result.fileText)
+                val file = this.openNewFile(result.fileNameAdd)
+                if (file != null) {
+                    logger.warn("handlePatchShow: item.fileNameAdd = ${file.path}")
+                    showPatch(file.path, result.fileText)
+                }
             }
             if (result.fileNameDelete != null) {
-                logger.warn("handlePatchShow: item.fileNameDelete = ${this.sanitizeFileNameForPosix(result.fileNameDelete)}")
-                this.deleteFile(this.sanitizeFileNameForPosix(result.fileNameDelete))
+                logger.warn("handlePatchShow: item.fileNameDelete = ${result.fileNameDelete}")
+                this.deleteFile(result.fileNameDelete)
             }
 
             if (result.fileNameEdit != null) {
-                val sanitizedFileNameEdit = this.sanitizeFileNameForPosix(result.fileNameEdit)
-                logger.warn("handlePatchShow: item.fileNameEdit = $sanitizedFileNameEdit")
-                showPatch(sanitizedFileNameEdit, result.fileText)
+                val validatedPath = validateAndSanitizePath(result.fileNameEdit, "handlePatchShow")
+                if (validatedPath != null) {
+                    logger.warn("handlePatchShow: item.fileNameEdit = $validatedPath")
+                    showPatch(validatedPath, result.fileText)
+                }
             }
         }
     }
@@ -752,11 +757,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
 
     private fun writeContentToVirtualFile(virtualFile: VirtualFile, content: String) {
-        return ApplicationManager.getApplication().runWriteAction {
-            val document = FileDocumentManager.getInstance().getDocument(virtualFile)
-            if (document != null) {
-                document.setText(content)
-            }
+        ApplicationManager.getApplication().runWriteAction {
+            FileDocumentManager.getInstance().getDocument(virtualFile)?.setText(content)
         }
     }
     private fun openVirtualFileInIde(virtualFile: VirtualFile) {
@@ -765,22 +767,33 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun createAndSetFileContent(path: String, content: String, chatId: String, toolCallId: String) {
-        ApplicationManager.getApplication().invokeLater {
+        val validatedPath = validateAndSanitizePath(path, "createAndSetFileContent")
+        if (validatedPath == null) {
+            handleFileAction(toolCallId, chatId, false)
+            return
+        }
+
+        ApplicationManager.getApplication().executeOnPooledThread {
             try {
-                val file = File(path)
-                file.parentFile.mkdirs()
+                val file = File(validatedPath)
+                file.parentFile?.mkdirs()
                 file.createNewFile()
-                val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
-                if (virtualFile != null) {
-                    writeContentToVirtualFile(virtualFile, content)
-                    openVirtualFileInIde(virtualFile)
-                    handleFileAction(toolCallId, chatId, true)
-                } else {
-                    handleFileAction(toolCallId, chatId, false)
+
+                ApplicationManager.getApplication().invokeLater {
+                    val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
+                    if (virtualFile != null) {
+                        writeContentToVirtualFile(virtualFile, content)
+                        openVirtualFileInIde(virtualFile)
+                        handleFileAction(toolCallId, chatId, true)
+                    } else {
+                        handleFileAction(toolCallId, chatId, false)
+                    }
                 }
             } catch (e: Exception) {
                 logger.error("Error creating or setting file content", e)
-                handleFileAction(toolCallId, chatId, false)
+                ApplicationManager.getApplication().invokeLater {
+                    handleFileAction(toolCallId, chatId, false)
+                }
             }
         }
     }
@@ -844,20 +857,15 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private val browser by lazy {
-        ChatWebView(
-            this.editor
-        ) { event ->
-            runBlocking {
-                handleEvent(event)
-            }
+    private val browserLazy = lazy {
+        ChatWebView(this.editor) { event ->
+            paneScope.launch { handleEvent(event) }
         }
     }
+    private val browser by browserLazy
 
-    val webView by lazy {
-//        System.setProperty("ide.browser.jcef.log.level", "info")
-        browser.webView
-    }
+    val webView: com.intellij.ui.jcef.JBCefBrowser
+        get() = browser.webView
 
     private fun postMessage(message: Events.ToChat<*>?) {
         synchronized(this) {
@@ -868,11 +876,13 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     override fun dispose() {
-        webView.dispose()
+        paneScope.cancel()
+        if (browserLazy.isInitialized()) {
+            browser.dispose()
+        }
         scheduler.shutdownNow()
         workerFuture?.cancel(true)
         workerScheduler.shutdownNow()
-        Disposer.dispose(this)
     }
 
 }

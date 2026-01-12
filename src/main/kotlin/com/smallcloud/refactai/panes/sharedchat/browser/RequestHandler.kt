@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.panes.sharedchat.browser
 
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbAware
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
@@ -75,16 +76,15 @@ class OpenedConnection(private val connection: URLConnection?) :
                     url.contains(".html") -> cefResponse.mimeType = "text/html"
                     else -> cefResponse.mimeType = connection.contentType
                 }
-                responseLength.set(inputStream?.available() ?: 0)
+                val contentLength = connection.contentLength
+                responseLength.set(if (contentLength >= 0) contentLength else -1)
                 cefResponse.status = 200
             } else {
-                // Handle the case where connection is null
                 cefResponse.error = CefLoadHandler.ErrorCode.ERR_FAILED
                 cefResponse.statusText = "Connection is null"
                 cefResponse.status = 500
             }
         } catch (e: IOException) {
-            println("Error: $e")
             cefResponse.error = CefLoadHandler.ErrorCode.ERR_FILE_NOT_FOUND
             cefResponse.statusText = e.localizedMessage
             cefResponse.status = 404
@@ -97,15 +97,13 @@ class OpenedConnection(private val connection: URLConnection?) :
         bytesRead: IntRef,
         callback: CefCallback
     ): Boolean {
-        return inputStream?.let { inputStream ->
-            val availableSize = inputStream.available()
-            return if (availableSize > 0) {
-                val maxBytesToRead = minOf(availableSize, bytesToRead)
-                val realBytesRead = inputStream.read(dataOut, 0, maxBytesToRead)
+        return inputStream?.let { stream ->
+            val realBytesRead = stream.read(dataOut, 0, bytesToRead)
+            return if (realBytesRead > 0) {
                 bytesRead.set(realBytesRead)
                 true
             } else {
-                inputStream.close()
+                stream.close()
                 false
             }
         } ?: false
@@ -118,6 +116,7 @@ class OpenedConnection(private val connection: URLConnection?) :
 
 class OpenedStream(private val inputStream: InputStream, private val url: String) :
     ResourceHandlerState() {
+    private val logger = Logger.getInstance(OpenedStream::class.java)
 
     override fun getResponseHeaders(
         cefResponse: CefResponse,
@@ -133,16 +132,13 @@ class OpenedStream(private val inputStream: InputStream, private val url: String
                 else -> URLConnection.guessContentTypeFromName(url) ?: "application/octet-stream"
             }
 
-            try {
-                responseLength.set(inputStream.available())
-            } catch (_: Exception) {
-                responseLength.set(-1) // Unknown length
-            }
+            // Use -1 for unknown length - CEF handles chunked transfer
+            responseLength.set(-1)
 
             cefResponse.status = 200
-            println("SUCCESS: Serving $url with MIME ${cefResponse.mimeType}")
+            logger.debug("Serving $url with MIME ${cefResponse.mimeType}")
         } catch (e: Exception) {
-            println("ERROR: Failed to set headers for $url: $e")
+            logger.warn("Failed to set headers for $url: $e")
             cefResponse.status = 500
         }
     }
@@ -155,14 +151,14 @@ class OpenedStream(private val inputStream: InputStream, private val url: String
     ): Boolean {
         return try {
             val read = inputStream.read(dataOut, 0, bytesToRead)
-            if (read >= 0) {
+            if (read > 0) {
                 bytesRead.set(read)
                 true
             } else {
                 false
             }
         } catch (e: Exception) {
-            println("ERROR: Failed to read from stream: $e")
+            logger.warn("Failed to read from stream: $e")
             false
         }
     }
@@ -171,12 +167,13 @@ class OpenedStream(private val inputStream: InputStream, private val url: String
         try {
             inputStream.close()
         } catch (e: Exception) {
-            println("ERROR: Failed to close stream: $e")
+            logger.warn("Failed to close stream: $e")
         }
     }
 }
 
 class RefactChatResourceHandler : CefResourceHandler, DumbAware {
+    private val logger = Logger.getInstance(RefactChatResourceHandler::class.java)
     private var state: ResourceHandlerState = ClosedConnection
     private var currentUrl: String? = null
 
@@ -187,30 +184,27 @@ class RefactChatResourceHandler : CefResourceHandler, DumbAware {
         val url = cefRequest.url
         return if (url != null) {
             val path = url.removePrefix("http://refactai/")
-            println("LOOKING FOR: $path")
+            logger.debug("Looking for resource: $path")
 
             val resourceStream = when {
                 path.startsWith("dist/") -> {
-                    println("Trying direct path: $path")
                     javaClass.classLoader.getResourceAsStream(path)
                 }
                 else -> {
                     val webviewPath = "webview/$path"
-                    println("Trying webview path: $webviewPath")
                     javaClass.classLoader.getResourceAsStream(webviewPath)
                 }
             }
 
             state = if (resourceStream != null) {
-                println("FOUND: Resource stream for $path")
+                logger.debug("Found resource stream for $path")
                 OpenedStream(resourceStream, url)
             } else {
-                println("FALLBACK: Trying URLConnection for webview/$path")
                 val fallbackUrl = javaClass.classLoader.getResource("webview/$path")
                 if (fallbackUrl != null) {
                     OpenedConnection(fallbackUrl.openConnection())
                 } else {
-                    println("NOT FOUND: $path")
+                    logger.debug("Resource not found: $path")
                     ClosedConnection
                 }
             }
@@ -219,7 +213,7 @@ class RefactChatResourceHandler : CefResourceHandler, DumbAware {
             cefCallback.Continue()
             true
         } else {
-            println("ERROR: URL is null")
+            logger.warn("Request URL is null")
             false
         }
     }

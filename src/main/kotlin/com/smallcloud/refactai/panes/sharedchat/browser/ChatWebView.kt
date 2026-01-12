@@ -27,6 +27,7 @@ import com.smallcloud.refactai.utils.JSQueryManager
 import com.smallcloud.refactai.utils.AsyncMessageHandler
 import com.smallcloud.refactai.utils.OSRRenderer
 import com.smallcloud.refactai.utils.JavaScriptExecutor
+import com.smallcloud.refactai.utils.JavaScriptTemplate
 import com.intellij.ui.jcef.JBCefApp
 import org.cef.CefApp
 import org.cef.CefSettings
@@ -63,25 +64,30 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     companion object {
         private val schemeHandlerRegistered = AtomicBoolean(false)
-        private val logger = Logger.getInstance(ChatWebView::class.java)
+        private val companionLogger = Logger.getInstance(ChatWebView::class.java)
 
         fun isSupported(): Boolean = JBCefApp.isSupported()
 
-        /**
-         * Registers scheme handler for http://refactai/ URLs.
-         * NOTE: This is a global, permanent registration that survives plugin reload.
-         * If plugin is dynamically unloaded, the handler may keep the old classloader alive.
-         * This is a known limitation of CefApp.registerSchemeHandlerFactory.
-         */
         private fun registerSchemeHandlerOnce() {
             if (!schemeHandlerRegistered.compareAndSet(false, true)) return
             try {
                 CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
-                logger.info("Registered scheme handler for http://refactai/")
+                companionLogger.info("Registered scheme handler for http://refactai/")
             } catch (e: Exception) {
-                logger.warn("Failed to register scheme handler: ${e.message}")
+                companionLogger.warn("Failed to register scheme handler: ${e.message}")
                 schemeHandlerRegistered.set(false)
             }
+        }
+
+        fun determineRenderingMode(): Boolean {
+            if (System.getProperty("refact.jcef.force-osr") == "true" ||
+                System.getenv("REFACT_FORCE_OSR") == "1") {
+                return true
+            }
+            if (SystemInfo.isWindows || SystemInfo.isMac) {
+                return false
+            }
+            return System.getProperty("refact.jcef.linux-osr", "false") == "true"
         }
     }
 
@@ -96,7 +102,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     private val cefBrowser: CefBrowser
     private val jbcefBrowser: JBCefBrowser
     private val component: JComponent
-    private val useOffscreenRendering = SystemInfo.isLinux
+    private val useOffscreenRendering: Boolean = determineRenderingMode()
+    private lateinit var postMessageTemplate: JavaScriptTemplate
 
     fun setStyle() {
         try {
@@ -165,6 +172,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             jsQueryManager = JSQueryManager(jbcefBrowser)
             asyncMessageHandler = AsyncMessageHandler(Events::parse, messageHandler)
             jsExecutor = JavaScriptExecutor(jbcefBrowser, timeoutMs = 5000L, poolSize = 3)
+            postMessageTemplate = jsExecutor.createTemplate("window.postMessage(%s, '*');")
 
             component = setupPlatformSpecificFeatures()
             registerSchemeHandlerOnce()
@@ -230,12 +238,14 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 source: String?,
                 line: Int
             ): Boolean {
-                val levelStr = when (level) {
-                    CefSettings.LogSeverity.LOGSEVERITY_ERROR, CefSettings.LogSeverity.LOGSEVERITY_FATAL -> "ERROR"
-                    CefSettings.LogSeverity.LOGSEVERITY_WARNING -> "WARNING"
-                    else -> "INFO"
+                if (System.getenv("REFACT_DEBUG") == "1" || logger.isDebugEnabled) {
+                    val levelStr = when (level) {
+                        CefSettings.LogSeverity.LOGSEVERITY_ERROR, CefSettings.LogSeverity.LOGSEVERITY_FATAL -> "ERROR"
+                        CefSettings.LogSeverity.LOGSEVERITY_WARNING -> "WARNING"
+                        else -> "DEBUG"
+                    }
+                    logger.debug("BROWSER_CONSOLE[$levelStr]: $message ($source:$line)")
                 }
-                logger.info("BROWSER_CONSOLE[$levelStr]: $message ($source:$line)")
                 return super.onConsoleMessage(browser, level, message, source, line)
             }
 
@@ -418,8 +428,10 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 logger.info("Load end event - HTTP status: $httpStatusCode, state: ${initializationState.get()}")
 
                 // Setup React if still at state 1 (page loaded but React not setup yet)
+                if (initializationState.get() == 1 || initializationState.get() == 2) {
+                    logger.debug("onLoadEnd: state=${initializationState.get()}, setup may already be running")
+                }
                 if (initializationState.get() == 1) {
-                    logger.info("Triggering React setup from onLoadEnd")
                     setupReactApplication()
                 }
             }
@@ -427,22 +439,25 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     private fun setupReactApplication() {
+        if (!initializationState.compareAndSet(1, 2)) {
+            logger.debug("React setup skipped - already in progress or completed (state: ${initializationState.get()})")
+            return
+        }
         logger.info("Starting React application setup")
 
         try {
+            val gson = Gson()
             val config = editor.getUserConfig()
-            val configJson = Gson().toJson(config)
+            val configJson = gson.toJson(config)
             val currentProject = """{ name: "${editor.project.name}" }"""
 
-            logger.info("Got user config: $configJson")
+            logger.debug("User config prepared")
 
             editor.getActiveFileInfo { file ->
-                val fileJson = Gson().toJson(file)
-                logger.info("Got active file info: $fileJson")
+                val fileJson = gson.toJson(file)
 
                 editor.getSelectedSnippet { snippet ->
-                    val snippetJson = if (snippet != null) Gson().toJson(snippet) else "undefined"
-                    logger.info("Got selected snippet: $snippetJson")
+                    val snippetJson = if (snippet != null) gson.toJson(snippet) else "undefined"
 
                     val scripts = listOf(
                         """
@@ -514,9 +529,9 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         """.trimIndent()
                     )
 
-                    logger.info("Executing React setup scripts")
                     jsExecutor.executeBatch(scripts, "react-setup").exceptionally { throwable ->
                         logger.error("Failed to setup React application", throwable)
+                        initializationState.set(1)
                         null
                     }
                 }
@@ -553,9 +568,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     private fun postMessageString(message: String) {
-        // Use template for better performance with repeated postMessage calls
-        val template = jsExecutor.createTemplate("window.postMessage(%s, '*');")
-        template.execute(message, description = "post-message")
+        postMessageTemplate.execute(message, description = "post-message")
     }
 
     override fun dispose() {

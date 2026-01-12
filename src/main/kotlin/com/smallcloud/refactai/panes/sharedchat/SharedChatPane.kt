@@ -44,10 +44,11 @@ import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
 import com.smallcloud.refactai.settings.Host
 import com.smallcloud.refactai.struct.ChatMessage
+import com.smallcloud.refactai.utils.SmartMessageQueue
+import com.smallcloud.refactai.utils.EventDebouncer
 import kotlinx.coroutines.*
 import org.jetbrains.annotations.NotNull
 import java.io.File
-import java.util.concurrent.Future
 import javax.swing.JPanel
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
@@ -67,22 +68,27 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private var isDropdownOpen = false
     private val dropdownStateCheckAlarm = Alarm(this)
 
-    private val messageQuery: ArrayDeque<Events.ToChat<*>> = ArrayDeque<Events.ToChat<*>>()
-    private var workerFuture: Future<*>? = null
-    private val workerScheduler =
-        AppExecutorUtil.createBoundedScheduledExecutorService("SMCSharedChatPaneWorkerScheduler", 1)
+    private val messageQueue = SmartMessageQueue(
+        maxCommands = 200,
+        flushDebounceMs = 16L,
+        parentDisposable = this
+    )
 
+    private val selectionDebouncer = EventDebouncer<Unit>(150L, this) {
+        doSendActiveFileInfo()
+        doSendSelectedSnippet()
+    }
+
+    private val configDebouncer = EventDebouncer<Unit>(100L, this) {
+        doSendUserConfig()
+    }
 
     init {
-        workerFuture = workerScheduler.scheduleWithFixedDelay({
-            synchronized(this) {
-                while (isReady() && messageQuery.isNotEmpty()) {
-                    messageQuery.removeFirst().let {
-                        this.browser.postMessage(it)
-                    }
-                }
+        messageQueue.setFlushCallback { messages ->
+            if (isReady() && browserLazy.isInitialized()) {
+                messages.forEach { browser.postMessage(it) }
             }
-        }, 0, 80, java.util.concurrent.TimeUnit.MILLISECONDS)
+        }
         this.addEventListeners()
         this.setupDropdownStateTracking()
     }
@@ -96,6 +102,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun sendSelectedSnippet() {
+        selectionDebouncer.debounce(Unit)
+    }
+
+    private fun doSendSelectedSnippet() {
         this.editor.getSelectedSnippet { snippet ->
             if (snippet != null) {
                 val message = Editor.SetSnippetToChat(snippet)
@@ -119,12 +129,20 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun sendUserConfig() {
+        configDebouncer.debounce(Unit)
+    }
+
+    private fun doSendUserConfig() {
         val config = this.editor.getUserConfig()
         val message = Events.Config.Update(config)
         this.postMessage(message)
     }
 
     private fun sendActiveFileInfo() {
+        selectionDebouncer.debounce(Unit)
+    }
+
+    private fun doSendActiveFileInfo() {
         this.editor.getActiveFileInfo { file ->
             val message = ActiveFileToChat(file)
             this.postMessage(message)
@@ -868,21 +886,20 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         get() = browser.webView
 
     private fun postMessage(message: Events.ToChat<*>?) {
-        synchronized(this) {
-            if (message != null) {
-                messageQuery.add(message)
-            }
+        if (message != null) {
+            messageQueue.enqueue(message)
         }
     }
 
     override fun dispose() {
         paneScope.cancel()
+        selectionDebouncer.cancel()
+        configDebouncer.cancel()
+        messageQueue.dispose()
         if (browserLazy.isInitialized()) {
             browser.dispose()
         }
         scheduler.shutdownNow()
-        workerFuture?.cancel(true)
-        workerScheduler.shutdownNow()
     }
 
 }

@@ -2,6 +2,7 @@ package com.smallcloud.refactai.panes.sharedchat.browser
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbAware
+import com.smallcloud.refactai.utils.ResourceCache
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.callback.CefCallback
@@ -114,6 +115,47 @@ class OpenedConnection(private val connection: URLConnection?) :
     }
 }
 
+class CachedResourceState(private val cached: ResourceCache.CachedResource, private val url: String) :
+    ResourceHandlerState() {
+    private val logger = Logger.getInstance(CachedResourceState::class.java)
+    private val inputStream = cached.createInputStream()
+
+    override fun getResponseHeaders(
+        cefResponse: CefResponse,
+        responseLength: IntRef,
+        redirectUrl: StringRef
+    ) {
+        cefResponse.mimeType = cached.mimeType
+        responseLength.set(cached.data.size)
+        cefResponse.status = 200
+        logger.debug("Serving cached $url (${cached.data.size} bytes)")
+    }
+
+    override fun readResponse(
+        dataOut: ByteArray,
+        bytesToRead: Int,
+        bytesRead: IntRef,
+        callback: CefCallback
+    ): Boolean {
+        return try {
+            val read = inputStream.read(dataOut, 0, bytesToRead)
+            if (read > 0) {
+                bytesRead.set(read)
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            logger.warn("Failed to read from cached stream: $e")
+            false
+        }
+    }
+
+    override fun close() {
+        inputStream.close()
+    }
+}
+
 class OpenedStream(private val inputStream: InputStream, private val url: String) :
     ResourceHandlerState() {
     private val logger = Logger.getInstance(OpenedStream::class.java)
@@ -131,10 +173,7 @@ class OpenedStream(private val inputStream: InputStream, private val url: String
                 url.endsWith(".json") -> "application/json"
                 else -> URLConnection.guessContentTypeFromName(url) ?: "application/octet-stream"
             }
-
-            // Use -1 for unknown length - CEF handles chunked transfer
             responseLength.set(-1)
-
             cefResponse.status = 200
             logger.debug("Serving $url with MIME ${cefResponse.mimeType}")
         } catch (e: Exception) {
@@ -181,41 +220,33 @@ class RefactChatResourceHandler : CefResourceHandler, DumbAware {
         cefRequest: CefRequest,
         cefCallback: CefCallback
     ): Boolean {
-        val url = cefRequest.url
-        return if (url != null) {
-            val path = url.removePrefix("http://refactai/")
-            logger.debug("Looking for resource: $path")
-
-            val resourceStream = when {
-                path.startsWith("dist/") -> {
-                    javaClass.classLoader.getResourceAsStream(path)
-                }
-                else -> {
-                    val webviewPath = "webview/$path"
-                    javaClass.classLoader.getResourceAsStream(webviewPath)
-                }
-            }
-
-            state = if (resourceStream != null) {
-                logger.debug("Found resource stream for $path")
-                OpenedStream(resourceStream, url)
-            } else {
-                val fallbackUrl = javaClass.classLoader.getResource("webview/$path")
-                if (fallbackUrl != null) {
-                    OpenedConnection(fallbackUrl.openConnection())
-                } else {
-                    logger.debug("Resource not found: $path")
-                    ClosedConnection
-                }
-            }
-
-            currentUrl = url
-            cefCallback.Continue()
-            true
-        } else {
+        val url = cefRequest.url ?: run {
             logger.warn("Request URL is null")
-            false
+            return false
         }
+
+        val path = url.removePrefix("http://refactai/")
+        val resourcePath = if (path.startsWith("dist/")) path else "webview/$path"
+
+        val cached = ResourceCache.getOrLoad(resourcePath) {
+            javaClass.classLoader.getResourceAsStream(resourcePath)
+        }
+
+        state = if (cached != null) {
+            CachedResourceState(cached, url)
+        } else {
+            val fallbackUrl = javaClass.classLoader.getResource("webview/$path")
+            if (fallbackUrl != null) {
+                OpenedConnection(fallbackUrl.openConnection())
+            } else {
+                logger.debug("Resource not found: $path")
+                ClosedConnection
+            }
+        }
+
+        currentUrl = url
+        cefCallback.Continue()
+        return true
     }
 
     override fun getResponseHeaders(

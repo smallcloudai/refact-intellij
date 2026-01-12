@@ -62,5 +62,34 @@ class JcefConfigurer : ApplicationLoadListener {
             val fromProperty = System.getProperty(key, "").lowercase() == "true"
             return fromRegistry || fromProperty
         }
+
+        fun getPerformanceHints(): List<String> {
+            val hints = mutableListOf<String>()
+
+            if (isAffectedVersion() && isOutOfProcessEnabled()) {
+                hints.add("JCEF out-of-process mode may cause freezes in 2025.1.*")
+            }
+
+            val gpuDisabled = System.getProperty("ide.browser.jcef.gpu.disable", "false") == "true"
+            if (gpuDisabled) {
+                hints.add("JCEF GPU is disabled - this may reduce performance")
+            }
+
+            return hints
+        }
+
+        fun getRecommendedVmOptions(): String {
+            return buildString {
+                appendLine("# Recommended JCEF VM options for optimal performance:")
+                appendLine()
+                if (isAffectedVersion()) {
+                    appendLine("# Fix for IJPL-186252 freeze bug in 2025.1.*")
+                    appendLine("-Dide.browser.jcef.out-of-process.enabled=false")
+                    appendLine()
+                }
+                appendLine("# Force windowed rendering (faster than OSR)")
+                appendLine("-Drefact.jcef.force-osr=false")
+            }
+        }
     }
 }

@@ -103,7 +103,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun setupVisibilityTracking() {
         addHierarchyListener { e ->
-            if ((e.changeFlags.toLong() and java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0L) {
+            if (e.changeFlags and java.awt.event.HierarchyEvent.SHOWING_CHANGED.toLong() != 0L) {
                 val wasVisible = isPanelVisible
                 isPanelVisible = isShowing
                 if (!wasVisible && isPanelVisible) {

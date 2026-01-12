@@ -17,6 +17,7 @@ import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeAction
 import com.smallcloud.refactai.settings.AppSettingsState
 import com.smallcloud.refactai.settings.settingsStartup
+import com.smallcloud.refactai.utils.ResourceCache
 import java.util.concurrent.atomic.AtomicBoolean
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
@@ -40,9 +41,31 @@ class Initializer : ProjectActivity, Disposable {
             ApplicationManager.getApplication().getService(CloudMessageService::class.java)
 
             checkJcefStatus()
+            preWarmResources()
         }
         getLSPProcessHolder(project)
         project.getService(LSPActiveDocNotifierService::class.java)
+    }
+
+    private fun preWarmResources() {
+        if (!JBCefApp.isSupported()) return
+        ApplicationManager.getApplication().executeOnPooledThread {
+            try {
+                val resources = listOf(
+                    "webview/index.html",
+                    "dist/chat/index.umd.cjs",
+                    "dist/chat/style.css"
+                )
+                resources.forEach { path ->
+                    ResourceCache.getOrLoad(path) {
+                        javaClass.classLoader.getResourceAsStream(path)
+                    }
+                }
+                logger.info("Pre-warmed ${resources.size} resources for chat")
+            } catch (e: Exception) {
+                logger.debug("Resource pre-warming failed: ${e.message}")
+            }
+        }
     }
 
     private fun checkJcefStatus() {

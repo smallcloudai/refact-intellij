@@ -68,6 +68,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private var isDropdownOpen = false
     private val dropdownStateCheckAlarm = Alarm(this)
 
+    @Volatile
+    private var isPanelVisible = true
+
     private val messageQueue = SmartMessageQueue(
         maxCommands = 200,
         flushDebounceMs = 16L,
@@ -75,12 +78,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     )
 
     private val selectionDebouncer = EventDebouncer<Unit>(150L, this) {
-        doSendActiveFileInfo()
-        doSendSelectedSnippet()
+        if (isPanelVisible) {
+            doSendActiveFileInfo()
+            doSendSelectedSnippet()
+        }
     }
 
     private val configDebouncer = EventDebouncer<Unit>(100L, this) {
-        doSendUserConfig()
+        if (isPanelVisible) {
+            doSendUserConfig()
+        }
     }
 
     init {
@@ -91,6 +98,27 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
         this.addEventListeners()
         this.setupDropdownStateTracking()
+        this.setupVisibilityTracking()
+    }
+
+    private fun setupVisibilityTracking() {
+        addHierarchyListener { e ->
+            if ((e.changeFlags.toLong() and java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0L) {
+                val wasVisible = isPanelVisible
+                isPanelVisible = isShowing
+                if (!wasVisible && isPanelVisible) {
+                    onPanelBecameVisible()
+                }
+            }
+        }
+    }
+
+    private fun onPanelBecameVisible() {
+        if (browserLazy.isInitialized()) {
+            selectionDebouncer.flush()
+            configDebouncer.flush()
+            messageQueue.flushNow()
+        }
     }
 
     private fun isReady(): Boolean {

@@ -7,13 +7,13 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Optimized JavaScript executor with pooling, timeout handling, and batch execution support.
- * Provides better performance and reliability for JavaScript execution in ChatWebView.
+ * Simplified JavaScript executor for ChatWebView.
+ * JCEF's executeJavaScript is thread-safe and internally serializes calls.
  */
 class JavaScriptExecutor(
     private val browser: JBCefBrowser,
     private val timeoutMs: Long = 5000L,
-    private val poolSize: Int = 5
+    poolSize: Int = 3
 ) : Disposable {
 
     private val logger = Logger.getInstance(JavaScriptExecutor::class.java)
@@ -23,6 +23,7 @@ class JavaScriptExecutor(
         }
     }
     private val pendingExecutions = AtomicInteger(0)
+    @Volatile
     private var disposed = false
 
     companion object {
@@ -40,7 +41,11 @@ class JavaScriptExecutor(
 
         return CompletableFuture.runAsync({
             try {
-                executeWithTimeout(script, timeoutMs, description)
+                if (browser.isDisposed) {
+                    throw IllegalStateException("Browser is disposed")
+                }
+                // JCEF's executeJavaScript is thread-safe - no nested future needed
+                browser.cefBrowser.executeJavaScript(script, browser.cefBrowser.url, 0)
             } catch (e: Exception) {
                 logger.warn("JavaScript execution failed for $description", e)
                 throw e
@@ -70,34 +75,20 @@ class JavaScriptExecutor(
         return JavaScriptTemplate(template, this)
     }
 
-    private fun executeWithTimeout(script: String, timeoutMs: Long, description: String) {
-        val future = CompletableFuture.runAsync {
-            try {
-                if (!browser.isDisposed) {
-                    browser.cefBrowser.executeJavaScript(script, browser.cefBrowser.url, 0)
-                } else {
-                    throw IllegalStateException("Browser is disposed or null")
-                }
-            } catch (e: Exception) {
-                logger.warn("CEF JavaScript execution failed for $description", e)
-                throw e
-            }
-        }
-
-        try {
-            future.get(timeoutMs, TimeUnit.MILLISECONDS)
-        } catch (e: TimeoutException) {
-            future.cancel(true)
-            throw RuntimeException("JavaScript execution timed out after ${timeoutMs}ms for $description")
-        } catch (e: ExecutionException) {
-            throw e.cause ?: e
-        }
-    }
-
     fun awaitCompletion(timeoutMs: Long = 10000L): Boolean {
         val deadline = System.currentTimeMillis() + timeoutMs
+        var waited = 0L
         while (pendingExecutions.get() > 0 && System.currentTimeMillis() < deadline) {
-            Thread.sleep(100)
+            try {
+                Thread.sleep(50)
+                waited += 50
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                break
+            }
+        }
+        if (waited > 0 && pendingExecutions.get() > 0) {
+            logger.debug("Waited ${waited}ms, still ${pendingExecutions.get()} pending")
         }
         return pendingExecutions.get() == 0
     }
@@ -107,15 +98,17 @@ class JavaScriptExecutor(
         disposed = true
         logger.info("Disposing JavaScriptExecutor with ${pendingExecutions.get()} pending executions")
 
-        awaitCompletion(2000L)
-        executor.shutdownNow()
-
+        executor.shutdown()
         try {
-            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                logger.warn("JavaScriptExecutor did not terminate gracefully")
+            if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
+                executor.shutdownNow()
+                if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
+                    logger.warn("JavaScriptExecutor did not terminate gracefully")
+                }
             }
         } catch (e: InterruptedException) {
-            logger.warn("Interrupted while waiting for JavaScriptExecutor termination")
+            executor.shutdownNow()
+            Thread.currentThread().interrupt()
         }
 
         logger.info("JavaScriptExecutor disposal completed")

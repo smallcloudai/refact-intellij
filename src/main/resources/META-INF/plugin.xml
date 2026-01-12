@@ -126,6 +126,8 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
+        <applicationLoadListener implementation="com.smallcloud.refactai.JcefConfigurer"/>
+
         <applicationService serviceImplementation="com.smallcloud.refactai.PluginState"/>
         <postStartupActivity implementation="com.smallcloud.refactai.Initializer"/>
         <config.codeVisionGroupSettingProvider implementation="com.smallcloud.refactai.code_lens.RefactOpenChatSettingProvider"/>

@@ -1,7 +1,5 @@
 package com.smallcloud.refactai
 
-import com.intellij.openapi.application.ApplicationInfo
-import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ide.plugins.PluginInstaller
 import com.intellij.openapi.Disposable
@@ -23,10 +21,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 
 class Initializer : ProjectActivity, Disposable {
+    private val logger = Logger.getInstance("SMCInitializer")
+
     override suspend fun execute(project: Project) {
         val shouldInitialize = !(initialized.getAndSet(true) || ApplicationManager.getApplication().isUnitTestMode)
         if (shouldInitialize) {
-            Logger.getInstance("SMCInitializer").info("Bin prefix = ${Resources.binPrefix}")
+            logger.info("Bin prefix = ${Resources.binPrefix}")
             initialize()
             if (AppSettingsState.instance.isFirstStart) {
                 AppSettingsState.instance.isFirstStart = false
@@ -38,32 +38,39 @@ class Initializer : ProjectActivity, Disposable {
             UpdateChecker.instance
 
             ApplicationManager.getApplication().getService(CloudMessageService::class.java)
-            if (!JBCefApp.isSupported()) {
-                emitInfo(RefactAIBundle.message("notifications.chatCanNotStartWarning"), false)
-            }
 
-            // notifications.chatCanFreezeWarning
-            // Show warning for 2025.* IDE versions with JCEF out-of-process enabled
-            if (JBCefApp.isSupported()) {
-                val appInfo = ApplicationInfo.getInstance()
-                val is2025 = appInfo.majorVersion == "2025"
-                val outOfProc = try {
-                    Registry.get("ide.browser.jcef.out-of-process.enabled").asBoolean()
-                } catch (_: Throwable) {
-                    false
-                }
-                if (is2025 && outOfProc) {
-                    emitInfo(RefactAIBundle.message("notifications.chatCanFreezeWarning"), false)
-                }
-            }
+            checkJcefStatus()
         }
         getLSPProcessHolder(project)
         project.getService(LSPActiveDocNotifierService::class.java)
     }
 
-    override fun dispose() {
+    private fun checkJcefStatus() {
+        if (!JBCefApp.isSupported()) {
+            emitInfo(RefactAIBundle.message("notifications.chatCanNotStartWarning"), false)
+            return
+        }
+
+        val configFailed = JcefConfigurer.configurationFailed()
+        if (configFailed != null) {
+            logger.warn("JCEF auto-configuration failed: $configFailed")
+            emitInfo(RefactAIBundle.message("notifications.chatCanFreezeWarning"), false)
+            return
+        }
+
+        if (JcefConfigurer.wasAutoConfigured()) {
+            logger.info("JCEF was auto-configured successfully")
+            return
+        }
+
+        if (JcefConfigurer.isAffectedVersion() && JcefConfigurer.isOutOfProcessEnabled()) {
+            logger.warn("Affected JCEF version detected, auto-config may not have applied")
+            emitInfo(RefactAIBundle.message("notifications.chatCanFreezeWarning"), false)
+        }
     }
 
+    override fun dispose() {
+    }
 }
 
 private val initialized = AtomicBoolean(false)

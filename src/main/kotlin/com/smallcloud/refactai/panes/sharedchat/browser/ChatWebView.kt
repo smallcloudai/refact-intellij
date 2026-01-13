@@ -198,7 +198,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             jbcefBrowser.component
         }
 
-        setupCommonBrowserFeatures()
+        setupCommonBrowserFeatures(resultComponent)
         return resultComponent
     }
 
@@ -225,7 +225,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         jbcefBrowser.jbCefClient.addKeyboardHandler(onTabHandler, cefBrowser)
     }
 
-    private fun setupCommonBrowserFeatures() {
+    private fun setupCommonBrowserFeatures(browserComponent: JComponent) {
         if (System.getenv("REFACT_DEBUG") != "1") {
             jbcefBrowser.setProperty(JBCefBrowserBase.Properties.NO_CONTEXT_MENU, true)
         }
@@ -270,12 +270,12 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             }, cefBrowser)
         }
 
-        setupFocusRecovery()
+        setupFocusRecovery(browserComponent)
         setupHealthCheck()
     }
 
-    private fun setupFocusRecovery() {
-        component.addFocusListener(object : FocusAdapter() {
+    private fun setupFocusRecovery(browserComponent: JComponent) {
+        browserComponent.addFocusListener(object : FocusAdapter() {
             override fun focusGained(e: FocusEvent?) {
                 checkBrowserHealth()
             }
@@ -510,12 +510,13 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         """
                         function loadChatJs() {
                             const element = document.getElementById("refact-chat");
-                            if (typeof RefactChat !== 'undefined') {
+                            const config = window.__INITIAL_STATE__?.config;
+                            if (typeof RefactChat !== 'undefined' && config) {
                                 RefactChat.render(element, config);
                                 console.log('RefactChat initialized successfully');
                                 try { ${readyQuery.inject("'ready'")} } catch(e) { console.error('Ready signal failed', e); }
                             } else {
-                                console.error('RefactChat not available');
+                                console.error('RefactChat not available or config missing', typeof RefactChat, config);
                             }
                         }
 

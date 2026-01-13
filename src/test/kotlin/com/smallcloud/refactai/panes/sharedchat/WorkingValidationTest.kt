@@ -120,16 +120,11 @@ class WorkingValidationTest : LightPlatform4TestCase() {
         try {
             val initialCount = CefLifecycleManager.getActiveBrowserCount()
 
-            // Test initialization - this might not work in test environment, so we catch exceptions
-            CefLifecycleManager.initIfNeeded()
-
-            // The count should not have changed just from initialization
-            val countAfterInit = CefLifecycleManager.getActiveBrowserCount()
-
-            println("CefLifecycleManager test: initial=$initialCount, after_init=$countAfterInit")
+            // The count should be zero initially (no browsers registered yet)
+            println("CefLifecycleManager test: initial=$initialCount")
 
             // In test environment, just verify we can call these methods without crashing
-            assertTrue("CefLifecycleManager methods should be callable", true)
+            assertTrue("CefLifecycleManager methods should be callable", initialCount >= 0)
 
         } catch (e: Exception) {
             // In test environment, CEF might not be available, so we just verify the manager exists

@@ -74,20 +74,8 @@ class Initializer : ProjectActivity, Disposable {
             return
         }
 
-        val configFailed = JcefConfigurer.configurationFailed()
-        if (configFailed != null) {
-            logger.warn("JCEF auto-configuration failed: $configFailed")
-            emitInfo(RefactAIBundle.message("notifications.chatCanFreezeWarning"), false)
-            return
-        }
-
-        if (JcefConfigurer.wasAutoConfigured()) {
-            logger.info("JCEF was auto-configured successfully")
-            return
-        }
-
         if (JcefConfigurer.isAffectedVersion() && JcefConfigurer.isOutOfProcessEnabled()) {
-            logger.warn("Affected JCEF version detected, auto-config may not have applied")
+            logger.warn("JCEF out-of-process mode detected on affected version 2025.1.*")
             emitInfo(RefactAIBundle.message("notifications.chatCanFreezeWarning"), false)
         }
     }

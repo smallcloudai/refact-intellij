@@ -226,7 +226,7 @@ class RefactChatResourceHandler : CefResourceHandler, DumbAware {
         }
 
         val path = url.removePrefix("http://refactai/")
-        val resourcePath = if (path.startsWith("dist/")) path else "webview/$path"
+        val resourcePath = "webview/$path"
 
         val cached = ResourceCache.getOrLoad(resourcePath) {
             javaClass.classLoader.getResourceAsStream(resourcePath)
@@ -235,11 +235,11 @@ class RefactChatResourceHandler : CefResourceHandler, DumbAware {
         state = if (cached != null) {
             CachedResourceState(cached, url)
         } else {
-            val fallbackUrl = javaClass.classLoader.getResource("webview/$path")
+            val fallbackUrl = javaClass.classLoader.getResource(resourcePath)
             if (fallbackUrl != null) {
                 OpenedConnection(fallbackUrl.openConnection())
             } else {
-                logger.debug("Resource not found: $path")
+                logger.debug("Resource not found: $resourcePath")
                 ClosedConnection
             }
         }

@@ -154,12 +154,12 @@ fun lspGetCommitMessage(project: Project, diff: String, currentMessage: String):
     if (baseUrl.toString().isBlank()) return ""
 
     val url = baseUrl.resolve("/v1/commit-message-from-diff")
-    val data = Gson().toJson(
-        mapOf(
-            "diff" to diff,
-            "text" to currentMessage,
-        )
-    )
+    val requestBody = mutableMapOf<String, String>("diff" to diff)
+    if (currentMessage.isNotBlank()) {
+        requestBody["text"] = currentMessage
+    }
+    val data = Gson().toJson(requestBody)
+
     InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
         InferenceGlobalContext.status = ConnectionStatus.CONNECTED
         InferenceGlobalContext.lastErrorMsg = null

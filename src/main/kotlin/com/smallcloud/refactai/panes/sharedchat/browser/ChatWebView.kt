@@ -16,6 +16,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
+import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.panes.sharedchat.Editor
@@ -67,6 +68,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         private val schemeHandlerRegistered = AtomicBoolean(false)
         private val companionLogger = Logger.getInstance(ChatWebView::class.java)
 
+        private const val JS_QUERY_POOL_SIZE = 200
         private const val PREF_KEY_RENDERING_MODE = "refact.jcef.rendering.mode"
         private const val PREF_KEY_CRASH_COUNT = "refact.jcef.crash.count"
         private const val PREF_KEY_LAST_CRASH_TIME = "refact.jcef.last.crash.time"
@@ -264,7 +266,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             logger.info("Creating JBCefBrowser with OSR=$useOffscreenRendering")
             jbcefBrowser = JBCefBrowser.createBuilder()
                 .setEnableOpenDevToolsMenuItem(true)
-                .setUrl("http://refactai/index.html")
                 .setOffScreenRendering(useOffscreenRendering)
                 .build()
 
@@ -272,16 +273,19 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             CefLifecycleManager.registerBrowser(cefBrowser)
             logger.info("JBCefBrowser created successfully, cefBrowser=${cefBrowser.javaClass.simpleName}")
 
+            jbcefBrowser.jbCefClient.setProperty(JBCefClient.Properties.JS_QUERY_POOL_SIZE, JS_QUERY_POOL_SIZE)
+
             jsQueryManager = JSQueryManager(jbcefBrowser)
             asyncMessageHandler = AsyncMessageHandler(Events::parse, messageHandler)
             jsExecutor = JavaScriptExecutor(jbcefBrowser, timeoutMs = 5000L, poolSize = 3)
             postMessageTemplate = jsExecutor.createTemplate("window.postMessage(%s, '*');")
 
             component = setupPlatformSpecificFeatures()
-            registerSchemeHandlerOnce()
             setupJavaScriptQueries()
             setupLoadHandler()
+            registerSchemeHandlerOnce()
             jbcefBrowser.createImmediately()
+            jbcefBrowser.loadURL("http://refactai/index.html")
 
             logger.info("ChatWebView initialization completed successfully")
 

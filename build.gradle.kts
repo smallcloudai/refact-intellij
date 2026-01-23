@@ -38,6 +38,7 @@ dependencies {
 
     // test libraries
     testImplementation(kotlin("test"))
+    testImplementation("com.google.code.gson:gson:2.10.1")
     testImplementation("com.squareup.okhttp3:mockwebserver3:5.0.0-alpha.14")
     testImplementation("org.bouncycastle:bcpkix-jdk15on:1.68")
     testImplementation("org.mockito:mockito-core:5.10.0")
@@ -93,6 +94,17 @@ intellijPlatform {
 val runIdeWith2025 by intellijPlatformTesting.runIde.registering {
     type = IntelliJPlatformType.PyCharmCommunity // or IdeaUltimate if you use IU
     version = "2025.1"
+    useInstaller = false
+}
+
+// Configurable via: -PrunIdeType=IntellijIdeaUltimate -PrunIdeVersion=2024.3.5
+// Available types: IntellijIdeaCommunity, IntellijIdeaUltimate, PyCharmCommunity,
+//                  PyCharmProfessional, CLion, GoLand, WebStorm, PhpStorm, Rider, RustRover
+val runIdeCustom by intellijPlatformTesting.runIde.registering {
+    type = IntelliJPlatformType.valueOf(
+        providers.gradleProperty("runIdeType").getOrElse("IntellijIdeaUltimate")
+    )
+    version = providers.gradleProperty("runIdeVersion").getOrElse("2025.1")
     useInstaller = false
 }
 

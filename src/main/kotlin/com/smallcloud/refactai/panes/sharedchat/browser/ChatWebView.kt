@@ -56,7 +56,7 @@ fun getActionKeybinding(actionId: String): String {
 class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromChat) -> Unit) : Disposable {
     private val logger = Logger.getInstance(ChatWebView::class.java)
 
-    private val initializationState = AtomicInteger(0) // 0=not loaded, 1=page loaded, 2=React ready
+    private val initializationState = AtomicInteger(0) // 0=not loaded, 1=page loaded, 2=setup in progress, 3=React ready
     private val browserHealthy = AtomicBoolean(true)
     private var healthCheckTimer: Timer? = null
     private var setupDelayTimer: Timer? = null
@@ -144,7 +144,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 CefApp.getInstance().registerSchemeHandlerFactory("http", "refactai", RequestHandlerFactory())
                 companionLogger.info("Registered scheme handler for http://refactai/")
             } catch (e: Exception) {
-                companionLogger.warn("Failed to register scheme handler: ${e.message}")
+                companionLogger.warn("Failed to register scheme handler", e)
                 schemeHandlerRegistered.set(false)
             }
         }
@@ -533,8 +533,11 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         linkQuery = jsQueryManager.createStringQuery { href ->
             if (href.isNotEmpty() && !href.contains("#") && href != "http://refactai/index.html") {
-                ApplicationManager.getApplication().invokeLater {
-                    BrowserUtil.browse(href)
+                val uri = runCatching { java.net.URI(href) }.getOrNull()
+                if (uri?.scheme?.lowercase() in listOf("http", "https")) {
+                    ApplicationManager.getApplication().invokeLater {
+                        BrowserUtil.browse(href)
+                    }
                 }
             }
         }
@@ -546,8 +549,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         readyQuery = jsQueryManager.createStringQuery { message ->
             if (message == "ready") {
-                val previousState = initializationState.getAndSet(2)
-                if (previousState < 2) {
+                val previousState = initializationState.getAndSet(3)
+                if (previousState < 3) {
                     logger.info("React application signaled ready")
                 }
             }
@@ -655,7 +658,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             val gson = Gson()
             val config = editor.getUserConfig()
             val configJson = gson.toJson(config)
-            val currentProject = """{ name: "${editor.project.name}" }"""
+            val currentProject = gson.toJson(mapOf("name" to editor.project.name))
 
             logger.debug("User config prepared")
 
@@ -752,15 +755,15 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         return component
     }
 
-    // Expose webView for backward compatibility with tests
+    fun isReady(): Boolean = initializationState.get() >= 3 && !jbcefBrowser.isDisposed
+
     val webView: JBCefBrowser
         get() = jbcefBrowser
 
     fun postMessage(message: Events.ToChat<*>?) {
         if (message == null) return
 
-        // Check if browser is initialized and healthy
-        if (initializationState.get() < 2) {
+        if (initializationState.get() < 3) {
             logger.warn("Attempted to post message before browser initialization complete")
             return
         }

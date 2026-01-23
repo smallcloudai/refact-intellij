@@ -21,18 +21,16 @@ object CefLifecycleManager {
     }
 
     fun releaseBrowser(browser: CefBrowser) {
-        synchronized(lock) {
-            val wasTracked = browsers.remove(browser)
-            try {
-                browser.close(true)
-                if (wasTracked) {
-                    logger.debug("Browser closed. Remaining browsers: ${browsers.size}")
-                } else {
-                    logger.debug("Released untracked browser")
-                }
-            } catch (e: Exception) {
-                logger.warn("Error closing browser", e)
-            }
+        val wasTracked = synchronized(lock) { browsers.remove(browser) }
+        if (!wasTracked) {
+            logger.debug("Skipping close for untracked browser")
+            return
+        }
+        try {
+            browser.close(true)
+            logger.debug("Browser closed. Remaining browsers: ${synchronized(lock) { browsers.size }}")
+        } catch (e: Exception) {
+            logger.warn("Error closing browser", e)
         }
     }
 

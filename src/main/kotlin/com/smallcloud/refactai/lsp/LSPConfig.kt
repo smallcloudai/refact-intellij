@@ -26,10 +26,23 @@ data class LSPConfig(
             params.add("--http-port")
             params.add("$port")
         }
-        if (apiKey != null) {
+        apiKey?.let {
             params.add("--api-key")
-            params.add("$apiKey")
+            params.add(it)
         }
+        return params + toCommonArgs()
+    }
+
+    fun toSafeLogString(): String {
+        val safe = mutableListOf<String>()
+        address?.let { safe.add("--address-url $it") }
+        port?.let { safe.add("--http-port $it") }
+        if (apiKey != null) safe.add("--api-key ***")
+        return (safe + toCommonArgs()).joinToString(" ")
+    }
+
+    private fun toCommonArgs(): List<String> {
+        val params = mutableListOf<String>()
         if (clientVersion != null) {
             params.add("--enduser-client-version")
             params.add("$clientVersion")

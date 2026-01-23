@@ -52,41 +52,67 @@ class RefactCodeVisionProvider(
     private fun getCodeLens(editor: Editor): List<CodeLen> {
         val codeLensStr = lspGetCodeLens(editor)
         val gson = Gson()
-        val codeLensJson = gson.fromJson(codeLensStr, JsonObject::class.java)
+        val codeLensJson = try {
+            gson.fromJson(codeLensStr, JsonObject::class.java)
+        } catch (_: Exception) {
+            return emptyList()
+        } ?: return emptyList()
+
         val resCodeLenses = mutableListOf<CodeLen>()
-        if (customization.has("code_lens")) {
-            val allCodeLenses = customization.get("code_lens").asJsonObject
-            if (codeLensJson.has("code_lens")) {
-                val codeLenses = codeLensJson.get("code_lens")!!.asJsonArray
-                for (codeLens in codeLenses) {
-                    val line1 = max(codeLens.asJsonObject.get("line1").asInt - 1, 0)
-                    val line2 = max(codeLens.asJsonObject.get("line2").asInt - 1, 0)
-                    val range = runReadAction {
-                        return@runReadAction TextRange(
-                            editor.logicalPositionToOffset(LogicalPosition(line1, 0)),
-                            editor.document.getLineEndOffset(line2)
-                        )
-                    }
-                    val value = allCodeLenses.get(commandKey).asJsonObject
-                    val msgs = value.asJsonObject.get("messages").asJsonArray.map {
-                        gson.fromJson(it.asJsonObject, ChatMessage::class.java)
-                    }.toTypedArray()
-                    val userMsg = msgs.find { it.role == "user" }
+        if (!customization.has("code_lens")) return resCodeLenses
 
-                    val sendImmediately = value.asJsonObject.get("auto_submit").asBoolean
-                    val openNewTab = value.asJsonObject.get("new_tab")?.asBoolean ?: true
+        val allCodeLenses = customization.get("code_lens")
+        if (allCodeLenses == null || !allCodeLenses.isJsonObject) return resCodeLenses
 
-                    val isValidCodeLen = msgs.isEmpty() || userMsg != null
-                    if (isValidCodeLen) {
-                        resCodeLenses.add(
-                            CodeLen(
-                                range,
-                                value.asJsonObject.get("label").asString,
-                                CodeLensAction(editor, line1, line2, msgs, sendImmediately, openNewTab)
-                            )
-                        )
-                    }
+        if (!codeLensJson.has("code_lens")) return resCodeLenses
+        val codeLenses = codeLensJson.get("code_lens")
+        if (codeLenses == null || !codeLenses.isJsonArray) return resCodeLenses
+
+        val lineCount = runReadAction { editor.document.lineCount }
+        if (lineCount == 0) return resCodeLenses
+
+        for (codeLens in codeLenses.asJsonArray) {
+            try {
+                val obj = codeLens.asJsonObject
+                var line1 = max(obj.get("line1")?.asInt?.minus(1) ?: continue, 0).coerceAtMost(lineCount - 1)
+                var line2 = max(obj.get("line2")?.asInt?.minus(1) ?: continue, 0).coerceAtMost(lineCount - 1)
+                if (line2 < line1) {
+                    val tmp = line1
+                    line1 = line2
+                    line2 = tmp
                 }
+
+                val value = allCodeLenses.asJsonObject.get(commandKey)
+                if (value == null || !value.isJsonObject) continue
+
+                val range = runReadAction {
+                    val startOffset = editor.document.getLineStartOffset(line1)
+                    val endOffset = editor.document.getLineEndOffset(line2)
+                    TextRange(startOffset, endOffset)
+                }
+
+                val messagesJson = value.asJsonObject.get("messages")
+                val msgs = if (messagesJson != null && messagesJson.isJsonArray) {
+                    messagesJson.asJsonArray.mapNotNull {
+                        try { gson.fromJson(it.asJsonObject, ChatMessage::class.java) } catch (_: Exception) { null }
+                    }.toTypedArray()
+                } else {
+                    emptyArray()
+                }
+                val userMsg = msgs.find { it.role == "user" }
+
+                val sendImmediately = value.asJsonObject.get("auto_submit")?.asBoolean ?: false
+                val openNewTab = value.asJsonObject.get("new_tab")?.asBoolean ?: true
+                val label = value.asJsonObject.get("label")?.asString ?: continue
+
+                val isValidCodeLen = msgs.isEmpty() || userMsg != null
+                if (isValidCodeLen) {
+                    resCodeLenses.add(
+                        CodeLen(range, label, CodeLensAction(editor, line1, line2, msgs, sendImmediately, openNewTab))
+                    )
+                }
+            } catch (_: Exception) {
+                continue
             }
         }
 

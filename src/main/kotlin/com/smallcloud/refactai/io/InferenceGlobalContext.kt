@@ -88,11 +88,8 @@ class InferenceGlobalContext : Disposable {
 
     val deploymentMode: DeploymentMode
         get() {
-            if (AppSettingsState.userInferenceUri == null) {
-                return DeploymentMode.CLOUD
-            }
-
-            return when(AppSettingsState.userInferenceUri!!.lowercase()) {
+            val uri = AppSettingsState.userInferenceUri ?: return DeploymentMode.CLOUD
+            return when(uri.lowercase()) {
                 "hf" -> DeploymentMode.HF
                 "refact" -> DeploymentMode.CLOUD
                 else -> DeploymentMode.SELF_HOSTED

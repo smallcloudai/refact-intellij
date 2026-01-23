@@ -20,30 +20,31 @@ interface ExtraInfoChangedNotifier {
 class PluginState : Disposable {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
 
-    var tooltipMessage: String? = null
+    var tooltipMessage: String?
         get() = AppSettingsState.instance.tooltipMessage
         set(newMsg) {
             if (AppSettingsState.instance.tooltipMessage == newMsg) return
+            AppSettingsState.instance.tooltipMessage = newMsg
             messageBus
                 .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
-                .tooltipMessageChanged(field)
+                .tooltipMessageChanged(newMsg)
         }
 
-    var inferenceMessage: String? = null
+    var inferenceMessage: String?
         get() = AppSettingsState.instance.inferenceMessage
         set(newMsg) {
-            if (field != newMsg) {
-                field = newMsg
-                messageBus
-                    .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
-                    .inferenceMessageChanged(field)
-            }
+            if (AppSettingsState.instance.inferenceMessage == newMsg) return
+            AppSettingsState.instance.inferenceMessage = newMsg
+            messageBus
+                .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
+                .inferenceMessageChanged(newMsg)
         }
 
     var loginMessage: String?
         get() = AppSettingsState.instance.loginMessage
         set(newMsg) {
-            if (loginMessage == newMsg) return
+            if (AppSettingsState.instance.loginMessage == newMsg) return
+            AppSettingsState.instance.loginMessage = newMsg
             messageBus
                 .syncPublisher(ExtraInfoChangedNotifier.TOPIC)
                 .loginMessageChanged(newMsg)

@@ -63,6 +63,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     var id: String? = null
     private val animatedFiles = mutableSetOf<String>()
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("SMCRainbowScheduler", 2)
+    private val canonicalProjectRoot: String? = project.basePath?.let {
+        runCatching { File(it).canonicalPath }.getOrNull()
+    }
 
     private var isDropdownOpen = false
     private val dropdownStateCheckAlarm = Alarm(this)
@@ -90,10 +93,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     init {
+        messageQueue.setReadyCheck { browserLazy.isInitialized() && browser.isReady() }
         messageQueue.setFlushCallback { messages ->
-            if (isReady() && browserLazy.isInitialized()) {
-                messages.forEach { browser.postMessage(it) }
-            }
+            messages.forEach { browser.postMessage(it) }
         }
         this.addEventListeners()
         this.setupDropdownStateTracking()
@@ -167,7 +169,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun doSendActiveFileInfo() {
         this.editor.getActiveFileInfo { file ->
-            val message = ActiveFileToChat(file)
+            val safeFile = if (file.path.isNotEmpty() && isPathWithinProject(file.path)) {
+                file
+            } else {
+                file.copy(content = null)
+            }
+            val message = ActiveFileToChat(safeFile)
             this.postMessage(message)
         }
     }
@@ -197,25 +204,33 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             }
 
             is Host.BringYourOwnKey -> {
-                val process = GeneralCommandLine(listOf(BIN_PATH, "--only-create-yaml-configs"))
+                val binPath = BIN_PATH
+                if (binPath == null) {
+                    logger.warn("BringYourOwnKey: BIN_PATH is null")
+                    return
+                }
+                val process = GeneralCommandLine(listOf(binPath, "--only-create-yaml-configs"))
                     .withRedirectErrorStream(true)
                     .createProcess()
                 process.awaitExit()
                 val out = process.getResultStdoutStr().getOrNull()
                 if (out == null) {
-                    println("Save btok file output is null")
+                    logger.warn("BringYourOwnKey: process output is null")
                     return
                 }
-                val fileName = out.lines().last()
+                val fileName = out.lines().lastOrNull()?.trim() ?: return
+                val file = File(fileName)
+                if (!file.isFile) {
+                    logger.warn("BringYourOwnKey: not a valid file: $fileName")
+                    return
+                }
 
                 ApplicationManager.getApplication().invokeLater {
-                    val virtualFile: VirtualFile? =
-                        LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(fileName))
+                    val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
                     if (virtualFile != null) {
-                        // Open the file in the editor
                         FileEditorManager.getInstance(project).openFile(virtualFile, true)
                     } else {
-                        println("File not found: $fileName")
+                        logger.warn("BringYourOwnKey: file not found: $fileName")
                     }
                     accountManager.apiKey = "any-key-will-work"
                     InferenceGlobalContext.instance.inferenceUri = fileName
@@ -237,7 +252,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
+    private fun isSafeExternalUrl(url: String): Boolean {
+        val uri = runCatching { java.net.URI(url) }.getOrNull() ?: return false
+        return uri.scheme?.lowercase() in listOf("http", "https")
+    }
+
     private fun openExternalUrl(url: String) {
+        if (!isSafeExternalUrl(url)) {
+            logger.warn("Blocked unsafe external URL: $url")
+            return
+        }
         BrowserUtil.browse(url)
     }
 
@@ -532,16 +556,15 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handleOpenFile(fileName: String, line: Int?) {
-        val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
-        val file = File(sanitizedFileName)
-        logger.warn("handleOpenFile: $fileName")
+        val validatedPath = validateAndSanitizePath(fileName, "handleOpenFile") ?: return
+        val file = File(validatedPath)
         invokeLater {
             val vf = VfsUtil.findFileByIoFile(file, true) ?: return@invokeLater
             val fileDescriptor = OpenFileDescriptor(project, vf)
             val editor = FileEditorManager.getInstance(project).openTextEditor(fileDescriptor, true)
-            logger.warn("handleOpenFile: $fileName found")
             line?.let {
-                editor?.caretModel?.moveToLogicalPosition(LogicalPosition(line, 0))
+                val targetLine = (line - 1).coerceAtLeast(0)
+                editor?.caretModel?.moveToLogicalPosition(LogicalPosition(targetLine, 0))
             }
         }
     }
@@ -576,39 +599,35 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun isPathWithinProject(path: String): Boolean {
-        val canonicalPath = try {
-            File(path).canonicalPath
-        } catch (e: Exception) {
-            logger.warn("Failed to canonicalize path: $path", e)
-            return false
-        }
+        val root = canonicalProjectRoot ?: return false
+        val canonicalPath = runCatching { File(path).canonicalPath }.getOrNull() ?: return false
+        return canonicalPath == root || canonicalPath.startsWith(root + File.separator)
+    }
 
-        val projectBasePath = project.basePath ?: return false
-        val canonicalProjectPath = try {
-            File(projectBasePath).canonicalPath
-        } catch (e: Exception) {
-            logger.warn("Failed to canonicalize project path: $projectBasePath", e)
-            return false
-        }
-
-        return canonicalPath.startsWith(canonicalProjectPath + File.separator) ||
-               canonicalPath == canonicalProjectPath
+    private fun resolveProjectPath(fileName: String): String {
+        val sanitized = sanitizeFileNameForPosix(fileName)
+        val file = File(sanitized)
+        if (file.isAbsolute) return sanitized
+        val base = project.basePath ?: return sanitized
+        return File(base, sanitized).path
     }
 
     private fun validateAndSanitizePath(fileName: String, operation: String): String? {
-        val sanitized = sanitizeFileNameForPosix(fileName)
+        val resolved = resolveProjectPath(fileName)
 
-        if (sanitized.contains("..")) {
-            logger.warn("$operation blocked: path contains '..': $fileName")
+        val canonical = try {
+            File(resolved).canonicalPath
+        } catch (e: Exception) {
+            logger.warn("$operation blocked: failed to canonicalize path: $fileName", e)
             return null
         }
 
-        if (!isPathWithinProject(sanitized)) {
+        if (!isPathWithinProject(canonical)) {
             logger.warn("$operation blocked: path outside project: $fileName (project: ${project.basePath})")
             return null
         }
 
-        return sanitized
+        return canonical
     }
 
     private fun openNewFile(fileName: String): File? {
@@ -760,40 +779,50 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private fun handleToolCall(payload: Events.IdeAction.ToolCallPayload) {
         when (val toolCall = payload.toolCall) {
             is TextDocToolCall.CreateTextDocToolCall -> {
-                val path = this.sanitizeFileNameForPosix(toolCall.function.arguments.path)
+                val path = validateAndSanitizePath(toolCall.function.arguments.path, "handleToolCall") ?: run {
+                    handleFileAction(toolCall.id, payload.chatId, false)
+                    return
+                }
                 val content = payload.edit.fileAfter
                 createAndSetFileContent(path, content, payload.chatId, toolCall.id)
             }
             is TextDocToolCall.UpdateTextDocToolCall -> {
-                val path = this.sanitizeFileNameForPosix(toolCall.function.arguments.path)
+                val path = validateAndSanitizePath(toolCall.function.arguments.path, "handleToolCall") ?: run {
+                    handleFileAction(toolCall.id, payload.chatId, false)
+                    return
+                }
                 showPatch(
                     path,
                     payload.edit.fileAfter,
-                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, true); },
-                    {_, _, _ ->  handleFileAction(toolCall.id, payload.chatId, false); }
+                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, true) },
+                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, false) }
                 )
             }
             is TextDocToolCall.ReplaceTextDocToolCall -> {
-                val path = this.sanitizeFileNameForPosix(toolCall.function.arguments.path)
+                val path = validateAndSanitizePath(toolCall.function.arguments.path, "handleToolCall") ?: run {
+                    handleFileAction(toolCall.id, payload.chatId, false)
+                    return
+                }
                 showPatch(
                     path,
                     payload.edit.fileAfter,
-                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, true); },
-                    {_, _, _ ->  handleFileAction(toolCall.id, payload.chatId, false); }
+                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, true) },
+                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, false) }
                 )
             }
             is TextDocToolCall.UpdateRegexTextDocToolCall -> {
-                val path = this.sanitizeFileNameForPosix(toolCall.function.arguments.path)
+                val path = validateAndSanitizePath(toolCall.function.arguments.path, "handleToolCall") ?: run {
+                    handleFileAction(toolCall.id, payload.chatId, false)
+                    return
+                }
                 showPatch(
                     path,
                     payload.edit.fileAfter,
-                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, true); },
-                    {_, _, _ ->  handleFileAction(toolCall.id, payload.chatId, false); }
+                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, true) },
+                    { _, _, _ -> handleFileAction(toolCall.id, payload.chatId, false) }
                 )
             }
-            else -> {
-                // Apply the edit to a file with diff
-            }
+            else -> {}
         }
     }
 
@@ -842,10 +871,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
 
     private fun handleFileAction(toolCallId: String, chatId: String, saved: Boolean) {
-        println("handleFileAciton")
         val actionPayload = Events.IdeAction.ToolCallResponsePayload(toolCallId, chatId, saved)
         val action = Events.IdeAction.ToolCallResponse(actionPayload)
-        println(action);
         postMessage(action)
     }
 

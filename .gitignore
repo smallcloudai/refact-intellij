@@ -41,3 +41,5 @@ bin/
 
 src/main/resources/bin/
 src/main/resources/webview/dist
+
+.refact/*

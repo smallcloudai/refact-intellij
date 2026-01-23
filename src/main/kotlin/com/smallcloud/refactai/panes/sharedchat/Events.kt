@@ -31,6 +31,7 @@ class EventNames {
         STOP_ANIMATION("ide/animateFile/stop"),
         DIFF_PREVIEW("ide/diffPreview"),
         WRITE_RESULTS_TO_FILE("ide/writeResultsToFile"),
+        IS_CHAT_STREAMING("ide/isChatStreaming"),
         CHAT_PAGE_CHANGE("ide/chatPageChange"),
         IDE_TOOL_EDIT("ide/toolEdit"),
         FORCE_RELOAD_FILE_BY_PATH("ide/forceReloadFileByPath"),
@@ -103,6 +104,9 @@ class Events {
                 // EventNames.FromChat.FIM_READY.value -> p2?.deserialize(payload, Fim.Ready::class.java)
                 EventNames.FromChat.FIM_REQUEST.value -> Fim.Request()
                 EventNames.FromChat.OPEN_HOTKEYS.value -> OpenHotKeys()
+                EventNames.FromChat.IS_CHAT_STREAMING.value -> {
+                    IsChatStreaming(payload?.asBoolean ?: false)
+                }
                 EventNames.FromChat.CHAT_PAGE_CHANGE.value -> {
                     ChatPageChange(payload?.asString ?: "")
                 }
@@ -328,6 +332,7 @@ class Events {
     ) : Serializable
 
 
+    class IsChatStreaming(val isStreaming: Boolean) : FromChat(EventNames.FromChat.IS_CHAT_STREAMING, isStreaming)
     class ChatPageChange(val currentPage: String) : FromChat(EventNames.FromChat.CHAT_PAGE_CHANGE, currentPage)
     class OpenSettings : FromChat(EventNames.FromChat.OPEN_SETTINGS, null)
 

@@ -142,12 +142,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     fun executeCodeLensCommand(messages: Array<ChatMessage>, sendImmediately: Boolean, openNewTab: Boolean) {
-        if (openNewTab || this.currentPage != "chat") {
+        if (openNewTab || this.currentPage != "chat" || messages.isEmpty()) {
             newChat()
         }
         if (messages.isEmpty()) {
-            // Just opening a new chat, no codelens execution
-            newChat()
             return
         }
         this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload("", sendImmediately, messages)))

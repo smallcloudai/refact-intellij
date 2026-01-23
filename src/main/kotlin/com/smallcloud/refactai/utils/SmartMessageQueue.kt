@@ -24,9 +24,14 @@ class SmartMessageQueue(
     private var flushPending = false
     private var disposed = false
     private var flushCallback: ((List<Events.ToChat<*>>) -> Unit)? = null
+    private var readyCheck: (() -> Boolean)? = null
 
     fun setFlushCallback(callback: (List<Events.ToChat<*>>) -> Unit) {
         flushCallback = callback
+    }
+
+    fun setReadyCheck(check: () -> Boolean) {
+        readyCheck = check
     }
 
     fun enqueue(message: Events.ToChat<*>) {
@@ -51,14 +56,24 @@ class SmartMessageQueue(
     }
 
     private fun scheduleFlush() {
-        if (flushPending || disposed) return
-        flushPending = true
+        synchronized(lock) {
+            if (flushPending || disposed) return
+            flushPending = true
+        }
         flushAlarm.addRequest({ doFlush() }, flushDebounceMs)
     }
 
     private fun doFlush() {
+        val check = readyCheck
+        val shouldReschedule = synchronized(lock) {
+            flushPending = false
+            disposed || (check != null && !check())
+        }
+        if (shouldReschedule) {
+            scheduleFlush()
+            return
+        }
         val messages = drain()
-        flushPending = false
         if (messages.isNotEmpty()) {
             flushCallback?.invoke(messages)
         }

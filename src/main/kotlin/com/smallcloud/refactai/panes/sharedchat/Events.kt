@@ -5,6 +5,7 @@ import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
+import com.google.gson.reflect.TypeToken
 import com.smallcloud.refactai.settings.Host
 import com.smallcloud.refactai.settings.HostDeserializer
 import com.smallcloud.refactai.struct.ChatMessage
@@ -128,22 +129,15 @@ class Events {
                 )
 
                 EventNames.FromChat.WRITE_RESULTS_TO_FILE.value -> {
-                    val results = mutableListOf<Patch.PatchResult>()
-                    val items = p2?.deserialize(payload, results::class.java) ?: results
-                    val applyPayload = Patch.ApplyPayload(items)
-                    return Patch.Apply(applyPayload)
+                    val listType = object : TypeToken<List<Patch.PatchResult>>() {}.type
+                    val items: List<Patch.PatchResult> = p2?.deserialize(payload, listType) ?: return null
+                    Patch.Apply(Patch.ApplyPayload(items))
                 }
 
                 EventNames.FromChat.IDE_TOOL_EDIT.value -> {
                     val toolCallPayload = p2?.deserialize<IdeAction.ToolCallPayload>(payload, IdeAction.ToolCallPayload::class.java)
                         ?: return null
-                    // Ensure that the edit field is properly deserialized
-                    val editJson = payload?.asJsonObject?.get("edit")
-                    val edit = p2.deserialize<ToolEditResult>(editJson, ToolEditResult::class.java)
-                    // Create a new ToolCallPayload with the deserialized edit
-                    val updatedPayload = IdeAction.ToolCallPayload(toolCallPayload.toolCall, toolCallPayload.chatId, edit ?: toolCallPayload.edit)
-                    return IdeAction.ToolCall(updatedPayload)
-
+                    IdeAction.ToolCall(toolCallPayload)
                 }
                 EventNames.FromChat.FORCE_RELOAD_FILE_BY_PATH.value -> {
                     val filePath = payload?.asString ?: return null
@@ -465,65 +459,15 @@ class Events {
             val toolCall: TextDocToolCall,
             val chatId: String,
             val edit: ToolEditResult,
-        ): Payload()  {
-            override fun equals(other: Any?): Boolean {
-                if (this === other) return true
-                if (javaClass != other?.javaClass) return false
+        ): Payload()
 
-                other as ToolCallPayload
-
-                if (toolCall != other.toolCall) return false
-                if (chatId != other.chatId) return false
-                if (edit != other.edit) return false
-
-                return true
-            }
-
-            override fun hashCode(): Int {
-                var result = toolCall.hashCode()
-                result = 31 * result + chatId.hashCode()
-                result = 31 * result + edit.hashCode()
-                return result
-            }
-        }
-
-        data class ToolCall(override val payload: ToolCallPayload): FromChat(EventNames.FromChat.IDE_TOOL_EDIT, payload) {
-            override fun equals(other: Any?): Boolean {
-                if (this === other) return true
-                if (javaClass != other?.javaClass) return false
-                return true
-            }
-
-            override fun hashCode(): Int {
-                return javaClass.hashCode()
-            }
-        }
+        data class ToolCall(override val payload: ToolCallPayload): FromChat(EventNames.FromChat.IDE_TOOL_EDIT, payload)
 
         data class ToolCallResponsePayload(
             val toolCallId: String,
             val chatId: String,
             val accepted: Boolean
-        ) : Payload() {
-            override fun equals(other: Any?): Boolean {
-                if (this === other) return true
-                if (javaClass != other?.javaClass) return false
-
-                other as ToolCallResponsePayload
-
-                if (accepted != other.accepted) return false
-                if (toolCallId != other.toolCallId) return false
-                if (chatId != other.chatId) return false
-
-                return true
-            }
-
-            override fun hashCode(): Int {
-                var result = accepted.hashCode()
-                result = 31 * result + toolCallId.hashCode()
-                result = 31 * result + chatId.hashCode()
-                return result
-            }
-        }
+        ) : Payload()
 
         class ToolCallResponse(payload: ToolCallResponsePayload): ToChat<ToolCallResponsePayload>(EventNames.ToChat.IDE_TOOL_EDIT_RESPONSE, payload)
     }
@@ -544,10 +488,8 @@ class Events {
             .create()
 
 
-        fun parse(msg: String?): FromChat? {
-            val result = gson.fromJson(msg, FromChat::class.java)
-            return result
-        }
+        fun parse(msg: String?): FromChat? =
+            runCatching { gson.fromJson(msg, FromChat::class.java) }.getOrNull()
 
         fun stringify(event: ToChat<*>): String {
             return gson.toJson(event)
@@ -630,39 +572,46 @@ data class ToolEditResult(
     val chunks: List<DiffChunk>
 )
 data class DiffChunk(
+    @SerializedName("file_name")
     val fileName: String,
+    @SerializedName("file_action")
     val fileAction: String,
     val line1: Int,
     val line2: Int,
+    @SerializedName("lines_remove")
     val linesRemove: String,
+    @SerializedName("lines_add")
     val linesAdd: String,
+    @SerializedName("file_name_rename")
     val fileNameRename: String? = null,
+    @SerializedName("application_details")
     val applicationDetails: String? = null
 )
 
 private class TextDocToolCallDeserializer : JsonDeserializer<TextDocToolCall> {
     override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): TextDocToolCall? {
         val jsonObject = json?.asJsonObject ?: return null
-        val functionObject = jsonObject.getAsJsonObject("function")
-        val functionName = functionObject.get("name").asString
-        val id = jsonObject.get("id").asString // seems to be nulls
+        val functionObject = jsonObject.getAsJsonObject("function") ?: return null
+        val functionName = functionObject.get("name")?.takeIf { !it.isJsonNull }?.asString ?: return null
+        val id = jsonObject.get("id")?.takeIf { !it.isJsonNull }?.asString ?: return null
+        val argsElement = functionObject.get("arguments") ?: return null
 
         return when (functionName) {
             "create_textdoc" -> {
-                val arguments = context?.deserialize<TextDocToolCall.CreateTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.CreateTextDocToolCall.Function.Arguments::class.java)
-                TextDocToolCall.CreateTextDocToolCall(id, TextDocToolCall.CreateTextDocToolCall.Function(arguments = arguments!!))
+                val arguments = context?.deserialize<TextDocToolCall.CreateTextDocToolCall.Function.Arguments>(argsElement, TextDocToolCall.CreateTextDocToolCall.Function.Arguments::class.java) ?: return null
+                TextDocToolCall.CreateTextDocToolCall(id, TextDocToolCall.CreateTextDocToolCall.Function(arguments = arguments))
             }
             "update_textdoc" -> {
-                val arguments = context?.deserialize<TextDocToolCall.UpdateTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.UpdateTextDocToolCall.Function.Arguments::class.java)
-                TextDocToolCall.UpdateTextDocToolCall(id, TextDocToolCall.UpdateTextDocToolCall.Function(arguments = arguments!!))
+                val arguments = context?.deserialize<TextDocToolCall.UpdateTextDocToolCall.Function.Arguments>(argsElement, TextDocToolCall.UpdateTextDocToolCall.Function.Arguments::class.java) ?: return null
+                TextDocToolCall.UpdateTextDocToolCall(id, TextDocToolCall.UpdateTextDocToolCall.Function(arguments = arguments))
             }
             "replace_textdoc" -> {
-                val arguments = context?.deserialize<TextDocToolCall.ReplaceTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.ReplaceTextDocToolCall.Function.Arguments::class.java)
-                TextDocToolCall.ReplaceTextDocToolCall(id, TextDocToolCall.ReplaceTextDocToolCall.Function(arguments = arguments!!))
+                val arguments = context?.deserialize<TextDocToolCall.ReplaceTextDocToolCall.Function.Arguments>(argsElement, TextDocToolCall.ReplaceTextDocToolCall.Function.Arguments::class.java) ?: return null
+                TextDocToolCall.ReplaceTextDocToolCall(id, TextDocToolCall.ReplaceTextDocToolCall.Function(arguments = arguments))
             }
             "update_textdoc_regex" -> {
-                val arguments = context?.deserialize<TextDocToolCall.UpdateRegexTextDocToolCall.Function.Arguments>(functionObject.get("arguments"), TextDocToolCall.UpdateRegexTextDocToolCall.Function.Arguments::class.java)
-                TextDocToolCall.UpdateRegexTextDocToolCall(id, TextDocToolCall.UpdateRegexTextDocToolCall.Function(arguments = arguments!!))
+                val arguments = context?.deserialize<TextDocToolCall.UpdateRegexTextDocToolCall.Function.Arguments>(argsElement, TextDocToolCall.UpdateRegexTextDocToolCall.Function.Arguments::class.java) ?: return null
+                TextDocToolCall.UpdateRegexTextDocToolCall(id, TextDocToolCall.UpdateRegexTextDocToolCall.Function(arguments = arguments))
             }
             else -> null
         }

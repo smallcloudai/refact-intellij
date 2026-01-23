@@ -4,12 +4,10 @@ import com.google.gson.Gson
 import com.smallcloud.refactai.panes.sharedchat.Events
 import kotlinx.coroutines.flow.*
 
-import kotlinx.coroutines.runBlocking
-
 
 object FimCache {
-    private val _events = MutableSharedFlow<Events.Fim.FimDebugPayload>();
-    val events = _events.asSharedFlow();
+    private val _events = MutableSharedFlow<Events.Fim.FimDebugPayload>(extraBufferCapacity = 64)
+    val events = _events.asSharedFlow()
 
    suspend fun subscribe(block: (Events.Fim.FimDebugPayload) -> Unit) {
        events.filterIsInstance<Events.Fim.FimDebugPayload>().collectLatest {
@@ -17,13 +15,11 @@ object FimCache {
        }
    }
 
-
     fun emit(data: Events.Fim.FimDebugPayload) {
-        runBlocking {
-            _events.emit(data)
-        }
+        _events.tryEmit(data)
     }
 
+    @Volatile
     var last: Events.Fim.FimDebugPayload? = null
 
     fun maybeSendFimData(res: String) {

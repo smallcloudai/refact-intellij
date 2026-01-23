@@ -35,7 +35,6 @@ import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.utils.getExtension
 import dev.gitlive.difflib.DiffUtils
 import dev.gitlive.difflib.patch.DeltaType
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -74,7 +73,7 @@ private class Default : InlineCompletionSuggestionUpdateManager.Adapter {
 
     private fun truncateFirstSymbol(elements: List<InlineCompletionElement>): List<InlineCompletionElement>? {
         val newFirstElementIndex = elements.indexOfFirst { it.text.isNotEmpty() }
-        check(newFirstElementIndex >= 0)
+        if (newFirstElementIndex < 0) return null
         val firstElement = elements[newFirstElementIndex]
         val manipulator = InlineCompletionElementManipulator.getApplicable(firstElement) ?: return null
         val newFirstElement = manipulator.truncateFirstSymbol(firstElement)
@@ -195,7 +194,8 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
 
         if (!state.isValid()) return null
         val stat = UsageStatistic(scope = "completion", extension = getExtension(fileName))
-        val baseUrl = getInstance(editor.project!!)?.url!!
+        val project = editor.project ?: return null
+        val baseUrl = getInstance(project)?.url ?: return null
         val httpRequest = RequestCreator.create(
             fileName, text, logicalPos.line, pos,
             stat,
@@ -226,12 +226,12 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = null
             }) { prediction ->
-                val choice = prediction.choices.first()
+                val choice = prediction.choices.firstOrNull() ?: return@streamedInferenceFetch
                 if (lastRequestId != prediction.requestId) {
                     return@streamedInferenceFetch
                 }
-                 val completion = Completion(
-                    context.request.body.inputs.sources.values.toList().first(),
+                val completion = Completion(
+                    context.request.body.inputs.sources.values.toList().firstOrNull() ?: return@streamedInferenceFetch,
                     offset = context.editorState.offset,
                     multiline = context.request.body.inputs.multiline,
                     createdTs = prediction.created,
@@ -239,7 +239,7 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
                     snippetTelemetryId = prediction.snippetTelemetryId
                 )
                 completion.updateCompletion(choice.delta)
-                CoroutineScope(Dispatchers.Default).launch {
+                launch(Dispatchers.Default) {
                     val elems = if (completion.multiline) {
                         getMultilineElements(completion, context.editorState)
                     } else {

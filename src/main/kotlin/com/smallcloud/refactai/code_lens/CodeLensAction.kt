@@ -91,11 +91,8 @@ class CodeLensAction(
         if (messages.isEmpty() && isActionRunning.compareAndSet(false, true)) {
             ApplicationManager.getApplication().invokeLater {
                 try {
-                    val pos1 = LogicalPosition(line1, 0)
-                    val pos2 = LogicalPosition(line2, editor.document.getLineEndOffset(line2))
-
-                    val intendedStart = editor.logicalPositionToOffset(pos1)
-                    val intendedEnd = editor.logicalPositionToOffset(pos2)
+                    val intendedStart = editor.document.getLineStartOffset(line1)
+                    val intendedEnd = editor.document.getLineEndOffset(line2)
                     editor.selectionModel.setSelection(intendedStart, intendedEnd)
                 } finally {
                     isActionRunning.set(false)

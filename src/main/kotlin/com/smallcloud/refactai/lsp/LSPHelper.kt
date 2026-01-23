@@ -26,15 +26,14 @@ import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as get
 fun findRoots(paths: List<String>): List<String> {
     val sortedPaths = paths.map { Paths.get(it).normalize() }.sortedBy { it.nameCount }
 
-    val roots = mutableSetOf<String>()
+    val roots = mutableListOf<java.nio.file.Path>()
 
     for (path in sortedPaths) {
-        val pathStr = path.toString()
-        if (roots.none { pathStr.startsWith("$it/") || pathStr == it }) {
-            roots.add(pathStr)
+        if (roots.none { path.startsWith(it) }) {
+            roots.add(path)
         }
     }
-    return roots.toList()
+    return roots.map { it.toString() }
 }
 
 fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
@@ -124,25 +123,27 @@ fun lspSetActiveDocument(editor: Editor) {
 
 
 fun lspGetCodeLens(editor: Editor): String {
-    val project = editor.project!!
+    val project = editor.project ?: return ""
+    val virtualFile = editor.virtualFile ?: return ""
     val url = getLSPProcessHolder(project)?.url?.resolve("/v1/code-lens") ?: return ""
     val data = Gson().toJson(
         mapOf(
-            "uri" to editor.virtualFile.url,
+            "uri" to virtualFile.url,
         )
     )
 
-    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
-        InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-        InferenceGlobalContext.lastErrorMsg = null
-    }, failedDataReceiveEnded = {
-        InferenceGlobalContext.status = ConnectionStatus.ERROR
-        if (it != null) {
-            InferenceGlobalContext.lastErrorMsg = it.message
-        }
-    }).let {
-        val res = it.get()!!.get() as String
-        return res
+    return try {
+        InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.lastErrorMsg = null
+        }, failedDataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.ERROR
+            if (it != null) {
+                InferenceGlobalContext.lastErrorMsg = it.message
+            }
+        }).get()?.get() as? String ?: ""
+    } catch (e: Exception) {
+        ""
     }
 }
 
@@ -160,16 +161,17 @@ fun lspGetCommitMessage(project: Project, diff: String, currentMessage: String):
     }
     val data = Gson().toJson(requestBody)
 
-    InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
-        InferenceGlobalContext.status = ConnectionStatus.CONNECTED
-        InferenceGlobalContext.lastErrorMsg = null
-    }, failedDataReceiveEnded = {
-        InferenceGlobalContext.status = ConnectionStatus.ERROR
-        if (it != null) {
-            InferenceGlobalContext.lastErrorMsg = it.message
-        }
-    }).let {
-        val res = it.get()!!.get() as String
-        return res
+    return try {
+        InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.CONNECTED
+            InferenceGlobalContext.lastErrorMsg = null
+        }, failedDataReceiveEnded = {
+            InferenceGlobalContext.status = ConnectionStatus.ERROR
+            if (it != null) {
+                InferenceGlobalContext.lastErrorMsg = it.message
+            }
+        }).get()?.get() as? String ?: ""
+    } catch (e: Exception) {
+        ""
     }
 }

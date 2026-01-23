@@ -220,7 +220,7 @@ class EventsTest {
         val toolCallFn =  TextDocToolCall.UpdateTextDocToolCall.Function("update_textdoc", toolCallArgs)
         val toolCall = TextDocToolCall.UpdateTextDocToolCall("test_tool_call_id", toolCallFn)
         val chunks = listOf(
-            DiffChunk(path, "edit", 32, 32, oldStr + "\n", newStr + "\n")
+            DiffChunk(path, "edit", 32, 32, oldStr + "\n", newStr + "\n", null, "")
         )
 
         val edit = ToolEditResult(oldStr+"\n", newStr+"\n", chunks)

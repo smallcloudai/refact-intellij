@@ -15,6 +15,7 @@ import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.io.IOException
 import java.io.InputStream
+import java.net.URI
 import java.net.URLConnection
 
 class RequestHandlerFactory : CefSchemeHandlerFactory {
@@ -143,10 +144,12 @@ class CachedResourceState(private val cached: ResourceCache.CachedResource, priv
                 bytesRead.set(read)
                 true
             } else {
+                inputStream.close()
                 false
             }
         } catch (e: Exception) {
-            logger.warn("Failed to read from cached stream: $e")
+            logger.warn("Failed to read from cached stream", e)
+            try { inputStream.close() } catch (_: Exception) {}
             false
         }
     }
@@ -177,7 +180,7 @@ class OpenedStream(private val inputStream: InputStream, private val url: String
             cefResponse.status = 200
             logger.debug("Serving $url with MIME ${cefResponse.mimeType}")
         } catch (e: Exception) {
-            logger.warn("Failed to set headers for $url: $e")
+            logger.warn("Failed to set headers for $url", e)
             cefResponse.status = 500
         }
     }
@@ -194,10 +197,12 @@ class OpenedStream(private val inputStream: InputStream, private val url: String
                 bytesRead.set(read)
                 true
             } else {
+                try { inputStream.close() } catch (_: Exception) {}
                 false
             }
         } catch (e: Exception) {
-            logger.warn("Failed to read from stream: $e")
+            logger.warn("Failed to read from stream", e)
+            try { inputStream.close() } catch (_: Exception) {}
             false
         }
     }
@@ -206,7 +211,7 @@ class OpenedStream(private val inputStream: InputStream, private val url: String
         try {
             inputStream.close()
         } catch (e: Exception) {
-            logger.warn("Failed to close stream: $e")
+            logger.warn("Failed to close stream", e)
         }
     }
 }
@@ -225,7 +230,30 @@ class RefactChatResourceHandler : CefResourceHandler, DumbAware {
             return false
         }
 
-        val path = url.removePrefix("http://refactai/")
+        if (!url.startsWith("http://refactai/")) {
+            state = ClosedConnection
+            currentUrl = url
+            cefCallback.Continue()
+            return true
+        }
+
+        val path = try {
+            val uri = URI(url)
+            uri.path?.removePrefix("/") ?: ""
+        } catch (_: Exception) {
+            state = ClosedConnection
+            currentUrl = url
+            cefCallback.Continue()
+            return true
+        }
+
+        if (path.isBlank() || path.startsWith("/") || path.contains("..") || path.contains("\\")) {
+            state = ClosedConnection
+            currentUrl = url
+            cefCallback.Continue()
+            return true
+        }
+
         val resourcePath = "webview/$path"
 
         val cached = ResourceCache.getOrLoad(resourcePath) {

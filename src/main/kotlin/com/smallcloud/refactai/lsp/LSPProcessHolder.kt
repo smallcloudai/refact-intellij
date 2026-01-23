@@ -259,37 +259,43 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         while (attempt < 5) {
             try {
                 if (BIN_PATH == null) {
-                    attempt = 0 // wait for initialize()
-                    logger.warn("LSP start_process BIN_PATH is null; waiting...")
-                    Thread.sleep(1000)
-                    continue
+                    logger.warn("LSP start_process BIN_PATH is null")
+                    return
                 }
-                newConfig.port = (32000..32199).random()
-                logger.warn("LSP start_process " + BIN_PATH + " " + newConfig.toArgs())
+                newConfig.port = (32000..32999).random()
+                logger.debug("LSP start_process $BIN_PATH ${newConfig.toSafeLogString()}")
                 process = GeneralCommandLine(listOf(BIN_PATH) + newConfig.toArgs()).withRedirectErrorStream(true)
                     .createProcess()
-                process!!.waitFor(5, TimeUnit.SECONDS)
+                Thread.sleep(500)
+                if (process?.isAlive != true) {
+                    throw RuntimeException("LSP process failed to start")
+                }
                 lastConfig = newConfig
                 break
             } catch (e: Exception) {
                 attempt++
                 logger.warn("LSP start_process didn't start attempt=${attempt}")
                 if (attempt == 5) {
-                    throw e
+                    logger.error("LSP process failed to start after 5 attempts", e)
+                    isWorking = false
+                    return
                 }
             }
         }
+        val currentProcess = process ?: return
         loggerTask = loggerScheduler.submit {
-            val reader = process!!.inputStream.bufferedReader()
-            var line = reader.readLine()
-            while (line != null) {
-                logger.warn("\n$line")
-                line = reader.readLine()
-            }
+            try {
+                val reader = currentProcess.inputStream.bufferedReader()
+                var line = reader.readLine()
+                while (line != null) {
+                    logger.debug(line)
+                    line = reader.readLine()
+                }
+            } catch (_: Exception) {}
         }
-        process!!.onExit().thenAcceptAsync { process1 ->
+        currentProcess.onExit().thenAcceptAsync { process1 ->
             if (process1.exitValue() != 0) {
-                logger.warn("LSP bad_things_happened " + process1.inputStream.bufferedReader().use { it.readText() })
+                logger.warn("LSP process exited with code ${process1.exitValue()}")
             }
         }
         attempt = 0
@@ -372,25 +378,27 @@ open class LSPProcessHolder(val project: Project) : Disposable {
 
 
     private fun safeTerminate() {
-        InferenceGlobalContext.connection.get(
-            URI(
-                "http://127.0.0.1:${lastConfig!!.port}/v1/graceful-shutdown"
-            )
-        ).get().get()
+        val port = lastConfig?.port ?: return
+        runCatching {
+            InferenceGlobalContext.connection.get(URI("http://127.0.0.1:$port/v1/graceful-shutdown")).get()?.get()
+        }
     }
 
     private fun terminate() {
         isWorking = false
-        process?.let {
-            try {
-                safeTerminate()
-                if (it.waitFor(3, TimeUnit.SECONDS)) {
-                    logger.info("LSP SIGTERM")
-                    it.destroy()
+        val p = process ?: return
+        process = null
+        try {
+            safeTerminate()
+            if (!p.waitFor(3, TimeUnit.SECONDS)) {
+                p.destroy()
+                if (!p.waitFor(2, TimeUnit.SECONDS)) {
+                    p.destroyForcibly()
                 }
-                process = null
-            } catch (_: Exception) {
             }
+        } catch (e: Exception) {
+            logger.debug("Exception during LSP terminate", e)
+            runCatching { p.destroyForcibly() }
         }
     }
 
@@ -536,12 +544,15 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             val shouldInitialize = !initialized.getAndSet(true)
             if (!shouldInitialize) return
 
-            Companion::class.java.getResourceAsStream(
+            val input: InputStream? = Companion::class.java.getResourceAsStream(
                 "/bin/${binPrefix}/refact-lsp${getExeSuffix()}"
-            ).use { input ->
-                if (input == null) {
-                    emitError("LSP server is not found for host operating system, please contact support")
-                } else {
+            )
+            if (input == null) {
+                emitError("LSP server is not found for host operating system, please contact support")
+                logger.warn("LSP initialize finished")
+                return
+            }
+            input.use {
                     val tmpFileName =
                         Path(getTempDirectory(), "${UUID.randomUUID().toString()}${getExeSuffix()}").toFile()
                     TMP_BIN_PATH = tmpFileName.toString()
@@ -575,7 +586,6 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                             tmpFileName.deleteOnExit()
                         }
                     }
-                }
             }
             logger.warn("LSP initialize finished")
             logger.warn("LSP initialize BIN_PATH=$BIN_PATH")
@@ -593,16 +603,16 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             val process = GeneralCommandLine(listOf(BIN_PATH, "--print-customization")).withRedirectErrorStream(true)
                 .createProcess()
             val isExit = process.waitFor(3, TimeUnit.SECONDS)
+            val out = process.inputStream.bufferedReader().use { it.readText() }
             if (isExit) {
                 if (process.exitValue() != 0) {
-                    logger.warn("LSP bad_things_happened " + process.inputStream.bufferedReader().use { it.readText() })
+                    logger.warn("LSP bad_things_happened $out")
                     return null
                 }
             } else {
-                process.destroy() // win11 doesn't finish process safe
+                process.destroy()
+                return null
             }
-
-            val out = process.inputStream.bufferedReader().use { it.readText() }
             val customizationStr = out.trim().lines().last()
             return try {
                 Gson().fromJson(customizationStr, JsonObject::class.java)

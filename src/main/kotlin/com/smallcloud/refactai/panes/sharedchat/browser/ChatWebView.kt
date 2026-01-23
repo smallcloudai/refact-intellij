@@ -28,6 +28,7 @@ import com.smallcloud.refactai.utils.AsyncMessageHandler
 import com.smallcloud.refactai.utils.OSRRenderer
 import com.smallcloud.refactai.utils.JavaScriptExecutor
 import com.smallcloud.refactai.utils.JavaScriptTemplate
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.ui.jcef.JBCefApp
 import org.cef.CefApp
 import org.cef.CefSettings
@@ -66,7 +67,74 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         private val schemeHandlerRegistered = AtomicBoolean(false)
         private val companionLogger = Logger.getInstance(ChatWebView::class.java)
 
+        private const val PREF_KEY_RENDERING_MODE = "refact.jcef.rendering.mode"
+        private const val PREF_KEY_CRASH_COUNT = "refact.jcef.crash.count"
+        private const val PREF_KEY_LAST_CRASH_TIME = "refact.jcef.last.crash.time"
+        private const val CRASH_THRESHOLD = 3
+        private const val CRASH_WINDOW_MS = 3600000L
+
+        private val lastInitError = AtomicReference<String?>(null)
+        private val sessionCrashCount = AtomicInteger(0)
+        private val osrFallbackTriggered = AtomicBoolean(false)
+
         fun isSupported(): Boolean = JBCefApp.isSupported()
+
+        fun getLastInitError(): String? = lastInitError.get()
+        fun clearLastInitError() = lastInitError.set(null)
+
+        fun reportCrash(): Boolean {
+            val props = PropertiesComponent.getInstance()
+            val now = System.currentTimeMillis()
+
+            // Check if we should reset crash count (outside crash window)
+            val lastCrashTime = props.getLong(PREF_KEY_LAST_CRASH_TIME, 0L)
+            if (now - lastCrashTime > CRASH_WINDOW_MS) {
+                props.setValue(PREF_KEY_CRASH_COUNT, "0")
+            }
+
+            // Increment crash count
+            val crashCount = props.getInt(PREF_KEY_CRASH_COUNT, 0) + 1
+            props.setValue(PREF_KEY_CRASH_COUNT, crashCount.toString())
+            props.setValue(PREF_KEY_LAST_CRASH_TIME, now.toString())
+
+            sessionCrashCount.incrementAndGet()
+
+            companionLogger.warn("JCEF crash detected (session: ${sessionCrashCount.get()}, total: $crashCount)")
+
+            // Switch to OSR if threshold exceeded
+            if (crashCount >= CRASH_THRESHOLD && !osrFallbackTriggered.get()) {
+                companionLogger.warn("Crash threshold exceeded ($crashCount >= $CRASH_THRESHOLD), switching to OSR mode")
+                props.setValue(PREF_KEY_RENDERING_MODE, "osr")
+                osrFallbackTriggered.set(true)
+                return true
+            }
+
+            return false
+        }
+
+        fun reportStable() {
+            val props = PropertiesComponent.getInstance()
+            val crashCount = props.getInt(PREF_KEY_CRASH_COUNT, 0)
+            if (crashCount > 0) {
+                // Slowly decrease crash count when things are working
+                props.setValue(PREF_KEY_CRASH_COUNT, (crashCount - 1).coerceAtLeast(0).toString())
+            }
+        }
+
+        fun resetRenderingPreferences() {
+            val props = PropertiesComponent.getInstance()
+            props.setValue(PREF_KEY_RENDERING_MODE, "auto")
+            props.setValue(PREF_KEY_CRASH_COUNT, "0")
+            sessionCrashCount.set(0)
+            osrFallbackTriggered.set(false)
+            companionLogger.info("Rendering preferences reset to auto")
+        }
+
+        fun isOsrFallbackTriggered(): Boolean = osrFallbackTriggered.get()
+
+        fun getRenderingModePreference(): String {
+            return PropertiesComponent.getInstance().getValue(PREF_KEY_RENDERING_MODE, "auto")
+        }
 
         private fun registerSchemeHandlerOnce() {
             if (!schemeHandlerRegistered.compareAndSet(false, true)) return
@@ -80,14 +148,43 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         }
 
         fun determineRenderingMode(): Boolean {
+            // Check explicit system property overrides first
             if (System.getProperty("refact.jcef.force-osr") == "true" ||
                 System.getenv("REFACT_FORCE_OSR") == "1") {
+                companionLogger.info("OSR forced via system property/env")
                 return true
             }
-            if (SystemInfo.isWindows || SystemInfo.isMac) {
+            if (System.getProperty("refact.jcef.force-native") == "true" ||
+                System.getenv("REFACT_FORCE_NATIVE") == "1") {
+                companionLogger.info("Native rendering forced via system property/env")
                 return false
             }
-            return System.getProperty("refact.jcef.linux-osr", "false") == "true"
+
+            // Windows/Mac: use native rendering (generally stable)
+            if (SystemInfo.isWindows || SystemInfo.isMac) {
+                companionLogger.info("Using native rendering on Windows/Mac")
+                return false
+            }
+
+            // Linux: check persisted preference (from crash detection)
+            val props = PropertiesComponent.getInstance()
+            val savedMode = props.getValue(PREF_KEY_RENDERING_MODE, "auto")
+            val crashCount = props.getInt(PREF_KEY_CRASH_COUNT, 0)
+
+            return when (savedMode) {
+                "osr" -> {
+                    companionLogger.info("Using OSR mode (saved preference)")
+                    true
+                }
+                "native" -> {
+                    companionLogger.info("Using native mode (explicit preference)")
+                    false
+                }
+                else -> {
+                    companionLogger.info("Using OSR mode (Linux default)")
+                    true
+                }
+            }
         }
     }
 
@@ -157,9 +254,14 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     init {
-        logger.info("Initializing ChatWebView, OSR=$useOffscreenRendering")
+        logger.info("Initializing ChatWebView: OSR=$useOffscreenRendering, platform=${SystemInfo.OS_NAME}, " +
+                "JBCefSupported=${JBCefApp.isSupported()}")
 
         try {
+            // Clear any previous error state
+            clearLastInitError()
+
+            logger.info("Creating JBCefBrowser with OSR=$useOffscreenRendering")
             jbcefBrowser = JBCefBrowser.createBuilder()
                 .setEnableOpenDevToolsMenuItem(true)
                 .setUrl("http://refactai/index.html")
@@ -168,6 +270,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
             cefBrowser = jbcefBrowser.cefBrowser
             CefLifecycleManager.registerBrowser(cefBrowser)
+            logger.info("JBCefBrowser created successfully, cefBrowser=${cefBrowser.javaClass.simpleName}")
 
             jsQueryManager = JSQueryManager(jbcefBrowser)
             asyncMessageHandler = AsyncMessageHandler(Events::parse, messageHandler)
@@ -180,10 +283,35 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             setupLoadHandler()
             jbcefBrowser.createImmediately()
 
+            logger.info("ChatWebView initialization completed successfully")
+
         } catch (e: Exception) {
-            logger.error("Failed to initialize ChatWebView", e)
+            val errorMsg = buildJcefErrorMessage(e)
+            lastInitError.set(errorMsg)
+            logger.error("Failed to initialize ChatWebView: $errorMsg", e)
             dispose()
             throw e
+        }
+    }
+
+    private fun buildJcefErrorMessage(e: Exception): String {
+        val cause = e.cause?.message ?: e.message ?: "Unknown error"
+        return when {
+            cause.contains("GPU", ignoreCase = true) ||
+            cause.contains("SIGSEGV", ignoreCase = true) ||
+            cause.contains("crash", ignoreCase = true) ->
+                "JCEF browser crashed (GPU/rendering issue). " +
+                "Try adding -Drefact.jcef.linux-osr=true to VM options, or " +
+                "-Djcef.disable-gpu=true"
+
+            cause.contains("disposed", ignoreCase = true) ->
+                "Browser was disposed unexpectedly. Please restart the IDE."
+
+            cause.contains("not supported", ignoreCase = true) ->
+                "JCEF is not supported on this platform. " +
+                "The Refact panel requires a JetBrains Runtime with JCEF support."
+
+            else -> "JCEF initialization failed: $cause"
         }
     }
 
@@ -284,6 +412,15 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     private var unhealthyCount = AtomicInteger(0)
     private val maxUnhealthyBeforeRecovery = 3
+    private var recoveryAttempts = AtomicInteger(0)
+    private val maxRecoveryAttempts = 2
+    private var stableRunCount = AtomicInteger(0)
+    private val stableThreshold = 10
+    private var modeSwitchCallback: (() -> Unit)? = null
+
+    fun setModeSwitchCallback(callback: () -> Unit) {
+        modeSwitchCallback = callback
+    }
 
     private fun setupHealthCheck() {
         healthCheckTimer = Timer(30000, null).apply {
@@ -305,6 +442,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             if (timeSinceLastPing > 60000) {
                 val count = unhealthyCount.incrementAndGet()
                 browserHealthy.set(false)
+                stableRunCount.set(0)
                 logger.warn("Browser unresponsive for ${timeSinceLastPing}ms (unhealthy count: $count)")
 
                 if (count >= maxUnhealthyBeforeRecovery) {
@@ -316,6 +454,13 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             // Reset unhealthy count on successful response window
             if (timeSinceLastPing < 35000) {
                 unhealthyCount.set(0)
+
+                // Track stable operation
+                val stableCount = stableRunCount.incrementAndGet()
+                if (stableCount == stableThreshold) {
+                    logger.info("Browser stable for $stableThreshold health checks, reporting stable")
+                    reportStable()
+                }
             }
 
             jsExecutor.executeJavaScript(
@@ -326,12 +471,35 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             logger.warn("Health check error", e)
             browserHealthy.set(false)
             unhealthyCount.incrementAndGet()
+            stableRunCount.set(0)
+
+            // Report potential crash
+            reportCrash()
         }
     }
 
     private fun attemptRecovery() {
-        logger.warn("Attempting browser recovery after $maxUnhealthyBeforeRecovery unhealthy checks")
+        val attempts = recoveryAttempts.incrementAndGet()
+        logger.warn("Attempting browser recovery (attempt $attempts/$maxRecoveryAttempts)")
         unhealthyCount.set(0)
+
+        val shouldSwitchMode = reportCrash()
+
+        if (shouldSwitchMode || attempts > maxRecoveryAttempts) {
+            logger.warn("Recovery failed repeatedly or crash threshold exceeded, recommending mode switch")
+            lastInitError.set(
+                "Browser repeatedly became unresponsive. " +
+                if (!useOffscreenRendering) "Switching to OSR mode may help." else "There may be a graphics driver issue."
+            )
+
+            if ((shouldSwitchMode || attempts > maxRecoveryAttempts) && modeSwitchCallback != null) {
+                logger.info("Triggering mode switch callback")
+                ApplicationManager.getApplication().invokeLater {
+                    modeSwitchCallback?.invoke()
+                }
+                return
+            }
+        }
 
         try {
             // Try to recover by reloading the page
@@ -346,6 +514,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             }
         } catch (e: Exception) {
             logger.error("Recovery attempt failed", e)
+            reportCrash()
         }
     }
 
@@ -433,6 +602,39 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 }
                 if (initializationState.get() == 1) {
                     setupReactApplication()
+                }
+            }
+
+            override fun onLoadError(
+                browser: CefBrowser?,
+                frame: CefFrame?,
+                errorCode: CefLoadHandler.ErrorCode?,
+                errorText: String?,
+                failedUrl: String?
+            ) {
+                if (errorCode == CefLoadHandler.ErrorCode.ERR_ABORTED) {
+                    logger.debug("Load aborted (normal during navigation): $failedUrl")
+                    return
+                }
+
+                logger.error("JCEF load error: code=$errorCode, text=$errorText, url=$failedUrl")
+
+                val errorMsg = "Browser load failed: $errorText (code: $errorCode, url: $failedUrl)"
+                lastInitError.set(errorMsg)
+                browserHealthy.set(false)
+
+                val isRenderingError = errorCode == CefLoadHandler.ErrorCode.ERR_FAILED ||
+                        errorText?.contains("crash", ignoreCase = true) == true ||
+                        errorText?.contains("GPU", ignoreCase = true) == true
+
+                if (isRenderingError) {
+                    val shouldSwitch = reportCrash()
+                    if (shouldSwitch) {
+                        logger.warn("Load error triggered mode switch recommendation")
+                        modeSwitchCallback?.let {
+                            ApplicationManager.getApplication().invokeLater { it() }
+                        }
+                    }
                 }
             }
         }, cefBrowser)

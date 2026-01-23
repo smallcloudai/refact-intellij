@@ -39,10 +39,10 @@ class Editor (val project: Project) {
                 val range = TextRange(selection?.startOffset ?: 0, selection?.endOffset ?: 0)
 
                 val code = editor?.document?.getText(range)
-                if (language == null || code == null) {
+                if (code.isNullOrEmpty()) {
                     cb(Events.Editor.Snippet())
                 } else {
-                    val snippet = Events.Editor.Snippet(language, code, path, name)
+                    val snippet = Events.Editor.Snippet(language ?: "text", code, path, name)
                     cb(snippet)
                 }
             } else {

@@ -60,7 +60,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val logger = Logger.getInstance(SharedChatPane::class.java)
     private val editor = Editor(project)
     private var currentPage: String = ""
-    private var isChatStreaming: Boolean = false
     var id: String? = null
     private val animatedFiles = mutableSetOf<String>()
     private val scheduler = AppExecutorUtil.createBoundedScheduledExecutorService("SMCRainbowScheduler", 2)
@@ -143,7 +142,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     fun executeCodeLensCommand(messages: Array<ChatMessage>, sendImmediately: Boolean, openNewTab: Boolean) {
-        if (isChatStreaming) return
         if (openNewTab || this.currentPage != "chat") {
             newChat()
         }
@@ -152,7 +150,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             newChat()
             return
         }
-        isChatStreaming = true
         this.postMessage(Events.CodeLensCommand(Events.CodeLensCommandPayload("", sendImmediately, messages)))
     }
 
@@ -362,13 +359,13 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun setLookAndFeel() {
-        this.browser.setStyle()
-        this.sendUserConfig()
+        if (browserLazy.isInitialized()) {
+            browser.setStyle()
+            sendUserConfig()
+        }
     }
 
     private fun setupDropdownStateTracking() {
-        // Optimized dropdown tracking - uses MutationObserver only, no polling interval
-        // This reduces CPU usage significantly while still detecting dropdown state changes
         val trackingScript = """
             (function() {
                 if (window.__refactDropdownTrackerInstalled) return;
@@ -433,6 +430,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
         val setupAlarm = Alarm(this)
         setupAlarm.addRequest({
+            if (!browserLazy.isInitialized()) return@addRequest
             try {
                 browser.webView.cefBrowser.executeJavaScript(trackingScript, null, 0)
                 logger.debug("Dropdown state tracking script injected")
@@ -752,8 +750,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun handleAnimationStop(fileName: String) {
         synchronized(this) {
-            animatedFiles.remove(fileName)
             val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
+            animatedFiles.remove(sanitizedFileName)
             ApplicationManager.getApplication().invokeLater {
                 val virtualFile = LocalFileSystem.getInstance().findFileByPath(sanitizedFileName)
                 virtualFile?.refresh(true, false)
@@ -869,10 +867,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.Patch.Show -> this.handlePatchShow(event.payload)
             is Events.Animation.Start -> this.handleAnimationStart(event.fileName)
             is Events.Animation.Stop -> this.handleAnimationStop(event.fileName)
-            is Events.IsChatStreaming -> {
-                isChatStreaming = event.payload as Boolean
-            }
-
             is Events.ChatPageChange -> {
                 currentPage = event.payload.toString()
             }
@@ -912,6 +906,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     val webView: com.intellij.ui.jcef.JBCefBrowser
         get() = browser.webView
+
+    internal val chatWebView: ChatWebView
+        get() = browser
 
     private fun postMessage(message: Events.ToChat<*>?) {
         if (message != null) {

@@ -121,8 +121,10 @@ fun emitRegular(project: Project, editor: Editor) {
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
-        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         notification.expire()
+        ApplicationManager.getApplication().invokeLater {
+            ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
+        }
     })
 
     notification.addAction(NotificationAction.createSimple(
@@ -160,8 +162,10 @@ fun emitWarning(project: Project, msg: String) {
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
-        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIAdvancedSettingsID, null)
         notification.expire()
+        ApplicationManager.getApplication().invokeLater {
+            ShowSettingsUtilImpl.showSettingsDialog(project, refactAIAdvancedSettingsID, null)
+        }
     })
 
     notification.notify(project)
@@ -182,8 +186,10 @@ fun emitInfo(msg: String, needToDeleteLast: Boolean = true) {
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
-        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         notification.expire()
+        ApplicationManager.getApplication().invokeLater {
+            ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
+        }
     })
     notification.notify(project)
 }
@@ -196,8 +202,10 @@ fun emitError(msg: String) {
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
-        ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         notification.expire()
+        ApplicationManager.getApplication().invokeLater {
+            ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
+        }
     })
     notification.notify(project)
     lastNotification = notification

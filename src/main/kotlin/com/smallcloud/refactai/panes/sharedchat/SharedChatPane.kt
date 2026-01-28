@@ -240,12 +240,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     private fun handleForceReloadFileByPath(fileName: String) {
+        val validatedPath = validateAndSanitizePath(fileName, "handleForceReloadFileByPath") ?: return
         ApplicationManager.getApplication().invokeLater {
-            val sanitizedFileName = this.sanitizeFileNameForPosix(fileName);
             val virtualFile: VirtualFile? =
-                LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(sanitizedFileName))
+                LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(validatedPath))
             if (virtualFile == null) {
-                logger.warn("handleForceReloadFileByPath: File not found: $fileName (sanitized: $sanitizedFileName)")
+                logger.warn("handleForceReloadFileByPath: File not found: $fileName (validated: $validatedPath)")
                 return@invokeLater
             }
             VfsUtil.markDirtyAndRefresh(true, true, true, virtualFile)
@@ -634,12 +634,21 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         val validatedPath = validateAndSanitizePath(fileName, "openNewFile") ?: return null
         val file = File(validatedPath)
         if (!file.exists()) {
-            file.parentFile?.mkdirs()
-            file.createNewFile()
+            val created = runCatching {
+                file.parentFile?.mkdirs()
+                file.createNewFile()
+            }.getOrElse { e ->
+                logger.warn("openNewFile: failed to create file: $validatedPath", e)
+                return null
+            }
+            if (!created) {
+                logger.warn("openNewFile: createNewFile returned false: $validatedPath")
+                return null
+            }
         }
         val fileSystem = StandardFileSystems.local()
         fileSystem.refresh(false)
-        logger.warn("openNewFileWithContent: $validatedPath")
+        logger.info("openNewFile: $validatedPath")
 
         return file
     }

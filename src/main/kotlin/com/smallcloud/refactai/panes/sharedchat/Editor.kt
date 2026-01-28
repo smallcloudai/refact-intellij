@@ -60,7 +60,8 @@ class Editor (val project: Project) {
         val mode = if (isDarkMode) "dark" else "light"
         val themeProps = Events.Config.ThemeProps(mode)
         val apiKey = instance.apiKey
-        val lspPort = lsp.url.port
+        val rawPort = lsp.url.port
+        val lspPort = if (rawPort > 0) rawPort else 0
         val addressURL = AppSettingsState.instance.userInferenceUri ?: ""
         val keyBindings = Events.Config.KeyBindings(getActionKeybinding("ForceCompletionAction"))
 

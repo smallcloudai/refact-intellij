@@ -613,12 +613,18 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 process.destroy()
                 return null
             }
-            val customizationStr = out.trim().lines().last()
+            val trimmed = out.trim()
+            val jsonStart = trimmed.indexOf('{')
+            val jsonEnd = trimmed.lastIndexOf('}')
+            if (jsonStart < 0 || jsonEnd < 0 || jsonEnd <= jsonStart) {
+                logger.warn("LSP customization output does not contain valid JSON: $trimmed")
+                return null
+            }
+            val customizationStr = trimmed.substring(jsonStart, jsonEnd + 1)
             return try {
                 Gson().fromJson(customizationStr, JsonObject::class.java)
             } catch (e: Exception) {
-                logger.warn("LSP can not parse json string $customizationStr")
-                logger.warn("LSP can not parse json string error = ${e.message}")
+                logger.warn("LSP can not parse json string: ${e.message}")
                 null
             }
         }

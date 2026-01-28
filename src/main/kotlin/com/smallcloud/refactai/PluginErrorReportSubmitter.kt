@@ -25,8 +25,8 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
     ): Boolean {
         val event = events.firstOrNull()
         val eventMessage = event?.message ?: "(no message)"
-        val eventThrowable = if (event?.throwableText == null) {
-            if (event?.throwableText?.length!! > 9_000) {
+        val eventThrowable = if (event?.throwableText != null) {
+            if (event.throwableText.length > 9_000) {
                 event.throwableText.slice(0..8_997) + "..."
             } else {
                 event.throwableText
@@ -34,7 +34,7 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
         } else {
             "(no stack trace)"
         }
-        val exceptionClassName = event.throwableText?.lines()?.firstOrNull()?.split(':')?.firstOrNull()?.split('.')?.lastOrNull()?.let { ": $it" }.orEmpty()
+        val exceptionClassName = event?.throwableText?.lines()?.firstOrNull()?.split(':')?.firstOrNull()?.split('.')?.lastOrNull()?.let { ": $it" }.orEmpty()
         val issueTitle = "[JB plugin] Internal error${exceptionClassName}".urlEncoded()
         val ideNameAndVersion = ApplicationInfoEx.getInstanceEx().let { appInfo ->
             appInfo.fullApplicationName + "  " + "Build #" + appInfo.build.asString()

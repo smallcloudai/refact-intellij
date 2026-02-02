@@ -696,16 +696,16 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         """
                         if (!window.__REFACT_MESSAGE_LISTENER__) {
                             window.__REFACT_MESSAGE_LISTENER__ = true;
-                            window.addEventListener('message', function(event) {
+                            window.postIntellijMessage = function(message) {
                                 try {
-                                    let messageData = typeof event.data === 'string' 
-                                        ? event.data 
-                                        : JSON.stringify(event.data);
+                                    let messageData = typeof message === 'string' 
+                                        ? message 
+                                        : JSON.stringify(message);
                                     ${mainQuery.inject("messageData")};
                                 } catch (e) {
-                                    console.error('Error processing message:', e);
+                                    console.error('Error posting message:', e);
                                 }
-                            });
+                            };
                             window.ideMessageHandler = function(message) {
                                 ${mainQuery.inject("message")};
                             };

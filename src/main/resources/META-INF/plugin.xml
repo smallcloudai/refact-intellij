@@ -164,6 +164,7 @@
         <projectService serviceImplementation="com.smallcloud.refactai.lsp.LSPProcessHolder"/>
         <projectService serviceImplementation="com.smallcloud.refactai.lsp.LSPActiveDocNotifierService" />
         <projectService serviceImplementation="com.smallcloud.refactai.code_lens.CodeLensInvalidatorService" />
+        <projectService serviceImplementation="com.smallcloud.refactai.io.NotificationSSEClient" />
         <codeInsight.codeVisionProviderFactory implementation="com.smallcloud.refactai.code_lens.RefactCodeVisionProviderFactory"/>
     </extensions>
     <actions>

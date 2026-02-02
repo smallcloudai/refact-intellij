@@ -54,6 +54,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.roots.ProjectRootManager
+import com.smallcloud.refactai.notifications.emitChat
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val paneScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -885,6 +886,37 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         postMessage(action)
     }
 
+    private fun escapeHtml(text: String): String {
+        return text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+    }
+
+    private fun handleTaskDone(payload: Events.TaskDonePayload) {
+        val message = escapeHtml(payload.summary.ifEmpty { "Task completed" })
+        ApplicationManager.getApplication().invokeLater {
+            emitChat(project, message, payload.chatId)
+        }
+    }
+
+    private fun handleAskQuestions(payload: Events.AskQuestionsPayload) {
+        val count = payload.questions.size
+        val text = when (count) {
+            0 -> "your input"
+            1 -> "1 question"
+            else -> "$count questions"
+        }
+        ApplicationManager.getApplication().invokeLater {
+            emitChat(project, "AI needs $text to continue", payload.chatId)
+        }
+    }
+
+    fun switchToThread(chatId: String) {
+        val action = Events.SwitchToThread(chatId)
+        postMessage(action)
+    }
+
     private suspend fun handleEvent(event: Events.FromChat) {
 //        logger.warn("${event.toString()} ${event.payload.toString()}")
         when (event) {
@@ -925,6 +957,14 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.DropdownStateChanged -> {
                 logger.debug("Dropdown state changed: isOpen=${event.isOpen}")
                 isDropdownOpen = event.isOpen
+            }
+
+            is Events.TaskDone -> {
+                handleTaskDone(event.payload)
+            }
+
+            is Events.AskQuestions -> {
+                handleAskQuestions(event.payload)
             }
 
             else -> Unit

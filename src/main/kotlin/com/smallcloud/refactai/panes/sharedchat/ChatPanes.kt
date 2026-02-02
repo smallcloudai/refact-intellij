@@ -136,6 +136,10 @@ class ChatPanes(val project: Project) : Disposable {
         pane?.newChat()
     }
 
+    fun switchToThread(chatId: String) {
+        pane?.switchToThread(chatId)
+    }
+
     override fun dispose() {
         pane?.dispose()
     }

@@ -38,7 +38,9 @@ class EventNames {
         FORCE_RELOAD_FILE_BY_PATH("ide/forceReloadFileByPath"),
         FORCE_RELOAD_PROJECT_TREE_FILES("ide/forceReloadProjectTreeFiles"),
         SET_CODE_COMPLETION_MODEL("ide/setCodeCompletionModel"),
-        DROPDOWN_STATE_CHANGED("ide/dropdownStateChanged")
+        DROPDOWN_STATE_CHANGED("ide/dropdownStateChanged"),
+        TASK_DONE("ide/taskDone"),
+        ASK_QUESTIONS("ide/askQuestions")
     }
 
     enum class ToChat(val value: String) {
@@ -64,7 +66,9 @@ class EventNames {
         IDE_TOOL_EDIT_RESPONSE("ide/toolEditResponse"),
         // Set current project for knowledge
         @SerializedName("currentProjectInfo/setCurrentProjectInfo")
-        SET_CURRENT_PROJECT("currentProjectInfo/setCurrentProjectInfo")
+        SET_CURRENT_PROJECT("currentProjectInfo/setCurrentProjectInfo"),
+        @SerializedName("ide/switchToThread")
+        SWITCH_TO_THREAD("ide/switchToThread")
     }
 }
 
@@ -156,6 +160,16 @@ class Events {
                 EventNames.FromChat.DROPDOWN_STATE_CHANGED.value -> {
                     val isOpen = payload?.asJsonObject?.get("isOpen")?.asBoolean ?: false
                     return DropdownStateChanged(isOpen)
+                }
+
+                EventNames.FromChat.TASK_DONE.value -> {
+                    val taskDonePayload = p2?.deserialize<TaskDonePayload>(payload, TaskDonePayload::class.java) ?: return null
+                    TaskDone(taskDonePayload)
+                }
+
+                EventNames.FromChat.ASK_QUESTIONS.value -> {
+                    val questionPayload = p2?.deserialize<AskQuestionsPayload>(payload, AskQuestionsPayload::class.java) ?: return null
+                    AskQuestions(questionPayload)
                 }
 
                 else -> null
@@ -478,6 +492,34 @@ class Events {
 
         class SetCurrentProject(name: String) : ToChat<Payload>(EventNames.ToChat.SET_CURRENT_PROJECT, SetCurrentProjectPayload(name))
     }
+
+    data class TaskDonePayload(
+        val chatId: String,
+        val toolCallId: String,
+        val summary: String,
+        val knowledgePath: String? = null
+    ) : Payload()
+
+    data class TaskDone(override val payload: TaskDonePayload) : FromChat(EventNames.FromChat.TASK_DONE, payload)
+
+    data class QuestionItem(
+        val id: String,
+        val type: String,
+        val text: String,
+        val options: List<String>? = null
+    ) : Serializable
+
+    data class AskQuestionsPayload(
+        val chatId: String,
+        val toolCallId: String,
+        val questions: List<QuestionItem>
+    ) : Payload()
+
+    data class AskQuestions(override val payload: AskQuestionsPayload) : FromChat(EventNames.FromChat.ASK_QUESTIONS, payload)
+
+    data class SwitchToThreadPayload(val chatId: String) : Payload()
+
+    class SwitchToThread(chatId: String) : ToChat<Payload>(EventNames.ToChat.SWITCH_TO_THREAD, SwitchToThreadPayload(chatId))
 
     companion object {
 

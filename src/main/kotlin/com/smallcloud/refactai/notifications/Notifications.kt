@@ -2,6 +2,7 @@ package com.smallcloud.refactai.notifications
 
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.actions.ShowSettingsUtilImpl
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
@@ -192,6 +193,34 @@ fun emitInfo(msg: String, needToDeleteLast: Boolean = true) {
         }
     })
     notification.notify(project)
+}
+
+private val notificationLogger = Logger.getInstance("RefactNotifications")
+
+fun emitChat(project: Project, msg: String, chatId: String? = null) {
+    removeLastNotification()
+    val notification = NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group")
+        .createNotification(Resources.titleStr, msg, NotificationType.INFORMATION)
+    notification.icon = Resources.Icons.LOGO_RED_16x16
+
+    notification.addAction(NotificationAction.createSimple("Open Chat") {
+        notification.expire()
+        val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Refact")
+        toolWindow?.activate {
+            val panes = RefactAIToolboxPaneFactory.chat
+            panes?.requestFocus()
+            if (chatId != null) {
+                panes?.switchToThread(chatId)
+            }
+        }
+    })
+    notification.notify(project)
+    lastNotification = notification
+}
+
+fun emitChat(msg: String, chatId: String? = null) {
+    val project = getLastUsedProject() ?: return
+    emitChat(project, msg, chatId)
 }
 
 fun emitError(msg: String) {

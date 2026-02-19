@@ -69,7 +69,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         runCatching { File(it).canonicalPath }.getOrNull()
     }
     private val canonicalRefactConfigDir: String? = runCatching {
-        File(SystemProperties.getUserHome(), ".config", "refact").canonicalPath
+        File(File(SystemProperties.getUserHome(), ".config"), "refact").canonicalPath
     }.getOrNull()
 
     private var isDropdownOpen = false

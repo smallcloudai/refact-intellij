@@ -26,6 +26,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.*
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.Alarm
+import com.intellij.util.SystemProperties
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
@@ -67,6 +68,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val canonicalProjectRoot: String? = project.basePath?.let {
         runCatching { File(it).canonicalPath }.getOrNull()
     }
+    private val canonicalRefactConfigDir: String? = runCatching {
+        File(SystemProperties.getUserHome(), ".config", "refact").canonicalPath
+    }.getOrNull()
 
     private var isDropdownOpen = false
     private val dropdownStateCheckAlarm = Alarm(this)
@@ -170,7 +174,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun doSendActiveFileInfo() {
         this.editor.getActiveFileInfo { file ->
-            val safeFile = if (file.path.isNotEmpty() && isPathWithinProject(file.path)) {
+            val safeFile = if (file.path.isNotEmpty() && isPathWithinAllowedScope(file.path)) {
                 file
             } else {
                 file.copy(content = null)
@@ -599,9 +603,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         return result
     }
 
-    private fun isPathWithinProject(path: String): Boolean {
-        val root = canonicalProjectRoot ?: return false
+    private fun isPathWithinAllowedScope(path: String): Boolean {
         val canonicalPath = runCatching { File(path).canonicalPath }.getOrNull() ?: return false
+        canonicalRefactConfigDir?.let { configDir ->
+            if (canonicalPath == configDir || canonicalPath.startsWith(configDir + File.separator)) return true
+        }
+        val root = canonicalProjectRoot ?: return false
         return canonicalPath == root || canonicalPath.startsWith(root + File.separator)
     }
 
@@ -623,7 +630,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             return null
         }
 
-        if (!isPathWithinProject(canonical)) {
+        if (!isPathWithinAllowedScope(canonical)) {
             logger.warn("$operation blocked: path outside project: $fileName (project: ${project.basePath})")
             return null
         }

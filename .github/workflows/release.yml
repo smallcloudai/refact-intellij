@@ -14,7 +14,7 @@ on:
         type: string
       chat_js_branch:
         description: "Branch name of chat-js"
-        default: "main-stable"
+        default: "main"
         type: string
         required: true
 jobs:

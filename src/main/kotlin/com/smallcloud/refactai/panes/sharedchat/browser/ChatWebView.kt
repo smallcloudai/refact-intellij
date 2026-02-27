@@ -56,11 +56,16 @@ fun getActionKeybinding(actionId: String): String {
 class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromChat) -> Unit) : Disposable {
     private val logger = Logger.getInstance(ChatWebView::class.java)
 
-    private val initializationState = AtomicInteger(0) // 0=not loaded, 1=page loaded, 2=setup in progress, 3=React ready
+    // 0=not loaded, 1=page loaded, 2=setup in progress, 3=React ready
+    private val initializationState = AtomicInteger(0)
     private val browserHealthy = AtomicBoolean(true)
+    private val disposing = AtomicBoolean(false)
     private var healthCheckTimer: Timer? = null
     private var setupDelayTimer: Timer? = null
-    private var lastPingResponse = AtomicLong(System.currentTimeMillis())
+    // lastPingSentAt: updated when ping JS is dispatched to the renderer
+    // lastPongAt:     updated when the JS→Kotlin pong callback fires
+    private val lastPingSentAt = AtomicLong(System.currentTimeMillis())
+    private val lastPongAt = AtomicLong(System.currentTimeMillis())
     private lateinit var pingQuery: JBCefJSQuery
     private lateinit var readyQuery: JBCefJSQuery
 
@@ -88,22 +93,18 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             val props = PropertiesComponent.getInstance()
             val now = System.currentTimeMillis()
 
-            // Check if we should reset crash count (outside crash window)
             val lastCrashTime = props.getLong(PREF_KEY_LAST_CRASH_TIME, 0L)
             if (now - lastCrashTime > CRASH_WINDOW_MS) {
                 props.setValue(PREF_KEY_CRASH_COUNT, "0")
             }
 
-            // Increment crash count
             val crashCount = props.getInt(PREF_KEY_CRASH_COUNT, 0) + 1
             props.setValue(PREF_KEY_CRASH_COUNT, crashCount.toString())
             props.setValue(PREF_KEY_LAST_CRASH_TIME, now.toString())
-
             sessionCrashCount.incrementAndGet()
 
             companionLogger.warn("JCEF crash detected (session: ${sessionCrashCount.get()}, total: $crashCount)")
 
-            // Switch to OSR if threshold exceeded
             if (crashCount >= CRASH_THRESHOLD && !osrFallbackTriggered.get()) {
                 companionLogger.warn("Crash threshold exceeded ($crashCount >= $CRASH_THRESHOLD), switching to OSR mode")
                 props.setValue(PREF_KEY_RENDERING_MODE, "osr")
@@ -118,7 +119,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             val props = PropertiesComponent.getInstance()
             val crashCount = props.getInt(PREF_KEY_CRASH_COUNT, 0)
             if (crashCount > 0) {
-                // Slowly decrease crash count when things are working
                 props.setValue(PREF_KEY_CRASH_COUNT, (crashCount - 1).coerceAtLeast(0).toString())
             }
         }
@@ -150,7 +150,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         }
 
         fun determineRenderingMode(): Boolean {
-            // Check explicit system property overrides first
             if (System.getProperty("refact.jcef.force-osr") == "true" ||
                 System.getenv("REFACT_FORCE_OSR") == "1") {
                 companionLogger.info("OSR forced via system property/env")
@@ -162,16 +161,13 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 return false
             }
 
-            // Windows/Mac: use native rendering (generally stable)
             if (SystemInfo.isWindows || SystemInfo.isMac) {
                 companionLogger.info("Using native rendering on Windows/Mac")
                 return false
             }
 
-            // Linux: check persisted preference (from crash detection)
             val props = PropertiesComponent.getInstance()
             val savedMode = props.getValue(PREF_KEY_RENDERING_MODE, "auto")
-            val crashCount = props.getInt(PREF_KEY_CRASH_COUNT, 0)
 
             return when (savedMode) {
                 "osr" -> {
@@ -206,7 +202,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     fun setStyle() {
         try {
-            // Safely get the theme information
             val lafManager = LafManager.getInstance()
             val theme = lafManager?.currentUIThemeLookAndFeel
             val isDarkMode = theme?.isDark ?: false
@@ -260,7 +255,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 "JBCefSupported=${JBCefApp.isSupported()}")
 
         try {
-            // Clear any previous error state
             clearLastInitError()
 
             logger.info("Creating JBCefBrowser with OSR=$useOffscreenRendering")
@@ -402,8 +396,46 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             }, cefBrowser)
         }
 
+        setupRenderProcessHandler()
         setupFocusRecovery(browserComponent)
         setupHealthCheck()
+    }
+
+    private fun setupRenderProcessHandler() {
+        jbcefBrowser.jbCefClient.addRequestHandler(object : CefRequestHandlerAdapter() {
+            override fun onRenderProcessTerminated(
+                browser: CefBrowser?,
+                status: CefRequestHandler.TerminationStatus?
+            ) {
+                if (disposing.get()) return
+                logger.warn("Render process terminated: $status")
+                browserHealthy.set(false)
+                stableRunCount.set(0)
+
+                val shouldSwitch = reportCrash()
+                ApplicationManager.getApplication().invokeLater {
+                    if (disposing.get() || jbcefBrowser.isDisposed) return@invokeLater
+                    if (shouldSwitch && modeSwitchCallback != null) {
+                        logger.warn("Render crash triggered mode switch")
+                        recoveryInProgress.set(false)
+                        modeSwitchCallback?.invoke()
+                    } else if (recoveryInProgress.compareAndSet(false, true)) {
+                        logger.info("Reloading browser after render process crash")
+                        val now = System.currentTimeMillis()
+                        initializationState.set(0)
+                        lastPingSentAt.set(now)
+                        lastPongAt.set(now)
+                        recoveryAttempts.set(0)
+                        unhealthyCount.set(0)
+                        browserHealthy.set(true)
+                        jbcefBrowser.cefBrowser.reload()
+                        // recoveryInProgress is cleared by onLoadingStateChange
+                    } else {
+                        logger.info("Render process terminated but recovery already in progress")
+                    }
+                }
+            }
+        }, cefBrowser)
     }
 
     private fun setupFocusRecovery(browserComponent: JComponent) {
@@ -414,12 +446,13 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         })
     }
 
-    private var unhealthyCount = AtomicInteger(0)
+    private val unhealthyCount = AtomicInteger(0)
     private val maxUnhealthyBeforeRecovery = 3
-    private var recoveryAttempts = AtomicInteger(0)
+    private val recoveryAttempts = AtomicInteger(0)
     private val maxRecoveryAttempts = 2
-    private var stableRunCount = AtomicInteger(0)
+    private val stableRunCount = AtomicInteger(0)
     private val stableThreshold = 10
+    private val recoveryInProgress = AtomicBoolean(false)
     private var modeSwitchCallback: (() -> Unit)? = null
 
     fun setModeSwitchCallback(callback: () -> Unit) {
@@ -439,50 +472,62 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     private fun checkBrowserHealth() {
-        if (jbcefBrowser.isDisposed) return
+        if (disposing.get() || jbcefBrowser.isDisposed) return
+        if (!::pingQuery.isInitialized) return
+
+        val now = System.currentTimeMillis()
+
+        // Unresponsive only when both timestamps are stale: stale pong alone may be a slow
+        // round-trip; stale sent-at means the renderer couldn't accept JS at all.
+        val timeSincePingSent = now - lastPingSentAt.get()
+        val timeSincePong     = now - lastPongAt.get()
+        val unresponsive = timeSincePingSent > 60000 && timeSincePong > 60000
+
+        if (unresponsive) {
+            val count = unhealthyCount.incrementAndGet()
+            browserHealthy.set(false)
+            stableRunCount.set(0)
+            logger.warn("Browser unresponsive: lastSent=${timeSincePingSent}ms, lastPong=${timeSincePong}ms (count: $count)")
+
+            if (count >= maxUnhealthyBeforeRecovery) {
+                attemptRecovery()
+            }
+            return
+        }
+
+        // Consider healthy when pong came back recently
+        if (timeSincePong < 35000) {
+            unhealthyCount.set(0)
+            val stableCount = stableRunCount.incrementAndGet()
+            if (stableCount == stableThreshold) {
+                logger.info("Browser stable for $stableThreshold health checks, reporting stable")
+                reportStable()
+            }
+        }
 
         try {
-            val timeSinceLastPing = System.currentTimeMillis() - lastPingResponse.get()
-            if (timeSinceLastPing > 60000) {
-                val count = unhealthyCount.incrementAndGet()
-                browserHealthy.set(false)
-                stableRunCount.set(0)
-                logger.warn("Browser unresponsive for ${timeSinceLastPing}ms (unhealthy count: $count)")
-
-                if (count >= maxUnhealthyBeforeRecovery) {
-                    attemptRecovery()
-                }
-                return
-            }
-
-            // Reset unhealthy count on successful response window
-            if (timeSinceLastPing < 35000) {
-                unhealthyCount.set(0)
-
-                // Track stable operation
-                val stableCount = stableRunCount.incrementAndGet()
-                if (stableCount == stableThreshold) {
-                    logger.info("Browser stable for $stableThreshold health checks, reporting stable")
-                    reportStable()
-                }
-            }
-
-            jsExecutor.executeJavaScript(
+            val pingFuture = jsExecutor.executeJavaScript(
                 "try { ${pingQuery.inject("'pong'")} } catch(e) { console.error('ping failed', e); }",
                 "health-ping"
             )
+            pingFuture.whenComplete { _, ex ->
+                if (ex == null) lastPingSentAt.set(System.currentTimeMillis())
+            }
         } catch (e: Exception) {
-            logger.warn("Health check error", e)
-            browserHealthy.set(false)
-            unhealthyCount.incrementAndGet()
+            // Don't call reportCrash() here — transient executor/disposal errors should not
+            // persist to disk or trigger OSR fallback. Let the unhealthy counter accumulate.
+            logger.warn("Health check: ping dispatch failed", e)
             stableRunCount.set(0)
-
-            // Report potential crash
-            reportCrash()
         }
     }
 
     private fun attemptRecovery() {
+        if (disposing.get()) return
+        if (!recoveryInProgress.compareAndSet(false, true)) {
+            logger.info("Recovery already in progress, skipping")
+            return
+        }
+
         val attempts = recoveryAttempts.incrementAndGet()
         logger.warn("Attempting browser recovery (attempt $attempts/$maxRecoveryAttempts)")
         unhealthyCount.set(0)
@@ -496,9 +541,10 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 if (!useOffscreenRendering) "Switching to OSR mode may help." else "There may be a graphics driver issue."
             )
 
-            if ((shouldSwitchMode || attempts > maxRecoveryAttempts) && modeSwitchCallback != null) {
+            if (modeSwitchCallback != null) {
                 logger.info("Triggering mode switch callback")
                 ApplicationManager.getApplication().invokeLater {
+                    recoveryInProgress.set(false)
                     modeSwitchCallback?.invoke()
                 }
                 return
@@ -506,19 +552,20 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         }
 
         try {
-            // Try to recover by reloading the page
             ApplicationManager.getApplication().invokeLater {
-                if (!jbcefBrowser.isDisposed) {
-                    logger.info("Reloading browser to recover from unhealthy state")
-                    initializationState.set(0)
-                    jbcefBrowser.cefBrowser.reload()
-                    lastPingResponse.set(System.currentTimeMillis())
-                    browserHealthy.set(true)
-                }
+                recoveryInProgress.set(false)
+                if (disposing.get() || jbcefBrowser.isDisposed) return@invokeLater
+                logger.info("Reloading browser to recover from unhealthy state")
+                val now = System.currentTimeMillis()
+                initializationState.set(0)
+                lastPingSentAt.set(now)
+                lastPongAt.set(now)
+                browserHealthy.set(true)
+                jbcefBrowser.cefBrowser.reload()
             }
         } catch (e: Exception) {
+            recoveryInProgress.set(false)
             logger.error("Recovery attempt failed", e)
-            reportCrash()
         }
     }
 
@@ -543,7 +590,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         }
 
         pingQuery = jsQueryManager.createStringQuery {
-            lastPingResponse.set(System.currentTimeMillis())
+            lastPongAt.set(System.currentTimeMillis())
             browserHealthy.set(true)
         }
 
@@ -566,12 +613,11 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 canGoForward: Boolean
             ) {
                 if (isLoading) {
-                    // Reset state when a new page load starts
                     val previousState = initializationState.getAndSet(0)
                     if (previousState > 0) {
                         logger.info("Page reload detected, resetting initialization state from $previousState to 0")
                     }
-                    // Cancel any pending setup timer
+                    recoveryInProgress.set(false)
                     setupDelayTimer?.stop()
                     setupDelayTimer = null
                     return
@@ -581,7 +627,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
                 if (initializationState.compareAndSet(0, 1)) {
                     logger.info("Page loaded, scheduling React setup")
-                    // Cancel any existing timer to prevent duplicates
                     setupDelayTimer?.stop()
                     setupDelayTimer = Timer(100, null).apply {
                         isRepeats = false
@@ -602,11 +647,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
             override fun onLoadEnd(browser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
                 logger.info("Load end event - HTTP status: $httpStatusCode, state: ${initializationState.get()}")
-
-                // Setup React if still at state 1 (page loaded but React not setup yet)
-                if (initializationState.get() == 1 || initializationState.get() == 2) {
-                    logger.debug("onLoadEnd: state=${initializationState.get()}, setup may already be running")
-                }
                 if (initializationState.get() == 1) {
                     setupReactApplication()
                 }
@@ -670,9 +710,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
                     val scripts = listOf(
                         """
-                        if (window.__REFACT_BRIDGE_INSTALLED__) {
-                            console.log('Bridge already installed, skipping');
-                        } else {
+                        if (!window.__REFACT_BRIDGE_INSTALLED__) {
                             window.__REFACT_BRIDGE_INSTALLED__ = true;
                             const config = $configJson;
                             const active_file = $fileJson;
@@ -715,7 +753,6 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         }
                         """.trimIndent(),
 
-                        // Chat script loading with ready handshake
                         """
                         function loadChatJs() {
                             const element = document.getElementById("refact-chat");
@@ -782,29 +819,24 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     override fun dispose() {
+        disposing.set(true)
         logger.info("Disposing ChatWebView")
 
         try {
-            // Stop timers first (safe on any thread)
             healthCheckTimer?.stop()
             healthCheckTimer = null
             setupDelayTimer?.stop()
             setupDelayTimer = null
 
-            // Clean up OSR renderer (removes listeners)
             osrRenderer?.cleanup()
             osrRenderer = null
 
-            // Dispose resource managers - these are thread-safe
             asyncMessageHandler.dispose()
             jsQueryManager.dispose()
 
-            // JS executor disposal may wait - do it without blocking EDT
             val app = ApplicationManager.getApplication()
             if (app.isDispatchThread) {
-                app.executeOnPooledThread {
-                    disposeJsExecutorAndBrowser()
-                }
+                app.executeOnPooledThread { disposeJsExecutorAndBrowser() }
             } else {
                 disposeJsExecutorAndBrowser()
             }

@@ -8,7 +8,6 @@ import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationListener.Adapter
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.EditorFactoryEvent
@@ -123,7 +122,7 @@ fun emitRegular(project: Project, editor: Editor) {
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
         notification.expire()
-        ApplicationManager.getApplication().invokeLater {
+        AppExecutorUtil.getAppExecutorService().execute {
             ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         }
     })
@@ -164,7 +163,7 @@ fun emitWarning(project: Project, msg: String) {
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
         notification.expire()
-        ApplicationManager.getApplication().invokeLater {
+        AppExecutorUtil.getAppExecutorService().execute {
             ShowSettingsUtilImpl.showSettingsDialog(project, refactAIAdvancedSettingsID, null)
         }
     })
@@ -188,7 +187,7 @@ fun emitInfo(msg: String, needToDeleteLast: Boolean = true) {
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
         notification.expire()
-        ApplicationManager.getApplication().invokeLater {
+        AppExecutorUtil.getAppExecutorService().execute {
             ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         }
     })
@@ -232,7 +231,7 @@ fun emitError(msg: String) {
 
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
         notification.expire()
-        ApplicationManager.getApplication().invokeLater {
+        AppExecutorUtil.getAppExecutorService().execute {
             ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
         }
     })

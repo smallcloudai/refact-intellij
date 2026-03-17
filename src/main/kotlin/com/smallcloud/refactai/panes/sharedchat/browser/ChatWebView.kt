@@ -53,6 +53,17 @@ fun getActionKeybinding(actionId: String): String {
     return if (shortcuts.isNotEmpty()) KeymapUtil.getShortcutText(shortcuts[0]) else ""
 }
 
+internal const val JCEF_UNRESPONSIVE_PONG_TIMEOUT_MS = 10_000L
+internal const val JCEF_HEALTHY_PONG_WINDOW_MS = 5_000L
+
+internal fun isJcefRendererUnresponsive(nowMs: Long, lastPongAtMs: Long): Boolean {
+    return nowMs - lastPongAtMs > JCEF_UNRESPONSIVE_PONG_TIMEOUT_MS
+}
+
+internal fun hasRecentJcefPong(nowMs: Long, lastPongAtMs: Long): Boolean {
+    return nowMs - lastPongAtMs < JCEF_HEALTHY_PONG_WINDOW_MS
+}
+
 class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromChat) -> Unit) : Disposable {
     private val logger = Logger.getInstance(ChatWebView::class.java)
 
@@ -460,7 +471,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     private fun setupHealthCheck() {
-        healthCheckTimer = Timer(30000, null).apply {
+        healthCheckTimer = Timer(10000, null).apply {
             isRepeats = true
             addActionListener {
                 if (initializationState.get() >= 2 && !jbcefBrowser.isDisposed) {
@@ -476,18 +487,16 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         if (!::pingQuery.isInitialized) return
 
         val now = System.currentTimeMillis()
-
-        // Unresponsive only when both timestamps are stale: stale pong alone may be a slow
-        // round-trip; stale sent-at means the renderer couldn't accept JS at all.
         val timeSincePingSent = now - lastPingSentAt.get()
-        val timeSincePong     = now - lastPongAt.get()
-        val unresponsive = timeSincePingSent > 60000 && timeSincePong > 60000
+        val lastPongAtMs = lastPongAt.get()
+        val timeSincePong = now - lastPongAtMs
+        val unresponsive = isJcefRendererUnresponsive(now, lastPongAtMs)
 
         if (unresponsive) {
             val count = unhealthyCount.incrementAndGet()
             browserHealthy.set(false)
             stableRunCount.set(0)
-            logger.warn("Browser unresponsive: lastSent=${timeSincePingSent}ms, lastPong=${timeSincePong}ms (count: $count)")
+            logger.warn("Browser unresponsive: lastPong=${timeSincePong}ms, lastSent=${timeSincePingSent}ms (count: $count)")
 
             if (count >= maxUnhealthyBeforeRecovery) {
                 attemptRecovery()
@@ -495,8 +504,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             return
         }
 
-        // Consider healthy when pong came back recently
-        if (timeSincePong < 35000) {
+        if (hasRecentJcefPong(now, lastPongAtMs)) {
             unhealthyCount.set(0)
             val stableCount = stableRunCount.incrementAndGet()
             if (stableCount == stableThreshold) {

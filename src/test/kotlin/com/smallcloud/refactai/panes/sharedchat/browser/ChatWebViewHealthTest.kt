@@ -24,6 +24,34 @@ class ChatWebViewHealthTest {
     }
 
     @Test
+    fun stalePongWithoutOutstandingPingDoesNotTriggerTimeout() {
+        val now = 120_000L
+        val lastPingSentAt = now - JCEF_UNRESPONSIVE_PONG_TIMEOUT_MS - 1
+
+        assertFalse(
+            hasTimedOutOutstandingPing(
+                nowMs = now,
+                lastPingSentAtMs = lastPingSentAt,
+                pingInFlight = false,
+            ),
+        )
+    }
+
+    @Test
+    fun outstandingPingTimeoutRequiresPingInFlight() {
+        val now = 120_000L
+        val lastPingSentAt = now - JCEF_UNRESPONSIVE_PONG_TIMEOUT_MS - 1
+
+        assertTrue(
+            hasTimedOutOutstandingPing(
+                nowMs = now,
+                lastPingSentAtMs = lastPingSentAt,
+                pingInFlight = true,
+            ),
+        )
+    }
+
+    @Test
     fun pongAtThirtySecondsTriggersRecoveryWindow() {
         val now = 120_000L
         val lastPongAt = now - JCEF_UNRESPONSIVE_PONG_TIMEOUT_MS - 1

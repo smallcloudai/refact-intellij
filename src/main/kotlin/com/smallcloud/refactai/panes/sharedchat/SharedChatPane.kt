@@ -99,6 +99,9 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     init {
         messageQueue.setReadyCheck { browserLazy.isInitialized() && browser.isReady() }
+        messageQueue.setSuspendFlushCheck {
+            browserLazy.isInitialized() && !browser.isBrowserHealthy()
+        }
         messageQueue.setFlushCallback { messages ->
             messages.forEach { browser.postMessage(it) }
         }

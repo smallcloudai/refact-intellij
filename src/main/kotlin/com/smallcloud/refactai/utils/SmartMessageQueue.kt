@@ -8,6 +8,7 @@ import com.smallcloud.refactai.panes.sharedchat.Events
 class SmartMessageQueue(
     private val maxCommands: Int = 200,
     private val flushDebounceMs: Long = 16L,
+    private val blockedFlushDebounceMs: Long = 250L,
     parentDisposable: Disposable
 ) : Disposable {
 
@@ -25,6 +26,7 @@ class SmartMessageQueue(
     private var disposed = false
     private var flushCallback: ((List<Events.ToChat<*>>) -> Unit)? = null
     private var readyCheck: (() -> Boolean)? = null
+    private var suspendFlushCheck: (() -> Boolean)? = null
 
     fun setFlushCallback(callback: (List<Events.ToChat<*>>) -> Unit) {
         flushCallback = callback
@@ -32,6 +34,10 @@ class SmartMessageQueue(
 
     fun setReadyCheck(check: () -> Boolean) {
         readyCheck = check
+    }
+
+    fun setSuspendFlushCheck(check: () -> Boolean) {
+        suspendFlushCheck = check
     }
 
     fun enqueue(message: Events.ToChat<*>) {
@@ -56,18 +62,22 @@ class SmartMessageQueue(
     }
 
     private fun scheduleFlush() {
-        synchronized(lock) {
-            if (flushPending || disposed) return
+        val delay = synchronized(lock) {
+            if (disposed || flushPending) return
             flushPending = true
+            if (suspendFlushCheck?.invoke() == true) blockedFlushDebounceMs else flushDebounceMs
         }
-        flushAlarm.addRequest({ doFlush() }, flushDebounceMs)
+        flushAlarm.addRequest({ doFlush() }, delay)
     }
 
     private fun doFlush() {
         val check = readyCheck
+        val suspendCheck = suspendFlushCheck
         val shouldReschedule = synchronized(lock) {
             flushPending = false
-            disposed || (check != null && !check())
+            disposed ||
+                (suspendCheck != null && suspendCheck()) ||
+                (check != null && !check())
         }
         if (shouldReschedule) {
             scheduleFlush()

@@ -53,8 +53,9 @@ fun getActionKeybinding(actionId: String): String {
     return if (shortcuts.isNotEmpty()) KeymapUtil.getShortcutText(shortcuts[0]) else ""
 }
 
-internal const val JCEF_UNRESPONSIVE_PONG_TIMEOUT_MS = 10_000L
-internal const val JCEF_HEALTHY_PONG_WINDOW_MS = 5_000L
+internal const val JCEF_UNRESPONSIVE_PONG_TIMEOUT_MS = 20_000L
+internal const val JCEF_HEALTHY_PONG_WINDOW_MS = 10_000L
+internal const val JCEF_HEALTH_CHECK_INTERVAL_MS = 10_000
 
 internal fun isJcefRendererUnresponsive(nowMs: Long, lastPongAtMs: Long): Boolean {
     return nowMs - lastPongAtMs > JCEF_UNRESPONSIVE_PONG_TIMEOUT_MS
@@ -62,6 +63,14 @@ internal fun isJcefRendererUnresponsive(nowMs: Long, lastPongAtMs: Long): Boolea
 
 internal fun hasRecentJcefPong(nowMs: Long, lastPongAtMs: Long): Boolean {
     return nowMs - lastPongAtMs < JCEF_HEALTHY_PONG_WINDOW_MS
+}
+
+internal fun hasTimedOutOutstandingPing(
+    nowMs: Long,
+    lastPingSentAtMs: Long,
+    pingInFlight: Boolean,
+): Boolean {
+    return pingInFlight && nowMs - lastPingSentAtMs > JCEF_UNRESPONSIVE_PONG_TIMEOUT_MS
 }
 
 class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromChat) -> Unit) : Disposable {
@@ -73,10 +82,11 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     private val disposing = AtomicBoolean(false)
     private var healthCheckTimer: Timer? = null
     private var setupDelayTimer: Timer? = null
-    // lastPingSentAt: updated when ping JS is dispatched to the renderer
+    // lastPingSentAt: updated when a health ping is queued for the renderer
     // lastPongAt:     updated when the JS→Kotlin pong callback fires
     private val lastPingSentAt = AtomicLong(System.currentTimeMillis())
     private val lastPongAt = AtomicLong(System.currentTimeMillis())
+    private val pingInFlight = AtomicBoolean(false)
     private lateinit var pingQuery: JBCefJSQuery
     private lateinit var readyQuery: JBCefJSQuery
 
@@ -470,11 +480,58 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         modeSwitchCallback = callback
     }
 
+    private fun resetHealthTracking(now: Long = System.currentTimeMillis()) {
+        lastPingSentAt.set(now)
+        lastPongAt.set(now)
+        pingInFlight.set(false)
+        browserHealthy.set(true)
+        unhealthyCount.set(0)
+        stableRunCount.set(0)
+    }
+
+    private fun markRendererResponsive(now: Long = System.currentTimeMillis()) {
+        lastPongAt.set(now)
+        pingInFlight.set(false)
+        browserHealthy.set(true)
+        unhealthyCount.set(0)
+        recoveryAttempts.set(0)
+
+        val stableCount = stableRunCount.incrementAndGet()
+        if (stableCount == stableThreshold) {
+            logger.info("Browser stable for $stableThreshold successful pings, reporting stable")
+            reportStable()
+        }
+    }
+
+    private fun dispatchHealthPing(now: Long) {
+        if (!pingInFlight.compareAndSet(false, true)) return
+
+        lastPingSentAt.set(now)
+
+        try {
+            val pingFuture = jsExecutor.executeJavaScript(
+                "try { ${pingQuery.inject("'pong'")} } catch(e) { console.error('ping failed', e); }",
+                "health-ping"
+            )
+            pingFuture.whenComplete { _, ex ->
+                if (ex != null) {
+                    pingInFlight.set(false)
+                    stableRunCount.set(0)
+                    logger.warn("Health check: ping dispatch failed", ex)
+                }
+            }
+        } catch (e: Exception) {
+            pingInFlight.set(false)
+            stableRunCount.set(0)
+            logger.warn("Health check: ping dispatch failed", e)
+        }
+    }
+
     private fun setupHealthCheck() {
-        healthCheckTimer = Timer(10000, null).apply {
+        healthCheckTimer = Timer(JCEF_HEALTH_CHECK_INTERVAL_MS, null).apply {
             isRepeats = true
             addActionListener {
-                if (initializationState.get() >= 2 && !jbcefBrowser.isDisposed) {
+                if (initializationState.get() >= 3 && !jbcefBrowser.isDisposed) {
                     checkBrowserHealth()
                 }
             }
@@ -485,48 +542,37 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     private fun checkBrowserHealth() {
         if (disposing.get() || jbcefBrowser.isDisposed) return
         if (!::pingQuery.isInitialized) return
+        if (initializationState.get() < 3) return
+        if (recoveryInProgress.get()) return
 
         val now = System.currentTimeMillis()
         val timeSincePingSent = now - lastPingSentAt.get()
         val lastPongAtMs = lastPongAt.get()
         val timeSincePong = now - lastPongAtMs
-        val unresponsive = isJcefRendererUnresponsive(now, lastPongAtMs)
+        val pingTimedOut = hasTimedOutOutstandingPing(
+            nowMs = now,
+            lastPingSentAtMs = lastPingSentAt.get(),
+            pingInFlight = pingInFlight.get(),
+        )
 
-        if (unresponsive) {
+        if (pingTimedOut) {
             val count = unhealthyCount.incrementAndGet()
             browserHealthy.set(false)
             stableRunCount.set(0)
-            logger.warn("Browser unresponsive: lastPong=${timeSincePong}ms, lastSent=${timeSincePingSent}ms (count: $count)")
+            pingInFlight.set(false)
+            logger.warn("Browser ping timed out: lastPong=${timeSincePong}ms, lastPing=${timeSincePingSent}ms (count: $count)")
 
             if (count >= maxUnhealthyBeforeRecovery) {
                 attemptRecovery()
+                return
             }
+        }
+
+        if (pingInFlight.get()) {
             return
         }
 
-        if (hasRecentJcefPong(now, lastPongAtMs)) {
-            unhealthyCount.set(0)
-            val stableCount = stableRunCount.incrementAndGet()
-            if (stableCount == stableThreshold) {
-                logger.info("Browser stable for $stableThreshold health checks, reporting stable")
-                reportStable()
-            }
-        }
-
-        try {
-            val pingFuture = jsExecutor.executeJavaScript(
-                "try { ${pingQuery.inject("'pong'")} } catch(e) { console.error('ping failed', e); }",
-                "health-ping"
-            )
-            pingFuture.whenComplete { _, ex ->
-                if (ex == null) lastPingSentAt.set(System.currentTimeMillis())
-            }
-        } catch (e: Exception) {
-            // Don't call reportCrash() here — transient executor/disposal errors should not
-            // persist to disk or trigger OSR fallback. Let the unhealthy counter accumulate.
-            logger.warn("Health check: ping dispatch failed", e)
-            stableRunCount.set(0)
-        }
+        dispatchHealthPing(now)
     }
 
     private fun attemptRecovery() {
@@ -540,7 +586,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         logger.warn("Attempting browser recovery (attempt $attempts/$maxRecoveryAttempts)")
         unhealthyCount.set(0)
 
-        val shouldSwitchMode = reportCrash()
+        val shouldSwitchMode = attempts > maxRecoveryAttempts
 
         if (shouldSwitchMode || attempts > maxRecoveryAttempts) {
             logger.warn("Recovery failed repeatedly or crash threshold exceeded, recommending mode switch")
@@ -561,14 +607,13 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
         try {
             ApplicationManager.getApplication().invokeLater {
-                recoveryInProgress.set(false)
-                if (disposing.get() || jbcefBrowser.isDisposed) return@invokeLater
+                if (disposing.get() || jbcefBrowser.isDisposed) {
+                    recoveryInProgress.set(false)
+                    return@invokeLater
+                }
                 logger.info("Reloading browser to recover from unhealthy state")
-                val now = System.currentTimeMillis()
                 initializationState.set(0)
-                lastPingSentAt.set(now)
-                lastPongAt.set(now)
-                browserHealthy.set(true)
+                resetHealthTracking()
                 jbcefBrowser.cefBrowser.reload()
             }
         } catch (e: Exception) {
@@ -598,8 +643,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         }
 
         pingQuery = jsQueryManager.createStringQuery {
-            lastPongAt.set(System.currentTimeMillis())
-            browserHealthy.set(true)
+            markRendererResponsive()
         }
 
         readyQuery = jsQueryManager.createStringQuery { message ->
@@ -608,6 +652,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 if (previousState < 3) {
                     logger.info("React application signaled ready")
                 }
+                markRendererResponsive()
             }
         }
     }
@@ -626,6 +671,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         logger.info("Page reload detected, resetting initialization state from $previousState to 0")
                     }
                     recoveryInProgress.set(false)
+                    pingInFlight.set(false)
                     setupDelayTimer?.stop()
                     setupDelayTimer = null
                     return

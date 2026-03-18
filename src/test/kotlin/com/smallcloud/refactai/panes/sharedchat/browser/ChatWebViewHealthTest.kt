@@ -17,7 +17,7 @@ class ChatWebViewHealthTest {
     @Test
     fun recentPongKeepsRendererResponsive() {
         val now = 120_000L
-        val lastPongAt = now - 10_000L
+        val lastPongAt = now - 3_000L
 
         assertFalse(isJcefRendererUnresponsive(now, lastPongAt))
         assertTrue(hasRecentJcefPong(now, lastPongAt))

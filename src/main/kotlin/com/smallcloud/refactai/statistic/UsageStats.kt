@@ -14,10 +14,21 @@ import com.smallcloud.refactai.io.sendRequest
 import com.smallcloud.refactai.listeners.LastEditorGetterListener.Companion.LAST_EDITOR
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.acceptedCompletionCounter
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
+import java.net.URI
 
 
 class UsageStats(private val project: Project): Disposable {
     private val execService = AppExecutorUtil.getAppScheduledExecutorService()
+
+    private fun getBaseUrlOrStart(reason: String): URI? {
+        val lspHolder = getLSPProcessHolder(project) ?: return null
+        val baseUrl = lspHolder.baseUrlOrNull()
+        if (baseUrl == null) {
+            lspHolder.ensureStartedAsync(reason)
+            return null
+        }
+        return baseUrl
+    }
 
     fun addStatistic(
         positive: Boolean,
@@ -46,8 +57,8 @@ class UsageStats(private val project: Project): Disposable {
                 "url" to relatedUrl,
             )
         )
-        val lspHolder = getLSPProcessHolder(project) ?: return
-        val url = lspHolder.url.resolve(defaultReportUrlSuffix)
+        val baseUrl = getBaseUrlOrStart("usage-stats-report") ?: return
+        val url = baseUrl.resolve(defaultReportUrlSuffix)
         execService.submit {
             try {
                 val res = sendRequest(url, "POST", body=body)
@@ -65,8 +76,8 @@ class UsageStats(private val project: Project): Disposable {
     }
 
     fun snippetAccepted(snippetId: Int) {
-        val lspHolder = getLSPProcessHolder(project) ?: return
-        val url = lspHolder.url.resolve(defaultSnippetAcceptedUrlSuffix)
+        val baseUrl = getBaseUrlOrStart("usage-stats-snippet-accepted") ?: return
+        val url = baseUrl.resolve(defaultSnippetAcceptedUrlSuffix)
         execService.submit {
             try {
                 val gson = Gson()
@@ -122,8 +133,8 @@ class UsageStats(private val project: Project): Disposable {
                 "scope" to scopeJson,
             )
         )
-        val lspHolder = getLSPProcessHolder(project) ?: return
-        val url = lspHolder.url.resolve(defaultChatReportUrlSuffix)
+        val baseUrl = getBaseUrlOrStart("usage-stats-chat-report") ?: return
+        val url = baseUrl.resolve(defaultChatReportUrlSuffix)
         execService.submit {
             try {
                 val res = sendRequest(url, "POST", body=body)

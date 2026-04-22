@@ -68,9 +68,9 @@ class NotificationSSEClient(private val project: Project) : Disposable {
 
     private fun connect() {
         val lspHolder = LSPProcessHolder.getInstance(project) ?: return
-        val baseUrl = lspHolder.url
-        if (baseUrl.toString().isEmpty()) {
-            Thread.sleep(reconnectDelayMs)
+        val baseUrl = lspHolder.baseUrlOrNull()
+        if (baseUrl == null) {
+            lspHolder.ensureStartedAsync("sidebar-sse-connect")
             return
         }
 

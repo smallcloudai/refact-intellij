@@ -122,7 +122,10 @@ class RefactCodeVisionProvider(
     override fun computeCodeVision(editor: Editor, uiData: Unit): CodeVisionState {
 //        Logger.getInstance(RefactCodeVisionProvider::class.java).warn("computeCodeVision $commandKey start")
         val lsp = editor.project?.let { getInstance(it) } ?: return CodeVisionState.NotReady
-        if (!lsp.isWorking) return CodeVisionState.NotReady
+        if (!lsp.isWorking || lsp.baseUrlOrNull() == null) {
+            lsp.ensureStartedAsync("code-vision-compute")
+            return CodeVisionState.NotReady
+        }
 
         try {
             val codeLens = getCodeLens(editor)

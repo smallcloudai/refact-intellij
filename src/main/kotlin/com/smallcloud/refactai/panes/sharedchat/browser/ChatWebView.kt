@@ -94,7 +94,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         private val schemeHandlerRegistered = AtomicBoolean(false)
         private val companionLogger = Logger.getInstance(ChatWebView::class.java)
 
-        private const val JS_QUERY_POOL_SIZE = 200
+        private const val JS_QUERY_POOL_SIZE = 512
         private const val PREF_KEY_RENDERING_MODE = "refact.jcef.rendering.mode"
         private const val PREF_KEY_CRASH_COUNT = "refact.jcef.crash.count"
         private const val PREF_KEY_LAST_CRASH_TIME = "refact.jcef.last.crash.time"
@@ -207,9 +207,9 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         }
     }
 
-    private val jsQueryManager: JSQueryManager
-    private val asyncMessageHandler: AsyncMessageHandler<Events.FromChat>
-    private val jsExecutor: JavaScriptExecutor
+    private lateinit var jsQueryManager: JSQueryManager
+    private lateinit var asyncMessageHandler: AsyncMessageHandler<Events.FromChat>
+    private lateinit var jsExecutor: JavaScriptExecutor
     private var osrRenderer: OSRRenderer? = null
 
     private lateinit var mainQuery: JBCefJSQuery
@@ -442,13 +442,9 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         modeSwitchCallback?.invoke()
                     } else if (recoveryInProgress.compareAndSet(false, true)) {
                         logger.info("Reloading browser after render process crash")
-                        val now = System.currentTimeMillis()
                         initializationState.set(0)
-                        lastPingSentAt.set(now)
-                        lastPongAt.set(now)
+                        resetHealthTracking()
                         recoveryAttempts.set(0)
-                        unhealthyCount.set(0)
-                        browserHealthy.set(true)
                         jbcefBrowser.cefBrowser.reload()
                         // recoveryInProgress is cleared by onLoadingStateChange
                     } else {
@@ -718,6 +714,11 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                     return
                 }
 
+                if (errorCode == CefLoadHandler.ErrorCode.ERR_UNKNOWN_URL_SCHEME) {
+                    logger.debug("Unknown URL scheme (e.g. mailto:, tel:) — ignored: $failedUrl")
+                    return
+                }
+
                 logger.error("JCEF load error: code=$errorCode, text=$errorText, url=$failedUrl")
 
                 val errorMsg = "Browser load failed: $errorText (code: $errorCode, url: $failedUrl)"
@@ -742,6 +743,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     }
 
     private fun setupReactApplication() {
+        if (disposing.get()) return
         if (!initializationState.compareAndSet(1, 2)) {
             logger.debug("React setup skipped - already in progress or completed (state: ${initializationState.get()})")
             return
@@ -885,8 +887,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             osrRenderer?.cleanup()
             osrRenderer = null
 
-            asyncMessageHandler.dispose()
-            jsQueryManager.dispose()
+            if (::asyncMessageHandler.isInitialized) asyncMessageHandler.dispose()
+            if (::jsQueryManager.isInitialized) jsQueryManager.dispose()
 
             val app = ApplicationManager.getApplication()
             if (app.isDispatchThread) {
@@ -904,7 +906,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
     private fun disposeJsExecutorAndBrowser() {
         try {
-            jsExecutor.dispose()
+            if (::jsExecutor.isInitialized) jsExecutor.dispose()
 
             try {
                 CefLifecycleManager.releaseBrowser(cefBrowser)

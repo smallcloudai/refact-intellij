@@ -15,7 +15,6 @@ import com.smallcloud.refactai.settings.AppSettingsState
 
 
 class Editor (val project: Project) {
-    private val lsp: LSPProcessHolder = LSPProcessHolder.getInstance(project)!!
     private fun getLanguage(fm: FileEditorManager): Language? {
         val editor = fm.selectedTextEditor
         val language = editor?.document?.let {
@@ -60,7 +59,11 @@ class Editor (val project: Project) {
         val mode = if (isDarkMode) "dark" else "light"
         val themeProps = Events.Config.ThemeProps(mode)
         val apiKey = instance.apiKey
-        val rawPort = lsp.url.port
+        val lspHolder = LSPProcessHolder.getInstance(project)
+        val rawPort = lspHolder?.baseUrlOrNull()?.port ?: 0
+        if (rawPort <= 0) {
+            lspHolder?.ensureStartedAsync("editor-config-request")
+        }
         val lspPort = if (rawPort > 0) rawPort else 0
         val addressURL = AppSettingsState.instance.userInferenceUri ?: ""
         val keyBindings = Events.Config.KeyBindings(getActionKeybinding("ForceCompletionAction"))

@@ -30,8 +30,10 @@ import java.nio.file.Paths
 import java.security.MessageDigest
 import java.util.*
 import java.util.concurrent.Future
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.Path
 import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
@@ -73,6 +75,15 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     private val ragStatusCheckerScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
         "SMCLSPRagStatusCheckerScheduler", 1
     )
+    private val lifecycleScheduler = AppExecutorUtil.createBoundedScheduledExecutorService(
+        "SMCLSPLifecycleScheduler", 1
+    )
+    private val lifecycleWorkerRunning = AtomicBoolean(false)
+    private val lifecycleStartRequested = AtomicBoolean(false)
+    private val lifecycleRestartRequested = AtomicBoolean(false)
+    private val lifecycleReason = AtomicReference("initial")
+    @Volatile
+    private var customizationCache: JsonObject? = null
 
     private val exitThread: Thread = Thread {
         terminate()
@@ -88,74 +99,193 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             }
         }
 
-    init {
+    private fun logIfBlockingOperationOnEdt(operation: String) {
+        if (ApplicationManager.getApplication().isDispatchThread) {
+            logger.error("LSP blocking operation '$operation' called on EDT")
+        }
+    }
+
+    private fun isCustomPortConfigured(): Boolean {
+        return InferenceGlobalContext.xDebugLSPPort != null
+    }
+
+    private fun shouldAbortLifecycleWork(): Boolean {
+        return isDisposed || project.isDisposed
+    }
+
+    private fun requestLifecycleWork(reason: String, restart: Boolean) {
+        try {
+            if (isDisposed || project.isDisposed) {
+                logger.info("Skipping lifecycle work for disposed LSPProcessHolder or project")
+                return
+            }
+
+            lifecycleStartRequested.set(true)
+            if (restart) {
+                lifecycleRestartRequested.set(true)
+            }
+            lifecycleReason.set(reason)
+            scheduleLifecycleWorkerIfNeeded()
+        } catch (e: RejectedExecutionException) {
+            if (e.message?.contains("Already shutdown") == true) {
+                logger.info("Ignoring RejectedExecutionException during lifecycle scheduling: ${e.message}")
+            } else {
+                throw e
+            }
+        }
+    }
+
+    private fun scheduleLifecycleWorkerIfNeeded() {
+        if (!lifecycleWorkerRunning.compareAndSet(false, true)) return
+
+        try {
+            lifecycleScheduler.submit {
+                runLifecycleWorker()
+            }
+        } catch (e: RejectedExecutionException) {
+            lifecycleWorkerRunning.set(false)
+            if (e.message?.contains("Already shutdown") == true) {
+                logger.info("Ignoring RejectedExecutionException during lifecycle startup: ${e.message}")
+            } else {
+                throw e
+            }
+        }
+    }
+
+    private fun runLifecycleWorker() {
+        try {
+            while (!isDisposed && !project.isDisposed) {
+                val shouldRestart = lifecycleRestartRequested.getAndSet(false)
+                val shouldStart = lifecycleStartRequested.getAndSet(false)
+                if (!shouldRestart && !shouldStart) {
+                    break
+                }
+
+                val reason = lifecycleReason.getAndSet("coalesced")
+                logger.debug("Lifecycle worker run: restart=$shouldRestart start=$shouldStart reason=$reason")
+                if (shouldRestart) {
+                    applySettingsChangeBlocking(reason)
+                } else {
+                    ensureStartedBlocking(reason)
+                }
+            }
+        } catch (e: Exception) {
+            logger.warn("Exception during lifecycle worker: ${e.message}")
+        } finally {
+            lifecycleWorkerRunning.set(false)
+            if (!isDisposed && !project.isDisposed && (lifecycleStartRequested.get() || lifecycleRestartRequested.get())) {
+                scheduleLifecycleWorkerIfNeeded()
+            }
+        }
+    }
+
+    private fun applySettingsChangeBlocking(reason: String) {
+        if (shouldAbortLifecycleWork()) {
+            logger.info("Skipping settings change for disposed LSPProcessHolder or project")
+            return
+        }
+
         initialize()
+        logger.info("Applying LSP settings change: $reason")
+        customizationCache = null
+
+        if (isCustomPortConfigured()) {
+            terminate()
+            capabilities = getCaps()
+            isWorking = true
+            lspProjectInitialize(this, project)
+            return
+        }
+
+        startProcess()
+    }
+
+    protected open fun ensureStartedBlocking(reason: String) {
+        if (shouldAbortLifecycleWork()) {
+            logger.info("Skipping ensure-started for disposed LSPProcessHolder or project")
+            return
+        }
+
+        initialize()
+        logger.debug("Ensuring LSP is started: $reason")
+
+        if (isCustomPortConfigured()) {
+            if (!isWorking) {
+                capabilities = getCaps()
+                isWorking = true
+                lspProjectInitialize(this, project)
+            }
+            return
+        }
+
+        if (!isWorking || process?.isAlive != true || lastConfig == null) {
+            startProcess()
+        }
+    }
+
+    open fun ensureStartedAsync(reason: String = "external-request") {
+        requestLifecycleWork(reason, restart = false)
+    }
+
+    fun hasPendingLifecycleWork(): Boolean {
+        return lifecycleStartRequested.get() || lifecycleRestartRequested.get() || lifecycleWorkerRunning.get()
+    }
+
+    fun ensureStartedIfNeeded(reason: String = "external-request") {
+        val app = ApplicationManager.getApplication()
+        if (app.isDispatchThread) {
+            ensureStartedAsync(reason)
+        } else {
+            ensureStartedBlocking(reason)
+        }
+    }
+
+    init {
         messageBus.connect(this).subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
             override fun apiKeyChanged(newApiKey: String?) {
-                AppExecutorUtil.getAppScheduledExecutorService().submit {
-                    settingsChanged()
-                }
+                settingsChanged("account-api-key-changed")
             }
 
             override fun planStatusChanged(newPlan: String?) {
-                AppExecutorUtil.getAppScheduledExecutorService().submit {
-                    settingsChanged()
-                }
+                settingsChanged("account-plan-status-changed")
             }
         })
         messageBus.connect(this)
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                 override fun userInferenceUriChanged(newUrl: String?) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+                    settingsChanged("inference-uri-changed")
                 }
 
                 override fun astFlagChanged(newValue: Boolean) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+                    settingsChanged("ast-flag-changed")
                 }
 
                 override fun astFileLimitChanged(newValue: Int) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+                    settingsChanged("ast-file-limit-changed")
                 }
 
                 override fun vecdbFlagChanged(newValue: Boolean) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+                    settingsChanged("vecdb-flag-changed")
                 }
 
                 override fun vecdbFileLimitChanged(newValue: Int) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+                    settingsChanged("vecdb-file-limit-changed")
                 }
 
                 override fun xDebugLSPPortChanged(newPort: Int?) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+                    settingsChanged("debug-port-changed")
                 }
 
                 override fun insecureSSLChanged(newValue: Boolean) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+                    settingsChanged("insecure-ssl-changed")
                 }
 
                 override fun experimentalLspFlagEnabledChanged(newValue: Boolean) {
-                    AppExecutorUtil.getAppScheduledExecutorService().submit {
-                        settingsChanged()
-                    }
+                    settingsChanged("experimental-flag-changed")
                 }
             })
 
         Runtime.getRuntime().addShutdownHook(exitThread)
-        settingsChanged()
 
         healthCheckerScheduler.scheduleWithFixedDelay({
             try {
@@ -166,9 +296,9 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 }
 
                 if (lastConfig == null) return@scheduleWithFixedDelay
-                if (InferenceGlobalContext.xDebugLSPPort != null) return@scheduleWithFixedDelay
+                if (isCustomPortConfigured()) return@scheduleWithFixedDelay
                 if (process?.isAlive == false) {
-                    startProcess()
+                    ensureStartedAsync("health-check-process-dead")
                 }
             } catch (e: java.util.concurrent.RejectedExecutionException) {
                 // This exception can occur during shutdown when schedulers are already closed
@@ -186,40 +316,8 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 1000, TimeUnit.MILLISECONDS)
     }
 
-    fun settingsChanged() {
-        try {
-            // Check if we're already disposed before proceeding
-            if (isDisposed || project.isDisposed) {
-                logger.info("Skipping settings change for disposed LSPProcessHolder or project")
-                return
-            }
-
-            synchronized(this) {
-                // Double-check inside the synchronized block
-                if (isDisposed || project.isDisposed) {
-                    logger.info("Skipping settings change for disposed LSPProcessHolder or project")
-                    return
-                }
-
-                terminate()
-                if (InferenceGlobalContext.xDebugLSPPort != null) {
-                    capabilities = getCaps()
-                    isWorking = true
-                    lspProjectInitialize(this, project)
-                    return
-                }
-                startProcess()
-            }
-        } catch (e: java.util.concurrent.RejectedExecutionException) {
-            // This exception can occur during shutdown when schedulers are already closed
-            // but there are still pending tasks trying to use them
-            if (e.message?.contains("Already shutdown") == true) {
-                logger.info("Ignoring RejectedExecutionException during shutdown: ${e.message}")
-            } else {
-                // Rethrow other types of RejectedExecutionException
-                throw e
-            }
-        }
+    open fun settingsChanged(reason: String = "settings-changed") {
+        requestLifecycleWork(reason, restart = true)
     }
 
     open var capabilities: LSPCapabilities = LSPCapabilities()
@@ -232,6 +330,9 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         }
 
     open fun startProcess() {
+        logIfBlockingOperationOnEdt("startProcess")
+        val startedAt = System.currentTimeMillis()
+        if (shouldAbortLifecycleWork()) return
         val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
         val newConfig = LSPConfig(
             address = address,
@@ -257,6 +358,10 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         if (!newConfig.isValid) return
         var attempt = 0
         while (attempt < 5) {
+            if (shouldAbortLifecycleWork()) {
+                logger.info("Aborting LSP startup during spawn loop: disposed")
+                return
+            }
             try {
                 if (BIN_PATH == null) {
                     logger.warn("LSP start_process BIN_PATH is null")
@@ -287,7 +392,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             try {
                 val reader = currentProcess.inputStream.bufferedReader()
                 var line = reader.readLine()
-                while (line != null) {
+                while (line != null && !shouldAbortLifecycleWork()) {
                     logger.debug(line)
                     line = reader.readLine()
                 }
@@ -300,13 +405,18 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         }
         attempt = 0
         while (attempt < 5) {
+            if (shouldAbortLifecycleWork()) {
+                logger.info("Aborting LSP startup during readiness loop: disposed")
+                terminate()
+                return
+            }
             try {
                 InferenceGlobalContext.connection.ping(url)
                 buildInfo = getBuildInfo()
                 logger.warn("LSP binary build info $buildInfo")
                 capabilities = getCaps()
-                fetchCustomization()
                 isWorking = true
+                fetchCustomizationFromServer()?.also { customizationCache = it }
                 break
             } catch (e: Exception) {
                 logger.warn("LSP bad_things_happened " + e.message)
@@ -314,13 +424,42 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             attempt++
             Thread.sleep(3000)
         }
+        if (shouldAbortLifecycleWork()) {
+            terminate()
+            return
+        }
         lspProjectInitialize(this, project)
+        logger.info("LSP startProcess finished in ${System.currentTimeMillis() - startedAt}ms (working=$isWorking)")
     }
 
-    fun fetchCustomization(): JsonObject? {
-        if (!isWorking) return getCustomizationDirectly()
+    open fun fetchCustomization(): JsonObject? {
+        logIfBlockingOperationOnEdt("fetchCustomization")
+        customizationCache?.let { return it }
+        if (!isWorking) {
+            val direct = getCustomizationDirectly()
+            customizationCache = direct
+            return direct
+        }
+        val server = fetchCustomizationFromServer()
+        customizationCache = server
+        return server
+    }
+
+    fun fetchCustomizationDirectly(): JsonObject? {
+        logIfBlockingOperationOnEdt("fetchCustomizationDirectly")
+        val direct = getCustomizationDirectly()
+        customizationCache = direct
+        return direct
+    }
+
+    fun getCachedCustomization(): JsonObject? {
+        return customizationCache
+    }
+
+    private fun fetchCustomizationFromServer(): JsonObject? {
+        val baseUrl = baseUrlOrNull() ?: return null
         try {
-            val config = InferenceGlobalContext.connection.get(url.resolve("/v1/customization"), dataReceiveEnded = {
+            val config = InferenceGlobalContext.connection.get(baseUrl.resolve("/v1/customization"), dataReceiveEnded = {
                 InferenceGlobalContext.status = ConnectionStatus.CONNECTED
                 InferenceGlobalContext.lastErrorMsg = null
             }, errorDataReceived = {}, failedDataReceiveEnded = {
@@ -372,7 +511,9 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
             }
         } catch (e: Exception) {
-            ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
+            if (!ragStatusCheckerScheduler.isShutdown && !ragStatusCheckerScheduler.isTerminated) {
+                ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
+            }
         }
     }
 
@@ -385,6 +526,9 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     private fun terminate() {
+        if (!isDisposed) {
+            logIfBlockingOperationOnEdt("terminate")
+        }
         isWorking = false
         val p = process ?: return
         process = null
@@ -399,6 +543,8 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         } catch (e: Exception) {
             logger.debug("Exception during LSP terminate", e)
             runCatching { p.destroyForcibly() }
+        } finally {
+            lastConfig = null
         }
     }
 
@@ -411,6 +557,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             ragStatusCheckerScheduler.shutdown()
             terminate()
             healthCheckerScheduler.shutdown()
+            lifecycleScheduler.shutdown()
             loggerScheduler.shutdown()
             Runtime.getRuntime().removeShutdownHook(exitThread)
         } catch (e: Exception) {
@@ -420,6 +567,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     private fun getBuildInfo(): String {
+        logIfBlockingOperationOnEdt("getBuildInfo")
         var res = ""
         InferenceGlobalContext.connection.get(url.resolve("/build_info"), dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
@@ -442,12 +590,25 @@ open class LSPProcessHolder(val project: Project) : Disposable {
 
     open val url: URI
         get() {
-            val port = InferenceGlobalContext.xDebugLSPPort ?: lastConfig?.port ?: return URI("")
-
-            return URI("http://127.0.0.1:${port}/")
+            val base = baseUrlOrNull() ?: return URI("")
+            return base
         }
 
+    open fun baseUrlOrNull(): URI? {
+        val debugPort = InferenceGlobalContext.xDebugLSPPort
+        if (debugPort != null && debugPort > 0) {
+            return URI("http://127.0.0.1:${debugPort}/")
+        }
+
+        if (!isWorking || process?.isAlive != true) return null
+
+        val port = lastConfig?.port ?: return null
+        if (port <= 0) return null
+        return URI("http://127.0.0.1:${port}/")
+    }
+
     open fun getCaps(): LSPCapabilities {
+        logIfBlockingOperationOnEdt("getCaps")
         var res = LSPCapabilities()
         InferenceGlobalContext.connection.get(url.resolve("/v1/caps"), dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
@@ -473,6 +634,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     fun getRagStatus(): RagStatus? {
+        logIfBlockingOperationOnEdt("getRagStatus")
         InferenceGlobalContext.connection.get(url.resolve("/v1/rag-status"),
             requestProperties = mapOf("redirect" to "follow", "cache" to "no-cache", "referrer" to "no-referrer"),
             dataReceiveEnded = {

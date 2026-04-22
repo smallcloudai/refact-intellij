@@ -180,6 +180,9 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
         lspSyncTask = AppExecutorUtil.getAppExecutorService().submit {
             try {
                 val lsp = LSPProcessHolder.getInstance(project) ?: return@submit
+                if (lsp.baseUrlOrNull() == null) {
+                    lsp.ensureStartedAsync("statusbar-initial-sync")
+                }
                 var attempts = 0
                 while (!Thread.currentThread().isInterrupted && !project.isDisposed && attempts < 100) {
                     val ragStatus = lsp.ragStatusCache
@@ -277,6 +280,10 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
             }
         }
         val lsp = LSPProcessHolder.getInstance(project) ?: return titleStr
+        if (lsp.baseUrlOrNull() == null) {
+            lsp.ensureStartedAsync("statusbar-tooltip")
+            return titleStr
+        }
         var msg = RefactAIBundle.message("statusBar.communicatingWith", escapeHtml(lsp.attempingToReach()))
         val lastAutoModel = InferenceGlobalContext.lastAutoModel
         if (lastAutoModel != null) {

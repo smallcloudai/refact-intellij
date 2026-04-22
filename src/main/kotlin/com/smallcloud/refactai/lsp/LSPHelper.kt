@@ -18,6 +18,7 @@ import com.intellij.util.application
 import com.intellij.workspaceModel.ide.impl.LegacyBridgeJpsEntitySourceFactory
 import com.intellij.workspaceModel.ide.impl.legacyBridge.project.ProjectRootManagerBridge
 import com.smallcloud.refactai.io.ConnectionStatus
+import java.net.URI
 import java.nio.file.Paths
 import kotlin.io.path.Path
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
@@ -56,7 +57,8 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
         }
         return@ifEmpty findRoots(listOfFiles)
     }.ifEmpty { listOf(project.basePath) }
-    val url = lsp.url.resolve("/v1/lsp-initialize")
+    val baseUrl = lsp.baseUrlOrNull() ?: return
+    val url = baseUrl.resolve("/v1/lsp-initialize")
     val data = Gson().toJson(
         mapOf(
             "project_roots" to projectRoots,
@@ -74,8 +76,19 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
     })
 }
 
+private fun getLspBaseUrl(project: Project, startReason: String): URI? {
+    val lsp = getLSPProcessHolder(project) ?: return null
+    val baseUrl = lsp.baseUrlOrNull()
+    if (baseUrl == null) {
+        lsp.ensureStartedAsync(startReason)
+        return null
+    }
+    return baseUrl
+}
+
 fun lspDocumentDidChanged(project: Project, docUrl: String, text: String) {
-    val url = getLSPProcessHolder(project)?.url?.resolve("/v1/lsp-did-changed") ?: return
+    val baseUrl = getLspBaseUrl(project, "document-changed") ?: return
+    val url = baseUrl.resolve("/v1/lsp-did-changed")
     val data = Gson().toJson(
         mapOf(
             "uri" to docUrl,
@@ -103,7 +116,8 @@ fun lspSetActiveDocument(editor: Editor) {
     val vFile = getVirtualFile(editor) ?: return
     if (!vFile.exists()) return
 
-    val url = getLSPProcessHolder(project)?.url?.resolve("/v1/lsp-set-active-document") ?: return
+    val baseUrl = getLspBaseUrl(project, "active-document-changed") ?: return
+    val url = baseUrl.resolve("/v1/lsp-set-active-document")
     val data = Gson().toJson(
         mapOf(
             "uri" to vFile.url,
@@ -125,7 +139,8 @@ fun lspSetActiveDocument(editor: Editor) {
 fun lspGetCodeLens(editor: Editor): String {
     val project = editor.project ?: return ""
     val virtualFile = editor.virtualFile ?: return ""
-    val url = getLSPProcessHolder(project)?.url?.resolve("/v1/code-lens") ?: return ""
+    val baseUrl = getLspBaseUrl(project, "code-lens-request") ?: return ""
+    val url = baseUrl.resolve("/v1/code-lens")
     val data = Gson().toJson(
         mapOf(
             "uri" to virtualFile.url,
@@ -149,10 +164,12 @@ fun lspGetCodeLens(editor: Editor): String {
 
 fun lspGetCommitMessage(project: Project, diff: String, currentMessage: String): String {
     val lsp = getLSPProcessHolder(project) ?: return ""
-    if (!lsp.isWorking) return ""
+    if (!lsp.isWorking) {
+        lsp.ensureStartedAsync("commit-message-request")
+        return ""
+    }
 
-    val baseUrl = lsp.url
-    if (baseUrl.toString().isBlank()) return ""
+    val baseUrl = lsp.baseUrlOrNull() ?: return ""
 
     val url = baseUrl.resolve("/v1/commit-message-from-diff")
     val requestBody = mutableMapOf<String, String>("diff" to diff)

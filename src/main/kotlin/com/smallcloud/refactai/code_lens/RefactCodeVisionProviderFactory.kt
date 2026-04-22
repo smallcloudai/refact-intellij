@@ -35,8 +35,29 @@ class RefactOpenExplainSettingProvider : CodeVisionGroupSettingProvider {
 class RefactCodeVisionProviderFactory : CodeVisionProviderFactory {
     override fun createProviders(project: Project): Sequence<CodeVisionProvider<*>> {
         if (ApplicationManager.getApplication().isUnitTestMode) return emptySequence()
+        val isEdt = ApplicationManager.getApplication().isDispatchThread
         initialize()
-        val customization = getLSPProcessHolder(project)?.fetchCustomization() ?: return emptySequence()
+        val lspHolder = getLSPProcessHolder(project) ?: return emptySequence()
+        if (!isEdt) {
+            lspHolder.ensureStartedIfNeeded("code-vision-create-providers")
+        }
+
+        val cachedCustomization = lspHolder.getCachedCustomization()
+        if (isEdt && cachedCustomization == null) {
+            lspHolder.ensureStartedAsync("code-vision-create-providers")
+            return emptySequence()
+        }
+
+        if (isEdt && !lspHolder.isWorking) {
+            return emptySequence()
+        }
+
+        val customization = if (lspHolder.baseUrlOrNull() == null) {
+            lspHolder.ensureStartedAsync("code-vision-create-providers")
+            cachedCustomization ?: lspHolder.fetchCustomizationDirectly()
+        } else {
+            cachedCustomization ?: lspHolder.fetchCustomization()
+        } ?: return emptySequence()
         if (customization.has("code_lens")) {
             val allCodeLenses = customization.get("code_lens").asJsonObject
             val allCodeLensKeys = allCodeLenses.keySet().toList()

@@ -36,7 +36,7 @@ class RefactCommitAction : AnAction(
     override fun update(e: AnActionEvent) {
         val project = e.project
         val commitMessage = e.getData(VcsDataKeys.COMMIT_MESSAGE_CONTROL) as? CommitMessage
-        val lspAvailable = project != null && LSPProcessHolder.getInstance(project)?.isWorking == true
+        val lspAvailable = project != null && LSPProcessHolder.getInstance(project)?.baseUrlOrNull() != null
         e.presentation.isEnabledAndVisible = project != null && commitMessage != null
         e.presentation.isEnabled = lspAvailable
     }

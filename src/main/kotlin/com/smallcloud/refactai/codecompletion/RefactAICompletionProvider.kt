@@ -195,7 +195,12 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
         if (!state.isValid()) return null
         val stat = UsageStatistic(scope = "completion", extension = getExtension(fileName))
         val project = editor.project ?: return null
-        val baseUrl = getInstance(project)?.url ?: return null
+        val lsp = getInstance(project) ?: return null
+        val baseUrl = lsp.baseUrlOrNull()
+        if (baseUrl == null) {
+            lsp.ensureStartedAsync("inline-completion")
+            return null
+        }
         val httpRequest = RequestCreator.create(
             fileName, text, logicalPos.line, pos,
             stat,

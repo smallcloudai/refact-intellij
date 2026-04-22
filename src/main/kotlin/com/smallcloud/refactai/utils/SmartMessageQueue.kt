@@ -65,7 +65,10 @@ class SmartMessageQueue(
         val delay = synchronized(lock) {
             if (disposed || flushPending) return
             flushPending = true
-            if (suspendFlushCheck?.invoke() == true) blockedFlushDebounceMs else flushDebounceMs
+            val shouldBackOff =
+                (suspendFlushCheck?.invoke() == true) ||
+                    (readyCheck?.invoke() == false)
+            if (shouldBackOff) blockedFlushDebounceMs else flushDebounceMs
         }
         flushAlarm.addRequest({ doFlush() }, delay)
     }

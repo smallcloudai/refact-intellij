@@ -11,6 +11,7 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import org.junit.Assert.assertFalse
 
 /**
  * Test that demonstrates the "Already disposed" issue in LSPProcessHolder.
@@ -52,6 +53,18 @@ class LSPProcessHolderTest : BasePlatformTestCase() {
             // This simulates the call to setCapabilities from startProcess() in LSPProcessHolder
             capabilities = LSPCapabilities(cloudName = "test-cloud")
         }
+
+        override fun ensureStartedAsync(reason: String) {
+            // no-op for unit test
+        }
+
+        override fun settingsChanged(reason: String) {
+            // no-op for unit test
+        }
+
+        override fun ensureStartedBlocking(reason: String) {
+            // no-op for unit test
+        }
     }
 
     @Test
@@ -86,6 +99,20 @@ class LSPProcessHolderTest : BasePlatformTestCase() {
         assertNull("With the fix, no AlreadyDisposedException should be thrown", exception)
         // Verify that the capabilities were still set correctly
         assertEquals("test-cloud", holder.capabilities.cloudName)
+    }
+
+    @Test
+    fun testPendingLifecycleFlagDefaultsFalse() {
+        val mockProject = mock(Project::class.java)
+        val mockMessageBus = mock(MessageBus::class.java)
+        val mockPublisher = mock(LSPProcessHolderChangedNotifier::class.java)
+
+        `when`(mockProject.isDisposed).thenReturn(false)
+        `when`(mockProject.messageBus).thenReturn(mockMessageBus)
+        `when`(mockMessageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)).thenReturn(mockPublisher)
+
+        val holder = TestLspProccessHolder(mockProject)
+        assertFalse(holder.hasPendingLifecycleWork())
     }
 
 }

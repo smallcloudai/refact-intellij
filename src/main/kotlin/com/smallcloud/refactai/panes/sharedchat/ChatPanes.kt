@@ -6,7 +6,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
+import com.intellij.openapi.util.Disposer
 import com.smallcloud.refactai.struct.ChatMessage
 import java.awt.BorderLayout
 import java.util.concurrent.atomic.AtomicBoolean
@@ -26,7 +26,7 @@ class ChatPanes(val project: Project) : Disposable {
         invokeLater {
             holder.removeAll()
             try {
-                pane = SharedChatPane(project)
+                pane = SharedChatPane(project).also { Disposer.register(this, it) }
                 component = pane?.webView?.component
                 holder.add(component)
 
@@ -69,7 +69,7 @@ class ChatPanes(val project: Project) : Disposable {
                 component = null
                 holder.removeAll()
 
-                pane = SharedChatPane(project)
+                pane = SharedChatPane(project).also { Disposer.register(this, it) }
                 component = pane?.webView?.component
                 holder.add(component)
 

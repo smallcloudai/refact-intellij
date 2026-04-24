@@ -22,15 +22,17 @@ import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.ProjectManagerListener
-import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.vfs.*
+import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.StandardFileSystems
+import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.Alarm
 import com.intellij.util.SystemProperties
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
-import com.smallcloud.refactai.PluginState
 import com.smallcloud.refactai.account.AccountManager
 import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContext
@@ -39,23 +41,19 @@ import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.modes.diff.waitingDiff
+import com.smallcloud.refactai.notifications.emitChat
 import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToChat
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
 import com.smallcloud.refactai.settings.Host
 import com.smallcloud.refactai.struct.ChatMessage
-import com.smallcloud.refactai.utils.SmartMessageQueue
 import com.smallcloud.refactai.utils.EventDebouncer
+import com.smallcloud.refactai.utils.SmartMessageQueue
 import kotlinx.coroutines.*
 import org.jetbrains.annotations.NotNull
 import java.io.File
 import javax.swing.JPanel
-import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent
-import com.intellij.openapi.fileEditor.FileEditorManagerListener
-import com.intellij.openapi.roots.ProjectRootManager
-import com.smallcloud.refactai.notifications.emitChat
 
 class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private val paneScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -606,10 +604,14 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         return result
     }
 
-    private fun isPathWithinAllowedScope(path: String): Boolean {
+    private enum class PathScope { PROJECT_ONLY, PROJECT_OR_REFACT_CONFIG }
+
+    private fun isPathWithinAllowedScope(path: String, scope: PathScope = PathScope.PROJECT_ONLY): Boolean {
         val canonicalPath = runCatching { File(path).canonicalPath }.getOrNull() ?: return false
-        canonicalRefactConfigDir?.let { configDir ->
-            if (canonicalPath == configDir || canonicalPath.startsWith(configDir + File.separator)) return true
+        if (scope == PathScope.PROJECT_OR_REFACT_CONFIG) {
+            canonicalRefactConfigDir?.let { configDir ->
+                if (canonicalPath == configDir || canonicalPath.startsWith(configDir + File.separator)) return true
+            }
         }
         val root = canonicalProjectRoot ?: return false
         return canonicalPath == root || canonicalPath.startsWith(root + File.separator)
@@ -623,7 +625,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         return File(base, sanitized).path
     }
 
-    private fun validateAndSanitizePath(fileName: String, operation: String): String? {
+    private fun validateAndSanitizePath(
+        fileName: String,
+        operation: String,
+        scope: PathScope = PathScope.PROJECT_ONLY
+    ): String? {
         val resolved = resolveProjectPath(fileName)
 
         val canonical = try {
@@ -633,8 +639,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             return null
         }
 
-        if (!isPathWithinAllowedScope(canonical)) {
-            logger.warn("$operation blocked: path outside project: $fileName (project: ${project.basePath})")
+        if (!isPathWithinAllowedScope(canonical, scope)) {
+            logger.warn("$operation blocked: path outside allowed scope ($scope): $fileName (project: ${project.basePath})")
             return null
         }
 
@@ -760,11 +766,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun handleAnimationStart(fileName: String) {
         synchronized(this) { // action thread
-            val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
-            if (animatedFiles.contains(sanitizedFileName)) return
-            animatedFiles.add(sanitizedFileName)
+            val validatedPath = validateAndSanitizePath(fileName, "handleAnimationStart") ?: return
+            if (animatedFiles.contains(validatedPath)) return
+            animatedFiles.add(validatedPath)
             val file = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-                LocalFileSystem.getInstance().findFileByPath(sanitizedFileName)
+                LocalFileSystem.getInstance().findFileByPath(validatedPath)
             } ?: return
             val fileDescriptor = OpenFileDescriptor(project, file)
             ApplicationManager.getApplication().invokeLater {
@@ -777,7 +783,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                         editor.offsetToLogicalPosition(editor.document.textLength)
                     ) {
                         synchronized(this) {
-                            animatedFiles.contains(sanitizedFileName)
+                            animatedFiles.contains(validatedPath)
                         }
                     }
                 }
@@ -787,10 +793,14 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun handleAnimationStop(fileName: String) {
         synchronized(this) {
-            val sanitizedFileName = this.sanitizeFileNameForPosix(fileName)
-            animatedFiles.remove(sanitizedFileName)
+            val validatedPath = validateAndSanitizePath(fileName, "handleAnimationStop") ?: run {
+                val sanitized = sanitizeFileNameForPosix(fileName)
+                animatedFiles.remove(sanitized)
+                return
+            }
+            animatedFiles.remove(validatedPath)
             ApplicationManager.getApplication().invokeLater {
-                val virtualFile = LocalFileSystem.getInstance().findFileByPath(sanitizedFileName)
+                val virtualFile = LocalFileSystem.getInstance().findFileByPath(validatedPath)
                 virtualFile?.refresh(true, false)
             }
         }

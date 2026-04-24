@@ -25,6 +25,7 @@ import org.apache.hc.core5.concurrent.ComplexFuture
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.net.ServerSocket
 import java.net.URI
 import java.nio.file.Paths
 import java.security.MessageDigest
@@ -57,7 +58,6 @@ interface LSPProcessHolderChangedNotifier {
 }
 
 open class LSPProcessHolder(val project: Project) : Disposable {
-    // Flag to track if this instance has been disposed
     @Volatile
     private var isDisposed = false
     private var process: Process? = null
@@ -297,8 +297,8 @@ open class LSPProcessHolder(val project: Project) : Disposable {
 
                 if (lastConfig == null) return@scheduleWithFixedDelay
                 if (isCustomPortConfigured()) return@scheduleWithFixedDelay
-                if (process?.isAlive == false) {
-                    ensureStartedAsync("health-check-process-dead")
+                if (process?.isAlive == false || !isWorking) {
+                    ensureStartedAsync("health-check-process-dead-or-unready")
                 }
             } catch (e: java.util.concurrent.RejectedExecutionException) {
                 // This exception can occur during shutdown when schedulers are already closed
@@ -351,7 +351,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
 
         val processIsAlive = process?.isAlive == true
 
-        if (newConfig == lastConfig && processIsAlive) return
+        if (newConfig.sameRuntimeSettings(lastConfig) && processIsAlive && isWorking) return
 
         capabilities = LSPCapabilities()
         terminate()
@@ -362,47 +362,69 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 logger.info("Aborting LSP startup during spawn loop: disposed")
                 return
             }
-            try {
-                if (BIN_PATH == null) {
-                    logger.warn("LSP start_process BIN_PATH is null")
-                    return
-                }
-                newConfig.port = (32000..32999).random()
-                logger.debug("LSP start_process $BIN_PATH ${newConfig.toSafeLogString()}")
-                process = GeneralCommandLine(listOf(BIN_PATH) + newConfig.toArgs()).withRedirectErrorStream(true)
-                    .createProcess()
-                Thread.sleep(500)
-                if (process?.isAlive != true) {
-                    throw RuntimeException("LSP process failed to start")
-                }
-                lastConfig = newConfig
-                break
+            val bin = BIN_PATH
+            if (bin == null) {
+                logger.warn("LSP start_process BIN_PATH is null")
+                return
+            }
+            val port = allocateFreePort()
+            if (port == null) {
+                logger.warn("LSP start_process could not allocate a free port")
+                attempt++
+                continue
+            }
+            newConfig.port = port
+            logger.debug("LSP start_process $bin ${newConfig.toSafeLogString()}")
+            val spawnedProcess = try {
+                GeneralCommandLine(listOf(bin) + newConfig.toArgs()).withRedirectErrorStream(true).createProcess()
             } catch (e: Exception) {
                 attempt++
-                logger.warn("LSP start_process didn't start attempt=${attempt}")
+                logger.warn("LSP start_process spawn failed attempt=$attempt: ${e.message}")
                 if (attempt == 5) {
                     logger.error("LSP process failed to start after 5 attempts", e)
                     isWorking = false
-                    return
                 }
+                continue
+            }
+
+            val outputLines = ArrayDeque<String>(200)
+            val gobbler = loggerScheduler.submit {
+                try {
+                    spawnedProcess.inputStream.bufferedReader().forEachLine { line ->
+                        logger.debug(line)
+                        synchronized(outputLines) {
+                            if (outputLines.size >= 200) outputLines.removeFirst()
+                            outputLines.addLast(line)
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+
+            Thread.sleep(500)
+            if (spawnedProcess.isAlive) {
+                process = spawnedProcess
+                spawnedProcess.onExit().thenAcceptAsync { p ->
+                    if (p.exitValue() != 0) logger.warn("LSP process exited with code ${p.exitValue()}")
+                }
+                loggerTask = gobbler
+                break
+            }
+
+            gobbler.cancel(false)
+            val exitCode = runCatching { spawnedProcess.exitValue() }.getOrDefault(-1)
+            val captured = synchronized(outputLines) { outputLines.joinToString("\n") }
+            attempt++
+            logger.warn(
+                "LSP start_process didn't start attempt=$attempt " +
+                "(exit=$exitCode binary=$bin port=$port)\n$captured"
+            )
+            if (attempt == 5) {
+                logger.error("LSP process failed to start after 5 attempts")
+                isWorking = false
+                return
             }
         }
-        val currentProcess = process ?: return
-        loggerTask = loggerScheduler.submit {
-            try {
-                val reader = currentProcess.inputStream.bufferedReader()
-                var line = reader.readLine()
-                while (line != null && !shouldAbortLifecycleWork()) {
-                    logger.debug(line)
-                    line = reader.readLine()
-                }
-            } catch (_: Exception) {}
-        }
-        currentProcess.onExit().thenAcceptAsync { process1 ->
-            if (process1.exitValue() != 0) {
-                logger.warn("LSP process exited with code ${process1.exitValue()}")
-            }
-        }
+
         attempt = 0
         while (attempt < 5) {
             if (shouldAbortLifecycleWork()) {
@@ -415,6 +437,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 buildInfo = getBuildInfo()
                 logger.warn("LSP binary build info $buildInfo")
                 capabilities = getCaps()
+                lastConfig = newConfig
                 isWorking = true
                 fetchCustomizationFromServer()?.also { customizationCache = it }
                 break
@@ -423,6 +446,11 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             }
             attempt++
             Thread.sleep(3000)
+        }
+        if (!isWorking) {
+            logger.warn("LSP readiness probe failed after 5 attempts, terminating process")
+            terminate()
+            return
         }
         if (shouldAbortLifecycleWork()) {
             terminate()
@@ -675,8 +703,17 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     companion object {
+        @Volatile
         var BIN_PATH: String? = null
         private var TMP_BIN_PATH: String? = null
+
+        private fun allocateFreePort(): Int? {
+            return try {
+                ServerSocket(0).use { it.localPort }
+            } catch (e: Exception) {
+                null
+            }
+        }
 
         @JvmStatic
         fun getInstance(project: Project): LSPProcessHolder? = project.service()
@@ -700,11 +737,10 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             return digest.digest().joinToString("") { String.format("%02x", it) }
         }
 
-        // only one time
+        @Synchronized
         fun initialize() {
             logger.warn("LSP initialize start")
-            val shouldInitialize = !initialized.getAndSet(true)
-            if (!shouldInitialize) return
+            if (initialized.get()) return
 
             val input: InputStream? = Companion::class.java.getResourceAsStream(
                 "/bin/${binPrefix}/refact-lsp${getExeSuffix()}"
@@ -715,39 +751,68 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 return
             }
             input.use {
-                    val tmpFileName =
-                        Path(getTempDirectory(), "${UUID.randomUUID().toString()}${getExeSuffix()}").toFile()
-                    TMP_BIN_PATH = tmpFileName.toString()
-                    val hash = generateMD5HexAndWriteInTmpFile(input, tmpFileName)
-                    BIN_PATH = Path(
-                        getTempDirectory(),
-                        ApplicationInfo.getInstance().build.toString()
-                            .replace(Regex("[^A-Za-z0-9 ]"), "_") + "_refact_lsp_${hash}${getExeSuffix()}"
-                    ).toString()
-                    var shouldUseTmp = false
-                    for (i in 0..4) {
-                        try {
-                            val path = Paths.get(BIN_PATH!!)
-                            path.parent.toFile().mkdirs()
-                            if (tmpFileName.renameTo(path.toFile())) {
-                                setExecutable(path.toFile())
+                val tmpFile = Path(getTempDirectory(), "${UUID.randomUUID()}${getExeSuffix()}").toFile()
+                val hash = try {
+                    generateMD5HexAndWriteInTmpFile(input, tmpFile)
+                } catch (e: Exception) {
+                    logger.warn("LSP initialize: failed to write temp binary: ${e.message}")
+                    tmpFile.delete()
+                    return
+                }
+
+                val targetName = ApplicationInfo.getInstance().build.toString()
+                    .replace(Regex("[^A-Za-z0-9 ]"), "_") + "_refact_lsp_${hash}${getExeSuffix()}"
+                val targetPath = Paths.get(getTempDirectory(), targetName)
+                val targetFile = targetPath.toFile()
+
+                var resolvedPath: String? = null
+
+                for (attempt in 1..5) {
+                    try {
+                        targetPath.parent.toFile().mkdirs()
+                        if (targetFile.exists()) {
+                            if (targetFile.canExecute()) {
+                                resolvedPath = targetFile.canonicalPath
+                                break
                             }
-                            shouldUseTmp = false
+                            setExecutable(targetFile)
+                            if (targetFile.canExecute()) {
+                                resolvedPath = targetFile.canonicalPath
+                                break
+                            }
+                        }
+                        java.nio.file.Files.move(
+                            tmpFile.toPath(), targetPath,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                        )
+                        setExecutable(targetFile)
+                        if (targetFile.exists() && targetFile.canExecute()) {
+                            resolvedPath = targetFile.canonicalPath
                             break
-                        } catch (e: Exception) {
-                            logger.warn("LSP bad_things_happened: can not save binary $BIN_PATH")
-                            logger.warn("LSP bad_things_happened: error message - ${e.message}")
-                            shouldUseTmp = true
                         }
+                        logger.warn("LSP initialize: move succeeded but binary not ready (attempt $attempt)")
+                    } catch (e: Exception) {
+                        logger.warn("LSP initialize: attempt $attempt failed to install binary: ${e.message}")
                     }
-                    if (shouldUseTmp) {
-                        setExecutable(tmpFileName)
-                        BIN_PATH = TMP_BIN_PATH
+                }
+
+                if (resolvedPath == null) {
+                    setExecutable(tmpFile)
+                    if (tmpFile.exists() && tmpFile.canExecute()) {
+                        logger.warn("LSP initialize: using temp path as fallback")
+                        resolvedPath = tmpFile.canonicalPath
+                        TMP_BIN_PATH = resolvedPath
                     } else {
-                        if (tmpFileName.exists()) {
-                            tmpFileName.deleteOnExit()
-                        }
+                        logger.warn("LSP initialize: binary could not be installed or made executable — giving up")
+                        tmpFile.delete()
+                        return
                     }
+                } else {
+                    if (tmpFile.exists()) tmpFile.deleteOnExit()
+                }
+
+                BIN_PATH = resolvedPath
+                initialized.set(true)
             }
             logger.warn("LSP initialize finished")
             logger.warn("LSP initialize BIN_PATH=$BIN_PATH")

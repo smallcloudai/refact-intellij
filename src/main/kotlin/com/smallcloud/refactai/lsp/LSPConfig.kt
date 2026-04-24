@@ -73,24 +73,19 @@ data class LSPConfig(
         return params
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as LSPConfig
-
-        if (address != other.address) return false
-        if (apiKey != other.apiKey) return false
-        if (clientVersion != other.clientVersion) return false
-        if (useTelemetry != other.useTelemetry) return false
-        if (deployment != other.deployment) return false
-        if (ast != other.ast) return false
-        if (vecdb != other.vecdb) return false
-        if (astFileLimit != other.astFileLimit) return false
-        if (vecdbFileLimit != other.vecdbFileLimit) return false
-        if (experimental != other.experimental) return false
-
-        return true
+    fun sameRuntimeSettings(other: LSPConfig?): Boolean {
+        if (other == null) return false
+        return address == other.address
+            && apiKey == other.apiKey
+            && clientVersion == other.clientVersion
+            && useTelemetry == other.useTelemetry
+            && deployment == other.deployment
+            && ast == other.ast
+            && vecdb == other.vecdb
+            && astFileLimit == other.astFileLimit
+            && vecdbFileLimit == other.vecdbFileLimit
+            && insecureSSL == other.insecureSSL
+            && experimental == other.experimental
     }
 
     val isValid: Boolean
@@ -98,9 +93,9 @@ data class LSPConfig(
             return address != null
                 && port != null
                 && clientVersion != null
-                && (astFileLimit != null && astFileLimit!! > 0)
-                && (vecdbFileLimit != null && vecdbFileLimit!! > 0)
-                // token must be if we are not selfhosted
+                && (!ast || (astFileLimit != null && astFileLimit!! > 0))
+                && (!vecdb || (vecdbFileLimit != null && vecdbFileLimit!! > 0))
+                // token must be present unless self-hosted
                 && (deployment == DeploymentMode.SELF_HOSTED ||
                 (apiKey != null && (deployment == DeploymentMode.CLOUD || deployment == DeploymentMode.HF)))
         }

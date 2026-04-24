@@ -26,7 +26,8 @@ class Initializer : ProjectActivity, Disposable {
     private val logger = Logger.getInstance("SMCInitializer")
 
     override suspend fun execute(project: Project) {
-        val shouldInitialize = !(initialized.getAndSet(true) || ApplicationManager.getApplication().isUnitTestMode)
+        val isUnitTest = ApplicationManager.getApplication().isUnitTestMode
+        val shouldInitialize = !isUnitTest && !initialized.getAndSet(true)
         if (shouldInitialize) {
             logger.info("Bin prefix = ${Resources.binPrefix}")
             initialize()

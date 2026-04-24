@@ -54,6 +54,7 @@ class RefactCommitAction : AnAction(
         generateMessage(project, changes.toList(), commitMessage)
     }
 
+    @Suppress("DialogTitleCapitalization")
     private fun generateMessage(project: Project, changes: List<Change>, commitMsg: CommitMessage) {
         ProgressManager.getInstance().run(object : Task.Backgroundable(
             project, "Generating Commit Message...", true

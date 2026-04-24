@@ -45,6 +45,7 @@ class ChatPanes(val project: Project) : Disposable {
         }
     }
 
+    @Suppress("DialogTitleCapitalization")
     private fun recreateWithOsrMode() {
         if (!isRecreating.compareAndSet(false, true)) {
             logger.info("Already recreating pane, skipping")

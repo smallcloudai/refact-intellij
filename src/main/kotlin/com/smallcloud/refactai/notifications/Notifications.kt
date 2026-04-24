@@ -2,7 +2,6 @@ package com.smallcloud.refactai.notifications
 
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.actions.ShowSettingsUtilImpl
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
@@ -11,10 +10,8 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.EditorFactoryEvent
 import com.intellij.openapi.editor.event.EditorFactoryListener
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.PluginState
@@ -30,7 +27,6 @@ import java.awt.event.FocusListener
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
 
 private var lastNotification: Notification? = null
@@ -101,10 +97,6 @@ fun emitRateUs() {
     notification.icon = Resources.Icons.LOGO_RED_16x16
     notification.notify(project)
     lastRateUsNotification = notification
-}
-
-private fun getVirtualFile(editor: Editor): VirtualFile? {
-    return FileDocumentManager.getInstance().getFile(editor.document)
 }
 
 fun emitRegular(project: Project, editor: Editor) {
@@ -183,6 +175,7 @@ fun emitInfo(msg: String, needToDeleteLast: Boolean = true) {
     notification.notify(project)
 }
 
+@Suppress("DialogTitleCapitalization")
 fun emitInfoWithDocLink(msg: String, docUrl: String, needToDeleteLast: Boolean = true) {
     if (needToDeleteLast) removeLastNotification()
     val project = getLastUsedProject()
@@ -203,8 +196,7 @@ fun emitInfoWithDocLink(msg: String, docUrl: String, needToDeleteLast: Boolean =
     notification.notify(project)
 }
 
-private val notificationLogger = Logger.getInstance("RefactNotifications")
-
+@Suppress("DialogTitleCapitalization")
 fun emitChat(project: Project, msg: String, chatId: String? = null) {
     removeLastNotification()
     val notification = NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group")
@@ -224,11 +216,6 @@ fun emitChat(project: Project, msg: String, chatId: String? = null) {
     })
     notification.notify(project)
     lastNotification = notification
-}
-
-fun emitChat(msg: String, chatId: String? = null) {
-    val project = getLastUsedProject() ?: return
-    emitChat(project, msg, chatId)
 }
 
 fun emitError(msg: String) {

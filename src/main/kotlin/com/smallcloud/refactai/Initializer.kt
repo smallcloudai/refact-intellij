@@ -45,9 +45,9 @@ class Initializer : ProjectActivity, Disposable {
             checkJcefStatus()
             preWarmResources()
         }
-        getLSPProcessHolder(project)?.ensureStartedIfNeeded("project-activity")
+        getLSPProcessHolder(project).ensureStartedIfNeeded("project-activity")
         project.getService(LSPActiveDocNotifierService::class.java)
-        getLSPProcessHolder(project)?.ensureStartedIfNeeded("active-doc-notifier")
+        getLSPProcessHolder(project).ensureStartedIfNeeded("active-doc-notifier")
         project.getService(NotificationSSEClient::class.java).start()
     }
 

@@ -70,7 +70,7 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
 }
 
 private fun getLspBaseUrl(project: Project, startReason: String): URI? {
-    val lsp = getLSPProcessHolder(project) ?: return null
+    val lsp = getLSPProcessHolder(project)
     val baseUrl = lsp.baseUrlOrNull()
     if (baseUrl == null) {
         lsp.ensureStartedAsync(startReason)
@@ -155,7 +155,7 @@ fun lspGetCodeLens(editor: Editor): String {
 }
 
 fun lspGetCommitMessage(project: Project, diff: String, currentMessage: String): String {
-    val lsp = getLSPProcessHolder(project) ?: return ""
+    val lsp = getLSPProcessHolder(project)
     if (!lsp.isWorking) {
         lsp.ensureStartedAsync("commit-message-request")
         return ""

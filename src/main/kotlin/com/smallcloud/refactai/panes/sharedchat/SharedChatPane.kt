@@ -668,24 +668,26 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun handlePatchApply(payload: Events.Patch.ApplyPayload) {
-        payload.items.forEach { item ->
-            if (item.fileNameAdd != null) {
-                val file = this.openNewFile(item.fileNameAdd)
-                if (file != null) {
-                    logger.warn("handlePatchApply: item.fileNameAdd = ${file.path}")
-                    setContent(file.path, item.fileText)
+    private suspend fun handlePatchApply(payload: Events.Patch.ApplyPayload) {
+        withContext(Dispatchers.IO) {
+            payload.items.forEach { item ->
+                if (item.fileNameAdd != null) {
+                    val file = openNewFile(item.fileNameAdd)
+                    if (file != null) {
+                        logger.warn("handlePatchApply: item.fileNameAdd = ${file.path}")
+                        setContent(file.path, item.fileText)
+                    }
                 }
-            }
 
-            if (item.fileNameDelete != null) {
-                logger.warn("handlePatchApply: item.fileNameDelete = ${item.fileNameDelete}")
-                this.deleteFile(item.fileNameDelete)
-            }
+                if (item.fileNameDelete != null) {
+                    logger.warn("handlePatchApply: item.fileNameDelete = ${item.fileNameDelete}")
+                    deleteFile(item.fileNameDelete)
+                }
 
-            if (item.fileNameEdit != null) {
-                logger.warn("handlePatchApply: item.fileNameEdit = ${item.fileNameEdit}")
-                setContent(item.fileNameEdit, item.fileText)
+                if (item.fileNameEdit != null) {
+                    logger.warn("handlePatchApply: item.fileNameEdit = ${item.fileNameEdit}")
+                    setContent(item.fileNameEdit, item.fileText)
+                }
             }
         }
     }
@@ -722,25 +724,27 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun handlePatchShow(payload: Events.Patch.ShowPayload) {
-        payload.results.forEach { result ->
-            if (result.fileNameAdd != null) {
-                val file = this.openNewFile(result.fileNameAdd)
-                if (file != null) {
-                    logger.warn("handlePatchShow: item.fileNameAdd = ${file.path}")
-                    showPatch(file.path, result.fileText)
+    private suspend fun handlePatchShow(payload: Events.Patch.ShowPayload) {
+        withContext(Dispatchers.IO) {
+            payload.results.forEach { result ->
+                if (result.fileNameAdd != null) {
+                    val file = openNewFile(result.fileNameAdd)
+                    if (file != null) {
+                        logger.warn("handlePatchShow: item.fileNameAdd = ${file.path}")
+                        showPatch(file.path, result.fileText)
+                    }
                 }
-            }
-            if (result.fileNameDelete != null) {
-                logger.warn("handlePatchShow: item.fileNameDelete = ${result.fileNameDelete}")
-                this.deleteFile(result.fileNameDelete)
-            }
+                if (result.fileNameDelete != null) {
+                    logger.warn("handlePatchShow: item.fileNameDelete = ${result.fileNameDelete}")
+                    deleteFile(result.fileNameDelete)
+                }
 
-            if (result.fileNameEdit != null) {
-                val validatedPath = validateAndSanitizePath(result.fileNameEdit, "handlePatchShow")
-                if (validatedPath != null) {
-                    logger.warn("handlePatchShow: item.fileNameEdit = $validatedPath")
-                    showPatch(validatedPath, result.fileText)
+                if (result.fileNameEdit != null) {
+                    val validatedPath = validateAndSanitizePath(result.fileNameEdit, "handlePatchShow")
+                    if (validatedPath != null) {
+                        logger.warn("handlePatchShow: item.fileNameEdit = $validatedPath")
+                        showPatch(validatedPath, result.fileText)
+                    }
                 }
             }
         }

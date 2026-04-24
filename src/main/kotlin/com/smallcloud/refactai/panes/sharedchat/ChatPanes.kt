@@ -65,7 +65,7 @@ class ChatPanes(val project: Project) : Disposable {
                     )
                     ?.notify(project)
 
-                pane?.dispose()
+                pane?.let { Disposer.dispose(it) }
                 pane = null
                 component = null
                 holder.removeAll()
@@ -142,6 +142,6 @@ class ChatPanes(val project: Project) : Disposable {
     }
 
     override fun dispose() {
-        pane?.dispose()
+        pane?.let { Disposer.dispose(it) }
     }
 }

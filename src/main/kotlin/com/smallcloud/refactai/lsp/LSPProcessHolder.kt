@@ -540,8 +540,12 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
             }
         } catch (_: Exception) {
-            if (!ragStatusCheckerScheduler.isShutdown && !ragStatusCheckerScheduler.isTerminated) {
-                ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
+            try {
+                if (!ragStatusCheckerScheduler.isShutdown && !ragStatusCheckerScheduler.isTerminated) {
+                    ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
+                }
+            } catch (_: Exception) {
+                // scheduler shut down between check and schedule, ignore
             }
         }
     }

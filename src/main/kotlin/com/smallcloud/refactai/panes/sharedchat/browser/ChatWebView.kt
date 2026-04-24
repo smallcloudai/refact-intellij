@@ -182,28 +182,23 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 return false
             }
 
-            if (SystemInfo.isWindows || SystemInfo.isMac) {
-                companionLogger.info("Using native rendering on Windows/Mac")
+            val savedMode = PropertiesComponent.getInstance().getValue(PREF_KEY_RENDERING_MODE, "auto")
+            if (savedMode == "osr") {
+                companionLogger.info("Using OSR mode (saved preference)")
+                return true
+            }
+            if (savedMode == "native") {
+                companionLogger.info("Using native mode (saved preference)")
                 return false
             }
 
-            val props = PropertiesComponent.getInstance()
-            val savedMode = props.getValue(PREF_KEY_RENDERING_MODE, "auto")
-
-            return when (savedMode) {
-                "osr" -> {
-                    companionLogger.info("Using OSR mode (saved preference)")
-                    true
-                }
-                "native" -> {
-                    companionLogger.info("Using native mode (explicit preference)")
-                    false
-                }
-                else -> {
-                    companionLogger.info("Using OSR mode (Linux default)")
-                    true
-                }
+            if (SystemInfo.isWindows || SystemInfo.isMac) {
+                companionLogger.info("Using native rendering on Windows/Mac (auto)")
+                return false
             }
+
+            companionLogger.info("Using OSR mode (Linux default)")
+            return true
         }
     }
 
@@ -215,9 +210,9 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     private lateinit var mainQuery: JBCefJSQuery
     private lateinit var linkQuery: JBCefJSQuery
 
-    private val cefBrowser: CefBrowser
-    private val jbcefBrowser: JBCefBrowser
-    private val component: JComponent
+    private lateinit var cefBrowser: CefBrowser
+    private lateinit var jbcefBrowser: JBCefBrowser
+    private lateinit var component: JComponent
     private val useOffscreenRendering: Boolean = determineRenderingMode()
     private lateinit var postMessageTemplate: JavaScriptTemplate
 
@@ -593,6 +588,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
             if (modeSwitchCallback != null) {
                 logger.info("Triggering mode switch callback")
+                PropertiesComponent.getInstance().setValue(PREF_KEY_RENDERING_MODE, "osr")
+                osrFallbackTriggered.set(true)
                 ApplicationManager.getApplication().invokeLater {
                     recoveryInProgress.set(false)
                     modeSwitchCallback?.invoke()
@@ -697,7 +694,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
             override fun onLoadEnd(browser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
                 logger.info("Load end event - HTTP status: $httpStatusCode, state: ${initializationState.get()}")
-                if (initializationState.get() == 1) {
+                if (!disposing.get() && initializationState.get() == 1) {
                     setupReactApplication()
                 }
             }
@@ -762,9 +759,10 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                 val fileJson = gson.toJson(file)
 
                 editor.getSelectedSnippet { snippet ->
+                    if (disposing.get()) return@getSelectedSnippet
                     val snippetJson = if (snippet != null) gson.toJson(snippet) else "undefined"
 
-                    val scripts = listOf(
+                    val scripts = try { listOf(
                         """
                         if (!window.__REFACT_BRIDGE_INSTALLED__) {
                             window.__REFACT_BRIDGE_INSTALLED__ = true;
@@ -830,7 +828,10 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                         script.src = "http://refactai/dist/chat/index.umd.cjs";
                         document.head.appendChild(script);
                         """.trimIndent()
-                    )
+                    ) } catch (e: IllegalStateException) {
+                        logger.warn("Skipping React setup: JS queries already disposed", e)
+                        return@getSelectedSnippet
+                    }
 
                     jsExecutor.executeBatch(scripts, "react-setup").exceptionally { throwable ->
                         logger.error("Failed to setup React application", throwable)
@@ -908,12 +909,14 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         try {
             if (::jsExecutor.isInitialized) jsExecutor.dispose()
 
-            try {
-                CefLifecycleManager.releaseBrowser(cefBrowser)
-            } catch (e: Exception) {
-                logger.warn("Failed to release browser through lifecycle manager", e)
-                if (!jbcefBrowser.isDisposed) {
-                    jbcefBrowser.dispose()
+            if (::cefBrowser.isInitialized) {
+                try {
+                    CefLifecycleManager.releaseBrowser(cefBrowser)
+                } catch (e: Exception) {
+                    logger.warn("Failed to release browser through lifecycle manager", e)
+                    if (::jbcefBrowser.isInitialized && !jbcefBrowser.isDisposed) {
+                        jbcefBrowser.dispose()
+                    }
                 }
             }
 

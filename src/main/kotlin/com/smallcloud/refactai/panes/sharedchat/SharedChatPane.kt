@@ -20,8 +20,6 @@ import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.project.ProjectManagerListener
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.StandardFileSystems
@@ -128,10 +126,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private fun isReady(): Boolean {
-        return currentPage.isNotEmpty() // didn't get first message
-    }
-
     fun newChat() {
         this.postMessage(Events.NewChat)
     }
@@ -183,11 +177,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             val message = ActiveFileToChat(safeFile)
             this.postMessage(message)
         }
-    }
-
-    private fun sendCurrentProjectInfo(p: Project = project) {
-        val message = Events.CurrentProject.SetCurrentProject(p.name)
-        this.postMessage(message)
     }
 
     private suspend fun handleSetupHost(host: Host) {
@@ -332,13 +321,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 if(!project.isDisposed) {
                     this@SharedChatPane.setLookAndFeel()
                 }
-            }
-        })
-
-        project.messageBus.connect(this).subscribe(ProjectManager.TOPIC, object: ProjectManagerListener {
-            @Deprecated("deprecation")
-            override fun projectOpened(project: Project) {
-                this@SharedChatPane.sendCurrentProjectInfo(project)
             }
         })
 
@@ -940,8 +922,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     private suspend fun handleEvent(event: Events.FromChat) {
 //        logger.warn("${event.toString()} ${event.payload.toString()}")
         when (event) {
-            is Events.Editor.PasteDiff -> this.handlePasteDiff(event.content)
-            is Events.Editor.NewFile -> this.handleNewFile(event.content)
+            is Editor.PasteDiff -> this.handlePasteDiff(event.content)
+            is Editor.NewFile -> this.handleNewFile(event.content)
             is Events.OpenSettings -> this.handleOpenSettings()
             is Events.Setup.SetupHost -> this.handleSetupHost(event.host)
             is Events.Setup.OpenExternalUrl -> this.openExternalUrl(event.url)
@@ -960,11 +942,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Events.IdeAction.ToolCall -> {
                 this.handleToolCall(event.payload)
             }
-            is Events.Editor.ForceReloadFileByPath -> {
+            is Editor.ForceReloadFileByPath -> {
                 this.handleForceReloadFileByPath(event.path)
             }
 
-            is Events.Editor.ForceReloadProjectTreeFiles -> {
+            is Editor.ForceReloadProjectTreeFiles -> {
                 ProjectRootManager.getInstance(project).contentRoots.forEach {
                     this.handleForceReloadFileByPath(it.path)
                 }

@@ -20,7 +20,7 @@ data class LSPConfig(
         val params = mutableListOf<String>()
         if (address != null) {
             params.add("--address-url")
-            params.add("$address")
+            params.add(address)
         }
         if (port != null) {
             params.add("--http-port")

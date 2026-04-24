@@ -13,7 +13,7 @@ import com.smallcloud.refactai.io.NotificationSSEClient
 import com.smallcloud.refactai.listeners.UninstallListener
 import com.smallcloud.refactai.lsp.LSPActiveDocNotifierService
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.initialize
-import com.smallcloud.refactai.notifications.emitInfo
+import com.smallcloud.refactai.notifications.emitInfoWithDocLink
 import com.smallcloud.refactai.notifications.notificationStartup
 import com.smallcloud.refactai.panes.sharedchat.ChatPaneInvokeAction
 import com.smallcloud.refactai.settings.AppSettingsState
@@ -74,13 +74,13 @@ class Initializer : ProjectActivity, Disposable {
 
     private fun checkJcefStatus() {
         if (!JBCefApp.isSupported()) {
-            emitInfo(RefactAIBundle.message("notifications.chatCanNotStartWarning"), false)
+            emitInfoWithDocLink(RefactAIBundle.message("notifications.chatCanNotStartWarning"), "https://docs.refact.ai/guides/plugins/jetbrains/troubleshooting/", false)
             return
         }
 
         if (JcefConfigurer.isAffectedVersion() && JcefConfigurer.isOutOfProcessEnabled()) {
             logger.warn("JCEF out-of-process mode detected on affected version 2025.1.*")
-            emitInfo(RefactAIBundle.message("notifications.chatCanFreezeWarning"), false)
+            emitInfoWithDocLink(RefactAIBundle.message("notifications.chatCanFreezeWarning"), "https://docs.refact.ai/guides/plugins/jetbrains/troubleshooting/", false)
         }
     }
 

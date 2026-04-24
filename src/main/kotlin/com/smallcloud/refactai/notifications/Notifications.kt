@@ -6,7 +6,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
-import com.intellij.notification.NotificationListener.Adapter
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
@@ -28,10 +27,8 @@ import com.smallcloud.refactai.settings.AppSettingsState.Companion.acceptedCompl
 import com.smallcloud.refactai.utils.getLastUsedProject
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
-import java.net.URL
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
-import javax.swing.event.HyperlinkEvent
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.getInstance as getLSPProcessHolder
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
@@ -95,14 +92,12 @@ fun emitRateUs() {
     val notification =
         NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
             Resources.titleStr, RefactAIBundle.message("notifications.rateUs"), NotificationType.INFORMATION,
-        ).also { it.setListener(object : Adapter() {
-            override fun hyperlinkActivated(notification: Notification, event: HyperlinkEvent) {
-                val url: URL = event.url
-                BrowserUtil.browse(url)
-                AppSettingsState.rateUsNotification = true
-                notification.expire()
-            }
-        })}
+        )
+    notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.rateUsAction")) {
+        BrowserUtil.browse("https://www.smallcloud.ai/ratejb")
+        AppSettingsState.rateUsNotification = true
+        notification.expire()
+    })
     notification.icon = Resources.Icons.LOGO_RED_16x16
     notification.notify(project)
     lastRateUsNotification = notification
@@ -176,15 +171,29 @@ fun emitInfo(msg: String, needToDeleteLast: Boolean = true) {
     if (needToDeleteLast) removeLastNotification()
     val project = getLastUsedProject()
     val notification = NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group")
-        .createNotification(Resources.titleStr, msg, NotificationType.INFORMATION).setListener(object : Adapter() {
-            override fun hyperlinkActivated(notification: Notification, event: HyperlinkEvent) {
-                val url: URL = event.url
-                BrowserUtil.browse(url)
-                notification.expire()
-            }
-        })
+        .createNotification(Resources.titleStr, msg, NotificationType.INFORMATION)
     notification.icon = Resources.Icons.LOGO_RED_16x16
 
+    notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
+        notification.expire()
+        AppExecutorUtil.getAppExecutorService().execute {
+            ShowSettingsUtilImpl.showSettingsDialog(project, refactAIRootSettingsID, null)
+        }
+    })
+    notification.notify(project)
+}
+
+fun emitInfoWithDocLink(msg: String, docUrl: String, needToDeleteLast: Boolean = true) {
+    if (needToDeleteLast) removeLastNotification()
+    val project = getLastUsedProject()
+    val notification = NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group")
+        .createNotification(Resources.titleStr, msg, NotificationType.INFORMATION)
+    notification.icon = Resources.Icons.LOGO_RED_16x16
+
+    notification.addAction(NotificationAction.createSimple("Open Documentation") {
+        BrowserUtil.browse(docUrl)
+        notification.expire()
+    })
     notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.settingsAndPrivacy")) {
         notification.expire()
         AppExecutorUtil.getAppExecutorService().execute {

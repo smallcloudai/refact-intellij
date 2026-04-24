@@ -300,7 +300,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 if (process?.isAlive == false || !isWorking) {
                     ensureStartedAsync("health-check-process-dead-or-unready")
                 }
-            } catch (e: java.util.concurrent.RejectedExecutionException) {
+            } catch (e: RejectedExecutionException) {
                 // This exception can occur during shutdown when schedulers are already closed
                 if (e.message?.contains("Already shutdown") == true) {
                     logger.info("Ignoring RejectedExecutionException during health check: ${e.message}")
@@ -425,6 +425,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             }
         }
 
+        val startupUrl = URI("http://127.0.0.1:${newConfig.port}/")
         attempt = 0
         while (attempt < 5) {
             if (shouldAbortLifecycleWork()) {
@@ -433,12 +434,12 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                 return
             }
             try {
-                InferenceGlobalContext.connection.ping(url)
+                InferenceGlobalContext.connection.ping(startupUrl)
+                lastConfig = newConfig
+                isWorking = true
                 buildInfo = getBuildInfo()
                 logger.warn("LSP binary build info $buildInfo")
                 capabilities = getCaps()
-                lastConfig = newConfig
-                isWorking = true
                 fetchCustomizationFromServer()?.also { customizationCache = it }
                 break
             } catch (e: Exception) {
@@ -538,7 +539,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             } else {
                 ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             if (!ragStatusCheckerScheduler.isShutdown && !ragStatusCheckerScheduler.isTerminated) {
                 ragStatusCheckerScheduler.schedule({ lspRagStatusSync() }, 5000, TimeUnit.MILLISECONDS)
             }
@@ -710,13 +711,13 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         private fun allocateFreePort(): Int? {
             return try {
                 ServerSocket(0).use { it.localPort }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
         }
 
         @JvmStatic
-        fun getInstance(project: Project): LSPProcessHolder? = project.service()
+        fun getInstance(project: Project): LSPProcessHolder = project.service()
 
         var buildInfo: String = ""
         private val initialized = AtomicBoolean(false)

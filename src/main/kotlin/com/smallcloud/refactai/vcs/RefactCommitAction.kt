@@ -36,7 +36,7 @@ class RefactCommitAction : AnAction(
     override fun update(e: AnActionEvent) {
         val project = e.project
         val commitMessage = e.getData(VcsDataKeys.COMMIT_MESSAGE_CONTROL) as? CommitMessage
-        val lspAvailable = project != null && LSPProcessHolder.getInstance(project)?.baseUrlOrNull() != null
+        val lspAvailable = project != null && LSPProcessHolder.getInstance(project).baseUrlOrNull() != null
         e.presentation.isEnabledAndVisible = project != null && commitMessage != null
         e.presentation.isEnabled = lspAvailable
     }
@@ -44,7 +44,7 @@ class RefactCommitAction : AnAction(
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val lsp = LSPProcessHolder.getInstance(project)
-        if (lsp == null || !lsp.isWorking) return
+        if (!lsp.isWorking) return
 
         val commitMessage = e.getData(VcsDataKeys.COMMIT_MESSAGE_CONTROL) as? CommitMessage ?: return
         val handler = e.getData(VcsDataKeys.COMMIT_WORKFLOW_HANDLER) as? AbstractCommitWorkflowHandler<*, *>
@@ -105,7 +105,7 @@ class RefactCommitAction : AnAction(
                 }
 
                 try {
-                    val currentMessage = commitMsg.text?.takeIf { it.isNotBlank() } ?: ""
+                    val currentMessage = commitMsg.text.takeIf { it.isNotBlank() } ?: ""
                     val result = lspGetCommitMessage(project, diff, currentMessage)
 
                     if (result.isNotBlank()) {

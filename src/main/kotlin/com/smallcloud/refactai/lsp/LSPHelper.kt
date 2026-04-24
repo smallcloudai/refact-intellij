@@ -139,7 +139,6 @@ fun lspGetCodeLens(editor: Editor): String {
             "uri" to virtualFile.url,
         )
     )
-
     return try {
         InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
@@ -150,7 +149,7 @@ fun lspGetCodeLens(editor: Editor): String {
                 InferenceGlobalContext.lastErrorMsg = it.message
             }
         }).get()?.get() as? String ?: ""
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         ""
     }
 }
@@ -170,7 +169,6 @@ fun lspGetCommitMessage(project: Project, diff: String, currentMessage: String):
         requestBody["text"] = currentMessage
     }
     val data = Gson().toJson(requestBody)
-
     return try {
         InferenceGlobalContext.connection.post(url, data, dataReceiveEnded = {
             InferenceGlobalContext.status = ConnectionStatus.CONNECTED
@@ -181,7 +179,7 @@ fun lspGetCommitMessage(project: Project, diff: String, currentMessage: String):
                 InferenceGlobalContext.lastErrorMsg = it.message
             }
         }).get()?.get() as? String ?: ""
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         ""
     }
 }

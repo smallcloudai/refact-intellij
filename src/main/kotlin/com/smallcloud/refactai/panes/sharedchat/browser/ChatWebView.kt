@@ -646,6 +646,18 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                     logger.info("React application signaled ready")
                 }
                 markRendererResponsive()
+
+                ApplicationManager.getApplication().invokeLater {
+                    if (disposing.get()) return@invokeLater
+                    if (!::component.isInitialized) return@invokeLater
+                    component.revalidate()
+                    component.repaint()
+                }
+
+                jsExecutor.executeAsync(
+                    "window.dispatchEvent(new Event('resize'));",
+                    "react-ready-resize",
+                )
             }
         }
     }

@@ -120,9 +120,17 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     private fun onPanelBecameVisible() {
         if (browserLazy.isInitialized()) {
+            browser.refreshAfterVisibilityChange()
             selectionDebouncer.flush()
             configDebouncer.flush()
             messageQueue.flushNow()
+
+            paneScope.launch {
+                delay(32)
+                if (isPanelVisible && browserLazy.isInitialized()) {
+                    browser.refreshAfterVisibilityChange()
+                }
+            }
         }
     }
 

@@ -861,6 +861,32 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
         return component
     }
 
+    fun refreshAfterVisibilityChange() {
+        if (disposing.get()) return
+
+        ApplicationManager.getApplication().invokeLater {
+            if (disposing.get()) return@invokeLater
+            if (!::component.isInitialized) return@invokeLater
+
+            component.revalidate()
+            component.repaint()
+        }
+
+        if (!::jsExecutor.isInitialized) return
+        if (!::jbcefBrowser.isInitialized || jbcefBrowser.isDisposed) return
+        if (initializationState.get() < 3) return
+
+        jsExecutor.executeAsync(
+            """
+            window.dispatchEvent(new Event('resize'));
+            requestAnimationFrame(() => {
+                window.dispatchEvent(new Event('resize'));
+            });
+            """.trimIndent(),
+            "visibility-refresh",
+        )
+    }
+
     fun isReady(): Boolean = initializationState.get() >= 3 && !jbcefBrowser.isDisposed
 
     val webView: JBCefBrowser

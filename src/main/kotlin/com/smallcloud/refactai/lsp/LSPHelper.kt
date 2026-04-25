@@ -54,7 +54,7 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
     val url = baseUrl.resolve("/v1/lsp-initialize")
     val data = Gson().toJson(
         mapOf(
-            "project_roots" to projectRoots,
+            "project_roots" to projectRoots.map { java.io.File(it).toURI().toString() },
         )
     )
 

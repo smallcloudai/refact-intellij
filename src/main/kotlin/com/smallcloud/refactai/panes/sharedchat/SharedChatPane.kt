@@ -50,6 +50,12 @@ import com.smallcloud.refactai.utils.EventDebouncer
 import com.smallcloud.refactai.utils.SmartMessageQueue
 import kotlinx.coroutines.*
 import org.jetbrains.annotations.NotNull
+import java.awt.Component
+import java.awt.KeyboardFocusManager
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
+import java.awt.event.HierarchyEvent
+import java.beans.PropertyChangeListener
 import java.io.File
 import javax.swing.JPanel
 
@@ -73,6 +79,8 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
 
     @Volatile
     private var isPanelVisible = true
+    private var activationListener: PropertyChangeListener? = null
+    private var trackedComponent: Component? = null
 
     private val messageQueue = SmartMessageQueue(
         maxCommands = 200,
@@ -104,6 +112,58 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         this.addEventListeners()
         this.setupDropdownStateTracking()
         this.setupVisibilityTracking()
+        this.setupActivationTracking()
+    }
+
+    private fun updateTrackedVisibility() {
+        isPanelVisible = (trackedComponent ?: this).isShowing
+    }
+
+    private fun refreshBrowserSoon(delayMs: Long = 0L) {
+        updateTrackedVisibility()
+        if (!isPanelVisible || !browserLazy.isInitialized()) return
+
+        paneScope.launch {
+            if (delayMs > 0) delay(delayMs)
+            updateTrackedVisibility()
+            if (isPanelVisible && browserLazy.isInitialized()) {
+                browser.refreshAfterVisibilityChange()
+            }
+        }
+    }
+
+    private fun setupTrackedComponent(component: Component) {
+        if (trackedComponent === component) {
+            updateTrackedVisibility()
+            return
+        }
+
+        trackedComponent = component
+        updateTrackedVisibility()
+
+        component.addComponentListener(object : ComponentAdapter() {
+            override fun componentShown(e: ComponentEvent?) {
+                updateTrackedVisibility()
+                onPanelBecameVisible()
+            }
+
+            override fun componentHidden(e: ComponentEvent?) {
+                updateTrackedVisibility()
+            }
+        })
+
+        component.addHierarchyListener { event ->
+            val flags = HierarchyEvent.SHOWING_CHANGED.toLong() or
+                HierarchyEvent.DISPLAYABILITY_CHANGED.toLong() or
+                HierarchyEvent.PARENT_CHANGED.toLong()
+            if (event.changeFlags and flags != 0L) {
+                val wasVisible = isPanelVisible
+                updateTrackedVisibility()
+                if (!wasVisible && isPanelVisible) {
+                    onPanelBecameVisible()
+                }
+            }
+        }
     }
 
     private fun setupVisibilityTracking() {
@@ -116,6 +176,26 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                 }
             }
         }
+    }
+
+    private fun setupActivationTracking() {
+        val listener = PropertyChangeListener { event ->
+            val name = event.propertyName
+            if (name != "activeWindow" && name != "focusedWindow") return@PropertyChangeListener
+            if (event.newValue == null) return@PropertyChangeListener
+
+            updateTrackedVisibility()
+            if (!isPanelVisible || !browserLazy.isInitialized()) return@PropertyChangeListener
+
+            refreshBrowserSoon()
+            refreshBrowserSoon(48)
+            refreshBrowserSoon(180)
+        }
+
+        activationListener = listener
+        val focusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        focusManager.addPropertyChangeListener("activeWindow", listener)
+        focusManager.addPropertyChangeListener("focusedWindow", listener)
     }
 
     private fun onPanelBecameVisible() {
@@ -998,6 +1078,10 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     internal val chatWebView: ChatWebView
         get() = browser
 
+    fun attachMountedComponent(component: Component) {
+        setupTrackedComponent(component)
+    }
+
     private fun postMessage(message: Events.ToChat<*>?) {
         if (message != null) {
             messageQueue.enqueue(message)
@@ -1005,6 +1089,12 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
     }
 
     override fun dispose() {
+        activationListener?.let { listener ->
+            val focusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+            focusManager.removePropertyChangeListener("activeWindow", listener)
+            focusManager.removePropertyChangeListener("focusedWindow", listener)
+        }
+        activationListener = null
         paneScope.cancel()
         selectionDebouncer.cancel()
         configDebouncer.cancel()

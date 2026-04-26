@@ -29,6 +29,7 @@ class Initializer : ProjectActivity, Disposable {
         val isUnitTest = ApplicationManager.getApplication().isUnitTestMode
         val shouldInitialize = !isUnitTest && !initialized.getAndSet(true)
         if (shouldInitialize) {
+            JcefConfigurer.applyEarlyRemoteModeWorkaround()
             logger.info("Bin prefix = ${Resources.binPrefix}")
             initialize()
             if (AppSettingsState.instance.isFirstStart) {
@@ -76,11 +77,6 @@ class Initializer : ProjectActivity, Disposable {
         if (!JBCefApp.isSupported()) {
             emitInfoWithDocLink(RefactAIBundle.message("notifications.chatCanNotStartWarning"), "https://docs.refact.ai/guides/plugins/jetbrains/troubleshooting/", false)
             return
-        }
-
-        if (JcefConfigurer.isAffectedVersion() && JcefConfigurer.isOutOfProcessEnabled()) {
-            logger.warn("JCEF out-of-process mode detected on affected version 2025.1.*")
-            emitInfoWithDocLink(RefactAIBundle.message("notifications.chatCanFreezeWarning"), "https://docs.refact.ai/guides/plugins/jetbrains/troubleshooting/", false)
         }
     }
 

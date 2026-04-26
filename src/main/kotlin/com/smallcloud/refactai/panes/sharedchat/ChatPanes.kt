@@ -28,6 +28,7 @@ class ChatPanes(val project: Project) : Disposable {
             try {
                 pane = SharedChatPane(project).also { Disposer.register(this, it) }
                 component = pane?.webView?.component
+                component?.let { pane?.attachMountedComponent(it) }
                 holder.add(component)
 
                 // Set up mode switch callback for dynamic crash recovery
@@ -72,6 +73,7 @@ class ChatPanes(val project: Project) : Disposable {
 
                 pane = SharedChatPane(project).also { Disposer.register(this, it) }
                 component = pane?.webView?.component
+                component?.let { pane?.attachMountedComponent(it) }
                 holder.add(component)
 
                 pane?.chatWebView?.setModeSwitchCallback {

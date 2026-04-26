@@ -215,6 +215,61 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
     private lateinit var component: JComponent
     private val useOffscreenRendering: Boolean = determineRenderingMode()
     private lateinit var postMessageTemplate: JavaScriptTemplate
+    private val syntheticResizeInFlight = AtomicBoolean(false)
+
+    private fun dispatchCefVisibilitySignals() {
+        if (!::cefBrowser.isInitialized || !::component.isInitialized) return
+
+        runCatching {
+            cefBrowser.setWindowVisibility(component.isShowing)
+        }
+        runCatching {
+            cefBrowser.notifyScreenInfoChanged()
+        }
+
+        val width = component.width
+        val height = component.height
+        if (width > 1 && height > 1) {
+            runCatching {
+                cefBrowser.wasResized(width, height)
+            }
+        }
+    }
+
+    private fun nudgeComponentSize() {
+        if (!::component.isInitialized) return
+        if (!syntheticResizeInFlight.compareAndSet(false, true)) return
+
+        ApplicationManager.getApplication().invokeLater {
+            try {
+                if (disposing.get() || !::component.isInitialized) return@invokeLater
+
+                val width = component.width
+                val height = component.height
+                if (width <= 1 || height <= 1) return@invokeLater
+
+                component.setSize(width + 1, height)
+                component.revalidate()
+                component.repaint()
+                dispatchCefVisibilitySignals()
+
+                ApplicationManager.getApplication().invokeLater {
+                    try {
+                        if (disposing.get() || !::component.isInitialized) return@invokeLater
+
+                        component.setSize(width, height)
+                        component.revalidate()
+                        component.repaint()
+                        dispatchCefVisibilitySignals()
+                    } finally {
+                        syntheticResizeInFlight.set(false)
+                    }
+                }
+            } catch (_: Exception) {
+                syntheticResizeInFlight.set(false)
+            }
+        }
+    }
 
     fun setStyle() {
         try {
@@ -646,18 +701,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
                     logger.info("React application signaled ready")
                 }
                 markRendererResponsive()
-
-                ApplicationManager.getApplication().invokeLater {
-                    if (disposing.get()) return@invokeLater
-                    if (!::component.isInitialized) return@invokeLater
-                    component.revalidate()
-                    component.repaint()
-                }
-
-                jsExecutor.executeAsync(
-                    "window.dispatchEvent(new Event('resize'));",
-                    "react-ready-resize",
-                )
+                refreshAfterVisibilityChange()
             }
         }
     }
@@ -870,6 +914,8 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
 
             component.revalidate()
             component.repaint()
+            dispatchCefVisibilitySignals()
+            nudgeComponentSize()
         }
 
         if (!::jsExecutor.isInitialized) return

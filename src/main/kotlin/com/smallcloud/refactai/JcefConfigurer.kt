@@ -4,11 +4,19 @@ import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.util.registry.Registry
 
 object JcefConfigurer {
+    private const val REMOTE_MODE_KEY = "jcef.remote.enabled"
+
     fun isAffectedVersion(): Boolean {
         return try {
             val appInfo = ApplicationInfo.getInstance()
             appInfo.majorVersion == "2025" && appInfo.minorVersion == "1"
         } catch (_: Exception) { false }
+    }
+
+    fun applyEarlyRemoteModeWorkaround() {
+        if (!isAffectedVersion()) return
+        if (System.getProperty(REMOTE_MODE_KEY) != null) return
+        System.setProperty(REMOTE_MODE_KEY, "false")
     }
 
     fun isOutOfProcessEnabled(): Boolean {

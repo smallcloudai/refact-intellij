@@ -14,10 +14,5 @@ fun makeLinksPanel(): JPanel {
                 BrowserUtil.browse("https://github.com/smallcloudai/refact-intellij/issues")
             }, null)
         })
-        add(LinkLabel<String>("Discord", AllIcons.Ide.External_link_arrow).apply {
-            setListener({ _, _ ->
-                BrowserUtil.browse("https://www.smallcloud.ai/discord")
-            }, null)
-        })
     }
 }

@@ -53,7 +53,6 @@ dependencies {
         // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file for plugin from JetBrains Marketplace.
         plugins(providers.gradleProperty("platformPlugins").map { it.split(',') })
 
-        instrumentationTools()
         pluginVerifier()
         zipSigner()
         testFramework(TestFrameworkType.Platform)
@@ -97,6 +96,23 @@ val runIdeWith2025 by intellijPlatformTesting.runIde.registering {
     useInstaller = false
 }
 
+val runIdeWith2025JcefWorkaround by intellijPlatformTesting.runIde.registering {
+    type = IntelliJPlatformType.PyCharmCommunity
+    version = "2025.1"
+    useInstaller = false
+}
+
+tasks.named("runIdeWith2025") {
+    (this as JavaExec).jvmArgs("-Xmx4096m")
+}
+
+tasks.named("runIdeWith2025JcefWorkaround") {
+    (this as JavaExec).jvmArgs(
+        "-Xmx4096m",
+        "-Dide.browser.jcef.out-of-process.enabled=false",
+    )
+}
+
 // Configurable via: -PrunIdeType=IntellijIdeaUltimate -PrunIdeVersion=2024.3.5
 // Available types: IntellijIdeaCommunity, IntellijIdeaUltimate, PyCharmCommunity,
 //                  PyCharmProfessional, CLion, GoLand, WebStorm, PhpStorm, Rider, RustRover
@@ -115,7 +131,7 @@ tasks {
         targetCompatibility = javaCompilerVersion
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = javaCompilerVersion
+        compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget(javaCompilerVersion))
     }
 }
 

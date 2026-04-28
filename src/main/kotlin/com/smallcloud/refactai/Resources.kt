@@ -8,7 +8,6 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.IconUtil
 import java.io.File
-import java.net.URI
 import javax.swing.Icon
 import javax.swing.UIManager
 
@@ -69,12 +68,7 @@ private fun getBinPrefix(): String {
 object Resources {
     val binPrefix: String = getBinPrefix()
 
-    val defaultCloudUrl: URI = URI("https://www.smallcloud.ai")
-    val defaultCodeCompletionUrlSuffix = URI("v1/code-completion")
-    val cloudUserMessage: URI = defaultCloudUrl.resolve("/v1/user-message")
-    val defaultReportUrlSuffix: URI = URI("v1/telemetry-network")
-    val defaultChatReportUrlSuffix: URI = URI("v1/telemetry-chat")
-    val defaultSnippetAcceptedUrlSuffix: URI = URI("v1/snippet-accepted")
+    const val defaultCodeCompletionUrlSuffix: String = "v1/code-completion"
     val version: String = getVersion()
     const val client: String = "jetbrains"
     const val titleStr: String = "Refact.ai"
@@ -101,7 +95,6 @@ object Resources {
         val LOGO_12x12: Icon = makeIcon("/icons/refactai_logo_12x12.svg")
         val LOGO_RED_16x16: Icon = IconLoader.getIcon("/icons/refactai_logo_red_16x16.svg", Resources::class.java)
 
-        val COIN_16x16: Icon = makeIcon("/icons/coin_16x16.svg")
         val HAND_12x12: Icon = makeIcon("/icons/hand_12x12.svg")
     }
 }

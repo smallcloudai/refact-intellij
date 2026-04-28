@@ -9,15 +9,10 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 import com.intellij.util.xmlb.annotations.Transient
 import com.smallcloud.refactai.ExtraInfoChangedNotifier
 import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance
 import java.io.File
 import java.net.URI
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.io.path.Path
-import kotlin.io.path.exists
-import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 
 /**
  * Supports storing the application settings in a persistent way.
@@ -30,7 +25,6 @@ import com.smallcloud.refactai.account.AccountManager.Companion.instance as Acco
     Storage("SMCSettings.xml"),
 ])
 class AppSettingsState : PersistentStateComponent<AppSettingsState> {
-    var apiKey: String? = null
     var temperature: Float? = null
     var model: String? = null
     var userLoggedIn: String? = null
@@ -43,7 +37,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var developerModeEnabled: Boolean = false
     var xDebugLSPPort: Int? = null
     var stagingVersion: String = ""
-    var rateUsNotification: Boolean = false
     var astIsEnabled: Boolean = true
     var astIsEnabledDefaultChanged: Boolean = false
     var vecdbIsEnabled: Boolean = true
@@ -52,7 +45,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     var vecdbFileLimit: Int = 15000
     var completionMaxTokens: Int = 0
     var insecureSSL: Boolean = false
-    var telemetrySnippetsEnabled: Boolean = false
     var isFirstStart: Boolean = true
     var experimentalLspFlagEnabled: Boolean = false
 
@@ -60,17 +52,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
     private val messageBus: MessageBus = ApplicationManager.getApplication().messageBus
 
     init {
-        messageBus
-            .connect(PluginState.instance)
-            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun userChanged(newUser: String?) {
-                    instance.userLoggedIn = newUser
-                }
-
-                override fun apiKeyChanged(newApiKey: String?) {
-                    instance.apiKey = newApiKey
-                }
-            })
         messageBus
             .connect(PluginState.instance)
             .subscribe(
@@ -123,10 +104,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
                     override fun completionMaxTokensChanged(newMaxTokens: Int) {
                         instance.completionMaxTokens = newMaxTokens
                     }
-                    override fun telemetrySnippetsEnabledChanged(newValue: Boolean) {
-                        instance.telemetrySnippetsEnabled = newValue
-                    }
-
                     override fun experimentalLspFlagEnabledChanged(newValue: Boolean) {
                         instance.experimentalLspFlagEnabled = newValue
                     }
@@ -161,8 +138,6 @@ class AppSettingsState : PersistentStateComponent<AppSettingsState> {
         @JvmStatic
         val instance: AppSettingsState
             get() = ApplicationManager.getApplication().getService(AppSettingsState::class.java)
-
-        val acceptedCompletionCounter = AtomicInteger(0)
     }
 }
 
@@ -172,5 +147,4 @@ fun settingsStartup() {
             instance.userInferenceUri = null
         }
     }
-    AccountManager.startup()
 }

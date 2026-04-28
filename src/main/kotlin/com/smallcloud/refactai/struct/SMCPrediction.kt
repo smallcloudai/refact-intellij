@@ -7,7 +7,6 @@ data class SMCStreamingPeace(
     val choices: List<StreamingChoice>,
     val created: Double,
     val model: String,
-    @SerializedName("snippet_telemetry_id") val snippetTelemetryId: Int? = null,
     val cached: Boolean = false,
     @Expose
     var requestId: String = ""

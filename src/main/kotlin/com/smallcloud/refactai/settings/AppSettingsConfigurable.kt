@@ -1,11 +1,7 @@
 package com.smallcloud.refactai.settings
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
-import com.smallcloud.refactai.PluginState
-import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import javax.swing.JComponent
-import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 /**
@@ -13,18 +9,6 @@ import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as I
  */
 class AppSettingsConfigurable : Configurable {
     private var mySettingsComponent: AppSettingsComponent? = null
-
-    init {
-        ApplicationManager.getApplication().messageBus.connect(PluginState.instance)
-            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun apiKeyChanged(newApiKey: String?) {
-                    mySettingsComponent?.myTokenText?.let { it.text = newApiKey }
-                    mySettingsComponent?.astIsEnabled = InferenceGlobalContext.astIsEnabled
-                    mySettingsComponent?.vecdbIsEnabled = InferenceGlobalContext.vecdbIsEnabled
-                    mySettingsComponent?.splitter?.revalidate()
-                }
-            })
-    }
 
     // A default constructor with no arguments is required because this implementation
     // is registered as an applicationConfigurable EP
@@ -42,17 +26,7 @@ class AppSettingsConfigurable : Configurable {
     }
 
     override fun isModified(): Boolean {
-        var modified =
-            (mySettingsComponent!!.tokenText.isNotEmpty() && (AccountManager.apiKey == null ||
-                mySettingsComponent!!.tokenText.trim() != AccountManager.apiKey))
-        modified = modified || (mySettingsComponent!!.tokenText.isEmpty() && AccountManager.apiKey != null)
-
-        modified =
-            modified || (mySettingsComponent!!.contrastUrlText.isNotEmpty() &&
-                mySettingsComponent!!.contrastUrlText != InferenceGlobalContext.inferenceUri)
-        modified =
-            modified || (mySettingsComponent!!.contrastUrlText.isEmpty() && !InferenceGlobalContext.isCloud)
-
+        var modified = false
         modified = modified || mySettingsComponent!!.useDeveloperMode != InferenceGlobalContext.developerModeEnabled
 
         modified = modified || mySettingsComponent!!.xDebugLSPPort != InferenceGlobalContext.xDebugLSPPort
@@ -74,9 +48,6 @@ class AppSettingsConfigurable : Configurable {
     }
 
     override fun apply() {
-        AccountManager.apiKey = mySettingsComponent!!.tokenText.trim().ifEmpty { null }
-        InferenceGlobalContext.inferenceUri = mySettingsComponent!!.contrastUrlText.ifEmpty { null }
-        mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
         InferenceGlobalContext.developerModeEnabled = mySettingsComponent!!.useDeveloperMode
         InferenceGlobalContext.stagingVersion = mySettingsComponent!!.stagingVersion
         InferenceGlobalContext.xDebugLSPPort = mySettingsComponent!!.xDebugLSPPort
@@ -92,8 +63,6 @@ class AppSettingsConfigurable : Configurable {
     }
 
     override fun reset() {
-        mySettingsComponent!!.tokenText = AccountManager.apiKey ?: ""
-        mySettingsComponent!!.contrastUrlText = InferenceGlobalContext.inferenceUri ?: ""
         mySettingsComponent!!.useDeveloperMode = InferenceGlobalContext.developerModeEnabled
         mySettingsComponent!!.stagingVersion = InferenceGlobalContext.stagingVersion
         mySettingsComponent!!.xDebugLSPPort = InferenceGlobalContext.xDebugLSPPort

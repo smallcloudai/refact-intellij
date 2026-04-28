@@ -8,9 +8,7 @@ import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
-import com.smallcloud.refactai.io.CloudMessageService
 import com.smallcloud.refactai.io.NotificationSSEClient
-import com.smallcloud.refactai.listeners.UninstallListener
 import com.smallcloud.refactai.lsp.LSPActiveDocNotifierService
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.initialize
 import com.smallcloud.refactai.notifications.emitInfoWithDocLink
@@ -38,10 +36,7 @@ class Initializer : ProjectActivity, Disposable {
             }
             settingsStartup()
             notificationStartup()
-            PluginInstaller.addStateListener(UninstallListener())
             UpdateChecker.instance
-
-            ApplicationManager.getApplication().getService(CloudMessageService::class.java)
 
             checkJcefStatus()
             preWarmResources()

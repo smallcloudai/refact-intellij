@@ -24,7 +24,6 @@ data class LSPCapabilities(
         @SerializedName("endpoint_style") var endpointStyle: String = "",
         @SerializedName("endpoint_template") var endpointTemplate: String = "",
         @SerializedName("running_models") var runningModels: List<String> = listOf(),
-        @SerializedName("telemetry_basic_dest") var telemetryBasicDest: String = "",
         @SerializedName("tokenizer_path_template") var tokenizerPathTemplate: String = "",
         @SerializedName("tokenizer_rewrite_path") var tokenizerRewritePath: Map<String, String> = mapOf(),
 )

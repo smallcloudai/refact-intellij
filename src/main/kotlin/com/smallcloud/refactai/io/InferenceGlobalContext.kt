@@ -3,10 +3,8 @@ package com.smallcloud.refactai.io
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.messages.MessageBus
-import com.smallcloud.refactai.struct.DeploymentMode
 import com.smallcloud.refactai.struct.SMCRequest
 import com.smallcloud.refactai.struct.SMCRequestBody
-import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
 
 class InferenceGlobalContext : Disposable {
@@ -86,25 +84,6 @@ class InferenceGlobalContext : Disposable {
                     .useAutoCompletionModeChanged(newValue)
         }
 
-    val deploymentMode: DeploymentMode
-        get() {
-            val uri = AppSettingsState.userInferenceUri ?: return DeploymentMode.CLOUD
-            return when(uri.lowercase()) {
-                "hf" -> DeploymentMode.HF
-                "refact" -> DeploymentMode.CLOUD
-                else -> DeploymentMode.SELF_HOSTED
-            }
-        }
-
-    val isCloud: Boolean
-        get() {
-            return deploymentMode == DeploymentMode.CLOUD
-        }
-    val isSelfHosted: Boolean
-        get() {
-            return deploymentMode == DeploymentMode.SELF_HOSTED
-        }
-
     var astIsEnabled: Boolean
         get() = AppSettingsState.astIsEnabled
         set(newValue) {
@@ -178,9 +157,7 @@ class InferenceGlobalContext : Disposable {
         }
 
     fun makeRequest(requestData: SMCRequestBody): SMCRequest? {
-        val apiKey = AccountManager.apiKey
-
-        return SMCRequest(requestData, apiKey ?: "self_hosted")
+        return SMCRequest(requestData)
     }
 
     override fun dispose() {}

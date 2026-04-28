@@ -6,7 +6,6 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException
 import com.intellij.openapi.Disposable
 import com.intellij.util.text.findTextRange
-import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.SMCExceptions
 import org.apache.hc.client5.http.async.methods.AbstractBinResponseConsumer
 import org.apache.hc.client5.http.async.methods.SimpleHttpRequest
@@ -34,7 +33,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.statistic.UsageStats.Companion.instance as UsageStats
 
 
 private const val STREAMING_PREFIX = "data: "
@@ -84,7 +82,6 @@ class AsyncConnection : Disposable {
         body: String? = null,
         headers: Map<String, String>? = null,
         requestProperties: Map<String, String>? = null,
-        stat: UsageStatistic = UsageStatistic(),
         dataReceiveEnded: (String) -> Unit = {},
         dataReceived: (String, String) -> Unit = { _: String, _: String -> },
         errorDataReceived: (JsonObject) -> Unit = {},
@@ -104,7 +101,6 @@ class AsyncConnection : Disposable {
 
         return send(
             requestProducer, uri,
-            stat = stat,
             dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
             errorDataReceived = errorDataReceived, failedDataReceiveEnded = failedDataReceiveEnded,
             requestId = requestId
@@ -116,7 +112,6 @@ class AsyncConnection : Disposable {
         body: String? = null,
         headers: Map<String, String>? = null,
         requestProperties: Map<String, String>? = null,
-        stat: UsageStatistic = UsageStatistic(),
         dataReceiveEnded: (String) -> Unit = {},
         dataReceived: (String, String) -> Unit = { _: String, _: String -> },
         errorDataReceived: (JsonObject) -> Unit = {},
@@ -135,7 +130,6 @@ class AsyncConnection : Disposable {
         )
         return send(
             requestProducer, uri,
-            stat = stat,
             dataReceiveEnded = dataReceiveEnded, dataReceived = dataReceived,
             errorDataReceived = errorDataReceived, failedDataReceiveEnded = failedDataReceiveEnded,
             requestId = requestId
@@ -145,7 +139,6 @@ class AsyncConnection : Disposable {
     private fun send(
         requestProducer: AsyncRequestProducer,
         uri: URI,
-        stat: UsageStatistic,
         dataReceiveEnded: (String) -> Unit,
         dataReceived: (String, String) -> Unit,
         errorDataReceived: (JsonObject) -> Unit,
@@ -217,8 +210,6 @@ class AsyncConnection : Disposable {
                     }
 
                     override fun failed(ex: java.lang.Exception?) {
-                        if (ex !is SMCExceptions)
-                            UsageStats?.addStatistic(false, stat, uri.toString(), ex.toString())
                         if (ex is java.net.SocketException ||
                             ex is java.net.UnknownHostException) {
                             InferenceGlobalContext.status = ConnectionStatus.DISCONNECTED

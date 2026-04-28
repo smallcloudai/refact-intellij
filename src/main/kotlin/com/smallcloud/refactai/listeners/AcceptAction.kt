@@ -5,7 +5,6 @@ import com.intellij.codeInsight.hint.HintManagerImpl.ActionToIgnore
 import com.intellij.codeInsight.inline.completion.InlineCompletion
 import com.intellij.codeInsight.inline.completion.session.InlineCompletionContext
 import com.intellij.openapi.actionSystem.DataContext
-import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
@@ -14,10 +13,8 @@ import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
 import com.intellij.openapi.util.TextRange
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.codecompletion.EditorRefactLastCompletionIsMultilineKey
-import com.smallcloud.refactai.codecompletion.EditorRefactLastSnippetTelemetryIdKey
 import com.smallcloud.refactai.codecompletion.InlineCompletionGrayTextElementCustom
 import com.smallcloud.refactai.modes.ModeProvider
-import com.smallcloud.refactai.statistic.UsageStats
 import kotlin.math.absoluteValue
 
 const val ACTION_ID_ = "TabPressedAction"
@@ -35,11 +32,7 @@ class TabPressedAction : EditorAction(InsertInlineCompletionHandler()), ActionTo
             val provider = ModeProvider.getOrCreateModeProvider(editor)
             if (provider.isInCompletionMode()) {
                 InlineCompletion.getHandlerOrNull(editor)?.insert()
-                 EditorRefactLastSnippetTelemetryIdKey[editor]?.also {
-                     editor.project?.service<UsageStats>()?.snippetAccepted(it)
-                     EditorRefactLastSnippetTelemetryIdKey[editor] = null
-                     EditorRefactLastCompletionIsMultilineKey[editor] = null
-                 }
+                EditorRefactLastCompletionIsMultilineKey[editor] = null
             } else {
                 provider.onTabPressed(editor, caret, dataContext)
             }

@@ -1,7 +1,6 @@
 package com.smallcloud.refactai.modes.completion.prompt
 
 import com.smallcloud.refactai.Resources
-import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.SMCCursor
 import com.smallcloud.refactai.struct.SMCInputs
 import com.smallcloud.refactai.struct.SMCRequest
@@ -13,7 +12,6 @@ object RequestCreator {
     fun create(
         fileName: String, text: String,
         line: Int, column: Int,
-        stat: UsageStatistic,
         baseUrl: URI,
         model: String? = null,
         useAst: Boolean = false,
@@ -40,7 +38,6 @@ object RequestCreator {
         return InferenceGlobalContext.makeRequest(
             requestBody,
         )?.also {
-            it.stat = stat
             it.uri = baseUrl.resolve(Resources.defaultCodeCompletionUrlSuffix)
         }
     }

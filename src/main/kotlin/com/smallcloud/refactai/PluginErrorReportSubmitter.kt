@@ -9,10 +9,8 @@ import com.intellij.openapi.diagnostic.SubmittedReportInfo
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.Consumer
 import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.buildInfo
-import com.smallcloud.refactai.struct.DeploymentMode
 import java.awt.Component
 import java.net.URLEncoder
-import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 private fun String.urlEncoded(): String = URLEncoder.encode(this, "UTF-8")
 
@@ -39,11 +37,6 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
         val ideNameAndVersion = ApplicationInfoEx.getInstanceEx().let { appInfo ->
             appInfo.fullApplicationName + "  " + "Build #" + appInfo.build.asString()
         }
-        val mode = when(InferenceGlobalContext.deploymentMode) {
-            DeploymentMode.CLOUD -> "Cloud"
-            DeploymentMode.SELF_HOSTED -> "Self-Hosted/Enterprise"
-            DeploymentMode.HF -> "HF"
-        }
         val pluginVersion = getThisPlugin()?.version ?: "unknown"
         val properties = System.getProperties()
         val jdk = properties.getProperty("java.version", "unknown") +
@@ -67,7 +60,6 @@ class PluginErrorReportSubmitter : ErrorReportSubmitter(), Disposable {
       |- JDK: $jdk
       |- OS: $os
       |- ARCH: $arch
-      |- MODE: $mode
       |- LSP BUILD INFO: $buildInfo
       |
       |### Additional information

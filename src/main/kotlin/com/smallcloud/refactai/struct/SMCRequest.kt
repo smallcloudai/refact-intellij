@@ -1,7 +1,6 @@
 package com.smallcloud.refactai.struct
 
 import com.google.gson.annotations.SerializedName
-import com.smallcloud.refactai.statistic.UsageStatistic
 import java.net.URI
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.streams.asSequence
@@ -48,8 +47,6 @@ data class SMCRequestBody(
 
 data class SMCRequest(
     var body: SMCRequestBody,
-    var token: String,
     var uri: URI = URI(""),
     var id: String = uuid(),
-    var stat: UsageStatistic = UsageStatistic(),
 )

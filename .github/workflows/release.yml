@@ -208,13 +208,6 @@ jobs:
           tag: v${{ steps.setupvars.outputs.plugin_version }}  # Use the version from previous step with 'v' prefix
           overwrite: true
           file_glob: true
-
-      - name: Notify to Discord
-        run: |
-          curl -X POST ${{ secrets.DISCORD_WEBHOOK_URL }} \
-          -H "Content-Type: application/json" \
-          -d '{"msg":"JB plugin ${{ steps.setupvars.outputs.plugin_version }} is released in ${{ steps.setupvars.outputs.slack_notification_channel }} channel"}'
-
       - name: Post to a Slack channel
         id: slack
         uses: slackapi/slack-github-action@v1.26.0

@@ -22,8 +22,6 @@ import com.smallcloud.refactai.modes.completion.StubCompletionMode
 import com.smallcloud.refactai.modes.completion.structs.DocumentEventExtra
 import com.smallcloud.refactai.modes.diff.DiffMode
 import com.smallcloud.refactai.modes.diff.DiffModeWithSideEffects
-import com.smallcloud.refactai.statistic.UsageStatistic
-import com.smallcloud.refactai.statistic.UsageStats
 import java.lang.System.currentTimeMillis
 import java.lang.System.identityHashCode
 import java.util.concurrent.ConcurrentLinkedQueue

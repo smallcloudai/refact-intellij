@@ -31,7 +31,7 @@ class AppSettingsComponent {
     val splitter: JBSplitter = JBSplitter(true, 0.3f)
     private val mainPanel: JPanel
     private var experimentalPanel: JPanel = JPanel()
-    val myTokenText = JBTextField().apply {
+    private val shortcutText = JBTextField().apply {
         addKeyListener(object : KeyListener {
             override fun keyTyped(e: KeyEvent?) {}
             override fun keyReleased(e: KeyEvent?) {}
@@ -45,7 +45,6 @@ class AppSettingsComponent {
 
         })
     }
-    private val myContrastUrlText = JBTextField()
     private val myModelText = JBTextField()
     private val myAstFileLimitText = JBTextField()
     private val myVecdbFileLimitText = JBTextField()
@@ -100,17 +99,6 @@ class AppSettingsComponent {
 
     init {
         mainPanel = FormBuilder.createFormBuilder().run {
-            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.inferenceURL")}: "),
-                myContrastUrlText, (UIUtil.DEFAULT_VGAP * 1.5).toInt(), false)
-            addComponentToRightColumn(
-                JBLabel(
-                    RefactAIBundle.message("advancedSettings.inferenceURLDescription"),
-                    UIUtil.ComponentStyle.SMALL, UIUtil.FontColor.BRIGHTER
-                ), 0
-            )
-            addLabeledComponent(JBLabel("${RefactAIBundle.message("advancedSettings.secretApiKey")}: "),
-                myTokenText, 1, false)
-
             addComponent(insecureSSLCheckBox, UIUtil.LARGE_VGAP)
             addComponent(
                 JBLabel(
@@ -215,19 +203,7 @@ class AppSettingsComponent {
     }
 
     val preferredFocusedComponent: JComponent
-        get() = myTokenText
-
-    var tokenText: String
-        get() = myTokenText.text
-        set(newText) {
-            myTokenText.text = newText
-        }
-
-    var contrastUrlText: String
-        get() = myContrastUrlText.text
-        set(newText) {
-            myContrastUrlText.text = newText
-        }
+        get() = shortcutText
 
     var useDeveloperMode: Boolean
         get() = developerModeCheckBox.isSelected

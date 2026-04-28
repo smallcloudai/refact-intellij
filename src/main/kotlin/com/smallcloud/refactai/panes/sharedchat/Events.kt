@@ -6,8 +6,6 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
-import com.smallcloud.refactai.settings.Host
-import com.smallcloud.refactai.settings.HostDeserializer
 import com.smallcloud.refactai.struct.ChatMessage
 import java.io.Serializable
 import java.lang.reflect.Type
@@ -21,9 +19,7 @@ class EventNames {
         OPEN_HOTKEYS("ide/openHotKeys"), // Will this work?
         OPEN_FILE("ide/openFile"),
         OPEN_CHAT_IN_TAB("ide/openChatInNewTab"), // Will this work?
-        SETUP_HOST("setup_host"),
         OPEN_EXTERNAL_URL("open_external_url"),
-        LOG_OUT("log_out"),
         FIM_READY("fim/ready"),
         FIM_REQUEST("fim/request"),
 
@@ -82,22 +78,12 @@ class Events {
     private class FromChatDeserializer : JsonDeserializer<FromChat> {
         override fun deserialize(p0: JsonElement?, p1: Type?, p2: JsonDeserializationContext?): FromChat? {
             val type = p0?.asJsonObject?.get("type")?.asString
-            // events without payload
-            if (type == EventNames.FromChat.LOG_OUT.value) {
-                return Setup.LogOut()
-            }
-
             val payload = p0?.asJsonObject?.get("payload")
             if (type == null) return null
 
             return when (type) {
                 EventNames.FromChat.NEW_FILE.value -> payload?.asString?.let { Editor.NewFile(it) }
                 EventNames.FromChat.OPEN_SETTINGS.value -> OpenSettings()
-                EventNames.FromChat.SETUP_HOST.value -> {
-                    val host = p2?.deserialize<Host>(payload, Host::class.java) ?: return null
-                    Setup.SetupHost(host)
-                }
-
                 EventNames.FromChat.OPEN_EXTERNAL_URL.value -> {
                     val url = payload?.asJsonObject?.get("url")?.asString ?: return null
                     Setup.OpenExternalUrl(url)
@@ -318,8 +304,6 @@ class Events {
 
         data class FimDebugPayload(
             val choices: Array<Choice>,
-            @SerializedName("snippet_telemetry_id")
-            val snippetTelemetryId: Number,
             val model: String,
             val context: Context?,
             val created: Number?,
@@ -373,16 +357,8 @@ class Events {
     }
 
     class Setup {
-        data class SetupHostPayload(
-            val host: Host
-        ) : Payload()
-
-        data class SetupHost(val host: Host) : FromChat(EventNames.FromChat.SETUP_HOST, SetupHostPayload(host))
-
         data class UrlPayload(val url: String) : Payload()
         data class OpenExternalUrl(val url: String) : FromChat(EventNames.FromChat.OPEN_EXTERNAL_URL, UrlPayload(url))
-
-        class LogOut : FromChat(EventNames.FromChat.LOG_OUT, null)
     }
 
     class Editor {
@@ -457,8 +433,6 @@ class Events {
             val features: Config.Features,
             val themeProps: Config.ThemeProps?,
             val lspPort: Int,
-            val apiKey: String?,
-            val addressURL: String?,
             val keyBindings: Config.KeyBindings,
             val tabbed: Boolean? = false,
             val host: String? = "jetbrains"
@@ -525,7 +499,6 @@ class Events {
 
         val gson = GsonBuilder()
             .registerTypeAdapter(FromChat::class.java, FromChatDeserializer())
-            .registerTypeAdapter(Host::class.java, HostDeserializer())
             .registerTypeAdapter(TextDocToolCall::class.java, TextDocToolCallDeserializer())
             .create()
 

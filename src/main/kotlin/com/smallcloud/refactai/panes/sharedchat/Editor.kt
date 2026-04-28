@@ -8,7 +8,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.util.ui.UIUtil
-import com.smallcloud.refactai.account.AccountManager.Companion.instance
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.browser.getActionKeybinding
 import com.smallcloud.refactai.settings.AppSettingsState
@@ -58,17 +57,15 @@ class Editor (val project: Project) {
         val isDarkMode = LafManager.getInstance().currentUIThemeLookAndFeel.isDark
         val mode = if (isDarkMode) "dark" else "light"
         val themeProps = Events.Config.ThemeProps(mode)
-        val apiKey = instance.apiKey
         val lspHolder = LSPProcessHolder.getInstance(project)
         val rawPort = lspHolder?.baseUrlOrNull()?.port ?: 0
         if (rawPort <= 0) {
             lspHolder?.ensureStartedAsync("editor-config-request")
         }
         val lspPort = if (rawPort > 0) rawPort else 0
-        val addressURL = AppSettingsState.instance.userInferenceUri ?: ""
         val keyBindings = Events.Config.KeyBindings(getActionKeybinding("ForceCompletionAction"))
 
-        return Events.Config.UpdatePayload(features, themeProps, lspPort, apiKey, addressURL, keyBindings)
+        return Events.Config.UpdatePayload(features, themeProps, lspPort, keyBindings)
     }
 
     fun getActiveFileInfo(cb: (Events.ActiveFile.FileInfo) -> Unit) {

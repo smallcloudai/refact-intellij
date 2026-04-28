@@ -17,7 +17,6 @@ import com.intellij.util.messages.MessageBus
 import com.intellij.util.messages.Topic
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.binPrefix
-import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
 import com.smallcloud.refactai.notifications.emitError
@@ -36,7 +35,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.Path
-import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 
@@ -241,15 +239,6 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     }
 
     init {
-        messageBus.connect(this).subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-            override fun apiKeyChanged(newApiKey: String?) {
-                settingsChanged("account-api-key-changed")
-            }
-
-            override fun planStatusChanged(newPlan: String?) {
-                settingsChanged("account-plan-status-changed")
-            }
-        })
         messageBus.connect(this)
             .subscribe(InferenceGlobalContextChangedNotifier.TOPIC, object : InferenceGlobalContextChangedNotifier {
                 override fun userInferenceUriChanged(newUrl: String?) {
@@ -333,14 +322,8 @@ open class LSPProcessHolder(val project: Project) : Disposable {
         logIfBlockingOperationOnEdt("startProcess")
         val startedAt = System.currentTimeMillis()
         if (shouldAbortLifecycleWork()) return
-        val address = if (InferenceGlobalContext.inferenceUri == null) "Refact" else InferenceGlobalContext.inferenceUri
         val newConfig = LSPConfig(
-            address = address,
-            apiKey = AccountManager.apiKey,
             port = 0,
-            clientVersion = "${Resources.client}-${Resources.version}/${Resources.jbBuildVersion}",
-            useTelemetry = true,
-            deployment = InferenceGlobalContext.deploymentMode,
             ast = InferenceGlobalContext.astIsEnabled,
             astFileLimit = InferenceGlobalContext.astFileLimit,
             vecdb = InferenceGlobalContext.vecdbIsEnabled,

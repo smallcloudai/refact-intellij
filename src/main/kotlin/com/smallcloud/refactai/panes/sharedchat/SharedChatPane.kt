@@ -1,7 +1,5 @@
 package com.smallcloud.refactai.panes.sharedchat
 
-import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.execution.processTools.getResultStdoutStr
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
@@ -29,13 +27,9 @@ import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.Alarm
 import com.intellij.util.SystemProperties
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.intellij.util.io.awaitExit
 import com.smallcloud.refactai.FimCache
-import com.smallcloud.refactai.account.AccountManager
-import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.InferenceGlobalContext
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
-import com.smallcloud.refactai.lsp.LSPProcessHolder.Companion.BIN_PATH
 import com.smallcloud.refactai.lsp.LSPProcessHolderChangedNotifier
 import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.modes.diff.waitingDiff
@@ -44,7 +38,6 @@ import com.smallcloud.refactai.panes.sharedchat.Events.ActiveFile.ActiveFileToCh
 import com.smallcloud.refactai.panes.sharedchat.Events.Editor
 import com.smallcloud.refactai.panes.sharedchat.browser.ChatWebView
 import com.smallcloud.refactai.settings.AppSettingsConfigurable
-import com.smallcloud.refactai.settings.Host
 import com.smallcloud.refactai.struct.ChatMessage
 import com.smallcloud.refactai.utils.EventDebouncer
 import com.smallcloud.refactai.utils.SmartMessageQueue
@@ -267,61 +260,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         }
     }
 
-    private suspend fun handleSetupHost(host: Host) {
-        val accountManager = AccountManager.instance
-        when (host) {
-            is Host.CloudHost -> {
-                accountManager.apiKey = host.apiKey
-                InferenceGlobalContext.instance.inferenceUri = "Refact"
-                accountManager.user = host.userName
-            }
-
-            is Host.Enterprise -> {
-                accountManager.apiKey = host.apiKey
-                InferenceGlobalContext.instance.inferenceUri = host.endpointAddress
-            }
-
-            is Host.SelfHost -> {
-                accountManager.apiKey = "any-key-will-work"
-                InferenceGlobalContext.instance.inferenceUri = host.endpointAddress
-            }
-
-            is Host.BringYourOwnKey -> {
-                val binPath = BIN_PATH
-                if (binPath == null) {
-                    logger.warn("BringYourOwnKey: BIN_PATH is null")
-                    return
-                }
-                val process = GeneralCommandLine(listOf(binPath, "--only-create-yaml-configs"))
-                    .withRedirectErrorStream(true)
-                    .createProcess()
-                process.awaitExit()
-                val out = process.getResultStdoutStr().getOrNull()
-                if (out == null) {
-                    logger.warn("BringYourOwnKey: process output is null")
-                    return
-                }
-                val fileName = out.lines().lastOrNull()?.trim() ?: return
-                val file = File(fileName)
-                if (!file.isFile) {
-                    logger.warn("BringYourOwnKey: not a valid file: $fileName")
-                    return
-                }
-
-                ApplicationManager.getApplication().invokeLater {
-                    val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
-                    if (virtualFile != null) {
-                        FileEditorManager.getInstance(project).openFile(virtualFile, true)
-                    } else {
-                        logger.warn("BringYourOwnKey: file not found: $fileName")
-                    }
-                    accountManager.apiKey = "any-key-will-work"
-                    InferenceGlobalContext.instance.inferenceUri = fileName
-                }
-            }
-        }
-    }
-
     private fun handleForceReloadFileByPath(fileName: String) {
         val validatedPath = validateAndSanitizePath(fileName, "handleForceReloadFileByPath") ?: return
         ApplicationManager.getApplication().invokeLater {
@@ -346,11 +284,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             return
         }
         BrowserUtil.browse(url)
-    }
-
-    private fun logOut() {
-        AccountManager.instance.logout()
-        InferenceGlobalContext.instance.inferenceUri = null
     }
 
     private fun handlePasteDiff(content: String) {
@@ -433,14 +366,6 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
                         this@SharedChatPane.sendUserConfig()
                     }
                 })
-        editor.project.messageBus
-            .connect(this)
-            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun apiKeyChanged(newApiKey: String?) {
-                    this@SharedChatPane.sendUserConfig()
-                }
-            })
-
         editor.project.messageBus
             .connect(this)
             .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
@@ -1017,9 +942,7 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             is Editor.PasteDiff -> this.handlePasteDiff(event.content)
             is Editor.NewFile -> this.handleNewFile(event.content)
             is Events.OpenSettings -> this.handleOpenSettings()
-            is Events.Setup.SetupHost -> this.handleSetupHost(event.host)
             is Events.Setup.OpenExternalUrl -> this.openExternalUrl(event.url)
-            is Events.Setup.LogOut -> this.logOut()
             is Events.Fim.Request -> this.handleFimRequest()
             is Events.OpenHotKeys -> this.handleOpenHotKeys()
             is Events.OpenFile -> this.handleOpenFile(event.payload.filePath, event.payload.line)

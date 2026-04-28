@@ -30,9 +30,7 @@ import com.smallcloud.refactai.modes.ModeProvider
 import com.smallcloud.refactai.modes.completion.CompletionTracker
 import com.smallcloud.refactai.modes.completion.prompt.RequestCreator
 import com.smallcloud.refactai.modes.completion.structs.Completion
-import com.smallcloud.refactai.statistic.UsageStatistic
 import com.smallcloud.refactai.struct.SMCRequest
-import com.smallcloud.refactai.utils.getExtension
 import dev.gitlive.difflib.DiffUtils
 import dev.gitlive.difflib.patch.DeltaType
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +45,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
-val EditorRefactLastSnippetTelemetryIdKey = Key.create<Int>("refact.snippetTelemetryId")
 val EditorRefactLastCompletionIsMultilineKey = Key.create<Boolean>("refact.lastCompletion.isMultiline")
 
 private class Default : InlineCompletionSuggestionUpdateManager.Adapter {
@@ -193,7 +190,6 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
         }
 
         if (!state.isValid()) return null
-        val stat = UsageStatistic(scope = "completion", extension = getExtension(fileName))
         val project = editor.project ?: return null
         val lsp = getInstance(project) ?: return null
         val baseUrl = lsp.baseUrlOrNull()
@@ -203,7 +199,6 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
         }
         val httpRequest = RequestCreator.create(
             fileName, text, logicalPos.line, pos,
-            stat,
             baseUrl = baseUrl,
             stream = false, model = InferenceGlobalContext.model,
             multiline = isMultiline, useAst = InferenceGlobalContext.astIsEnabled,
@@ -241,7 +236,6 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
                     multiline = context.request.body.inputs.multiline,
                     createdTs = prediction.created,
                     isFromCache = prediction.cached,
-                    snippetTelemetryId = prediction.snippetTelemetryId
                 )
                 completion.updateCompletion(choice.delta)
                 launch(Dispatchers.Default) {
@@ -255,7 +249,6 @@ class RefactAICompletionProvider : DebouncedInlineCompletionProvider() {
                         send(it)
                         delay(2)
                     }
-                    EditorRefactLastSnippetTelemetryIdKey[request.editor] = completion.snippetTelemetryId
                     EditorRefactLastCompletionIsMultilineKey[request.editor] = completion.multiline
                 }
             }

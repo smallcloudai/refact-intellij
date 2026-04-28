@@ -10,8 +10,6 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.wm.ToolWindowManager
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
-import com.smallcloud.refactai.statistic.UsageStatistic
-import com.smallcloud.refactai.statistic.UsageStats
 import com.smallcloud.refactai.struct.ChatMessage
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.relativeTo
@@ -84,7 +82,6 @@ class CodeLensAction(
         chat?.activate {
             RefactAIToolboxPaneFactory.chat?.requestFocus()
             RefactAIToolboxPaneFactory.chat?.executeCodeLensCommand(formatMessages(), sendImmediately, openNewTab)
-            editor.project?.service<UsageStats>()?.addChatStatistic(true, UsageStatistic("openChatByCodelens"), "")
         }
 
         // If content is empty, then it's "Open Chat" instruction, selecting range of code in active tab

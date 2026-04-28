@@ -6,8 +6,6 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.wm.ToolWindowManager
 import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
-import com.smallcloud.refactai.statistic.UsageStatistic
-import com.smallcloud.refactai.statistic.UsageStats
 import com.smallcloud.refactai.utils.getLastUsedProject
 
 class ChatPaneInvokeAction: AnAction(Resources.Icons.LOGO_RED_16x16) {
@@ -19,7 +17,6 @@ class ChatPaneInvokeAction: AnAction(Resources.Icons.LOGO_RED_16x16) {
         val chat = ToolWindowManager.getInstance(getLastUsedProject()).getToolWindow("Refact")
         chat?.activate {
             RefactAIToolboxPaneFactory.focusChat()
-            getLastUsedProject().service<UsageStats>().addChatStatistic(true, UsageStatistic("openChatByShortcut"), "")
         }
     }
 }

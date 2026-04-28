@@ -18,10 +18,8 @@ import com.intellij.util.Consumer
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.smallcloud.refactai.ExtraInfoChangedNotifier
 import com.smallcloud.refactai.RefactAIBundle
-import com.smallcloud.refactai.Resources.Icons.LOGO_12x12
 import com.smallcloud.refactai.Resources.Icons.LOGO_RED_16x16
 import com.smallcloud.refactai.Resources.titleStr
-import com.smallcloud.refactai.account.AccountManagerChangedNotifier
 import com.smallcloud.refactai.io.ConnectionChangedNotifier
 import com.smallcloud.refactai.io.ConnectionStatus
 import com.smallcloud.refactai.io.InferenceGlobalContextChangedNotifier
@@ -40,7 +38,6 @@ import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.Icon
 import javax.swing.JComponent
-import com.smallcloud.refactai.account.AccountManager.Companion.instance as AccountManager
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
 
 data class StatusBarState(
@@ -99,14 +96,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     init {
-        ApplicationManager.getApplication()
-            .messageBus
-            .connect(this)
-            .subscribe(AccountManagerChangedNotifier.TOPIC, object : AccountManagerChangedNotifier {
-                override fun isLoggedInChanged(isLoggedIn: Boolean) {
-                    update(null)
-                }
-            })
         ApplicationManager.getApplication()
             .messageBus
             .connect(this)
@@ -224,10 +213,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     private fun getIcon(): Icon {
-        if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud) {
-            return LOGO_12x12
-        }
-
         val state = statusbarStateRef.get()
         if (state.astLimitHit || state.vecdbLimitHit) {
             return AllIcons.Debugger.ThreadStates.Socket
@@ -256,10 +241,6 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
     }
 
     override fun getTooltipText(): String? {
-        if (!AccountManager.isLoggedIn && InferenceGlobalContext.isCloud) {
-            return null
-        }
-
         val state = statusbarStateRef.get()
 
         if (state.vecdbWarning.isNotEmpty()) {
@@ -324,8 +305,7 @@ class SMCStatusBarWidget(project: Project) : EditorBasedWidget(project), CustomS
                     emitWarning(project, RefactAIBundle.message("statusBar.notificationAstVecdbLimitMsg"))
                     return@Consumer
                 }
-                if (AccountManager.isLoggedIn || !InferenceGlobalContext.isCloud)
-                    getEditor()?.let { emitRegular(project, it) }
+                getEditor()?.let { emitRegular(project, it) }
             }
         }
     }

@@ -20,19 +20,13 @@ import com.smallcloud.refactai.Resources
 import com.smallcloud.refactai.Resources.refactAIAdvancedSettingsID
 import com.smallcloud.refactai.Resources.refactAIRootSettingsID
 import com.smallcloud.refactai.panes.RefactAIToolboxPaneFactory
-import com.smallcloud.refactai.settings.AppSettingsState.Companion.acceptedCompletionCounter
 import com.smallcloud.refactai.utils.getLastUsedProject
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
-import com.smallcloud.refactai.settings.AppSettingsState.Companion.instance as AppSettingsState
 
 private var lastNotification: Notification? = null
 private var lastRegularNotification: Notification? = null
-private var lastRateUsNotification: Notification? = null
-private var rateUsFuture: Future<*>? = null
 private fun removeLastNotification() {
     lastNotification?.apply {
         expire()
@@ -65,38 +59,6 @@ fun startup() {
         }
 
     }, PluginState.instance)
-
-    if (!AppSettingsState.rateUsNotification) {
-        rateUsFuture = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(
-            {
-                if (acceptedCompletionCounter.get() >= 30) {
-                    emitRateUs()
-                }
-                if (AppSettingsState.rateUsNotification) {
-                    rateUsFuture?.cancel(true)
-                }
-            }, 2, 2, TimeUnit.MINUTES
-        )
-    }
-}
-
-fun emitRateUs() {
-    if (lastRateUsNotification != null) {
-        return
-    }
-    val project = getLastUsedProject()
-    val notification =
-        NotificationGroupManager.getInstance().getNotificationGroup("Refact AI Notification Group").createNotification(
-            Resources.titleStr, RefactAIBundle.message("notifications.rateUs"), NotificationType.INFORMATION,
-        )
-    notification.addAction(NotificationAction.createSimple(RefactAIBundle.message("notifications.rateUsAction")) {
-        BrowserUtil.browse("https://www.smallcloud.ai/ratejb")
-        AppSettingsState.rateUsNotification = true
-        notification.expire()
-    })
-    notification.icon = Resources.Icons.LOGO_RED_16x16
-    notification.notify(project)
-    lastRateUsNotification = notification
 }
 
 fun emitRegular(project: Project, editor: Editor) {

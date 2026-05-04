@@ -5,13 +5,15 @@ import com.intellij.serviceContainer.AlreadyDisposedException
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.messages.MessageBus
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
-import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import org.junit.Assert.assertFalse
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Test that demonstrates the "Already disposed" issue in LSPProcessHolder.
@@ -54,6 +56,26 @@ class LSPProcessHolderTest : BasePlatformTestCase() {
             capabilities = LSPCapabilities(cloudName = "test-cloud")
         }
 
+        val startProcessCalls = AtomicInteger(0)
+        private val startProcessEntered = CountDownLatch(1)
+        private val releaseStartProcess = CountDownLatch(1)
+
+        override fun startProcess() {
+            startProcessCalls.incrementAndGet()
+            startProcessEntered.countDown()
+            releaseStartProcess.await(2, TimeUnit.SECONDS)
+            isWorking = true
+            val field = LSPProcessHolder::class.java.getDeclaredField("lastConfig")
+            field.isAccessible = true
+            field.set(this, LSPConfig(port = 1))
+        }
+
+        fun waitUntilStartProcessEntered(): Boolean = startProcessEntered.await(2, TimeUnit.SECONDS)
+
+        fun releaseStartProcess() {
+            releaseStartProcess.countDown()
+        }
+
         override fun ensureStartedAsync(reason: String) {
             // no-op for unit test
         }
@@ -62,8 +84,8 @@ class LSPProcessHolderTest : BasePlatformTestCase() {
             // no-op for unit test
         }
 
-        override fun ensureStartedBlocking(reason: String) {
-            // no-op for unit test
+        fun ensureStartedBlockingForTest(reason: String) {
+            ensureStartedBlocking(reason)
         }
     }
 
@@ -99,6 +121,36 @@ class LSPProcessHolderTest : BasePlatformTestCase() {
         assertNull("With the fix, no AlreadyDisposedException should be thrown", exception)
         // Verify that the capabilities were still set correctly
         assertEquals("test-cloud", holder.capabilities.cloudName)
+    }
+
+    @Test
+    fun testConcurrentBlockingEnsureStartedOnlyStartsOneProcess() {
+        val mockProject = mock(Project::class.java)
+        val mockMessageBus = mock(MessageBus::class.java)
+        val mockPublisher = mock(LSPProcessHolderChangedNotifier::class.java)
+
+        `when`(mockProject.isDisposed).thenReturn(false)
+        `when`(mockProject.messageBus).thenReturn(mockMessageBus)
+        `when`(mockMessageBus.syncPublisher(LSPProcessHolderChangedNotifier.TOPIC)).thenReturn(mockPublisher)
+
+        val holder = TestLspProccessHolder(mockProject)
+        val executor = Executors.newFixedThreadPool(3)
+        try {
+            val futures = (1..3).map {
+                executor.submit {
+                    holder.ensureStartedBlockingForTest("concurrent-$it")
+                }
+            }
+
+            assertTrue(holder.waitUntilStartProcessEntered())
+            holder.releaseStartProcess()
+            futures.forEach { it.get(3, TimeUnit.SECONDS) }
+
+            assertEquals(1, holder.startProcessCalls.get())
+        } finally {
+            executor.shutdownNow()
+            holder.dispose()
+        }
     }
 
     @Test

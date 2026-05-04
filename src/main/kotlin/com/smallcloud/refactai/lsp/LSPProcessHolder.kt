@@ -80,6 +80,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     private val lifecycleStartRequested = AtomicBoolean(false)
     private val lifecycleRestartRequested = AtomicBoolean(false)
     private val lifecycleReason = AtomicReference("initial")
+    private val processStartLock = Any()
     @Volatile
     private var customizationCache: JsonObject? = null
 
@@ -195,7 +196,9 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             return
         }
 
-        startProcess()
+        synchronized(processStartLock) {
+            startProcess()
+        }
     }
 
     protected open fun ensureStartedBlocking(reason: String) {
@@ -216,8 +219,10 @@ open class LSPProcessHolder(val project: Project) : Disposable {
             return
         }
 
-        if (!isWorking || process?.isAlive != true || lastConfig == null) {
-            startProcess()
+        synchronized(processStartLock) {
+            if (!isWorking || process?.isAlive != true || lastConfig == null) {
+                startProcess()
+            }
         }
     }
 

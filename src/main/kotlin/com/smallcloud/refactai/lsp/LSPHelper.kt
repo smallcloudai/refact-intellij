@@ -10,6 +10,7 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.application
 import com.smallcloud.refactai.io.ConnectionStatus
+import java.io.File
 import java.net.URI
 import java.nio.file.Paths
 import com.smallcloud.refactai.io.InferenceGlobalContext.Companion.instance as InferenceGlobalContext
@@ -30,7 +31,9 @@ fun findRoots(paths: List<String>): List<String> {
 
 fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
     val projectRootManager = ProjectRootManager.getInstance(project)
-    val projectRoots = projectRootManager.contentRoots.mapNotNull { it.path.takeIf { p -> p.isNotBlank() } }.ifEmpty {
+    val projectRoots = projectRootManager.contentRoots.mapNotNull { root ->
+        root.path.takeIf { root.isInLocalFileSystem && it.isNotBlank() }
+    }.ifEmpty {
         val listOfFiles: MutableList<String> = mutableListOf<String>().also { list ->
             project.basePath?.let { list.add(it) }
         }
@@ -38,9 +41,10 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
             project.modules.forEach { module ->
                 val rootManager = ModuleRootManager.getInstance(module)
                 rootManager.fileIndex.iterateContent { vfile ->
-                    if (rootManager.fileIndex.isInContent(vfile) ||
-                        rootManager.fileIndex.isInSourceContent(vfile) ||
-                        rootManager.fileIndex.isInTestSourceContent(vfile)
+                    if (vfile.isInLocalFileSystem &&
+                        (rootManager.fileIndex.isInContent(vfile) ||
+                            rootManager.fileIndex.isInSourceContent(vfile) ||
+                            rootManager.fileIndex.isInTestSourceContent(vfile))
                     ) {
                         listOfFiles.add(vfile.toNioPath().toString())
                     }
@@ -50,11 +54,12 @@ fun lspProjectInitialize(lsp: LSPProcessHolder, project: Project) {
         }
         findRoots(listOfFiles)
     }.ifEmpty { listOfNotNull(project.basePath) }
+        .map { path -> runCatching { File(path).canonicalPath }.getOrElse { path } }
     val baseUrl = lsp.baseUrlOrNull() ?: return
     val url = baseUrl.resolve("/v1/lsp-initialize")
     val data = Gson().toJson(
         mapOf(
-            "project_roots" to projectRoots.map { java.io.File(it).toURI().toString() },
+            "project_roots" to projectRoots.map { File(it).toURI().toString() },
         )
     )
 

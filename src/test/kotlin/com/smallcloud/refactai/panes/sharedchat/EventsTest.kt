@@ -298,4 +298,12 @@ class EventsTest {
         assertEquals(expected, result)
 
     }
+
+    @Test
+    fun formatCurrentProjectPayloadWithWorkspaceRoots() {
+        val message = Events.CurrentProject.SetCurrentProject("foo", listOf("/tmp/foo", "/tmp/bar"))
+        val result = Events.stringify(message)
+        val expected = """{"type":"currentProjectInfo/setCurrentProjectInfo","payload":{"name":"foo","workspaceRoots":["/tmp/foo","/tmp/bar"]}}"""
+        assertEquals(expected, result)
+    }
 }

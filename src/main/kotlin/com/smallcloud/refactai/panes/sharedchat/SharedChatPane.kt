@@ -1,5 +1,6 @@
 package com.smallcloud.refactai.panes.sharedchat
 
+import com.intellij.ProjectTopics
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
@@ -18,6 +19,8 @@ import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ModuleRootEvent
+import com.intellij.openapi.roots.ModuleRootListener
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.StandardFileSystems
@@ -244,6 +247,11 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
         this.postMessage(message)
     }
 
+    private fun sendCurrentProjectInfo() {
+        val message = Events.CurrentProject.SetCurrentProject(this.editor.getCurrentProject())
+        this.postMessage(message)
+    }
+
     private fun sendActiveFileInfo() {
         selectionDebouncer.debounce(Unit)
     }
@@ -371,8 +379,16 @@ class SharedChatPane(val project: Project) : JPanel(), Disposable {
             .subscribe(LSPProcessHolderChangedNotifier.TOPIC, object : LSPProcessHolderChangedNotifier {
                 override fun lspIsActive(isActive: Boolean) {
                     this@SharedChatPane.sendUserConfig()
+                    this@SharedChatPane.sendCurrentProjectInfo()
                 }
             })
+
+        project.messageBus.connect(this).subscribe(ProjectTopics.PROJECT_ROOTS, object : ModuleRootListener {
+            override fun rootsChanged(event: ModuleRootEvent) {
+                this@SharedChatPane.sendCurrentProjectInfo()
+                this@SharedChatPane.sendUserConfig()
+            }
+        })
 
         paneScope.launch {
             FimCache.subscribe { data ->

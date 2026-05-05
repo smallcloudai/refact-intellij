@@ -462,9 +462,16 @@ class Events {
 
 
     class CurrentProject {
-        data class SetCurrentProjectPayload(val name: String = ""): Payload()
+        data class SetCurrentProjectPayload(
+            val name: String = "",
+            val workspaceRoots: List<String>? = null
+        ): Payload()
 
-        class SetCurrentProject(name: String) : ToChat<Payload>(EventNames.ToChat.SET_CURRENT_PROJECT, SetCurrentProjectPayload(name))
+        class SetCurrentProject(payload: SetCurrentProjectPayload) :
+            ToChat<Payload>(EventNames.ToChat.SET_CURRENT_PROJECT, payload) {
+            constructor(name: String) : this(SetCurrentProjectPayload(name))
+            constructor(name: String, workspaceRoots: List<String>) : this(SetCurrentProjectPayload(name, workspaceRoots))
+        }
     }
 
     data class TaskDonePayload(

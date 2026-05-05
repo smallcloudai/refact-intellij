@@ -807,7 +807,7 @@ class ChatWebView(val editor: Editor, val messageHandler: (event: Events.FromCha
             val gson = Gson()
             val config = editor.getUserConfig()
             val configJson = gson.toJson(config)
-            val currentProject = gson.toJson(mapOf("name" to editor.project.name))
+            val currentProject = gson.toJson(editor.getCurrentProject())
 
             logger.debug("User config prepared")
 

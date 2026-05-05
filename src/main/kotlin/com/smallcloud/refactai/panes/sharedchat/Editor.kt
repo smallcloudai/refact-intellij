@@ -5,12 +5,17 @@ import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.modules
+import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.util.ui.UIUtil
+import com.intellij.util.application
 import com.smallcloud.refactai.lsp.LSPProcessHolder
 import com.smallcloud.refactai.panes.sharedchat.browser.getActionKeybinding
 import com.smallcloud.refactai.settings.AppSettingsState
+import java.io.File
+import java.nio.file.Paths
 
 
 class Editor (val project: Project) {
@@ -47,6 +52,50 @@ class Editor (val project: Project) {
                 cb(null)
             }
         }
+    }
+
+    private fun findRoots(paths: List<String>): List<String> {
+        val sortedPaths = paths.map { Paths.get(it).normalize() }.sortedBy { it.nameCount }
+        val roots = mutableListOf<java.nio.file.Path>()
+        for (path in sortedPaths) {
+            if (roots.none { path.startsWith(it) }) {
+                roots.add(path)
+            }
+        }
+        return roots.map { it.toString() }
+    }
+
+    private fun getWorkspaceRoots(): List<String> {
+        val projectRootManager = ProjectRootManager.getInstance(project)
+        return projectRootManager.contentRoots.mapNotNull { root ->
+            root.path.takeIf { root.isInLocalFileSystem && it.isNotBlank() }
+        }.ifEmpty {
+            val listOfFiles: MutableList<String> = mutableListOf<String>().also { list ->
+                project.basePath?.let { list.add(it) }
+            }
+            application.runReadAction {
+                project.modules.forEach { module ->
+                    val rootManager = ModuleRootManager.getInstance(module)
+                    rootManager.fileIndex.iterateContent { vfile ->
+                        if (vfile.isInLocalFileSystem &&
+                            (rootManager.fileIndex.isInContent(vfile) ||
+                                rootManager.fileIndex.isInSourceContent(vfile) ||
+                                rootManager.fileIndex.isInTestSourceContent(vfile))
+                        ) {
+                            listOfFiles.add(vfile.toNioPath().toString())
+                        }
+                        true
+                    }
+                }
+            }
+            findRoots(listOfFiles)
+        }.ifEmpty { listOfNotNull(project.basePath) }
+            .map { path -> runCatching { File(path).canonicalPath }.getOrElse { path } }
+    }
+
+    fun getCurrentProject(): Events.CurrentProject.SetCurrentProjectPayload {
+        val workspaceRoots = getWorkspaceRoots().takeIf { it.isNotEmpty() }
+        return Events.CurrentProject.SetCurrentProjectPayload(project.name, workspaceRoots)
     }
 
     fun getUserConfig(): Events.Config.UpdatePayload {

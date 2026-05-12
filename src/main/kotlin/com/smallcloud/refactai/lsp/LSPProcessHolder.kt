@@ -83,6 +83,8 @@ open class LSPProcessHolder(val project: Project) : Disposable {
     private val processStartLock = Any()
     @Volatile
     private var customizationCache: JsonObject? = null
+    @Volatile
+    private var startupInProgress = false
 
     private val exitThread: Thread = Thread {
         terminate()
@@ -289,7 +291,7 @@ open class LSPProcessHolder(val project: Project) : Disposable {
                     return@scheduleWithFixedDelay
                 }
 
-                if (lastConfig == null) return@scheduleWithFixedDelay
+                if (lastConfig == null || startupInProgress) return@scheduleWithFixedDelay
                 if (isCustomPortConfigured()) return@scheduleWithFixedDelay
                 if (process?.isAlive == false || !isWorking) {
                     ensureStartedAsync("health-check-process-dead-or-unready")
@@ -341,112 +343,141 @@ open class LSPProcessHolder(val project: Project) : Disposable {
 
         if (newConfig.sameRuntimeSettings(lastConfig) && processIsAlive && isWorking) return
 
-        capabilities = LSPCapabilities()
-        terminate()
-        if (!newConfig.isValid) return
-        var attempt = 0
-        while (attempt < 5) {
-            if (shouldAbortLifecycleWork()) {
-                logger.info("Aborting LSP startup during spawn loop: disposed")
-                return
-            }
-            val bin = BIN_PATH
-            if (bin == null) {
-                logger.warn("LSP start_process BIN_PATH is null")
-                return
-            }
-            val port = allocateFreePort()
-            if (port == null) {
-                logger.warn("LSP start_process could not allocate a free port")
-                attempt++
-                continue
-            }
-            newConfig.port = port
-            logger.debug("LSP start_process $bin ${newConfig.toSafeLogString()}")
-            val spawnedProcess = try {
-                GeneralCommandLine(listOf(bin) + newConfig.toArgs()).withRedirectErrorStream(true).createProcess()
-            } catch (e: Exception) {
-                attempt++
-                logger.warn("LSP start_process spawn failed attempt=$attempt: ${e.message}")
-                if (attempt == 5) {
-                    logger.error("LSP process failed to start after 5 attempts", e)
-                    isWorking = false
+        startupInProgress = true
+        try {
+            capabilities = LSPCapabilities()
+            terminate()
+            if (!newConfig.isValid) return
+            var attempt = 0
+            while (attempt < 5) {
+                if (shouldAbortLifecycleWork()) {
+                    logger.info("Aborting LSP startup during spawn loop: disposed")
+                    return
                 }
-                continue
-            }
+                val bin = BIN_PATH
+                if (bin == null) {
+                    logger.warn("LSP start_process BIN_PATH is null")
+                    return
+                }
+                val port = allocateFreePort()
+                if (port == null) {
+                    logger.warn("LSP start_process could not allocate a free port")
+                    attempt++
+                    continue
+                }
+                newConfig.port = port
+                logger.debug("LSP start_process $bin ${newConfig.toSafeLogString()}")
+                val spawnedProcess = try {
+                    GeneralCommandLine(listOf(bin) + newConfig.toArgs()).withRedirectErrorStream(true).createProcess()
+                } catch (e: Exception) {
+                    attempt++
+                    logger.warn("LSP start_process spawn failed attempt=$attempt: ${e.message}")
+                    if (attempt == 5) {
+                        logger.error("LSP process failed to start after 5 attempts", e)
+                        isWorking = false
+                        return
+                    }
+                    continue
+                }
 
-            val outputLines = ArrayDeque<String>(200)
-            val gobbler = loggerScheduler.submit {
-                try {
-                    spawnedProcess.inputStream.bufferedReader().forEachLine { line ->
-                        logger.debug(line)
-                        synchronized(outputLines) {
-                            if (outputLines.size >= 200) outputLines.removeFirst()
-                            outputLines.addLast(line)
+                val outputLines = ArrayDeque<String>(200)
+                val gobbler = loggerScheduler.submit {
+                    try {
+                        spawnedProcess.inputStream.bufferedReader().forEachLine { line ->
+                            logger.debug(line)
+                            synchronized(outputLines) {
+                                if (outputLines.size >= 200) outputLines.removeFirst()
+                                outputLines.addLast(line)
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                Thread.sleep(500)
+                if (spawnedProcess.isAlive) {
+                    process = spawnedProcess
+                    spawnedProcess.onExit().thenAcceptAsync { p ->
+                        val exitCode = p.exitValue()
+                        if (exitCode == 0 || exitCode == 143) {
+                            logger.info("LSP process exited with code $exitCode")
+                        } else {
+                            logger.warn("LSP process exited with code $exitCode")
                         }
                     }
-                } catch (_: Exception) {}
-            }
-
-            Thread.sleep(500)
-            if (spawnedProcess.isAlive) {
-                process = spawnedProcess
-                spawnedProcess.onExit().thenAcceptAsync { p ->
-                    if (p.exitValue() != 0) logger.warn("LSP process exited with code ${p.exitValue()}")
+                    loggerTask = gobbler
+                    break
                 }
-                loggerTask = gobbler
-                break
+
+                gobbler.cancel(false)
+                val exitCode = runCatching { spawnedProcess.exitValue() }.getOrDefault(-1)
+                val captured = synchronized(outputLines) { outputLines.joinToString("\n") }
+                attempt++
+                logger.warn(
+                    "LSP start_process didn't start attempt=$attempt " +
+                        "(exit=$exitCode binary=$bin port=$port)\n$captured"
+                )
+                if (attempt == 5) {
+                    logger.error("LSP process failed to start after 5 attempts")
+                    isWorking = false
+                    return
+                }
             }
 
-            gobbler.cancel(false)
-            val exitCode = runCatching { spawnedProcess.exitValue() }.getOrDefault(-1)
-            val captured = synchronized(outputLines) { outputLines.joinToString("\n") }
-            attempt++
-            logger.warn(
-                "LSP start_process didn't start attempt=$attempt " +
-                "(exit=$exitCode binary=$bin port=$port)\n$captured"
-            )
-            if (attempt == 5) {
-                logger.error("LSP process failed to start after 5 attempts")
+            if (process?.isAlive != true) {
+                logger.error("LSP process failed to start after spawn attempts")
                 isWorking = false
                 return
             }
-        }
 
-        val startupUrl = URI("http://127.0.0.1:${newConfig.port}/")
-        attempt = 0
-        while (attempt < 5) {
-            if (shouldAbortLifecycleWork()) {
-                logger.info("Aborting LSP startup during readiness loop: disposed")
+            val startupUrl = URI("http://127.0.0.1:${newConfig.port}/")
+            attempt = 0
+            val readinessAttempts = 30
+            while (attempt < readinessAttempts) {
+                if (shouldAbortLifecycleWork()) {
+                    logger.info("Aborting LSP startup during readiness loop: disposed")
+                    terminate()
+                    return
+                }
+                if (process?.isAlive != true) {
+                    logger.warn("LSP process exited before readiness probe succeeded")
+                    isWorking = false
+                    return
+                }
+                try {
+                    InferenceGlobalContext.connection.ping(startupUrl)
+                    lastConfig = newConfig
+                    isWorking = true
+                    buildInfo = getBuildInfo()
+                    logger.warn("LSP binary build info $buildInfo")
+                    capabilities = getCaps()
+                    fetchCustomizationFromServer()?.also { customizationCache = it }
+                    break
+                } catch (e: Exception) {
+                    if (attempt == readinessAttempts - 1) {
+                        logger.warn("LSP readiness probe failed attempt=${attempt + 1}/$readinessAttempts: ${e.message}")
+                    } else {
+                        logger.debug("LSP readiness probe failed attempt=${attempt + 1}/$readinessAttempts: ${e.message}")
+                    }
+                }
+                attempt++
+                if (attempt < readinessAttempts) {
+                    Thread.sleep(1000)
+                }
+            }
+            if (!isWorking) {
+                logger.warn("LSP readiness probe failed after $readinessAttempts attempts, terminating process")
                 terminate()
                 return
             }
-            try {
-                InferenceGlobalContext.connection.ping(startupUrl)
-                lastConfig = newConfig
-                isWorking = true
-                buildInfo = getBuildInfo()
-                logger.warn("LSP binary build info $buildInfo")
-                capabilities = getCaps()
-                fetchCustomizationFromServer()?.also { customizationCache = it }
-                break
-            } catch (e: Exception) {
-                logger.warn("LSP bad_things_happened " + e.message)
+            if (shouldAbortLifecycleWork()) {
+                terminate()
+                return
             }
-            attempt++
-            Thread.sleep(3000)
+            lspProjectInitialize(this, project)
+            logger.info("LSP startProcess finished in ${System.currentTimeMillis() - startedAt}ms (working=$isWorking)")
+        } finally {
+            startupInProgress = false
         }
-        if (!isWorking) {
-            logger.warn("LSP readiness probe failed after 5 attempts, terminating process")
-            terminate()
-            return
-        }
-        if (shouldAbortLifecycleWork()) {
-            terminate()
-            return
-        }
-        lspProjectInitialize(this, project)
-        logger.info("LSP startProcess finished in ${System.currentTimeMillis() - startedAt}ms (working=$isWorking)")
     }
 
     open fun fetchCustomization(): JsonObject? {
